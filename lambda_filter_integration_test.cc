@@ -1,12 +1,13 @@
-#include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
+#include "test/integration/http_integration.h"
+
 namespace Solo {
-class LambdaFilterIntegrationTest : public Envoy::BaseIntegrationTest,
+class LambdaFilterIntegrationTest : public Envoy::HttpIntegrationTest,
                                         public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
 public:
-  LambdaFilterIntegrationTest() : Envoy::BaseIntegrationTest(GetParam()) {}
+  LambdaFilterIntegrationTest() : Envoy::HttpIntegrationTest(Envoy::Http::CodecClient::Type::HTTP1, GetParam()) {}
   /**
    * Initializer for an individual integration test.
    */
@@ -36,7 +37,7 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
   Envoy::IntegrationStreamDecoderPtr response(new Envoy::IntegrationStreamDecoder(*dispatcher_));
   Envoy::FakeStreamPtr request_stream;
 
-  codec_client = makeHttpConnection(lookupPort("http"), Envoy::Http::CodecClient::Type::HTTP1);
+  codec_client = makeHttpConnection(lookupPort("http"));
   codec_client->makeRequestWithBody(headers,2, *response);
   fake_upstream_connection = fake_upstreams_[0]->waitForHttpConnection(*dispatcher_);
   request_stream = fake_upstream_connection->waitForNewStream();

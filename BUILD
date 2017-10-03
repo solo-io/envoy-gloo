@@ -56,5 +56,6 @@ envoy_cc_test(
     deps = [
         ":lambda_filter_config",
         "@envoy//test/integration:integration_lib",
+        "@envoy//test/integration:http_integration_lib"
     ],
 )
