@@ -3,7 +3,7 @@
 #include <vector>
 #include <list>
 
-#include "http_filter.h"
+#include "lambda_filter.h"
 
 #include "server/config/network/http_connection_manager.h"
 
@@ -33,24 +33,24 @@ std::string LambdaFilter::functionUrlPath() {
   return val.str();
 }
 
-FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap& headers, bool end_stream) {
+Envoy::Http::FilterHeadersStatus LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap& headers, bool end_stream) {
 
   const Envoy::Router::RouteEntry* routeEntry = decoder_callbacks_->route()->routeEntry();
 
   if (routeEntry == nullptr) {
-    return FilterHeadersStatus::Continue;    
+    return Envoy::Http::FilterHeadersStatus::Continue;    
   }
 
   const std::string& cluster_name = routeEntry->clusterName();
   ClusterFunctionMap::iterator currentFunction = functions_.find(cluster_name);
   if (currentFunction == functions_.end()){
-    return FilterHeadersStatus::Continue;    
+    return Envoy::Http::FilterHeadersStatus::Continue;    
   }
 
   active_ = true;
   currentFunction_ = currentFunction->second;
 
-  headers.insertMethod().value().setReference(Http::Headers::get().MethodValues.Post);
+  headers.insertMethod().value().setReference(Envoy::Http::Headers::get().MethodValues.Post);
   
 //  headers.removeContentLength();  
   headers.insertPath().value(functionUrlPath());
@@ -60,13 +60,13 @@ FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap& headers, bool end_str
   ENVOY_LOG(debug, "decodeHeaders called end = {}", end_stream);
   
 
-  return FilterHeadersStatus::StopIteration;
+  return Envoy::Http::FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus LambdaFilter::decodeData(Buffer::Instance& data, bool end_stream) {
+Envoy::Http::FilterDataStatus LambdaFilter::decodeData(Envoy::Buffer::Instance& data, bool end_stream) {
 
   if (!active_) {
-    return FilterDataStatus::Continue;    
+    return Envoy::Http::FilterDataStatus::Continue;    
   }
   // calc hash of data
   ENVOY_LOG(debug, "decodeData called end = {} data = {}", end_stream, data.length());
@@ -81,43 +81,43 @@ FilterDataStatus LambdaFilter::decodeData(Buffer::Instance& data, bool end_strea
     active_ = false;
     // add header ?!
     // get stream id
-    return FilterDataStatus::Continue;
+    return Envoy::Http::FilterDataStatus::Continue;
   }
 
-  return FilterDataStatus::StopIterationAndBuffer;
+  return Envoy::Http::FilterDataStatus::StopIterationAndBuffer;
 }
 
 void LambdaFilter::lambdafy() {
-  std::list<LowerCaseString> headers;
+  std::list<Envoy::Http::LowerCaseString> headers;
 
-  headers.push_back(LowerCaseString("x-amz-invocation-type"));
-  request_headers_->addCopy(LowerCaseString("x-amz-invocation-type"), std::string("RequestResponse"));
+  headers.push_back(Envoy::Http::LowerCaseString("x-amz-invocation-type"));
+  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-invocation-type"), std::string("RequestResponse"));
   
-//  headers.push_back(LowerCaseString("x-amz-client-context"));
-//  request_headers_->addCopy(LowerCaseString("x-amz-client-context"), std::string(""));
+//  headers.push_back(Envoy::Http::LowerCaseString("x-amz-client-context"));
+//  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-client-context"), std::string(""));
 
-  headers.push_back(LowerCaseString("x-amz-log-type"));
-  request_headers_->addCopy(LowerCaseString("x-amz-log-type"), std::string("None"));
+  headers.push_back(Envoy::Http::LowerCaseString("x-amz-log-type"));
+  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-log-type"), std::string("None"));
   
-  headers.push_back(LowerCaseString("host"));
+  headers.push_back(Envoy::Http::LowerCaseString("host"));
   request_headers_->insertHost().value(currentFunction_.hostname_);
 
-  headers.push_back(LowerCaseString("content-type"));
+  headers.push_back(Envoy::Http::LowerCaseString("content-type"));
     
   awsAuthenticator_.sign(request_headers_, std::move(headers), currentFunction_.region_);
 }
 
-FilterTrailersStatus LambdaFilter::decodeTrailers(HeaderMap& headers) {
+Envoy::Http::FilterTrailersStatus LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap&) {
   if (!active_) {
-    return FilterTrailersStatus::Continue;    
+    return Envoy::Http::FilterTrailersStatus::Continue;    
   }
 
   lambdafy();
   
-  return FilterTrailersStatus::Continue;
+  return Envoy::Http::FilterTrailersStatus::Continue;
 }
 
-void LambdaFilter::setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) {
+void LambdaFilter::setDecoderFilterCallbacks(Envoy::Http::StreamDecoderFilterCallbacks& callbacks) {
   decoder_callbacks_ = &callbacks;
 }
 

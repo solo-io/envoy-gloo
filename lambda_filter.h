@@ -22,7 +22,7 @@ struct Function {
 typedef std::map<std::string, Function> ClusterFunctionMap;
 
 
-class LambdaFilter : public StreamDecoderFilter,  public Logger::Loggable<Logger::Id::filter> {
+class LambdaFilter : public Envoy::Http::StreamDecoderFilter,  public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   LambdaFilter(std::string access_key, std::string secret_key, ClusterFunctionMap functions);
   ~LambdaFilter();
@@ -31,19 +31,19 @@ public:
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap& headers, bool) override;
-  FilterDataStatus decodeData(Buffer::Instance&, bool) override;
-  FilterTrailersStatus decodeTrailers(HeaderMap&) override;
-  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks& callbacks) override;
+  Envoy::Http::FilterHeadersStatus decodeHeaders(Envoy::Http::HeaderMap& headers, bool) override;
+  Envoy::Http::FilterDataStatus decodeData(Envoy::Buffer::Instance&, bool) override;
+  Envoy::Http::FilterTrailersStatus decodeTrailers(Envoy::Http::HeaderMap&) override;
+  void setDecoderFilterCallbacks(Envoy::Http::StreamDecoderFilterCallbacks& callbacks) override;
 
 private:
-  StreamDecoderFilterCallbacks* decoder_callbacks_;
+  Envoy::Http::StreamDecoderFilterCallbacks* decoder_callbacks_;
   ClusterFunctionMap functions_;
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();
 
-  Http::HeaderMap* request_headers_{};
+  Envoy::Http::HeaderMap* request_headers_{};
   bool active_;
   AwsAuthenticator awsAuthenticator_;
 };

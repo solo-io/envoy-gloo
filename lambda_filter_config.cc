@@ -1,6 +1,6 @@
 #include <string>
 
-#include "http_filter.h"
+#include "lambda_filter.h"
 
 #include "envoy/registry/registry.h"
 
@@ -36,24 +36,24 @@ const std::string lAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
   }
   )EOF");
 
-class LambdaFilterConfig : public NamedHttpFilterConfigFactory {
+class LambdaFilterConfig : public Envoy::Server::Configuration::NamedHttpFilterConfigFactory {
 public:
-  HttpFilterFactoryCb createFilterFactory(const Json::Object& json_config, const std::string&,
-                                          FactoryContext& factoryContext) override {
+  Envoy::Server::Configuration::HttpFilterFactoryCb createFilterFactory(const Envoy::Json::Object& json_config, const std::string&,
+    Envoy::Server::Configuration::FactoryContext&) override {
     json_config.validateSchema(lAMBDA_HTTP_FILTER_SCHEMA);
                      
   std::string access_key = json_config.getString("access_key", "");
   std::string secret_key = json_config.getString("secret_key", "");
-  const Json::ObjectSharedPtr functions_obj = json_config.getObject("functions", false);
+  const Envoy::Json::ObjectSharedPtr functions_obj = json_config.getObject("functions", false);
 
-  Http::ClusterFunctionMap functions;
+  Lambda::ClusterFunctionMap functions;
 
-  functions_obj->iterate([&functions](const std::string& key, const Json::Object& value){
+  functions_obj->iterate([&functions](const std::string& key, const Envoy::Json::Object& value){
     const std::string cluster_name = key;
     const std::string func_name = value.getString("func_name", "");
     const std::string hostname = value.getString("hostname", "");
     const std::string region = value.getString("region", "");
-    functions[cluster_name] = Http::Function {
+    functions[cluster_name] = Lambda::Function {
       func_name_ : func_name,
       hostname_: hostname,
       region_ : region,
@@ -61,10 +61,10 @@ public:
     return true;
   });
 
-    return [&factoryContext, access_key, secret_key, functions](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+    return [access_key, secret_key, functions](Envoy::Http::FilterChainFactoryCallbacks& callbacks) -> void {
       auto filter = new Lambda::LambdaFilter(std::move(access_key), std::move(secret_key), std::move(functions));
       callbacks.addStreamDecoderFilter(
-          Http::StreamDecoderFilterSharedPtr{filter});
+          Envoy::Http::StreamDecoderFilterSharedPtr{filter});
     };
   }
   std::string name() override { return "lambda"; }
@@ -73,7 +73,7 @@ public:
 /**
  * Static registration for this sample filter. @see RegisterFactory.
  */
-static Registry::RegisterFactory<LambdaFilterConfig, NamedHttpFilterConfigFactory>
+static Envoy::Registry::RegisterFactory<LambdaFilterConfig, Envoy::Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
 
 } // Configuration

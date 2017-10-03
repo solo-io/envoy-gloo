@@ -12,6 +12,15 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "taskName": "test",
+            "type": "shell",
+            "command": "bazel test //:lambda_filter_integration_test",
+            "problemMatcher":["$gcc"],
+            "group": {
+                "kind": "test"
+            }
         }
     ]
 }

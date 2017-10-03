@@ -5,6 +5,7 @@
 #include "openssl/sha.h"
 #include "envoy/buffer/buffer.h"
 
+
 namespace Solo {
 namespace Lambda {
 
@@ -14,15 +15,15 @@ public:
   
   ~AwsAuthenticator();
 
-  void update_payload_hash(const Buffer::Instance& data);
+  void update_payload_hash(const Envoy::Buffer::Instance& data);
 
-  void sign(Http::HeaderMap* request_headers, std::list<LowerCaseString>&& headers_to_sign,const std::string& region);
+  void sign(Envoy::Http::HeaderMap* request_headers, std::list<Envoy::Http::LowerCaseString>&& headers_to_sign,const std::string& region);
 
 private:
 //  void lambdafy();
-  const Http::HeaderEntry* get_maybe_inline_header(Http::HeaderMap* request_headers, const LowerCaseString& im);
+  const Envoy::Http::HeaderEntry* get_maybe_inline_header(Envoy::Http::HeaderMap* request_headers, const Envoy::Http::LowerCaseString& im);
 
-  static bool lowercasecompare(const LowerCaseString& i,const LowerCaseString& j);
+  static bool lowercasecompare(const Envoy::Http::LowerCaseString& i,const Envoy::Http::LowerCaseString& j);
 
   std::string access_key_;
   std::string first_key_;

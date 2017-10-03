@@ -30,25 +30,25 @@ AwsAuthenticator::~AwsAuthenticator(){
 
 }
 
-void AwsAuthenticator::update_payload_hash(const Buffer::Instance& data) { 
+void AwsAuthenticator::update_payload_hash(const Envoy::Buffer::Instance& data) { 
 
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  Buffer::RawSlice slices[num_slices];
+  Envoy::Buffer::RawSlice slices[num_slices];
   data.getRawSlices(slices, num_slices);
-  for (Buffer::RawSlice& slice : slices) {
+  for (Envoy::Buffer::RawSlice& slice : slices) {
     SHA256_Update(&body_sha_, slice.mem_, slice.len_);
   }
 
 }
 
-const Http::HeaderEntry* AwsAuthenticator::get_maybe_inline_header(Http::HeaderMap* request_headers, const LowerCaseString& im) { 
+const Envoy::Http::HeaderEntry* AwsAuthenticator::get_maybe_inline_header(Envoy::Http::HeaderMap* request_headers, const Envoy::Http::LowerCaseString& im) { 
   #define Q(x) #x
   #define QUOTE(x) Q(x)
 
-  #define CHECK_INLINE_HEADER(name)                                                         \
-  static LowerCaseString name##Str = LowerCaseString(std::string(QUOTE(name)), true);                       \
-  if (im == name##Str) {                                                                    \
-    return request_headers->name();                                                         \
+  #define CHECK_INLINE_HEADER(name)                                                                                         \
+  static Envoy::Http::LowerCaseString name##Str = Envoy::Http::LowerCaseString(std::string(QUOTE(name)), true);             \
+  if (im == name##Str) {                                                                                                    \
+    return request_headers->name();                                                                                         \
   }                                                       
   
   ALL_INLINE_HEADERS(CHECK_INLINE_HEADER)
@@ -56,15 +56,15 @@ const Http::HeaderEntry* AwsAuthenticator::get_maybe_inline_header(Http::HeaderM
   return nullptr;
 }
 
-bool AwsAuthenticator::lowercasecompare(const LowerCaseString& i,const LowerCaseString& j) { return (i.get() < j.get()); }
+bool AwsAuthenticator::lowercasecompare(const Envoy::Http::LowerCaseString& i,const Envoy::Http::LowerCaseString& j) { return (i.get() < j.get()); }
 
-void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCaseString>&& headers, const std::string& region) {
-  static LowerCaseString dateheader = LowerCaseString("x-amz-date");
+void AwsAuthenticator::sign(Envoy::Http::HeaderMap* request_headers, std::list<Envoy::Http::LowerCaseString>&& headers, const std::string& region) {
+  static Envoy::Http::LowerCaseString dateheader = Envoy::Http::LowerCaseString("x-amz-date");
   headers.push_back(dateheader);
   headers.sort(lowercasecompare);
 
   auto now = std::chrono::system_clock::now();
-  std::string RequestDateTime = DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
+  std::string RequestDateTime = Envoy::DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
   request_headers->addReferenceKey(dateheader, RequestDateTime);
   
 
@@ -76,7 +76,7 @@ void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCas
   std::stringstream  signedHeaders;
 
   for (auto header = headers.begin(), end = headers.end(); header != end; header++) {  
-    const Http::HeaderEntry* headerEntry = request_headers->get(*header);
+    const Envoy::Http::HeaderEntry* headerEntry = request_headers->get(*header);
     if (headerEntry == nullptr) {
       headerEntry = get_maybe_inline_header(request_headers, *header);
     }
@@ -91,7 +91,7 @@ void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCas
       // TODO: add warning if null
     }
     canonicalHeaders << '\n';
-    std::list<LowerCaseString>::const_iterator next = header;
+    std::list<Envoy::Http::LowerCaseString>::const_iterator next = header;
     next++;
     if (next != end) {
       signedHeaders << ";";
@@ -103,11 +103,11 @@ void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCas
 
   uint8_t payload_out[SHA256_DIGEST_LENGTH];
   SHA256_Final(payload_out, &body_sha_);
-  std::string hexpayload = Hex::encode(payload_out, SHA256_DIGEST_LENGTH);
+  std::string hexpayload = Envoy::Hex::encode(payload_out, SHA256_DIGEST_LENGTH);
 
-  std::string HTTPRequestMethod = Http::Headers::get().MethodValues.Post;
-  const Http::HeaderString& CanonicalURI = request_headers->Path()->value();
-  std::string CanonicalQueryString = EMPTY_STRING; // TODO : support query string.
+  std::string HTTPRequestMethod = Envoy::Http::Headers::get().MethodValues.Post;
+  const Envoy::Http::HeaderString& CanonicalURI = request_headers->Path()->value();
+  std::string CanonicalQueryString = Envoy::EMPTY_STRING; // TODO : support query string.
 /*
   std::string CanonicalRequest =
   HTTPRequestMethod + '\n' +
@@ -136,9 +136,9 @@ void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCas
   SHA256_Final(cononicalRequestHashOut, &cononicalRequestHash);
 
 //  SHA256(static_cast<const uint8_t*>(static_cast<const void*>(CanonicalRequest.c_str())), CanonicalRequest.size(), out);
-  std::string hashedCanonicalRequest = Hex::encode(cononicalRequestHashOut, SHA256_DIGEST_LENGTH);
+  std::string hashedCanonicalRequest = Envoy::Hex::encode(cononicalRequestHashOut, SHA256_DIGEST_LENGTH);
   
-  std::string CredentialScopeDate = DateFormatter("%Y%m%d").fromTime(now);
+  std::string CredentialScopeDate = Envoy::DateFormatter("%Y%m%d").fromTime(now);
 
   std::stringstream credentialScopeStream;
   credentialScopeStream << CredentialScopeDate << "/" <<region << "/" << service_ << "/aws4_request";
@@ -190,7 +190,7 @@ void AwsAuthenticator::sign(Http::HeaderMap* request_headers, std::list<LowerCas
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t*>(hashedCanonicalRequest.c_str()), hashedCanonicalRequest.size());
   HMAC_Final(&ctx, out, &out_len);
 
-  std::string signature = Hex::encode(out, out_len);
+  std::string signature = Envoy::Hex::encode(out, out_len);
 
   std::stringstream authorizationvalue;
   authorizationvalue 
