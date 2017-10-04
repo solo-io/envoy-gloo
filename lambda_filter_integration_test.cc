@@ -14,7 +14,7 @@ public:
   void SetUp() override {
     fake_upstreams_.emplace_back(new Envoy::FakeUpstream(0, Envoy::FakeHttpConnection::Type::HTTP1, version_));
     registerPort("upstream_0", fake_upstreams_.back()->localAddress()->ip()->port());
-    createTestServer("envoy.conf", {"http"});
+    createTestServer("envoy-test.conf", {"http"});
   }
 
   /**
@@ -30,7 +30,7 @@ INSTANTIATE_TEST_CASE_P(IpVersions, LambdaFilterIntegrationTest,
                         testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(LambdaFilterIntegrationTest, Test1) {
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "POST"}, {":path", "/"}};
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
   Envoy::IntegrationCodecClientPtr codec_client;
   Envoy::FakeHttpConnectionPtr fake_upstream_connection;
@@ -38,7 +38,12 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
   Envoy::FakeStreamPtr request_stream;
 
   codec_client = makeHttpConnection(lookupPort("http"));
-  codec_client->makeRequestWithBody(headers,2, *response);
+  Envoy::Http::StreamEncoder& stream = codec_client->startRequest(headers, *response);
+  Envoy::Buffer::OwnedImpl data;
+  data.add(std::string("{\"a\":123}"));
+  codec_client->sendData(stream, data, true);
+
+
   fake_upstream_connection = fake_upstreams_[0]->waitForHttpConnection(*dispatcher_);
   request_stream = fake_upstream_connection->waitForNewStream();
   request_stream->waitForEndStream(*dispatcher_);
