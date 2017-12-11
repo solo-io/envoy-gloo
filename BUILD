@@ -42,6 +42,7 @@ envoy_cc_library(
     name = "lambda_filter_config",
     srcs = ["lambda_filter_config.cc"],
     repository = "@envoy",
+    visibility = ["//visibility:public"],
     deps = [
         ":lambda_filter_lib",
         "@envoy//source/exe:envoy_common_lib",
