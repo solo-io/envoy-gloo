@@ -7,6 +7,8 @@ load(
     "envoy_cc_test",
 )
 
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+
 envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
@@ -27,12 +29,18 @@ envoy_cc_library(
     ],
 )
 
+api_proto_library(
+    name = "lambda_proto",
+    srcs = ["lambda.proto"],
+)
+
 envoy_cc_library(
     name = "lambda_filter_lib",
     srcs = ["lambda_filter.cc"],
     hdrs = ["lambda_filter.h"],
     repository = "@envoy",
     deps = [
+        ":lambda_proto_cc",
         ":aws_authenticator_lib",        
         "@envoy//source/exe:envoy_common_lib",
     ],

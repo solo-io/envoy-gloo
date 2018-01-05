@@ -16,6 +16,29 @@
 namespace Solo {
 namespace Lambda {
 
+LambdaFilterConfig::LambdaFilterConfig(Envoy::Runtime::Loader& runtimeloader) {
+
+}
+const std::string& LambdaFilterConfig::aws_access() {
+
+}
+const std::string& LambdaFilterConfig::aws_secret() {
+
+}
+const Function* LambdaFilterConfig::get_function(const std::string& cluster) {
+  ClusterFunctionMap::iterator currentFunction = functions_.find(cluster_name);
+  if (currentFunction == functions_.end()) {
+    return nullptr;
+  }
+  return &currentFunction->second;
+}
+
+private:
+  const ClusterFunctionMap functions_;
+
+};
+
+
 LambdaFilter::LambdaFilter(std::string access_key, std::string secret_key, ClusterFunctionMap functions) : 
   functions_(std::move(functions)),
   active_(false), 
@@ -43,8 +66,8 @@ Envoy::Http::FilterHeadersStatus LambdaFilter::decodeHeaders(Envoy::Http::Header
 
   const std::string& cluster_name = routeEntry->clusterName();
   ClusterFunctionMap::iterator currentFunction = functions_.find(cluster_name);
-  if (currentFunction == functions_.end()){
-    return Envoy::Http::FilterHeadersStatus::Continue;    
+  if (currentFunction == functions_.end()) {
+    return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
   active_ = true;
@@ -77,8 +100,6 @@ Envoy::Http::FilterDataStatus LambdaFilter::decodeData(Envoy::Buffer::Instance& 
 
     lambdafy();
     // Authorization: AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7
-    request_headers_ = nullptr;
-    active_ = false;
     // add header ?!
     // get stream id
     return Envoy::Http::FilterDataStatus::Continue;
@@ -105,14 +126,15 @@ void LambdaFilter::lambdafy() {
   headers.push_back(Envoy::Http::LowerCaseString("content-type"));
     
   awsAuthenticator_.sign(request_headers_, std::move(headers), currentFunction_.region_);
+  request_headers_ = nullptr;
+  active_ = false;
+
 }
 
 Envoy::Http::FilterTrailersStatus LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap&) {
-  if (!active_) {
-    return Envoy::Http::FilterTrailersStatus::Continue;    
+  if (active_) {
+    lambdafy();
   }
-
-  lambdafy();
   
   return Envoy::Http::FilterTrailersStatus::Continue;
 }

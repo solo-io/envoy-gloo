@@ -26,9 +26,7 @@ AwsAuthenticator::AwsAuthenticator(std::string&& access_key, std::string&& secre
     SHA256_Init(&body_sha_);    
 }
 
-AwsAuthenticator::~AwsAuthenticator(){
-
-}
+AwsAuthenticator::~AwsAuthenticator() {}
 
 void AwsAuthenticator::update_payload_hash(const Envoy::Buffer::Instance& data) { 
 
@@ -75,7 +73,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap* request_headers, std::list<E
   std::stringstream  canonicalHeaders;
   std::stringstream  signedHeaders;
 
-  for (auto header = headers.begin(), end = headers.end(); header != end; header++) {  
+  for (auto header = headers.begin(), end = headers.end(); header != end; header++) {
     const Envoy::Http::HeaderEntry* headerEntry = request_headers->get(*header);
     if (headerEntry == nullptr) {
       headerEntry = get_maybe_inline_header(request_headers, *header);

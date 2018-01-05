@@ -21,6 +21,19 @@ struct Function {
 
 typedef std::map<std::string, Function> ClusterFunctionMap;
 
+class LambdaFilterConfig {
+public:
+  LambdaFilterConfig(Envoy::Runtime::Loader& runtimeloader);
+  const std::string& aws_access();
+  const std::string& aws_secret();
+  const Function* get_function(const std::string& cluster);
+
+private:
+  const ClusterFunctionMap functions_;
+  Envoy::Runtime::Loader& runtimeloader_;
+};
+
+typedef std::shared_ptr<LambdaFilterConfig> LambdaFilterConfigSharedPtr;
 
 class LambdaFilter : public Envoy::Http::StreamDecoderFilter,  public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
