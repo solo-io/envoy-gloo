@@ -24,13 +24,24 @@ typedef std::map<std::string, Function> ClusterFunctionMap;
 class LambdaFilterConfig {
 public:
   LambdaFilterConfig(Envoy::Runtime::Loader& runtimeloader);
-  const std::string& aws_access();
-  const std::string& aws_secret();
-  const Function* get_function(const std::string& cluster);
+
+  const std::string& aws_access() {
+    return aws_access_;
+  }
+
+  const std::string& aws_secret() {
+    return aws_secret_;
+  }
+
+  const Function* get_function(const std::string& cluster_name);
 
 private:
-  const ClusterFunctionMap functions_;
+
   Envoy::Runtime::Loader& runtimeloader_;
+
+  const std::string aws_access_;
+  const std::string aws_secret_;
+  const ClusterFunctionMap functions_;
 };
 
 typedef std::shared_ptr<LambdaFilterConfig> LambdaFilterConfigSharedPtr;
