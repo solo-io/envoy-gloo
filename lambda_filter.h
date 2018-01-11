@@ -61,5 +61,5 @@ private:
   AwsAuthenticator awsAuthenticator_;
 };
 
-} // Http
-} // Envoy
+} // Lambda
+} // Solo
