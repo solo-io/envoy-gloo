@@ -58,15 +58,3 @@ envoy_cc_library(
         "@envoy//source/exe:envoy_common_lib",
     ],
 )
-
-envoy_cc_test(
-    name = "lambda_filter_integration_test",
-    srcs = ["lambda_filter_integration_test.cc"],
-    data = [":envoy-test.conf"],
-    repository = "@envoy",
-    deps = [
-        ":lambda_filter_config",
-        "@envoy//test/integration:http_integration_lib",
-        "@envoy//test/integration:integration_lib",
-    ],
-)

@@ -18,7 +18,7 @@ public:
         0, Envoy::FakeHttpConnection::Type::HTTP1, version_));
     registerPort("upstream_0",
                  fake_upstreams_.back()->localAddress()->ip()->port());
-    createTestServer("envoy-test.conf", {"http"});
+    createTestServer("test/envoy-test.conf", {"http"});
   }
 
   /**
