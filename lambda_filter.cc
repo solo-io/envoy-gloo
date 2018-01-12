@@ -16,28 +16,19 @@
 namespace Solo {
 namespace Lambda {
 
-LambdaFilterConfig::LambdaFilterConfig(Envoy::Runtime::Loader& runtimeloader) {
+LambdaFilterConfig::LambdaFilterConfig(Envoy::Runtime::Loader& runtimeloader) :
+  runtimeloader_{runtimeloader} {
 
+  // TODO
 }
-const std::string& LambdaFilterConfig::aws_access() {
 
-}
-const std::string& LambdaFilterConfig::aws_secret() {
-
-}
-const Function* LambdaFilterConfig::get_function(const std::string& cluster) {
-  ClusterFunctionMap::iterator currentFunction = functions_.find(cluster_name);
+const Function* LambdaFilterConfig::get_function(const std::string& cluster_name) {
+  auto currentFunction = functions_.find(cluster_name);
   if (currentFunction == functions_.end()) {
     return nullptr;
   }
   return &currentFunction->second;
 }
-
-private:
-  const ClusterFunctionMap functions_;
-
-};
-
 
 LambdaFilter::LambdaFilter(std::string access_key, std::string secret_key, ClusterFunctionMap functions) : 
   functions_(std::move(functions)),

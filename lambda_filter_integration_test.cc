@@ -45,7 +45,7 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
 
 
   fake_upstream_connection = fake_upstreams_[0]->waitForHttpConnection(*dispatcher_);
-  request_stream = fake_upstream_connection->waitForNewStream();
+  request_stream = fake_upstream_connection->waitForNewStream(*dispatcher_);
   request_stream->waitForEndStream(*dispatcher_);
   response->waitForEndStream();
 
