@@ -9,11 +9,11 @@
 #include "openssl/sha.h"
 
 namespace Envoy {
-namespace HTTP {
+namespace Http {
 
 class AwsAuthenticator {
 public:
-  AwsAuthenticator(std::string &&access_key, std::string &&secret_key,
+  AwsAuthenticator(const std::string &access_key, const std::string &secret_key,
                    std::string &&service);
 
   ~AwsAuthenticator();
@@ -33,8 +33,8 @@ private:
   static bool lowercasecompare(const Envoy::Http::LowerCaseString &i,
                                const Envoy::Http::LowerCaseString &j);
 
-  std::string access_key_;
-  std::string first_key_;
+  const std::string access_key_;
+  const std::string first_key_;
   std::string service_;
   std::string host_;
 
@@ -43,5 +43,5 @@ private:
   static const std::string ALGORITHM;
 };
 
-} // namespace HTTP
+} // namespace Http
 } // namespace Envoy

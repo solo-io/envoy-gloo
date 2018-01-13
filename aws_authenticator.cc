@@ -17,12 +17,12 @@
 #include "openssl/sha.h"
 
 namespace Envoy {
-namespace HTTP {
+namespace Http {
 
 const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
 // TODO: move service to sign function
-AwsAuthenticator::AwsAuthenticator(std::string &&access_key,
-                                   std::string &&secret_key,
+AwsAuthenticator::AwsAuthenticator(const std::string &access_key,
+                                   const std::string &secret_key,
                                    std::string &&service)
     : access_key_(access_key), first_key_("AWS4" + secret_key),
       service_(service) {
@@ -231,5 +231,5 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   request_headers->insertAuthorization().value(authorizationvalue.str());
 }
 
-} // namespace HTTP
+} // namespace Http
 } // namespace Envoy
