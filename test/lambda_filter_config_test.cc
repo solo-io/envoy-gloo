@@ -71,8 +71,8 @@ TEST(LambdaFilterConfigTest, AccessAndSecret) {
       Envoy::Json::Factory::loadFromString(json);
   auto config = constructLambdaFilterConfigFromJson(*json_config);
 
-  EXPECT_EQ(config.aws_access(), "a");
-  EXPECT_EQ(config.aws_secret(), "b");
+  EXPECT_EQ(config.awsAccess(), "a");
+  EXPECT_EQ(config.awsSecret(), "b");
 }
 
 } // namespace Envoy

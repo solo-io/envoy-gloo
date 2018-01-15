@@ -16,8 +16,8 @@ public:
       : aws_access_(proto_config.access_key()),
         aws_secret_(proto_config.secret_key()) {}
 
-  const std::string &aws_access() const { return aws_access_; }
-  const std::string &aws_secret() const { return aws_secret_; }
+  const std::string &awsAccess() const { return aws_access_; }
+  const std::string &awsSecret() const { return aws_secret_; }
 
 private:
   const std::string aws_access_;

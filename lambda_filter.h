@@ -36,8 +36,8 @@ private:
   const LambdaFilterConfigSharedPtr config_;
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 
-  const std::string aws_access() const { return config_->aws_access(); }
-  const std::string aws_secret() const { return config_->aws_secret(); }
+  const std::string awsAccess() const { return config_->awsAccess(); }
+  const std::string awsSecret() const { return config_->awsSecret(); }
 
   ClusterFunctionMap functions_;
   Function currentFunction_;

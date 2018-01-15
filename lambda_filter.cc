@@ -19,7 +19,7 @@ namespace Http {
 LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
                            ClusterFunctionMap functions)
     : config_(config), functions_(std::move(functions)), active_(false),
-      awsAuthenticator_(aws_access(), aws_secret(),
+      awsAuthenticator_(awsAccess(), awsSecret(),
                         std::move(std::string("lambda"))) {}
 
 LambdaFilter::~LambdaFilter() {}
@@ -75,7 +75,7 @@ LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
   ENVOY_LOG(debug, "decodeData called end = {} data = {}", end_stream,
             data.length());
 
-  awsAuthenticator_.update_payload_hash(data);
+  awsAuthenticator_.updatePayloadHash(data);
 
   if (end_stream) {
 
