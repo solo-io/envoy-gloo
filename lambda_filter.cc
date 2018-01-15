@@ -16,10 +16,6 @@
 namespace Envoy {
 namespace Http {
 
-LambdaFilterConfig::LambdaFilterConfig(const ProtoConfig &proto_config)
-    : aws_access_(proto_config.access_key()),
-      aws_secret_(proto_config.secret_key()) {}
-
 LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
                            ClusterFunctionMap functions)
     : config_(config), functions_(std::move(functions)), active_(false),
