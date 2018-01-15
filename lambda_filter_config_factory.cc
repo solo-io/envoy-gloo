@@ -29,7 +29,7 @@ const std::string LAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
   }
   )EOF");
 
-class LambdaFilterConfig : public NamedHttpFilterConfigFactory {
+class LambdaFilterConfigFactory : public NamedHttpFilterConfigFactory {
 public:
   HttpFilterFactoryCb createFilterFactory(const Json::Object &json_config,
                                           const std::string &,
@@ -107,7 +107,7 @@ private:
  * Static registration for this sample filter. @see RegisterFactory.
  */
 static Envoy::Registry::RegisterFactory<
-    LambdaFilterConfig,
+    LambdaFilterConfigFactory,
     Envoy::Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
 

@@ -14,7 +14,7 @@ envoy_cc_test(
     data = [":envoy-test.conf"],
     repository = "@envoy",
     deps = [
-        "//:lambda_filter_config",
+        "//:lambda_filter_config_factory",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
     ],
