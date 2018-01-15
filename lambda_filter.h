@@ -10,60 +10,51 @@
 #include "server/config/network/http_connection_manager.h"
 
 #include "aws_authenticator.h"
+#include "function.h"
+#include "lambda_filter.pb.h"
 
 namespace Envoy {
-namespace HTTP {
-
-struct Function {
-  std::string func_name_;
-  std::string hostname_;
-  std::string region_;
-};
-
-typedef std::map<std::string, Function> ClusterFunctionMap;
+namespace Http {
 
 class LambdaFilterConfig {
+
+  using ProtoConfig = envoy::api::v2::filter::http::Lambda;
+
 public:
-  LambdaFilterConfig(Envoy::Runtime::Loader &runtimeloader);
+  LambdaFilterConfig(const ProtoConfig &proto_config);
 
-  const std::string &aws_access() { return aws_access_; }
-
-  const std::string &aws_secret() { return aws_secret_; }
-
-  const Function *get_function(const std::string &cluster_name);
+  const std::string &aws_access() const { return aws_access_; }
+  const std::string &aws_secret() const { return aws_secret_; }
 
 private:
-  Envoy::Runtime::Loader &runtimeloader_;
-
   const std::string aws_access_;
   const std::string aws_secret_;
-  const ClusterFunctionMap functions_;
 };
 
 typedef std::shared_ptr<LambdaFilterConfig> LambdaFilterConfigSharedPtr;
 
-class LambdaFilter : public Envoy::Http::StreamDecoderFilter,
-                     public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+class LambdaFilter : public StreamDecoderFilter,
+                     public Logger::Loggable<Logger::Id::filter> {
 public:
-  LambdaFilter(std::string access_key, std::string secret_key,
-               ClusterFunctionMap functions);
+  LambdaFilter(LambdaFilterConfigSharedPtr, ClusterFunctionMap);
   ~LambdaFilter();
 
   // Http::StreamFilterBase
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  Envoy::Http::FilterHeadersStatus
-  decodeHeaders(Envoy::Http::HeaderMap &headers, bool) override;
-  Envoy::Http::FilterDataStatus decodeData(Envoy::Buffer::Instance &,
-                                           bool) override;
-  Envoy::Http::FilterTrailersStatus
-  decodeTrailers(Envoy::Http::HeaderMap &) override;
-  void setDecoderFilterCallbacks(
-      Envoy::Http::StreamDecoderFilterCallbacks &callbacks) override;
+  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
+  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
+  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
+  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &) override;
 
 private:
-  Envoy::Http::StreamDecoderFilterCallbacks *decoder_callbacks_;
+  const LambdaFilterConfigSharedPtr config_;
+  StreamDecoderFilterCallbacks *decoder_callbacks_;
+
+  const std::string aws_access() const { return config_->aws_access(); }
+  const std::string aws_secret() const { return config_->aws_secret(); }
+
   ClusterFunctionMap functions_;
   Function currentFunction_;
   void lambdafy();
@@ -74,5 +65,5 @@ private:
   AwsAuthenticator awsAuthenticator_;
 };
 
-} // namespace HTTP
+} // namespace Http
 } // namespace Envoy

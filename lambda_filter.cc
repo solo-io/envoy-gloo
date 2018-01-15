@@ -14,27 +14,16 @@
 #include "server/config/network/http_connection_manager.h"
 
 namespace Envoy {
-namespace HTTP {
+namespace Http {
 
-LambdaFilterConfig::LambdaFilterConfig(Envoy::Runtime::Loader &runtimeloader)
-    : runtimeloader_{runtimeloader} {
+LambdaFilterConfig::LambdaFilterConfig(const ProtoConfig &proto_config)
+    : aws_access_(proto_config.access_key()),
+      aws_secret_(proto_config.secret_key()) {}
 
-  // TODO
-}
-
-const Function *
-LambdaFilterConfig::get_function(const std::string &cluster_name) {
-  auto currentFunction = functions_.find(cluster_name);
-  if (currentFunction == functions_.end()) {
-    return nullptr;
-  }
-  return &currentFunction->second;
-}
-
-LambdaFilter::LambdaFilter(std::string access_key, std::string secret_key,
+LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
                            ClusterFunctionMap functions)
-    : functions_(std::move(functions)), active_(false),
-      awsAuthenticator_(std::move(access_key), std::move(secret_key),
+    : config_(config), functions_(std::move(functions)), active_(false),
+      awsAuthenticator_(aws_access(), aws_secret(),
                         std::move(std::string("lambda"))) {}
 
 LambdaFilter::~LambdaFilter() {}
@@ -148,5 +137,5 @@ void LambdaFilter::setDecoderFilterCallbacks(
   decoder_callbacks_ = &callbacks;
 }
 
-} // namespace HTTP
+} // namespace Http
 } // namespace Envoy

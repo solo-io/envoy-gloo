@@ -2,13 +2,17 @@
 
 #include "envoy/registry/registry.h"
 
+#include "common/config/json_utility.h"
+#include "common/protobuf/utility.h"
+
 #include "lambda_filter.h"
+#include "lambda_filter.pb.h"
 
 namespace Envoy {
-namespace HTTP {
+namespace Server {
 namespace Configuration {
 
-const std::string lAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
+const std::string LAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
   {
     "$schema": "http://json-schema.org/schema#",
     "type" : "object",
@@ -18,63 +22,85 @@ const std::string lAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
       },
       "secret_key": {
         "type" : "string"
-      },
-      "functions": {
-        "type" : "object",
-        "additionalProperties" : {
-          "type" : "object",
-          "properties": {
-            "func_name" : {"type":"string"},
-            "hostname" : {"type":"string"},
-            "region" : {"type":"string"}
-          }
-        }
       }
     },
-    "required": ["access_key", "secret_key", "functions"],
+    "required": ["access_key", "secret_key"],
     "additionalProperties" : false
   }
   )EOF");
 
-class LambdaFilterConfig
-    : public Envoy::Server::Configuration::NamedHttpFilterConfigFactory {
+class LambdaFilterConfig : public NamedHttpFilterConfigFactory {
 public:
-  Envoy::Server::Configuration::HttpFilterFactoryCb
-  createFilterFactory(const Envoy::Json::Object &json_config,
-                      const std::string &,
-                      Envoy::Server::Configuration::FactoryContext &) override {
-    json_config.validateSchema(lAMBDA_HTTP_FILTER_SCHEMA);
+  HttpFilterFactoryCb createFilterFactory(const Json::Object &json_config,
+                                          const std::string &,
+                                          FactoryContext &context) override {
 
-    std::string access_key = json_config.getString("access_key", "");
-    std::string secret_key = json_config.getString("secret_key", "");
-    const Envoy::Json::ObjectSharedPtr functions_obj =
-        json_config.getObject("functions", false);
+    envoy::api::v2::filter::http::Lambda proto_config;
+    translateLambdaFilter(json_config, proto_config);
 
-    ClusterFunctionMap functions;
+    return createFilter(proto_config, context);
+  }
 
-    functions_obj->iterate(
-        [&functions](const std::string &key, const Envoy::Json::Object &value) {
-          const std::string cluster_name = key;
-          const std::string func_name = value.getString("func_name", "");
-          const std::string hostname = value.getString("hostname", "");
-          const std::string region = value.getString("region", "");
-          functions[cluster_name] = Function{
-            func_name_ : func_name,
-            hostname_ : hostname,
-            region_ : region,
-          };
-          return true;
-        });
+  HttpFilterFactoryCb
+  createFilterFactoryFromProto(const Protobuf::Message &proto_config,
+                               const std::string &,
+                               FactoryContext &context) override {
+    /**
+     * TODO:
+     * The corresponding `.pb.validate.h` for the message is required by
+     * Envoy::MessageUtil.
+     * @see https://github.com/envoyproxy/envoy/pull/2194
+     *
+     * #include "lambda_filter.pb.validate.h"
+     *
+     * return createFilter(
+     *    Envoy::MessageUtil::downcastAndValidate<const
+     * envoy::api::v2::filter::http::Lambda&>(proto_config), context);
+     * */
 
-    return [access_key, secret_key, functions](
+    return createFilter(
+        dynamic_cast<const envoy::api::v2::filter::http::Lambda &>(
+            proto_config),
+        context);
+  }
+
+  ProtobufTypes::MessagePtr createEmptyConfigProto() override {
+    return ProtobufTypes::MessagePtr{
+        new envoy::api::v2::filter::http::Lambda()};
+  }
+
+  std::string name() override { return "lambda"; }
+
+private:
+  HttpFilterFactoryCb
+  createFilter(const envoy::api::v2::filter::http::Lambda &proto_config,
+               FactoryContext &context) {
+
+    Http::LambdaFilterConfigSharedPtr config =
+        std::make_shared<Http::LambdaFilterConfig>(
+            Http::LambdaFilterConfig(proto_config));
+
+    Http::ClusterFunctionMap functions = {
+        {"lambda-func1",
+         {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
+
+    return [&context, config, functions](
                Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-      auto filter = new LambdaFilter(
-          std::move(access_key), std::move(secret_key), std::move(functions));
+      auto filter = new Http::LambdaFilter(config, std::move(functions));
       callbacks.addStreamDecoderFilter(
-          Envoy::Http::StreamDecoderFilterSharedPtr{filter});
+          Http::StreamDecoderFilterSharedPtr{filter});
     };
   }
-  std::string name() override { return "lambda"; }
+
+  void
+  translateLambdaFilter(const Json::Object &json_config,
+                        envoy::api::v2::filter::http::Lambda &proto_config) {
+
+    json_config.validateSchema(LAMBDA_HTTP_FILTER_SCHEMA);
+
+    JSON_UTIL_SET_STRING(json_config, proto_config, access_key);
+    JSON_UTIL_SET_STRING(json_config, proto_config, secret_key);
+  }
 };
 
 /**
@@ -86,5 +112,5 @@ static Envoy::Registry::RegisterFactory<
     register_;
 
 } // namespace Configuration
-} // namespace HTTP
+} // namespace Server
 } // namespace Envoy

@@ -21,6 +21,11 @@ envoy_cc_binary(
     ],
 )
 
+api_proto_library(
+    name = "lambda_filter_proto",
+    srcs = ["lambda_filter.proto"],
+)
+
 envoy_cc_library(
     name = "aws_authenticator_lib",
     srcs = ["aws_authenticator.cc"],
@@ -31,19 +36,17 @@ envoy_cc_library(
     ],
 )
 
-api_proto_library(
-    name = "lambda_proto",
-    srcs = ["lambda.proto"],
-)
-
 envoy_cc_library(
     name = "lambda_filter_lib",
     srcs = ["lambda_filter.cc"],
-    hdrs = ["lambda_filter.h"],
+    hdrs = [
+        "function.h",
+        "lambda_filter.h",
+    ],
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        ":lambda_proto_cc",
+        ":lambda_filter_proto_cc",
         "@envoy//source/exe:envoy_common_lib",
     ],
 )
@@ -56,17 +59,5 @@ envoy_cc_library(
     deps = [
         ":lambda_filter_lib",
         "@envoy//source/exe:envoy_common_lib",
-    ],
-)
-
-envoy_cc_test(
-    name = "lambda_filter_integration_test",
-    srcs = ["lambda_filter_integration_test.cc"],
-    data = [":envoy-test.conf"],
-    repository = "@envoy",
-    deps = [
-        ":lambda_filter_config",
-        "@envoy//test/integration:http_integration_lib",
-        "@envoy//test/integration:integration_lib",
     ],
 )
