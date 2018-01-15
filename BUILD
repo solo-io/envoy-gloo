@@ -37,6 +37,16 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "lambda_filter_config",
+    hdrs = ["lambda_filter_config.h"],
+    repository = "@envoy",
+    deps = [
+        ":lambda_filter_proto_cc",
+        "@envoy//source/exe:envoy_common_lib",
+    ],
+)
+
+envoy_cc_library(
     name = "lambda_filter_lib",
     srcs = ["lambda_filter.cc"],
     hdrs = [
@@ -46,7 +56,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        ":lambda_filter_proto_cc",
+        ":lambda_filter_config",
         "@envoy//source/exe:envoy_common_lib",
     ],
 )
@@ -54,6 +64,7 @@ envoy_cc_library(
 envoy_cc_library(
     name = "lambda_filter_config_factory",
     srcs = ["lambda_filter_config_factory.cc"],
+    hdrs = ["lambda_filter_config_factory.h"],
     repository = "@envoy",
     visibility = ["//visibility:public"],
     deps = [
