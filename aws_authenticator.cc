@@ -31,8 +31,7 @@ AwsAuthenticator::AwsAuthenticator(const std::string &access_key,
 
 AwsAuthenticator::~AwsAuthenticator() {}
 
-void AwsAuthenticator::update_payload_hash(
-    const Envoy::Buffer::Instance &data) {
+void AwsAuthenticator::updatePayloadHash(const Envoy::Buffer::Instance &data) {
 
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
   Envoy::Buffer::RawSlice slices[num_slices];
@@ -42,9 +41,9 @@ void AwsAuthenticator::update_payload_hash(
   }
 }
 
-const Envoy::Http::HeaderEntry *AwsAuthenticator::get_maybe_inline_header(
-    Envoy::Http::HeaderMap *request_headers,
-    const Envoy::Http::LowerCaseString &im) {
+const Envoy::Http::HeaderEntry *
+AwsAuthenticator::getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
+                                       const Envoy::Http::LowerCaseString &im) {
 #define Q(x) #x
 #define QUOTE(x) Q(x)
 
@@ -88,7 +87,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
        header++) {
     const Envoy::Http::HeaderEntry *headerEntry = request_headers->get(*header);
     if (headerEntry == nullptr) {
-      headerEntry = get_maybe_inline_header(request_headers, *header);
+      headerEntry = getMaybeInlineHeader(request_headers, *header);
     }
 
     auto headerName = header->get();
