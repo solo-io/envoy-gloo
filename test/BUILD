@@ -29,3 +29,13 @@ envoy_cc_test(
         "@envoy//test/integration:integration_lib",
     ],
 )
+
+envoy_cc_test(
+    name = "lambda_filter_lib_test",
+    srcs = ["function_retriever_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//:lambda_filter_lib",
+        "@envoy//test/test_common:utility_lib",
+    ],
+)

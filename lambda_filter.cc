@@ -13,6 +13,8 @@
 
 #include "server/config/network/http_connection_manager.h"
 
+#include "function_retriever.h"
+
 namespace Envoy {
 namespace Http {
 
@@ -45,13 +47,14 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
   }
 
   const std::string &cluster_name = routeEntry->clusterName();
-  ClusterFunctionMap::iterator currentFunction = functions_.find(cluster_name);
-  if (currentFunction == functions_.end()) {
+  const Function *currentFunction =
+      FunctionRetriever::getFunction(functions_, cluster_name);
+  if (currentFunction == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
   active_ = true;
-  currentFunction_ = currentFunction->second;
+  currentFunction_ = *currentFunction;
 
   headers.insertMethod().value().setReference(
       Envoy::Http::Headers::get().MethodValues.Post);
