@@ -3,11 +3,13 @@
 namespace Envoy {
 namespace Http {
 
+FunctionRetriever::FunctionRetriever(ClusterFunctionMap &&functions)
+    : functions_(functions) {}
+
 const Function *
-FunctionRetriever::getFunction(const ClusterFunctionMap &functions,
-                               const std::string &cluster_name) {
-  auto currentFunction = functions.find(cluster_name);
-  if (currentFunction == functions.end()) {
+FunctionRetriever::getFunction(const std::string &cluster_name) {
+  auto currentFunction = functions_.find(cluster_name);
+  if (currentFunction == functions_.end()) {
     return nullptr;
   }
 

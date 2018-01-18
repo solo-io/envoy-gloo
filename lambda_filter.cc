@@ -13,14 +13,12 @@
 
 #include "server/config/network/http_connection_manager.h"
 
-#include "function_retriever.h"
-
 namespace Envoy {
 namespace Http {
 
 LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
-                           ClusterFunctionMap functions)
-    : config_(config), functions_(std::move(functions)), active_(false),
+                           FunctionRetrieverSharedPtr functionRetriever)
+    : config_(config), functionRetriever_(functionRetriever), active_(false),
       awsAuthenticator_(awsAccess(), awsSecret(),
                         std::move(std::string("lambda"))) {}
 
@@ -48,7 +46,7 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 
   const std::string &cluster_name = routeEntry->clusterName();
   const Function *currentFunction =
-      FunctionRetriever::getFunction(functions_, cluster_name);
+      functionRetriever_->getFunction(cluster_name);
   if (currentFunction == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }

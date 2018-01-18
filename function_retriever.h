@@ -1,20 +1,22 @@
 #pragma once
 
+#include <memory>
+
 #include "function.h"
 
 namespace Envoy {
 namespace Http {
 
 class FunctionRetriever {
-
-  // Disallow construction.
-  FunctionRetriever() = delete;
-  FunctionRetriever(const FunctionRetriever &) = delete;
-
 public:
-  static const Function *getFunction(const ClusterFunctionMap &functions,
-                                     const std::string &cluster_name);
+  FunctionRetriever(ClusterFunctionMap &&functions);
+  const Function *getFunction(const std::string &cluster_name);
+
+private:
+  ClusterFunctionMap functions_;
 };
+
+typedef std::shared_ptr<FunctionRetriever> FunctionRetrieverSharedPtr;
 
 } // namespace Http
 } // namespace Envoy

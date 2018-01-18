@@ -6,24 +6,30 @@
 namespace Envoy {
 
 using Http::ClusterFunctionMap;
+using Http::Function;
 using Http::FunctionRetriever;
 
 TEST(FunctionRetrieverTest, EmptyFunctionMap) {
 
   ClusterFunctionMap functions;
 
-  auto function = FunctionRetriever::getFunction(functions, "lambda-func1");
+  FunctionRetriever functionRetriever(std::move(functions));
+  auto function = functionRetriever.getFunction("lambda-func1");
   EXPECT_EQ(function, nullptr);
 }
 
 TEST(FunctionRetrieverTest, ExistingCluster) {
 
-  ClusterFunctionMap functions = {
-      {"lambda-func1",
-       {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
+  std::string cluster_name{"lambda-func1"};
+  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
+                              "us-east-1"};
 
-  auto function = FunctionRetriever::getFunction(functions, "lambda-func1");
-  EXPECT_EQ(function, &functions["lambda-func1"]);
+  ClusterFunctionMap functions = {{cluster_name, configuredFunction}};
+
+  FunctionRetriever functionRetriever(std::move(functions));
+  auto actualFunction = functionRetriever.getFunction(cluster_name);
+
+  EXPECT_EQ(*actualFunction, configuredFunction);
 }
 
 TEST(FunctionRetrieverTest, MissingCluster) {
@@ -32,7 +38,9 @@ TEST(FunctionRetrieverTest, MissingCluster) {
       {"lambda-func1",
        {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
 
-  auto function = FunctionRetriever::getFunction(functions, "lambda-func2");
+  FunctionRetriever functionRetriever(std::move(functions));
+  auto function = functionRetriever.getFunction("lambda-func2");
+
   EXPECT_EQ(function, nullptr);
 }
 

@@ -11,6 +11,7 @@
 
 #include "aws_authenticator.h"
 #include "function.h"
+#include "function_retriever.h"
 #include "lambda_filter.pb.h"
 #include "lambda_filter_config.h"
 
@@ -20,7 +21,7 @@ namespace Http {
 class LambdaFilter : public StreamDecoderFilter,
                      public Logger::Loggable<Logger::Id::filter> {
 public:
-  LambdaFilter(LambdaFilterConfigSharedPtr, ClusterFunctionMap);
+  LambdaFilter(LambdaFilterConfigSharedPtr, FunctionRetrieverSharedPtr);
   ~LambdaFilter();
 
   // Http::StreamFilterBase
@@ -39,7 +40,7 @@ private:
   const std::string awsAccess() const { return config_->awsAccess(); }
   const std::string awsSecret() const { return config_->awsSecret(); }
 
-  ClusterFunctionMap functions_;
+  FunctionRetrieverSharedPtr functionRetriever_;
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();

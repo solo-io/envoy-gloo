@@ -79,9 +79,13 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
       {"lambda-func1",
        {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
 
-  return [&context, config, functions](
+  Http::FunctionRetrieverSharedPtr functionRetriever =
+      std::make_shared<Http::FunctionRetriever>(
+          Http::FunctionRetriever(std::move(functions)));
+
+  return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(config, std::move(functions));
+    auto filter = new Http::LambdaFilter(config, functionRetriever);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
