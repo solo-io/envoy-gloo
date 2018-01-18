@@ -1,24 +1,24 @@
 #include "test/test_common/utility.h"
 
 #include "function.h"
-#include "function_retriever.h"
+#include "map_function_retriever.h"
 
 namespace Envoy {
 
 using Http::ClusterFunctionMap;
 using Http::Function;
-using Http::FunctionRetriever;
+using Http::MapFunctionRetriever;
 
-TEST(FunctionRetrieverTest, EmptyFunctionMap) {
+TEST(MapFunctionRetrieverTest, EmptyFunctionMap) {
 
   ClusterFunctionMap functions;
 
-  FunctionRetriever functionRetriever(std::move(functions));
+  MapFunctionRetriever functionRetriever(std::move(functions));
   auto function = functionRetriever.getFunction("lambda-func1");
   EXPECT_EQ(function, nullptr);
 }
 
-TEST(FunctionRetrieverTest, ExistingCluster) {
+TEST(MapFunctionRetrieverTest, ExistingCluster) {
 
   std::string cluster_name{"lambda-func1"};
   Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
@@ -26,19 +26,19 @@ TEST(FunctionRetrieverTest, ExistingCluster) {
 
   ClusterFunctionMap functions = {{cluster_name, configuredFunction}};
 
-  FunctionRetriever functionRetriever(std::move(functions));
+  MapFunctionRetriever functionRetriever(std::move(functions));
   auto actualFunction = functionRetriever.getFunction(cluster_name);
 
   EXPECT_EQ(*actualFunction, configuredFunction);
 }
 
-TEST(FunctionRetrieverTest, MissingCluster) {
+TEST(MapFunctionRetrieverTest, MissingCluster) {
 
   ClusterFunctionMap functions = {
       {"lambda-func1",
        {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
 
-  FunctionRetriever functionRetriever(std::move(functions));
+  MapFunctionRetriever functionRetriever(std::move(functions));
   auto function = functionRetriever.getFunction("lambda-func2");
 
   EXPECT_EQ(function, nullptr);

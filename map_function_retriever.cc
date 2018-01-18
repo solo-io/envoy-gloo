@@ -1,13 +1,13 @@
-#include "function_retriever.h"
+#include "map_function_retriever.h"
 
 namespace Envoy {
 namespace Http {
 
-FunctionRetriever::FunctionRetriever(ClusterFunctionMap &&functions)
+MapFunctionRetriever::MapFunctionRetriever(ClusterFunctionMap &&functions)
     : functions_(functions) {}
 
 const Function *
-FunctionRetriever::getFunction(const std::string &cluster_name) {
+MapFunctionRetriever::getFunction(const std::string &cluster_name) {
   auto currentFunction = functions_.find(cluster_name);
   if (currentFunction == functions_.end()) {
     return nullptr;

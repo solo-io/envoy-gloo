@@ -11,9 +11,9 @@
 
 #include "aws_authenticator.h"
 #include "function.h"
-#include "function_retriever.h"
 #include "lambda_filter.pb.h"
 #include "lambda_filter_config.h"
+#include "map_function_retriever.h"
 
 namespace Envoy {
 namespace Http {

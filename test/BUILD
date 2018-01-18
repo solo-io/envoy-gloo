@@ -32,7 +32,7 @@ envoy_cc_test(
 
 envoy_cc_test(
     name = "lambda_filter_lib_test",
-    srcs = ["function_retriever_test.cc"],
+    srcs = ["map_function_retriever_test.cc"],
     repository = "@envoy",
     deps = [
         "//:lambda_filter_lib",
