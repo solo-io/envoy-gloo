@@ -3,20 +3,19 @@
 #include <memory>
 
 #include "function.h"
+#include "function_retriever.h"
 
 namespace Envoy {
 namespace Http {
 
-class MapFunctionRetriever {
+class MapFunctionRetriever : public FunctionRetriever {
 public:
   MapFunctionRetriever(ClusterFunctionMap &&functions);
-  const Function *getFunction(const std::string &cluster_name);
+  const Function *getFunction(const std::string &cluster_name) override;
 
 private:
   ClusterFunctionMap functions_;
 };
-
-typedef std::shared_ptr<MapFunctionRetriever> FunctionRetrieverSharedPtr;
 
 } // namespace Http
 } // namespace Envoy
