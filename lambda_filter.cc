@@ -10,6 +10,7 @@
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
+#include "common/http/filter_utility.h"
 
 #include "server/config/network/http_connection_manager.h"
 
@@ -17,10 +18,11 @@ namespace Envoy {
 namespace Http {
 
 LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
-                           FunctionRetrieverSharedPtr functionRetriever)
-    : config_(config), functionRetriever_(functionRetriever), active_(false),
-      awsAuthenticator_(awsAccess(), awsSecret(),
-                        std::move(std::string("lambda"))) {}
+                           FunctionRetrieverSharedPtr functionRetriever,
+                           ClusterManager &cm)
+    : config_(config), functionRetriever_(functionRetriever), cm_(cm),
+      active_(false), awsAuthenticator_(awsAccess(), awsSecret(),
+                                        std::move(std::string("lambda"))) {}
 
 LambdaFilter::~LambdaFilter() {}
 
@@ -37,16 +39,13 @@ std::string LambdaFilter::functionUrlPath() {
 Envoy::Http::FilterHeadersStatus
 LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 
-  const Envoy::Router::RouteEntry *routeEntry =
-      decoder_callbacks_->route()->routeEntry();
-
-  if (routeEntry == nullptr) {
+  Upstream::ClusterInfoConstSharedPtr info =
+      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
+  if (info == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
-
-  const std::string &cluster_name = routeEntry->clusterName();
   const Function *currentFunction =
-      functionRetriever_->getFunction(cluster_name);
+      functionRetriever_->getFunction(info->name());
   if (currentFunction == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }

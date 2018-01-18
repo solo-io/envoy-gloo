@@ -18,10 +18,13 @@
 namespace Envoy {
 namespace Http {
 
+using Envoy::Upstream::ClusterManager;
+
 class LambdaFilter : public StreamDecoderFilter,
                      public Logger::Loggable<Logger::Id::filter> {
 public:
-  LambdaFilter(LambdaFilterConfigSharedPtr, FunctionRetrieverSharedPtr);
+  LambdaFilter(LambdaFilterConfigSharedPtr, FunctionRetrieverSharedPtr,
+               ClusterManager &);
   ~LambdaFilter();
 
   // Http::StreamFilterBase
@@ -35,12 +38,14 @@ public:
 
 private:
   const LambdaFilterConfigSharedPtr config_;
+  FunctionRetrieverSharedPtr functionRetriever_;
+  ClusterManager &cm_;
+
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 
   const std::string awsAccess() const { return config_->awsAccess(); }
   const std::string awsSecret() const { return config_->awsSecret(); }
 
-  FunctionRetrieverSharedPtr functionRetriever_;
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();
