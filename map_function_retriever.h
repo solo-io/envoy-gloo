@@ -11,7 +11,7 @@ namespace Http {
 class MapFunctionRetriever : public FunctionRetriever {
 public:
   MapFunctionRetriever(ClusterFunctionMap &&functions);
-  const Function *getFunction(const std::string &cluster_name) override;
+  Optional<Function> getFunction(const std::string &cluster_name) override;
 
 private:
   ClusterFunctionMap functions_;

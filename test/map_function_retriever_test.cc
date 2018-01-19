@@ -15,7 +15,7 @@ TEST(MapFunctionRetrieverTest, EmptyFunctionMap) {
 
   MapFunctionRetriever functionRetriever(std::move(functions));
   auto function = functionRetriever.getFunction("lambda-func1");
-  EXPECT_EQ(function, nullptr);
+  EXPECT_FALSE(function.valid());
 }
 
 TEST(MapFunctionRetrieverTest, ExistingCluster) {
@@ -29,7 +29,7 @@ TEST(MapFunctionRetrieverTest, ExistingCluster) {
   MapFunctionRetriever functionRetriever(std::move(functions));
   auto actualFunction = functionRetriever.getFunction(cluster_name);
 
-  EXPECT_EQ(*actualFunction, configuredFunction);
+  EXPECT_EQ(actualFunction.value(), configuredFunction);
 }
 
 TEST(MapFunctionRetrieverTest, MissingCluster) {
@@ -41,7 +41,7 @@ TEST(MapFunctionRetrieverTest, MissingCluster) {
   MapFunctionRetriever functionRetriever(std::move(functions));
   auto function = functionRetriever.getFunction("lambda-func2");
 
-  EXPECT_EQ(function, nullptr);
+  EXPECT_FALSE(function.valid());
 }
 
 } // namespace Envoy

@@ -44,14 +44,14 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
   if (info == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
-  const Function *currentFunction =
-      functionRetriever_->getFunction(info->name());
-  if (currentFunction == nullptr) {
+
+  auto optionalFunction = functionRetriever_->getFunction(info->name());
+  if (!optionalFunction.valid()) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
   active_ = true;
-  currentFunction_ = *currentFunction;
+  currentFunction_ = std::move(optionalFunction.value());
 
   headers.insertMethod().value().setReference(
       Envoy::Http::Headers::get().MethodValues.Post);
