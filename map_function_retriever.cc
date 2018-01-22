@@ -6,6 +6,10 @@ namespace Http {
 MapFunctionRetriever::MapFunctionRetriever(ClusterFunctionMap &&functions)
     : functions_(functions) {}
 
+Optional<Function> MapFunctionRetriever::getFunction(const ClusterInfo &info) {
+  return getFunction(info.name());
+}
+
 Optional<Function>
 MapFunctionRetriever::getFunction(const std::string &cluster_name) {
   auto currentFunction = functions_.find(cluster_name);

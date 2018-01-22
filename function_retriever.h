@@ -4,16 +4,19 @@
 
 #include "envoy/common/optional.h"
 #include "envoy/common/pure.h"
+#include "envoy/upstream/upstream.h"
 
 #include "function.h"
 
 namespace Envoy {
 namespace Http {
 
+using Upstream::ClusterInfo;
+
 class FunctionRetriever {
 public:
   virtual ~FunctionRetriever() {}
-  virtual Optional<Function> getFunction(const std::string &cluster_name) PURE;
+  virtual Optional<Function> getFunction(const ClusterInfo &info) PURE;
 };
 
 typedef std::shared_ptr<FunctionRetriever> FunctionRetrieverSharedPtr;

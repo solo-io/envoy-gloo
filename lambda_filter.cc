@@ -45,7 +45,7 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
-  auto optionalFunction = functionRetriever_->getFunction(info->name());
+  auto optionalFunction = functionRetriever_->getFunction(*info);
   if (!optionalFunction.valid()) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }

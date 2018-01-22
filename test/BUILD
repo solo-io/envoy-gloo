@@ -31,8 +31,18 @@ envoy_cc_test(
 )
 
 envoy_cc_test(
-    name = "lambda_filter_lib_test",
+    name = "map_function_retriever_test",
     srcs = ["map_function_retriever_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//:lambda_filter_lib",
+        "@envoy//test/test_common:utility_lib",
+    ],
+)
+
+envoy_cc_test(
+    name = "metadata_function_retriever_test",
+    srcs = ["metadata_function_retriever_test.cc"],
     repository = "@envoy",
     deps = [
         "//:lambda_filter_lib",

@@ -51,12 +51,14 @@ envoy_cc_library(
     srcs = [
         "lambda_filter.cc",
         "map_function_retriever.cc",
+        "metadata_function_retriever.cc",
     ],
     hdrs = [
         "function.h",
         "function_retriever.h",
         "lambda_filter.h",
         "map_function_retriever.h",
+        "metadata_function_retriever.h",
     ],
     repository = "@envoy",
     deps = [
