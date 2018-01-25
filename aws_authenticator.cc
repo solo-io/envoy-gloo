@@ -20,12 +20,13 @@ namespace Envoy {
 namespace Http {
 
 const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
+
+const std::string AwsAuthenticator::SERVICE = "lambda";
+
 // TODO: move service to sign function
 AwsAuthenticator::AwsAuthenticator(const std::string &access_key,
-                                   const std::string &secret_key,
-                                   std::string &&service)
-    : access_key_(access_key), first_key_("AWS4" + secret_key),
-      service_(service) {
+                                   const std::string &secret_key)
+    : access_key_(access_key), first_key_("AWS4" + secret_key) {
   SHA256_Init(&body_sha_);
 }
 
@@ -161,7 +162,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
 
   std::stringstream credentialScopeStream;
   credentialScopeStream << CredentialScopeDate << "/" << region << "/"
-                        << service_ << "/aws4_request";
+                        << SERVICE << "/aws4_request";
   std::string CredentialScope = credentialScopeStream.str();
 
   /*
@@ -187,8 +188,8 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   HMAC_Final(&ctx, out, &out_len);
 
   HMAC_Init(&ctx, out, out_len, nullptr);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(service_.c_str()),
-              service_.size());
+  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(SERVICE.c_str()),
+              SERVICE.size());
   HMAC_Final(&ctx, out, &out_len);
 
   static std::string aws_request = "aws4_request";

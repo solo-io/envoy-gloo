@@ -13,8 +13,8 @@ namespace Http {
 
 class AwsAuthenticator {
 public:
-  AwsAuthenticator(const std::string &access_key, const std::string &secret_key,
-                   std::string &&service);
+  AwsAuthenticator(const std::string &access_key,
+                   const std::string &secret_key);
 
   ~AwsAuthenticator();
 
@@ -35,12 +35,12 @@ private:
 
   const std::string access_key_;
   const std::string first_key_;
-  std::string service_;
   std::string host_;
 
   SHA256_CTX body_sha_;
 
   static const std::string ALGORITHM;
+  static const std::string SERVICE;
 };
 
 } // namespace Http

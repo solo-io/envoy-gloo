@@ -21,8 +21,7 @@ LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
                            FunctionRetrieverSharedPtr functionRetriever,
                            ClusterManager &cm)
     : config_(config), functionRetriever_(functionRetriever), cm_(cm),
-      active_(false),
-      awsAuthenticator_(awsAccess(), awsSecret(), std::string("lambda")) {}
+      active_(false), awsAuthenticator_(awsAccess(), awsSecret()) {}
 
 LambdaFilter::~LambdaFilter() {}
 
