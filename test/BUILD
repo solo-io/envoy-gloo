@@ -9,9 +9,18 @@ load(
 envoy_package()
 
 envoy_cc_test(
+    name = "lambda_filter_config_test",
+    srcs = ["lambda_filter_config_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//:lambda_filter_config_factory",
+        "@envoy//test/test_common:utility_lib",
+    ],
+)
+
+envoy_cc_test(
     name = "lambda_filter_integration_test",
     srcs = ["lambda_filter_integration_test.cc"],
-    data = [":envoy-test.conf"],
     repository = "@envoy",
     deps = [
         "//:lambda_filter_config_factory",
@@ -21,11 +30,21 @@ envoy_cc_test(
 )
 
 envoy_cc_test(
-    name = "lambda_filter_config_test",
-    srcs = ["lambda_filter_config_test.cc"],
+    name = "map_function_retriever_test",
+    srcs = ["map_function_retriever_test.cc"],
     repository = "@envoy",
     deps = [
-        "//:lambda_filter_config_factory",
+        "//:lambda_filter_lib",
+        "@envoy//test/test_common:utility_lib",
+    ],
+)
+
+envoy_cc_test(
+    name = "metadata_function_retriever_test",
+    srcs = ["metadata_function_retriever_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//:lambda_filter_lib",
         "@envoy//test/test_common:utility_lib",
     ],
 )

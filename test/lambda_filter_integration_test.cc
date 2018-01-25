@@ -1,8 +1,21 @@
+#include "common/config/metadata.h"
+
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
+#include "metadata_function_retriever.h"
+
 namespace Envoy {
+
+const std::string DEFAULT_LAMBDA_FILTER =
+    R"EOF(
+name: envoy.lambda
+config:
+    access_key: a
+    secret_key: b
+)EOF";
+
 class LambdaFilterIntegrationTest
     : public Envoy::HttpIntegrationTest,
       public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
@@ -10,24 +23,46 @@ public:
   LambdaFilterIntegrationTest()
       : Envoy::HttpIntegrationTest(Envoy::Http::CodecClient::Type::HTTP1,
                                    GetParam()) {}
+
   /**
    * Initializer for an individual integration test.
    */
-  void SetUp() override {
-    fake_upstreams_.emplace_back(new Envoy::FakeUpstream(
-        0, Envoy::FakeHttpConnection::Type::HTTP1, version_));
-    registerPort("upstream_0",
-                 fake_upstreams_.back()->localAddress()->ip()->port());
-    createTestServer("test/envoy-test.conf", {"http"});
+  void initialize() override {
+
+    config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
+
+    config_helper_.addConfigModifier([](envoy::api::v2::Bootstrap &bootstrap) {
+      auto &lambda_cluster =
+          (*bootstrap.mutable_static_resources()->mutable_clusters())[0];
+
+      auto *metadata = lambda_cluster.mutable_metadata();
+
+      Config::Metadata::mutableMetadataValue(
+          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
+          Http::MetadataFunctionRetriever::FUNCTION_FUNC_NAME)
+          .set_string_value("FunctionName");
+
+      Config::Metadata::mutableMetadataValue(
+          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
+          Http::MetadataFunctionRetriever::FUNCTION_HOSTNAME)
+          .set_string_value("lambda.us-east-1.amazonaws.com");
+
+      Config::Metadata::mutableMetadataValue(
+          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
+          Http::MetadataFunctionRetriever::FUNCTION_REGION)
+          .set_string_value("us-east-1");
+    });
+
+    HttpIntegrationTest::initialize();
+
+    codec_client_ =
+        makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
   /**
-   * Destructor for an individual integration test.
+   * Initialize before every test.
    */
-  void TearDown() override {
-    test_server_.reset();
-    fake_upstreams_.clear();
-  }
+  void SetUp() override { initialize(); }
 };
 
 INSTANTIATE_TEST_CASE_P(
@@ -38,20 +73,17 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
   Envoy::Http::TestHeaderMapImpl headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
-  Envoy::IntegrationCodecClientPtr codec_client;
-  Envoy::FakeHttpConnectionPtr fake_upstream_connection;
   Envoy::IntegrationStreamDecoderPtr response(
       new Envoy::IntegrationStreamDecoder(*dispatcher_));
   Envoy::FakeStreamPtr request_stream;
 
-  codec_client = makeHttpConnection(lookupPort("http"));
   Envoy::Http::StreamEncoder &stream =
-      codec_client->startRequest(headers, *response);
+      codec_client_->startRequest(headers, *response);
   Envoy::Buffer::OwnedImpl data;
   data.add(std::string("{\"a\":123}"));
-  codec_client->sendData(stream, data, true);
+  codec_client_->sendData(stream, data, true);
 
-  fake_upstream_connection =
+  Envoy::FakeHttpConnectionPtr fake_upstream_connection =
       fake_upstreams_[0]->waitForHttpConnection(*dispatcher_);
   request_stream = fake_upstream_connection->waitForNewStream(*dispatcher_);
   request_stream->waitForEndStream(*dispatcher_);
@@ -62,6 +94,6 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
                    ->value()
                    .size());
 
-  codec_client->close();
+  codec_client_->close();
 }
 } // namespace Envoy

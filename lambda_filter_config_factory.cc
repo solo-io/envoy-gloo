@@ -12,6 +12,7 @@
 #include "lambda_filter.h"
 #include "lambda_filter.pb.h"
 #include "lambda_filter_config.h"
+#include "metadata_function_retriever.h"
 
 namespace Envoy {
 namespace Server {
@@ -53,7 +54,7 @@ ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyConfigProto() {
   return ProtobufTypes::MessagePtr{new envoy::api::v2::filter::http::Lambda()};
 }
 
-std::string LambdaFilterConfigFactory::name() { return "lambda"; }
+std::string LambdaFilterConfigFactory::name() { return "envoy.lambda"; }
 
 const envoy::api::v2::filter::http::Lambda
 LambdaFilterConfigFactory::translateLambdaFilter(
@@ -75,13 +76,13 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
       std::make_shared<Http::LambdaFilterConfig>(
           Http::LambdaFilterConfig(proto_config));
 
-  Http::ClusterFunctionMap functions = {
-      {"lambda-func1",
-       {"FunctionName", "lambda.us-east-1.amazonaws.com", "us-east-1"}}};
+  Http::FunctionRetrieverSharedPtr functionRetriever =
+      std::make_shared<Http::MetadataFunctionRetriever>();
 
-  return [&context, config, functions](
+  return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(config, std::move(functions));
+    auto filter = new Http::LambdaFilter(config, functionRetriever,
+                                         context.clusterManager());
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
