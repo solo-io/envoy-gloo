@@ -30,23 +30,22 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
 
 Optional<Function>
 MetadataFunctionRetriever::getFunction(const FieldMap &fields) {
-  auto func_name = stringValue(fields, FUNCTION_FUNC_NAME);
+  auto func_name = nonEmptyStringValue(fields, FUNCTION_FUNC_NAME);
   if (!func_name.valid()) {
     return {};
   }
 
-  auto hostname = stringValue(fields, FUNCTION_HOSTNAME);
+  auto hostname = nonEmptyStringValue(fields, FUNCTION_HOSTNAME);
   if (!hostname.valid()) {
     return {};
   }
 
-  auto region = stringValue(fields, FUNCTION_REGION);
+  auto region = nonEmptyStringValue(fields, FUNCTION_REGION);
   if (!region.valid()) {
     return {};
   }
 
-  return Function::create(*func_name.value(), *hostname.value(),
-                          *region.value());
+  return Function{*func_name.value(), *hostname.value(), *region.value()};
 }
 
 const std::string MetadataFunctionRetriever::ENVOY_LAMBDA = "envoy.lambda";
@@ -61,7 +60,7 @@ const std::string MetadataFunctionRetriever::FUNCTION_REGION =
     "function.region";
 
 /**
- * TODO: Consider moving the `Struct` extraction logic to `Metadata`:
+ * TODO(talnordan): Consider moving the `Struct` extraction logic to `Metadata`:
  * envoy/source/common/config/metadata.cc
  */
 Optional<const MetadataFunctionRetriever::FieldMap *>
@@ -78,17 +77,27 @@ MetadataFunctionRetriever::filterMetadataFields(
 }
 
 /**
- * TODO: Consider moving the this logic to `Metadata`:
+ * TODO(talnordan): Consider moving the this logic to `Metadata`:
  * envoy/source/common/config/metadata.cc
  */
 Optional<const std::string *>
-MetadataFunctionRetriever::stringValue(const FieldMap &fields,
-                                       const std::string &key) {
+MetadataFunctionRetriever::nonEmptyStringValue(const FieldMap &fields,
+                                               const std::string &key) {
   const auto fields_it = fields.find(key);
   if (fields_it == fields.end()) {
     return {};
   }
-  const auto &string_value = fields_it->second.string_value();
+
+  const auto &value = fields_it->second;
+  if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
+    return {};
+  }
+
+  const auto &string_value = value.string_value();
+  if (string_value.empty()) {
+    return {};
+  }
+
   return Optional<const std::string *>(&string_value);
 }
 

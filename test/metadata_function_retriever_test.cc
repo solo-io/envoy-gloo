@@ -79,6 +79,58 @@ TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
   EXPECT_FALSE(actualFunction.valid());
 }
 
+TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
+  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
+                              "us-east-1"};
+
+  std::string json = fmt::format(
+      R"EOF(
+    {{
+      "{}" : "{}",
+      "{}" : 17,
+      "{}" : "{}",
+    }}
+    )EOF",
+      MetadataFunctionRetriever::FUNCTION_FUNC_NAME,
+      configuredFunction.func_name_,
+      MetadataFunctionRetriever::FUNCTION_HOSTNAME,
+      MetadataFunctionRetriever::FUNCTION_REGION, configuredFunction.region_);
+
+  auto actualFunction = getFunction(json);
+
+  EXPECT_FALSE(actualFunction.valid());
+}
+
+TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
+  std::string empty;
+  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
+                              "us-east-1"};
+
+  for (auto func_name : {empty, configuredFunction.func_name_}) {
+    for (auto hostname : {empty, configuredFunction.hostname_}) {
+      for (auto region : {empty, configuredFunction.region_}) {
+        std::string json = fmt::format(
+            R"EOF(
+          {{
+            "{}" : "{}",
+            "{}" : "{}",
+            "{}" : "{}",
+          }}
+          )EOF",
+            MetadataFunctionRetriever::FUNCTION_FUNC_NAME, func_name,
+            MetadataFunctionRetriever::FUNCTION_HOSTNAME, hostname,
+            MetadataFunctionRetriever::FUNCTION_REGION, region);
+
+        auto actualFunction = getFunction(json);
+
+        if (func_name.empty() || hostname.empty() || region.empty()) {
+          EXPECT_FALSE(actualFunction.valid());
+        }
+      }
+    }
+  }
+}
+
 TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
   Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
                               "us-east-1"};
