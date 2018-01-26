@@ -37,7 +37,7 @@ private:
                        const std::string &filter);
 
   static inline Optional<const std::string *>
-  stringValue(const FieldMap &fields, const std::string &key);
+  nonEmptyStringValue(const FieldMap &fields, const std::string &key);
 };
 
 } // namespace Http

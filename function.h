@@ -10,27 +10,6 @@ namespace Envoy {
 namespace Http {
 
 struct Function {
-  Function() : func_name_(""), hostname_(""), region_("") {}
-
-  Function(const std::string &func_name, const std::string &hostname,
-           const std::string &region)
-      : func_name_(func_name), hostname_(hostname), region_(region) {}
-
-  static Optional<Function> create(const std::string &func_name,
-                                   const std::string &hostname,
-                                   const std::string &region) {
-    auto function = Function(func_name, hostname, region);
-    if (function.valid()) {
-      return Optional<Function>(function);
-    }
-
-    return {};
-  }
-
-  bool valid() const {
-    return !(func_name_.empty() || hostname_.empty() || region_.empty());
-  }
-
   std::string func_name_;
   std::string hostname_;
   std::string region_;
