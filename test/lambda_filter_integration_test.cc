@@ -10,7 +10,7 @@ namespace Envoy {
 
 const std::string DEFAULT_LAMBDA_FILTER =
     R"EOF(
-name: envoy.lambda
+name: io.solo.lambda
 config:
     access_key: a
     secret_key: b
