@@ -54,7 +54,7 @@ ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyConfigProto() {
   return ProtobufTypes::MessagePtr{new envoy::api::v2::filter::http::Lambda()};
 }
 
-std::string LambdaFilterConfigFactory::name() { return "envoy.lambda"; }
+std::string LambdaFilterConfigFactory::name() { return "io.solo.lambda"; }
 
 const envoy::api::v2::filter::http::Lambda
 LambdaFilterConfigFactory::translateLambdaFilter(
