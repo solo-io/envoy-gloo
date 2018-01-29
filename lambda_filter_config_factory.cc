@@ -73,8 +73,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
     FactoryContext &context) {
 
   Http::LambdaFilterConfigSharedPtr config =
-      std::make_shared<Http::LambdaFilterConfig>(
-          Http::LambdaFilterConfig(proto_config));
+      std::make_shared<Http::LambdaFilterConfig>(proto_config);
 
   Http::FunctionRetrieverSharedPtr functionRetriever =
       std::make_shared<Http::MetadataFunctionRetriever>();
