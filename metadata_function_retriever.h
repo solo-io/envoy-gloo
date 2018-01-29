@@ -18,18 +18,14 @@ class MetadataFunctionRetriever : public FunctionRetriever {
   using FieldMap = Protobuf::Map<std::string, Protobuf::Value>;
 
 public:
+  MetadataFunctionRetriever(const std::string &filter_key,
+                            const std::string &function_name_key,
+                            const std::string &hostname_key,
+                            const std::string &region_key);
+
   Optional<Function> getFunction(const ClusterInfo &info) override;
   Optional<Function> getFunction(const envoy::api::v2::Metadata &metadata);
   Optional<Function> getFunction(const FieldMap &fields);
-
-  /**
-   * TODO: Constants like these are typically declared in
-   * envoy/source/common/config/well_known_names.h.
-   */
-  static const std::string ENVOY_LAMBDA;
-  static const std::string FUNCTION_FUNC_NAME;
-  static const std::string FUNCTION_HOSTNAME;
-  static const std::string FUNCTION_REGION;
 
 private:
   static inline Optional<const FieldMap *>
@@ -38,6 +34,11 @@ private:
 
   static inline Optional<const std::string *>
   nonEmptyStringValue(const FieldMap &fields, const std::string &key);
+
+  const std::string &filter_key_;
+  const std::string &function_name_key_;
+  const std::string &hostname_key_;
+  const std::string &region_key_;
 };
 
 } // namespace Http

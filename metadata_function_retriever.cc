@@ -1,7 +1,6 @@
 #include "metadata_function_retriever.h"
 
 #include "common/config/metadata.h"
-#include "common/config/well_known_names.h"
 
 #include "lambda_filter.pb.h"
 
@@ -9,6 +8,12 @@ namespace Envoy {
 namespace Http {
 
 using Config::Metadata;
+
+MetadataFunctionRetriever::MetadataFunctionRetriever(
+    const std::string &filter_key, const std::string &function_name_key,
+    const std::string &hostname_key, const std::string &region_key)
+    : filter_key_(filter_key), function_name_key_(function_name_key),
+      hostname_key_(hostname_key), region_key_(region_key) {}
 
 Optional<Function>
 MetadataFunctionRetriever::getFunction(const ClusterInfo &info) {
@@ -19,7 +24,7 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
     const envoy::api::v2::Metadata &metadata) {
 
   auto lambda_filter_metadata_fields =
-      filterMetadataFields(metadata, ENVOY_LAMBDA);
+      filterMetadataFields(metadata, filter_key_);
 
   if (!lambda_filter_metadata_fields.valid()) {
     return {};
@@ -30,34 +35,23 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
 
 Optional<Function>
 MetadataFunctionRetriever::getFunction(const FieldMap &fields) {
-  auto func_name = nonEmptyStringValue(fields, FUNCTION_FUNC_NAME);
+  auto func_name = nonEmptyStringValue(fields, function_name_key_);
   if (!func_name.valid()) {
     return {};
   }
 
-  auto hostname = nonEmptyStringValue(fields, FUNCTION_HOSTNAME);
+  auto hostname = nonEmptyStringValue(fields, hostname_key_);
   if (!hostname.valid()) {
     return {};
   }
 
-  auto region = nonEmptyStringValue(fields, FUNCTION_REGION);
+  auto region = nonEmptyStringValue(fields, region_key_);
   if (!region.valid()) {
     return {};
   }
 
   return Function{*func_name.value(), *hostname.value(), *region.value()};
 }
-
-const std::string MetadataFunctionRetriever::ENVOY_LAMBDA = "envoy.lambda";
-
-const std::string MetadataFunctionRetriever::FUNCTION_FUNC_NAME =
-    "function.func_name";
-
-const std::string MetadataFunctionRetriever::FUNCTION_HOSTNAME =
-    "function.hostname";
-
-const std::string MetadataFunctionRetriever::FUNCTION_REGION =
-    "function.region";
 
 /**
  * TODO(talnordan): Consider moving the `Struct` extraction logic to `Metadata`:

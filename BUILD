@@ -38,7 +38,10 @@ envoy_cc_library(
 
 envoy_cc_library(
     name = "lambda_filter_config",
-    hdrs = ["lambda_filter_config.h"],
+    hdrs = [
+        "common/config/solo_well_known_names.h",
+        "lambda_filter_config.h",
+    ],
     repository = "@envoy",
     deps = [
         ":lambda_filter_proto_cc",

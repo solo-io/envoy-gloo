@@ -6,6 +6,7 @@
 
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
+#include "common/config/solo_well_known_names.h"
 #include "common/protobuf/utility.h"
 
 #include "function.h"
@@ -54,7 +55,9 @@ ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyConfigProto() {
   return ProtobufTypes::MessagePtr{new envoy::api::v2::filter::http::Lambda()};
 }
 
-std::string LambdaFilterConfigFactory::name() { return "io.solo.lambda"; }
+std::string LambdaFilterConfigFactory::name() {
+  return Config::SoloHttpFilterNames::get().LAMBDA;
+}
 
 const envoy::api::v2::filter::http::Lambda
 LambdaFilterConfigFactory::translateLambdaFilter(
@@ -76,7 +79,11 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
       std::make_shared<Http::LambdaFilterConfig>(proto_config);
 
   Http::FunctionRetrieverSharedPtr functionRetriever =
-      std::make_shared<Http::MetadataFunctionRetriever>();
+      std::make_shared<Http::MetadataFunctionRetriever>(
+          Config::SoloMetadataFilters::get().LAMBDA,
+          Config::MetadataLambdaKeys::get().FUNC_NAME,
+          Config::MetadataLambdaKeys::get().HOSTNAME,
+          Config::MetadataLambdaKeys::get().REGION);
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {

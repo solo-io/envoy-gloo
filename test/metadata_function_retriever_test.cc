@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "common/config/solo_well_known_names.h"
 #include "common/protobuf/utility.h"
 
 #include "test/test_common/utility.h"
@@ -18,7 +19,12 @@ Optional<Function> getFunction(const std::string json) {
   Protobuf::Struct lambda_metadata;
   MessageUtil::loadFromJson(json, lambda_metadata);
 
-  MetadataFunctionRetriever functionRetriever;
+  MetadataFunctionRetriever functionRetriever(
+      Config::SoloMetadataFilters::get().LAMBDA,
+      Config::MetadataLambdaKeys::get().FUNC_NAME,
+      Config::MetadataLambdaKeys::get().HOSTNAME,
+      Config::MetadataLambdaKeys::get().REGION);
+
   return functionRetriever.getFunction(lambda_metadata.fields());
 }
 
@@ -47,10 +53,9 @@ TEST(MetadataFunctionRetrieverTest, ConfiguredFunction) {
       "{}" : "{}",
     }}
     )EOF",
-      MetadataFunctionRetriever::FUNCTION_FUNC_NAME,
-      configuredFunction.func_name_,
-      MetadataFunctionRetriever::FUNCTION_HOSTNAME,
-      configuredFunction.hostname_, MetadataFunctionRetriever::FUNCTION_REGION,
+      Config::MetadataLambdaKeys::get().FUNC_NAME,
+      configuredFunction.func_name_, Config::MetadataLambdaKeys::get().HOSTNAME,
+      configuredFunction.hostname_, Config::MetadataLambdaKeys::get().REGION,
       configuredFunction.region_);
 
   auto actualFunction = getFunction(json);
@@ -70,8 +75,8 @@ TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
       "{}" : "{}",
     }}
     )EOF",
-      MetadataFunctionRetriever::FUNCTION_FUNC_NAME,
-      configuredFunction.func_name_, MetadataFunctionRetriever::FUNCTION_REGION,
+      Config::MetadataLambdaKeys::get().FUNC_NAME,
+      configuredFunction.func_name_, Config::MetadataLambdaKeys::get().REGION,
       configuredFunction.region_);
 
   auto actualFunction = getFunction(json);
@@ -91,10 +96,9 @@ TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
       "{}" : "{}",
     }}
     )EOF",
-      MetadataFunctionRetriever::FUNCTION_FUNC_NAME,
-      configuredFunction.func_name_,
-      MetadataFunctionRetriever::FUNCTION_HOSTNAME,
-      MetadataFunctionRetriever::FUNCTION_REGION, configuredFunction.region_);
+      Config::MetadataLambdaKeys::get().FUNC_NAME,
+      configuredFunction.func_name_, Config::MetadataLambdaKeys::get().HOSTNAME,
+      Config::MetadataLambdaKeys::get().REGION, configuredFunction.region_);
 
   auto actualFunction = getFunction(json);
 
@@ -117,9 +121,9 @@ TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
             "{}" : "{}",
           }}
           )EOF",
-            MetadataFunctionRetriever::FUNCTION_FUNC_NAME, func_name,
-            MetadataFunctionRetriever::FUNCTION_HOSTNAME, hostname,
-            MetadataFunctionRetriever::FUNCTION_REGION, region);
+            Config::MetadataLambdaKeys::get().FUNC_NAME, func_name,
+            Config::MetadataLambdaKeys::get().HOSTNAME, hostname,
+            Config::MetadataLambdaKeys::get().REGION, region);
 
         auto actualFunction = getFunction(json);
 
@@ -144,9 +148,8 @@ TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
     }}
     )EOF",
       "NunctionFame", configuredFunction.func_name_,
-      MetadataFunctionRetriever::FUNCTION_HOSTNAME,
-      configuredFunction.hostname_, MetadataFunctionRetriever::FUNCTION_REGION,
-      configuredFunction.region_);
+      Config::MetadataLambdaKeys::get().HOSTNAME, configuredFunction.hostname_,
+      Config::MetadataLambdaKeys::get().REGION, configuredFunction.region_);
 
   auto actualFunction = getFunction(json);
 
