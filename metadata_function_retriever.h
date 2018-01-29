@@ -23,7 +23,8 @@ public:
                             const std::string &hostname_key,
                             const std::string &region_key);
 
-  Optional<Function> getFunction(const ClusterInfo &info) override;
+  Optional<Function> getFunction(const RouteEntry &routeEntry,
+                                 const ClusterInfo &info) override;
   Optional<Function> getFunction(const envoy::api::v2::Metadata &metadata);
   Optional<Function> getFunction(const FieldMap &fields);
 

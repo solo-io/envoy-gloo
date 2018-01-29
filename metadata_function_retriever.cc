@@ -1,5 +1,6 @@
 #include "metadata_function_retriever.h"
 
+#include "common/common/macros.h"
 #include "common/config/metadata.h"
 
 #include "lambda_filter.pb.h"
@@ -16,7 +17,11 @@ MetadataFunctionRetriever::MetadataFunctionRetriever(
       hostname_key_(hostname_key), region_key_(region_key) {}
 
 Optional<Function>
-MetadataFunctionRetriever::getFunction(const ClusterInfo &info) {
+MetadataFunctionRetriever::getFunction(const RouteEntry &routeEntry,
+                                       const ClusterInfo &info) {
+  // TODO(talnordan): Use routeEntry.metadata().
+  UNREFERENCED_PARAMETER(routeEntry);
+
   return getFunction(info.metadata());
 }
 

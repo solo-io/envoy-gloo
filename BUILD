@@ -55,6 +55,7 @@ envoy_cc_library(
         "lambda_filter.cc",
         "map_function_retriever.cc",
         "metadata_function_retriever.cc",
+        "solo_filter_utility.cc",
     ],
     hdrs = [
         "function.h",
@@ -62,6 +63,7 @@ envoy_cc_library(
         "lambda_filter.h",
         "map_function_retriever.h",
         "metadata_function_retriever.h",
+        "solo_filter_utility.h",
     ],
     repository = "@envoy",
     deps = [

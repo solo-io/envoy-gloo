@@ -14,6 +14,8 @@
 
 #include "server/config/network/http_connection_manager.h"
 
+#include "solo_filter_utility.h"
+
 namespace Envoy {
 namespace Http {
 
@@ -38,13 +40,15 @@ std::string LambdaFilter::functionUrlPath() {
 Envoy::Http::FilterHeadersStatus
 LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 
+  const Envoy::Router::RouteEntry *routeEntry =
+      SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
   Upstream::ClusterInfoConstSharedPtr info =
       FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
-  if (info == nullptr) {
+  if (routeEntry == nullptr || info == nullptr) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
-  auto optionalFunction = functionRetriever_->getFunction(*info);
+  auto optionalFunction = functionRetriever_->getFunction(*routeEntry, *info);
   if (!optionalFunction.valid()) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
