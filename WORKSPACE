@@ -1,6 +1,6 @@
 workspace(name="aws_lambda_filter")
 
-ENVOY_SHA = "cb132c193630a5f7522a7efdf50e292dfa7f59b6"  # Jan 11, 2018 (config: add and populate metadata accessor in ClusterInfo (#2345))
+ENVOY_SHA = "29989a38c017d3be5aa3c735a797fcf58b754fe5"  # Jan 16, 2018 (rds: expose route metadata to requestinfo (#2392))
 
 http_archive(
     name = "envoy",

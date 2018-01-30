@@ -1,12 +1,18 @@
 #include "map_function_retriever.h"
 
+#include "common/common/macros.h"
+
 namespace Envoy {
 namespace Http {
 
 MapFunctionRetriever::MapFunctionRetriever(ClusterFunctionMap &&functions)
     : functions_(functions) {}
 
-Optional<Function> MapFunctionRetriever::getFunction(const ClusterInfo &info) {
+Optional<Function>
+MapFunctionRetriever::getFunction(const RouteEntry &routeEntry,
+                                  const ClusterInfo &info) {
+  UNREFERENCED_PARAMETER(routeEntry);
+
   return getFunction(info.name());
 }
 

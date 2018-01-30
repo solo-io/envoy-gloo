@@ -1,4 +1,5 @@
 #include "common/config/metadata.h"
+#include "common/config/solo_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -38,20 +39,28 @@ public:
       auto *metadata = lambda_cluster.mutable_metadata();
 
       Config::Metadata::mutableMetadataValue(
-          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
-          Http::MetadataFunctionRetriever::FUNCTION_FUNC_NAME)
-          .set_string_value("FunctionName");
-
-      Config::Metadata::mutableMetadataValue(
-          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
-          Http::MetadataFunctionRetriever::FUNCTION_HOSTNAME)
+          *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+          Config::MetadataLambdaKeys::get().HOSTNAME)
           .set_string_value("lambda.us-east-1.amazonaws.com");
 
       Config::Metadata::mutableMetadataValue(
-          *metadata, Http::MetadataFunctionRetriever::ENVOY_LAMBDA,
-          Http::MetadataFunctionRetriever::FUNCTION_REGION)
+          *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+          Config::MetadataLambdaKeys::get().REGION)
           .set_string_value("us-east-1");
     });
+
+    config_helper_.addConfigModifier(
+        [](envoy::api::v2::filter::network::HttpConnectionManager &hcm) {
+          auto *metadata = hcm.mutable_route_config()
+                               ->mutable_virtual_hosts(0)
+                               ->mutable_routes(0)
+                               ->mutable_metadata();
+
+          Config::Metadata::mutableMetadataValue(
+              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              Config::MetadataLambdaKeys::get().FUNC_NAME)
+              .set_string_value("FunctionName");
+        });
 
     HttpIntegrationTest::initialize();
 
