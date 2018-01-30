@@ -1,6 +1,5 @@
 #include "metadata_function_retriever.h"
 
-#include "common/common/macros.h"
 #include "common/config/metadata.h"
 
 #include "lambda_filter.pb.h"
@@ -19,38 +18,33 @@ MetadataFunctionRetriever::MetadataFunctionRetriever(
 Optional<Function>
 MetadataFunctionRetriever::getFunction(const RouteEntry &routeEntry,
                                        const ClusterInfo &info) {
-  // TODO(talnordan): Use routeEntry.metadata().
-  UNREFERENCED_PARAMETER(routeEntry);
+  auto route_metadata_fields = filterMetadataFields(routeEntry, filter_key_);
 
-  return getFunction(info.metadata());
-}
+  auto cluster_metadata_fields = filterMetadataFields(info, filter_key_);
 
-Optional<Function> MetadataFunctionRetriever::getFunction(
-    const envoy::api::v2::Metadata &metadata) {
-
-  auto lambda_filter_metadata_fields =
-      filterMetadataFields(metadata, filter_key_);
-
-  if (!lambda_filter_metadata_fields.valid()) {
+  if (!route_metadata_fields.valid() || !cluster_metadata_fields.valid()) {
     return {};
   }
 
-  return getFunction(*lambda_filter_metadata_fields.value());
+  return getFunction(*route_metadata_fields.value(),
+                     *cluster_metadata_fields.value());
 }
 
-Optional<Function>
-MetadataFunctionRetriever::getFunction(const FieldMap &fields) {
-  auto func_name = nonEmptyStringValue(fields, function_name_key_);
+Optional<Function> MetadataFunctionRetriever::getFunction(
+    const FieldMap &route_metadata_fields,
+    const FieldMap &cluster_metadata_fields) {
+  auto func_name =
+      nonEmptyStringValue(route_metadata_fields, function_name_key_);
   if (!func_name.valid()) {
     return {};
   }
 
-  auto hostname = nonEmptyStringValue(fields, hostname_key_);
+  auto hostname = nonEmptyStringValue(cluster_metadata_fields, hostname_key_);
   if (!hostname.valid()) {
     return {};
   }
 
-  auto region = nonEmptyStringValue(fields, region_key_);
+  auto region = nonEmptyStringValue(cluster_metadata_fields, region_key_);
   if (!region.valid()) {
     return {};
   }

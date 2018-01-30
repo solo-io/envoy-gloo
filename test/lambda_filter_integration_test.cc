@@ -40,11 +40,6 @@ public:
 
       Config::Metadata::mutableMetadataValue(
           *metadata, Config::SoloMetadataFilters::get().LAMBDA,
-          Config::MetadataLambdaKeys::get().FUNC_NAME)
-          .set_string_value("FunctionName");
-
-      Config::Metadata::mutableMetadataValue(
-          *metadata, Config::SoloMetadataFilters::get().LAMBDA,
           Config::MetadataLambdaKeys::get().HOSTNAME)
           .set_string_value("lambda.us-east-1.amazonaws.com");
 
@@ -53,6 +48,19 @@ public:
           Config::MetadataLambdaKeys::get().REGION)
           .set_string_value("us-east-1");
     });
+
+    config_helper_.addConfigModifier(
+        [](envoy::api::v2::filter::network::HttpConnectionManager &hcm) {
+          auto *metadata = hcm.mutable_route_config()
+                               ->mutable_virtual_hosts(0)
+                               ->mutable_routes(0)
+                               ->mutable_metadata();
+
+          Config::Metadata::mutableMetadataValue(
+              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              Config::MetadataLambdaKeys::get().FUNC_NAME)
+              .set_string_value("FunctionName");
+        });
 
     HttpIntegrationTest::initialize();
 
