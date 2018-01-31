@@ -13,7 +13,7 @@ envoy_cc_test(
     srcs = ["lambda_filter_config_test.cc"],
     repository = "@envoy",
     deps = [
-        "//:lambda_filter_config_factory",
+        "//:filter_lib",
         "@envoy//test/test_common:utility_lib",
     ],
 )
@@ -23,7 +23,7 @@ envoy_cc_test(
     srcs = ["lambda_filter_integration_test.cc"],
     repository = "@envoy",
     deps = [
-        "//:lambda_filter_config_factory",
+        "//:filter_lib",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
     ],
