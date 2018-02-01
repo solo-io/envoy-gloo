@@ -16,7 +16,7 @@ envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
     deps = [
-        ":lambda_filter_config_factory",
+        ":filter_lib",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )
@@ -74,7 +74,7 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "lambda_filter_config_factory",
+    name = "filter_lib",
     srcs = ["lambda_filter_config_factory.cc"],
     hdrs = ["lambda_filter_config_factory.h"],
     repository = "@envoy",
