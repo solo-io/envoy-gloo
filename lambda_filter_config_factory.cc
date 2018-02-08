@@ -87,8 +87,8 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(config, functionRetriever,
-                                         context.clusterManager());
+    auto filter = new Http::LambdaFilter(context, Config::SoloMetadataFilters::get().LAMBDA,
+                                         config);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };

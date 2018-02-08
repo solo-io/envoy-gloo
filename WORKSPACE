@@ -8,6 +8,13 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
+# load solo common
+git_repository(
+    name = "solocommon",
+    remote = "git@github.com:solo-io/envoy-common",
+    commit = "2ce7f3064d8bfdaf4e2ea6d53486dfd034504fde",
+)
+
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
 load("@envoy//bazel:cc_configure.bzl", "cc_configure")
 

@@ -14,32 +14,30 @@
 #include "lambda_filter.pb.h"
 #include "lambda_filter_config.h"
 #include "map_function_retriever.h"
+#include "common/http/functional_stream_decoder_base.h"
 
 namespace Envoy {
 namespace Http {
 
-using Envoy::Upstream::ClusterManager;
-
-class LambdaFilter : public StreamDecoderFilter,
-                     public Logger::Loggable<Logger::Id::filter> {
+class LambdaFilter : public FunctionalFilterBase {
 public:
-  LambdaFilter(LambdaFilterConfigSharedPtr, FunctionRetrieverSharedPtr,
-               ClusterManager &);
+
+  LambdaFilter(Server::Configuration::FactoryContext& ctx, const std::string& name,
+                           LambdaFilterConfigSharedPtr config);
   ~LambdaFilter();
 
   // Http::StreamFilterBase
   void onDestroy() override;
 
-  // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
-  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
-  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &) override;
+  // Http::FunctionalFilterBase
+  FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
+  FilterDataStatus functionDecodeData(Buffer::Instance &, bool) override;
+  FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
 
 private:
   const LambdaFilterConfigSharedPtr config_;
   FunctionRetrieverSharedPtr functionRetriever_;
-  ClusterManager &cm_;
+  Upstream::ClusterManager &cm_;
 
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 

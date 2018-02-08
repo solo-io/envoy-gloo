@@ -14,15 +14,15 @@
 
 #include "server/config/network/http_connection_manager.h"
 
-#include "solo_filter_utility.h"
+#include "common/http/solo_filter_utility.h"
 
 namespace Envoy {
 namespace Http {
 
-LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
-                           FunctionRetrieverSharedPtr functionRetriever,
-                           ClusterManager &cm)
-    : config_(config), functionRetriever_(functionRetriever), cm_(cm),
+LambdaFilter::LambdaFilter(Server::Configuration::FactoryContext& ctx, const std::string& name,
+                           LambdaFilterConfigSharedPtr config)
+    : FunctionalFilterBase(ctx, name), config_(config), 
+      cm_(ctx.clusterManager()),
       active_(false), awsAuthenticator_(awsAccess(), awsSecret()) {}
 
 LambdaFilter::~LambdaFilter() {}
@@ -38,7 +38,7 @@ std::string LambdaFilter::functionUrlPath() {
 }
 
 Envoy::Http::FilterHeadersStatus
-LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
+LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 
   const Envoy::Router::RouteEntry *routeEntry =
       SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
@@ -69,7 +69,7 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 }
 
 Envoy::Http::FilterDataStatus
-LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
+LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data, bool end_stream) {
 
   if (!active_) {
     return Envoy::Http::FilterDataStatus::Continue;
@@ -123,17 +123,12 @@ void LambdaFilter::lambdafy() {
 }
 
 Envoy::Http::FilterTrailersStatus
-LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
+LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
   if (active_) {
     lambdafy();
   }
 
   return Envoy::Http::FilterTrailersStatus::Continue;
-}
-
-void LambdaFilter::setDecoderFilterCallbacks(
-    Envoy::Http::StreamDecoderFilterCallbacks &callbacks) {
-  decoder_callbacks_ = &callbacks;
 }
 
 } // namespace Http
