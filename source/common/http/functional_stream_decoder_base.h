@@ -54,6 +54,8 @@ private:
   void tryToGetSpecFromCluster(const std::string& funcname, Upstream::ClusterInfoConstSharedPtr&& clusterinfo);
   bool isOurCluster(const Upstream::ClusterInfoConstSharedPtr& clusterinfo);
   bool active() {return spec_ != nullptr;}
+  void error();
+
 };
 
 

@@ -12,6 +12,7 @@
 
 #include "test/mocks/upstream/mocks.h"
 #include "test/mocks/server/mocks.h"
+#include "test/mocks/common.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -21,6 +22,7 @@ using testing::Return;
 using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
+using testing::WithArg;
 using testing::_;
 
 namespace Envoy {
@@ -158,6 +160,28 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
   EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
 }
 
+TEST_F(FuncitonFilterTest, MissingRouteMeta) {
+  initclustermeta();
+
+  std::string status;
+
+  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_,_)).WillOnce(Invoke([&](HeaderMap& headers, bool) {
+          status = headers.Status()->value().c_str();
+    }));
+        
+
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                        {":authority", "www.solo.io"},
+                                        {":path", "/getsomething"}};
+  filter_->decodeHeaders(headers, true);
+
+  // test that we needed errored
+  EXPECT_EQ(status, "404");
+
+  EXPECT_FALSE(filter_->functionDecodeHeadersCalled_);
+  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
+  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+}
 
 }
 } // namespace Envoy

@@ -36,6 +36,7 @@ envoy_cc_library(
         "@envoy//source/common/common:logger_lib",
         "@envoy//source/common/common:utility_lib",
         "@envoy//source/common/http:filter_utility_lib",
+        "@envoy//source/common/http:utility_lib",
 
     ],
 )

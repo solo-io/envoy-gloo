@@ -1,6 +1,8 @@
 #include "common/http/functional_stream_decoder_base.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/filter_utility.h"
+#include "common/http/utility.h"
+
 
 namespace Envoy {
 namespace Http {
@@ -75,11 +77,14 @@ void FunctionalFilterBase::tryToGetSpec() {
     if (!isOurCluster(info)) {
         return;
     }
+    // So now we know this this route is to a functional upstream. i.e. we must be able to do
+    // a function route or error.
 
     const envoy::api::v2::Metadata& metadata = routeEntry->metadata();
     // TODO CONSTIFY    
     const auto filter_it = metadata.filter_metadata().find("io.solo.function_router");
     if (filter_it == metadata.filter_metadata().end()) {
+        error();
         return;
     }
 
@@ -87,12 +92,15 @@ void FunctionalFilterBase::tryToGetSpec() {
     findSingleFunction(std::move(info), filter_metadata_struct);
     
     if (active()) {
+        // we have spec!
         return;
     }
     // TODO try multiple functions
 
     // Function not found :(
     // TODO: return a 404
+
+    error();
 
 }
 
@@ -162,6 +170,12 @@ bool FunctionalFilterBase::isOurCluster(const Upstream::ClusterInfoConstSharedPt
     const envoy::api::v2::Metadata& metadata = clusterinfo->metadata();
     const auto filter_it = metadata.filter_metadata().find(childname_);
     return filter_it != metadata.filter_metadata().end();
+}
+
+void FunctionalFilterBase::error() {
+      Utility::sendLocalReply(*decoder_callbacks_, false, Code::NotFound,
+                                    "Function not found");
+
 }
 
 
