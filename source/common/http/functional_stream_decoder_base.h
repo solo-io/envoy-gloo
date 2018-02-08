@@ -50,9 +50,10 @@ private:
 
 
   void tryToGetSpec();
-  void tryToGetSpecFromCluster(const std::string& funcname, const Upstream::ClusterInfoConstSharedPtr& clusterinfo);
+  void findSingleFunction(Upstream::ClusterInfoConstSharedPtr&& info, const ProtobufWkt::Struct& filter_metadata_struct);
+  void tryToGetSpecFromCluster(const std::string& funcname, Upstream::ClusterInfoConstSharedPtr&& clusterinfo);
   bool isOurCluster(const Upstream::ClusterInfoConstSharedPtr& clusterinfo);
-
+  bool active() {return spec_ != nullptr;}
 };
 
 
