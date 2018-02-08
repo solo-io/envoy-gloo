@@ -1,4 +1,4 @@
-#include "aws_authenticator.h"
+#include "common/http/filter/aws_authenticator.h"
 
 #include <algorithm>
 #include <list>

@@ -1,4 +1,4 @@
-#include "metadata_function_retriever.h"
+#include "common/http/filter/metadata_function_retriever.h"
 
 #include "common/config/metadata.h"
 
