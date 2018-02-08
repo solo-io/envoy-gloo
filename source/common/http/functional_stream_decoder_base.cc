@@ -55,7 +55,8 @@ void FunctionalFilterBase::tryToGetSpec() {
     }
 
     const envoy::api::v2::Metadata& metadata = routeEntry->metadata();
-    const auto filter_it = metadata.filter_metadata().find("TODO:function filter name");
+    // TODO CONSTIFY    
+    const auto filter_it = metadata.filter_metadata().find("io.solo.function_router");
     if (filter_it == metadata.filter_metadata().end()) {
         return;
     }
@@ -78,24 +79,48 @@ void FunctionalFilterBase::tryToGetSpec() {
     tryToGetSpecFromCluster(funcname, info);
 }
 
-void FunctionalFilterBase::tryToGetSpecFromCluster(const std::string& , const Upstream::ClusterInfoConstSharedPtr& clusterinfo) {
+void FunctionalFilterBase::tryToGetSpecFromCluster(const std::string& funcname, const Upstream::ClusterInfoConstSharedPtr& clusterinfo) {
 
 
     const envoy::api::v2::Metadata& metadata = clusterinfo->metadata();
-    const auto filter_it = metadata.filter_metadata().find("TODO:function filter name");
+    // TODO CONSTIFY
+    const auto filter_it = metadata.filter_metadata().find("io.solo.function_router");
     if (filter_it == metadata.filter_metadata().end()) {
         return;
     }
-/*
     const auto &filter_metadata_struct = filter_it->second;
     const auto &filter_metadata_fields = filter_metadata_struct.fields();
 
-    const auto function_it = filter_metadata_fields.find("function");
-    if (function_it == fields.end()) {
+    const auto functions_it = filter_metadata_fields.find("functions");
+    if (functions_it == filter_metadata_fields.end()) {
         return;
     }
-*/
-// TODO finish logic
+
+    const auto &functionsvalue = functions_it->second;
+    if (functionsvalue.kind_case() != ProtobufWkt::Value::kStructValue) {
+        return;
+    }
+
+    const auto& functions_struct = functionsvalue.struct_value();
+    const auto &functions_struct_fields = functions_struct.fields();
+
+
+    const auto spec_it = functions_struct_fields.find(funcname);
+    if (spec_it == functions_struct_fields.end()) {
+        return;
+    }
+
+    const auto &specvalue = spec_it->second;
+    if (specvalue.kind_case() != ProtobufWkt::Value::kStructValue) {
+        return;
+    }
+
+    // save the cluster info as the spec lives in it.
+    cluster_info_ = clusterinfo;
+    spec_ = &specvalue.struct_value();
+
+    // TODO: write code for multiple functions after e2e
+
 }
 
 bool FunctionalFilterBase::isOurCluster(const Upstream::ClusterInfoConstSharedPtr& clusterinfo) {

@@ -16,7 +16,7 @@ public:
   FunctionalFilterBase(FactoryContext& ctx, const std::string& childname) : 
    decoder_callbacks_(nullptr),
     cm_(ctx.clusterManager()),random_(ctx.random()), childname_(childname), 
-   cluster_info(nullptr), spec_(nullptr) {}
+   cluster_info_(nullptr), spec_(nullptr) {}
   virtual ~FunctionalFilterBase();
 
   // Http::StreamFilterBase
@@ -45,7 +45,7 @@ private:
   Envoy::Runtime::RandomGenerator& random_;
   const std::string& childname_;
 
-  Upstream::ClusterInfoConstSharedPtr cluster_info;
+  Upstream::ClusterInfoConstSharedPtr cluster_info_;
   const ProtobufWkt::Struct* spec_; 
 
 
