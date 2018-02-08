@@ -1,5 +1,4 @@
 licenses(["notice"])  # Apache 2
-package(default_visibility = ["//visibility:public"])
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
