@@ -68,14 +68,7 @@ void FunctionalFilterBase::tryToGetSpec() {
     return;
   }
 
-  Upstream::ClusterInfoConstSharedPtr info =
-      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
-
-  if (!info) {
-    return;
-  }
-
-  if (!isOurCluster(info)) {
+  if (!isOurCluster()) {
     return;
   }
   // So now we know this this route is to a functional upstream. i.e. we must be
@@ -89,6 +82,9 @@ void FunctionalFilterBase::tryToGetSpec() {
     error();
     return;
   }
+
+  Upstream::ClusterInfoConstSharedPtr info =
+      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
 
   const auto &filter_metadata_struct = filter_it->second;
   findSingleFunction(std::move(info), filter_metadata_struct);
@@ -169,12 +165,32 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   cluster_info_ = clusterinfo;
   spec_ = &specvalue.struct_value();
 }
+  
+const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() {
+    return *maybeGetChildFilterSpec();
+}
 
-bool FunctionalFilterBase::isOurCluster(
-    const Upstream::ClusterInfoConstSharedPtr &clusterinfo) {
+const ProtobufWkt::Struct *FunctionalFilterBase::maybeGetChildFilterSpec() {
+
+  Upstream::ClusterInfoConstSharedPtr clusterinfo =
+      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
+
+  if (!clusterinfo) {
+    return nullptr;
+  }
+
   const envoy::api::v2::Metadata &metadata = clusterinfo->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
-  return filter_it != metadata.filter_metadata().end();
+  if  (filter_it != metadata.filter_metadata().end()) {
+      return &filter_it->second;
+  } else {
+      return nullptr;
+  }
+
+}
+
+bool FunctionalFilterBase::isOurCluster() {
+  return maybeGetChildFilterSpec() != nullptr;
 }
 
 void FunctionalFilterBase::error() {

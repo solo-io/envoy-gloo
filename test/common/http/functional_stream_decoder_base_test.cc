@@ -19,6 +19,7 @@ using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
 using testing::WithArg;
+using testing::AtLeast;
 using testing::_;
 
 namespace Envoy {
@@ -141,7 +142,7 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
   initclustermeta();
   initroutemeta();
   auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
-  EXPECT_CALL(factory_context_.cluster_manager_, get(clustername));
+  EXPECT_CALL(factory_context_.cluster_manager_, get(clustername)).Times(AtLeast(1));
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

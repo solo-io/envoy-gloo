@@ -35,6 +35,7 @@ public:
 
 protected:
   const ProtobufWkt::Struct &getFunctionSpec();
+  const ProtobufWkt::Struct &getChildFilterSpec();
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &m, bool e) PURE;
@@ -42,6 +43,8 @@ protected:
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
 
 private:
+  const ProtobufWkt::Struct *maybeGetChildFilterSpec();
+
   Upstream::ClusterManager &cm_;
   Envoy::Runtime::RandomGenerator &random_;
   const std::string &childname_;
@@ -55,7 +58,7 @@ private:
   void
   tryToGetSpecFromCluster(const std::string &funcname,
                           Upstream::ClusterInfoConstSharedPtr &&clusterinfo);
-  bool isOurCluster(const Upstream::ClusterInfoConstSharedPtr &clusterinfo);
+  bool isOurCluster();
   bool active() { return spec_ != nullptr; }
   void error();
 };
