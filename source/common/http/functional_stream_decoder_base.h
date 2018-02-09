@@ -33,9 +33,11 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-protected:
+  bool active() { return spec_ != nullptr; }
   const ProtobufWkt::Struct &getFunctionSpec();
   const ProtobufWkt::Struct &getChildFilterSpec();
+
+protected:
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &m, bool e) PURE;
@@ -59,7 +61,6 @@ private:
   tryToGetSpecFromCluster(const std::string &funcname,
                           Upstream::ClusterInfoConstSharedPtr &&clusterinfo);
   bool isOurCluster();
-  bool active() { return spec_ != nullptr; }
   void error();
 };
 
