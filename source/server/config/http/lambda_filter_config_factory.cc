@@ -10,7 +10,7 @@
 #include "common/http/filter/function.h"
 #include "common/http/filter/lambda_filter.h"
 #include "common/http/filter/lambda_filter_config.h"
-#include "common/http/filter/metadata_function_retriever.h"
+// #include "common/http/filter/metadata_function_retriever.h"
 #include "common/protobuf/utility.h"
 
 #include "lambda_filter.pb.h"
@@ -78,13 +78,14 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
   Http::LambdaFilterConfigSharedPtr config =
       std::make_shared<Http::LambdaFilterConfig>(proto_config);
 
-  Http::FunctionRetrieverSharedPtr functionRetriever =
+  Http::FunctionRetrieverSharedPtr functionRetriever ;
+  /*=
       std::make_shared<Http::MetadataFunctionRetriever>(
           Config::SoloMetadataFilters::get().LAMBDA,
           Config::MetadataLambdaKeys::get().FUNC_NAME,
           Config::MetadataLambdaKeys::get().HOSTNAME,
           Config::MetadataLambdaKeys::get().REGION);
-
+*/
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new Http::LambdaFilter(

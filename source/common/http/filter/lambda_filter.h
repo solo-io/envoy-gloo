@@ -9,7 +9,7 @@
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
 #include "common/http/filter/lambda_filter_config.h"
-#include "common/http/filter/map_function_retriever.h"
+#include "common/http/filter/function_retriever.h"
 #include "common/http/functional_stream_decoder_base.h"
 
 #include "server/config/network/http_connection_manager.h"

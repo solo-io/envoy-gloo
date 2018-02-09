@@ -8,11 +8,14 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
+
+ENVOY_COMMON_SHA = "c68bef64da9acd31fcfd2960685cc81607291c8a"  # Feb 9, 2018 (refactor functional stream to enable function retriever.)
+
 # load solo common
 git_repository(
     name = "solocommon",
     remote = "git@github.com:solo-io/envoy-common",
-    commit = "2ce7f3064d8bfdaf4e2ea6d53486dfd034504fde",
+    commit = ENVOY_COMMON_SHA,
 )
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")

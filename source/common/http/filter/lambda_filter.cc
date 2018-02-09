@@ -49,7 +49,7 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
-  auto optionalFunction = functionRetriever_->getFunction(*routeEntry, *info);
+  auto optionalFunction = functionRetriever_->getFunction(*this);
   if (!optionalFunction.valid()) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
@@ -114,12 +114,12 @@ void LambdaFilter::lambdafy() {
                             std::string("None"));
 
   headers.push_back(Envoy::Http::LowerCaseString("host"));
-  request_headers_->insertHost().value(currentFunction_.hostname_);
+  request_headers_->insertHost().value(*currentFunction_.hostname_);
 
   headers.push_back(Envoy::Http::LowerCaseString("content-type"));
 
   awsAuthenticator_.sign(request_headers_, std::move(headers),
-                         currentFunction_.region_);
+                         *currentFunction_.region_);
   request_headers_ = nullptr;
   active_ = false;
 }
