@@ -33,9 +33,9 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  bool active() { return spec_ != nullptr; }
-  const ProtobufWkt::Struct &getFunctionSpec();
-  const ProtobufWkt::Struct &getChildFilterSpec();
+  bool active() const  { return spec_ != nullptr; }
+  const ProtobufWkt::Struct &getFunctionSpec() const;
+  const ProtobufWkt::Struct &getChildFilterSpec() const;
 
 protected:
   StreamDecoderFilterCallbacks *decoder_callbacks_;
@@ -45,7 +45,7 @@ protected:
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
 
 private:
-  const ProtobufWkt::Struct *maybeGetChildFilterSpec();
+  const ProtobufWkt::Struct *maybeGetChildFilterSpec() const;
 
   Upstream::ClusterManager &cm_;
   Envoy::Runtime::RandomGenerator &random_;
@@ -60,7 +60,7 @@ private:
   void
   tryToGetSpecFromCluster(const std::string &funcname,
                           Upstream::ClusterInfoConstSharedPtr &&clusterinfo);
-  bool isOurCluster();
+  bool isOurCluster() const;
   void error();
 };
 

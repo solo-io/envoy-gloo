@@ -56,7 +56,7 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
   return FilterTrailersStatus::Continue;
 }
 
-const ProtobufWkt::Struct &FunctionalFilterBase::getFunctionSpec() {
+const ProtobufWkt::Struct &FunctionalFilterBase::getFunctionSpec() const {
   RELEASE_ASSERT(spec_);
   return *spec_;
 }
@@ -166,11 +166,11 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   spec_ = &specvalue.struct_value();
 }
   
-const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() {
+const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() const {
     return *maybeGetChildFilterSpec();
 }
 
-const ProtobufWkt::Struct *FunctionalFilterBase::maybeGetChildFilterSpec() {
+const ProtobufWkt::Struct *FunctionalFilterBase::maybeGetChildFilterSpec() const {
 
   Upstream::ClusterInfoConstSharedPtr clusterinfo =
       FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
@@ -189,7 +189,7 @@ const ProtobufWkt::Struct *FunctionalFilterBase::maybeGetChildFilterSpec() {
 
 }
 
-bool FunctionalFilterBase::isOurCluster() {
+bool FunctionalFilterBase::isOurCluster() const {
   return maybeGetChildFilterSpec() != nullptr;
 }
 
