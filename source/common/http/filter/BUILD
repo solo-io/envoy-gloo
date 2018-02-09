@@ -38,13 +38,12 @@ envoy_cc_library(
 envoy_cc_library(
     name = "function_retrieves_lib",
     srcs = [
-    #    "map_function_retriever.cc",
-    #    "metadata_function_retriever.cc",
+        "metadata_function_retriever.cc",
     ],
     hdrs = [
         "function_retriever.h",
-     #   "map_function_retriever.h",
-     #   "metadata_function_retriever.h",
+        "function.h",
+        "metadata_function_retriever.h",
     ],
     repository = "@envoy",
     deps = [

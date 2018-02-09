@@ -9,7 +9,7 @@ http_archive(
 )
 
 
-ENVOY_COMMON_SHA = "c68bef64da9acd31fcfd2960685cc81607291c8a"  # Feb 9, 2018 (refactor functional stream to enable function retriever.)
+ENVOY_COMMON_SHA = "0ebe5d56fb7e7a2dfe2a378dd35a6effd8ef9ae8"  # Feb 9, 2018 (constify.)
 
 # load solo common
 git_repository(

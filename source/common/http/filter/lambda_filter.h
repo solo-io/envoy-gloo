@@ -21,7 +21,7 @@ namespace Http {
 
 class LambdaFilter : public FunctionalFilterBase {
 public:
-  LambdaFilter(Server::Configuration::FactoryContext &ctx,
+  LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver, Server::Configuration::FactoryContext &ctx,
                const std::string &name, LambdaFilterConfigSharedPtr config);
   ~LambdaFilter();
 
@@ -40,16 +40,15 @@ private:
 
   StreamDecoderFilterCallbacks *decoder_callbacks_;
 
-  const std::string awsAccess() const { return config_->awsAccess(); }
-  const std::string awsSecret() const { return config_->awsSecret(); }
-
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();
 
   Envoy::Http::HeaderMap *request_headers_{};
-  bool active_;
-  AwsAuthenticator awsAuthenticator_;
+  union{
+    AwsAuthenticator aws_authenticator_;
+  };
+
 };
 
 } // namespace Http

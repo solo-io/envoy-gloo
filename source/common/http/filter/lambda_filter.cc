@@ -18,44 +18,43 @@
 namespace Envoy {
 namespace Http {
 
-LambdaFilter::LambdaFilter(Server::Configuration::FactoryContext &ctx,
+LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,Server::Configuration::FactoryContext &ctx,
                            const std::string &name,
                            LambdaFilterConfigSharedPtr config)
     : FunctionalFilterBase(ctx, name), config_(config),
-      cm_(ctx.clusterManager()), active_(false),
-      awsAuthenticator_(awsAccess(), awsSecret()) {}
+    functionRetriever_(retreiver),
+    cm_(ctx.clusterManager()) {}
 
-LambdaFilter::~LambdaFilter() {}
+LambdaFilter::~LambdaFilter() {
+  
+  // No need to destruct as this has no state.
+  // if this changes, need to make sure only to destruct
+  // if it was initialized.
+  //  aws_authenticator_.~AwsAuthenticator();
+  
+}
 
 void LambdaFilter::onDestroy() {}
 
 std::string LambdaFilter::functionUrlPath() {
 
   std::stringstream val;
-  val << "/2015-03-31/functions/" << currentFunction_.func_name_
+  val << "/2015-03-31/functions/" << (*currentFunction_.name_)
       << "/invocations";
   return val.str();
 }
 
-Envoy::Http::FilterHeadersStatus
-LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
+Envoy::Http::FilterHeadersStatus LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
                                     bool end_stream) {
-
-  const Envoy::Router::RouteEntry *routeEntry =
-      SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
-  Upstream::ClusterInfoConstSharedPtr info =
-      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
-  if (routeEntry == nullptr || info == nullptr) {
-    return Envoy::Http::FilterHeadersStatus::Continue;
-  }
 
   auto optionalFunction = functionRetriever_->getFunction(*this);
   if (!optionalFunction.valid()) {
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
 
-  active_ = true;
   currentFunction_ = std::move(optionalFunction.value());
+  // placement new
+  new(&aws_authenticator_) AwsAuthenticator(*currentFunction_.access_key_, *currentFunction_.secret_key_);
 
   headers.insertMethod().value().setReference(
       Envoy::Http::Headers::get().MethodValues.Post);
@@ -65,22 +64,24 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
   request_headers_ = &headers;
 
   ENVOY_LOG(debug, "decodeHeaders called end = {}", end_stream);
-
+  if (end_stream) {
+    lambdafy();
+    return Envoy::Http::FilterHeadersStatus::Continue;
+  }
+  
   return Envoy::Http::FilterHeadersStatus::StopIteration;
+  
 }
 
 Envoy::Http::FilterDataStatus
 LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
                                  bool end_stream) {
 
-  if (!active_) {
-    return Envoy::Http::FilterDataStatus::Continue;
-  }
   // calc hash of data
   ENVOY_LOG(debug, "decodeData called end = {} data = {}", end_stream,
             data.length());
 
-  awsAuthenticator_.updatePayloadHash(data);
+  aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
 
@@ -114,21 +115,19 @@ void LambdaFilter::lambdafy() {
                             std::string("None"));
 
   headers.push_back(Envoy::Http::LowerCaseString("host"));
-  request_headers_->insertHost().value(*currentFunction_.hostname_);
+  request_headers_->insertHost().value(*currentFunction_.host_);
 
   headers.push_back(Envoy::Http::LowerCaseString("content-type"));
 
-  awsAuthenticator_.sign(request_headers_, std::move(headers),
+  aws_authenticator_.sign(request_headers_, std::move(headers),
                          *currentFunction_.region_);
   request_headers_ = nullptr;
-  active_ = false;
 }
 
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
-  if (active_) {
-    lambdafy();
-  }
+
+  lambdafy();
 
   return Envoy::Http::FilterTrailersStatus::Continue;
 }

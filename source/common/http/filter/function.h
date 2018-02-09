@@ -11,18 +11,14 @@ namespace Envoy {
 namespace Http {
 
 struct Function {
-  const std::string *func_name_{nullptr};
-  const std::string *func_qualifier_{nullptr};
-  const std::string *hostname_{nullptr};
+  const std::string *name_{nullptr};
+  const std::string *qualifier_{nullptr};
+  bool  async_{false};
+
+  const std::string *host_{nullptr};
   const std::string *region_{nullptr};
-  bool async_{false};
-
-  static Optional<Function>  getFunction(const ProtobufWkt::Struct& /*funcspec*/, const ProtobufWkt::Struct& /*clusterspec*/) {
-
-    return {};
-      
-  }
-
+  const std::string *access_key_{nullptr};
+  const std::string *secret_key_{nullptr};
 };
 
 } // namespace Http

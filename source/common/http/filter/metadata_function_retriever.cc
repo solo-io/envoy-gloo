@@ -1,97 +1,58 @@
 #include "common/http/filter/metadata_function_retriever.h"
 
-#include "common/config/metadata.h"
-
-#include "lambda_filter.pb.h"
+#include "common/common/macros.h"
 
 namespace Envoy {
 namespace Http {
 
-using Config::Metadata;
+MetadataFunctionRetriever::MetadataFunctionRetriever() {}
 
-MetadataFunctionRetriever::MetadataFunctionRetriever(
-    const std::string &filter_key, const std::string &function_name_key,
-    const std::string &hostname_key, const std::string &region_key)
-    : filter_key_(filter_key), function_name_key_(function_name_key),
-      hostname_key_(hostname_key), region_key_(region_key) {}
+#define CLUSTER_FIELDS(FIELD_FUNC)\
+  FIELD_FUNC(host) \
+  FIELD_FUNC(region) \
+  FIELD_FUNC(access_key) \
+  FIELD_FUNC(secret_key)
 
-Optional<Function>
-MetadataFunctionRetriever::getFunction(const RouteEntry &routeEntry,
-                                       const ClusterInfo &info) {
-  auto route_metadata_fields = filterMetadataFields(routeEntry, filter_key_);
+#define FUNC_FIELDS(FIELD_FUNC)\
+  FIELD_FUNC(async) \
+  FIELD_FUNC(name) \
+  FIELD_FUNC(qualifier)
 
-  auto cluster_metadata_fields = filterMetadataFields(info, filter_key_);
+Optional<Function> MetadataFunctionRetriever::getFunction(const FunctionalFilterBase& filter) {
+  const ProtobufWkt::Struct &function_spec = filter.getFunctionSpec();
+  const ProtobufWkt::Struct &filter_spec = filter.getChildFilterSpec();
 
-  if (!route_metadata_fields.valid() || !cluster_metadata_fields.valid()) {
-    return {};
-  }
+  #define CHECK(F) \
+    if (function_spec.fields().find( #F ) == function_spec.fields().end()) { \
+      return {}; \
+    }
+  FUNC_FIELDS(CHECK);
+  #undef CHECK
 
-  return getFunction(*route_metadata_fields.value(),
-                     *cluster_metadata_fields.value());
-}
+  #define CHECK(F) \
+    if (filter_spec.fields().find( #F ) == filter_spec.fields().end()) { \
+      return {}; \
+    }
+  CLUSTER_FIELDS(CHECK);
 
-Optional<Function> MetadataFunctionRetriever::getFunction(
-    const FieldMap &route_metadata_fields,
-    const FieldMap &cluster_metadata_fields) {
-  auto func_name =
-      nonEmptyStringValue(route_metadata_fields, function_name_key_);
-  if (!func_name.valid()) {
-    return {};
-  }
+  // function spec contains function details,
+  // filter spec contains upstream details.
+  const auto& function_fields = function_spec.fields();
+  const auto& filter_fields = filter_spec.fields();
 
-  auto hostname = nonEmptyStringValue(cluster_metadata_fields, hostname_key_);
-  if (!hostname.valid()) {
-    return {};
-  }
 
-  auto region = nonEmptyStringValue(cluster_metadata_fields, region_key_);
-  if (!region.valid()) {
-    return {};
-  }
+  #define GETSTRING(FIELD, F) &(FIELD.at( #F ).string_value()),
+  #define GETBOOL(FIELD, F) (FIELD.at( #F ).bool_value()),
 
-  return Function{*func_name.value(), *hostname.value(), *region.value()};
-}
-
-/**
- * TODO(talnordan): Consider moving the `Struct` extraction logic to `Metadata`:
- * envoy/source/common/config/metadata.cc
- */
-Optional<const MetadataFunctionRetriever::FieldMap *>
-MetadataFunctionRetriever::filterMetadataFields(
-    const envoy::api::v2::Metadata &metadata, const std::string &filter) {
-  const auto filter_it = metadata.filter_metadata().find(filter);
-  if (filter_it == metadata.filter_metadata().end()) {
-    return {};
-  }
-
-  const auto &filter_metadata_struct = filter_it->second;
-  const auto &filter_metadata_fields = filter_metadata_struct.fields();
-  return Optional<const FieldMap *>(&filter_metadata_fields);
-}
-
-/**
- * TODO(talnordan): Consider moving the this logic to `Metadata`:
- * envoy/source/common/config/metadata.cc
- */
-Optional<const std::string *>
-MetadataFunctionRetriever::nonEmptyStringValue(const FieldMap &fields,
-                                               const std::string &key) {
-  const auto fields_it = fields.find(key);
-  if (fields_it == fields.end()) {
-    return {};
-  }
-
-  const auto &value = fields_it->second;
-  if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
-    return {};
-  }
-
-  const auto &string_value = value.string_value();
-  if (string_value.empty()) {
-    return {};
-  }
-
-  return Optional<const std::string *>(&string_value);
+  return Function {
+    GETSTRING(function_fields, name_)
+    GETSTRING(function_fields, qualifier_)
+    GETBOOL(function_fields, async_)
+    GETSTRING(filter_fields, host_)
+    GETSTRING(filter_fields, region_)
+    GETSTRING(filter_fields, access_key_)
+    GETSTRING(filter_fields, secret_key_)
+  };
 }
 
 } // namespace Http
