@@ -6,24 +6,23 @@
 #include "envoy/upstream/cluster_manager.h"
 
 #include "common/common/logger.h"
-
-#include "server/config/network/http_connection_manager.h"
-
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
-#include "lambda_filter.pb.h"
 #include "common/http/filter/lambda_filter_config.h"
 #include "common/http/filter/map_function_retriever.h"
 #include "common/http/functional_stream_decoder_base.h"
+
+#include "server/config/network/http_connection_manager.h"
+
+#include "lambda_filter.pb.h"
 
 namespace Envoy {
 namespace Http {
 
 class LambdaFilter : public FunctionalFilterBase {
 public:
-
-  LambdaFilter(Server::Configuration::FactoryContext& ctx, const std::string& name,
-                           LambdaFilterConfigSharedPtr config);
+  LambdaFilter(Server::Configuration::FactoryContext &ctx,
+               const std::string &name, LambdaFilterConfigSharedPtr config);
   ~LambdaFilter();
 
   // Http::StreamFilterBase

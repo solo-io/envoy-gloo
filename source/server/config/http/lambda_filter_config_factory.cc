@@ -7,13 +7,13 @@
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
 #include "common/config/solo_well_known_names.h"
-#include "common/protobuf/utility.h"
-
 #include "common/http/filter/function.h"
 #include "common/http/filter/lambda_filter.h"
-#include "lambda_filter.pb.h"
 #include "common/http/filter/lambda_filter_config.h"
 #include "common/http/filter/metadata_function_retriever.h"
+#include "common/protobuf/utility.h"
+
+#include "lambda_filter.pb.h"
 
 namespace Envoy {
 namespace Server {
@@ -87,8 +87,8 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(context, Config::SoloMetadataFilters::get().LAMBDA,
-                                         config);
+    auto filter = new Http::LambdaFilter(
+        context, Config::SoloMetadataFilters::get().LAMBDA, config);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };

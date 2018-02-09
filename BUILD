@@ -17,7 +17,6 @@ api_proto_library(
     srcs = ["lambda_filter.proto"],
 )
 
-
 envoy_cc_library(
     name = "filter_lib",
     repository = "@envoy",
