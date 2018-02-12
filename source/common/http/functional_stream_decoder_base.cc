@@ -1,3 +1,4 @@
+#include "common/config/solo_well_known_names.h"
 #include "common/http/functional_stream_decoder_base.h"
 
 #include "common/http/filter_utility.h"
@@ -57,8 +58,41 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
 }
 
 const ProtobufWkt::Struct &FunctionalFilterBase::getFunctionSpec() const {
-  RELEASE_ASSERT(spec_);
-  return *spec_;
+  RELEASE_ASSERT(cluster_spec_);
+  return *cluster_spec_;
+}
+
+const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() const {
+  RELEASE_ASSERT(child_spec_);
+  return *child_spec_;
+}
+  
+const ProtobufWkt::Struct *FunctionalFilterBase::getChildRouteFilterSpec() const {
+
+  if (route_spec_) {
+    return route_spec_;
+  }
+
+  if (!route_info_) {
+    // save the pointer as the metadata is owned by it.
+    route_info_ = decoder_callbacks_->route();
+    if (!route_info_) {
+      return nullptr;
+    }
+  }
+
+  const Envoy::Router::RouteEntry *routeEntry = route_info_->routeEntry();
+  if (!routeEntry) {
+    return nullptr;
+  }
+
+  const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
+  const auto filter_it = metadata.filter_metadata().find(childname_);
+  if  (filter_it != metadata.filter_metadata().end()) {
+      route_spec_ = &filter_it->second;
+  }
+
+  return route_spec_;
 }
 
 void FunctionalFilterBase::tryToGetSpec() {
@@ -67,27 +101,26 @@ void FunctionalFilterBase::tryToGetSpec() {
   if (!routeEntry) {
     return;
   }
+  
+  fetchClusterInfoIfOurs();
 
-  if (!isOurCluster()) {
+  if (!cluster_info_) {
     return;
   }
   // So now we know this this route is to a functional upstream. i.e. we must be
   // able to do a function route or error.
 
   const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
-  // TODO CONSTIFY
+
   const auto filter_it =
-      metadata.filter_metadata().find("io.solo.function_router");
+      metadata.filter_metadata().find(Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     error();
     return;
   }
 
-  Upstream::ClusterInfoConstSharedPtr info =
-      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
-
   const auto &filter_metadata_struct = filter_it->second;
-  findSingleFunction(std::move(info), filter_metadata_struct);
+  findSingleFunction(filter_metadata_struct);
 
   if (active()) {
     // we have spec!
@@ -101,15 +134,13 @@ void FunctionalFilterBase::tryToGetSpec() {
   error();
 }
 
-void FunctionalFilterBase::findSingleFunction(
-    Upstream::ClusterInfoConstSharedPtr &&info,
-    const ProtobufWkt::Struct &filter_metadata_struct) {
+void FunctionalFilterBase::findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct) {
 
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
 
   // TODO: write code for multiple functions after e2e
 
-  const auto function_it = filter_metadata_fields.find("function");
+  const auto function_it = filter_metadata_fields.find(Config::MetadataFunctionalRouterKeys::get().FUNCTION);
   if (function_it == filter_metadata_fields.end()) {
     return;
   }
@@ -121,24 +152,22 @@ void FunctionalFilterBase::findSingleFunction(
 
   const std::string &funcname = value.string_value();
 
-  tryToGetSpecFromCluster(funcname, std::move(info));
+  tryToGetSpecFromCluster(funcname);
 }
 
-void FunctionalFilterBase::tryToGetSpecFromCluster(
-    const std::string &funcname,
-    Upstream::ClusterInfoConstSharedPtr &&clusterinfo) {
+void FunctionalFilterBase::tryToGetSpecFromCluster(const std::string &funcname) {
 
-  const envoy::api::v2::Metadata &metadata = clusterinfo->metadata();
-  // TODO CONSTIFY
+  const envoy::api::v2::Metadata &metadata = cluster_info_->metadata();
+
   const auto filter_it =
-      metadata.filter_metadata().find("io.solo.function_router");
+      metadata.filter_metadata().find(Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     return;
   }
   const auto &filter_metadata_struct = filter_it->second;
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
 
-  const auto functions_it = filter_metadata_fields.find("functions");
+  const auto functions_it = filter_metadata_fields.find(Config::MetadataFunctionalRouterKeys::get().FUNCTIONS);
   if (functions_it == filter_metadata_fields.end()) {
     return;
   }
@@ -162,38 +191,33 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   }
 
   // save the cluster info as the spec lives in it.
-  cluster_info_ = clusterinfo;
-  spec_ = &specvalue.struct_value();
+  cluster_spec_ = &specvalue.struct_value();
 }
+
+void FunctionalFilterBase::fetchClusterInfoIfOurs() {
   
-const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() const {
-    return *maybeGetChildFilterSpec();
-}
-
-const ProtobufWkt::Struct *FunctionalFilterBase::maybeGetChildFilterSpec() const {
-
-  Upstream::ClusterInfoConstSharedPtr clusterinfo =
-      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
-
-  if (!clusterinfo) {
-    return nullptr;
+  if (cluster_info_) {
+    return;
   }
+  Upstream::ClusterInfoConstSharedPtr cluster_info = FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
 
-  const envoy::api::v2::Metadata &metadata = clusterinfo->metadata();
+  const envoy::api::v2::Metadata &metadata = cluster_info->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
-  if  (filter_it != metadata.filter_metadata().end()) {
-      return &filter_it->second;
-  } else {
-      return nullptr;
+  if (filter_it != metadata.filter_metadata().end()) {
+    cluster_info_ = cluster_info;
+    child_spec_ = &filter_it->second;
   }
-
-}
-
-bool FunctionalFilterBase::isOurCluster() const {
-  return maybeGetChildFilterSpec() != nullptr;
 }
 
 void FunctionalFilterBase::error() {
+  // error :( 
+  // free shared pointers.
+  cluster_spec_ = nullptr;
+  child_spec_ = nullptr;
+  cluster_info_ = nullptr;
+  route_spec_ = nullptr;
+  route_info_ = nullptr;
+
   Utility::sendLocalReply(*decoder_callbacks_, false, Code::NotFound,
                           "Function not found");
 }

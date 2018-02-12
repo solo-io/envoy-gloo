@@ -1,6 +1,8 @@
 #include <iostream>
 
 #include "common/http/functional_stream_decoder_base.h"
+#include "common/config/solo_well_known_names.h"
+
 #include "common/protobuf/utility.h"
 #include "common/router/config_impl.h"
 
@@ -25,39 +27,35 @@ using testing::_;
 namespace Envoy {
 namespace Http {
 
+class FuncitonFilterTest;
+
 class FunctionalFilterTester : public FunctionalFilterBase {
 public:
-  FunctionalFilterTester(FactoryContext &ctx, const std::string &childname)
-      : FunctionalFilterBase(ctx, childname),
-        functionDecodeHeadersCalled_(false), functionDecodeDataCalled_(false),
-        functionDecodeTrailersCalled_(false) {}
+  FunctionalFilterTester(FuncitonFilterTest& testfixture, FactoryContext &ctx, const std::string &childname)
+      : FunctionalFilterBase(ctx, childname), testfixture_(testfixture){}
 
   const ProtobufWkt::Struct &getSpec() { return getFunctionSpec(); }
 
   virtual void onDestroy() override {}
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &,
-                                                    bool) override {
-    functionDecodeHeadersCalled_ = true;
-    return FilterHeadersStatus::Continue;
-  }
+                                                    bool) override;
   virtual FilterDataStatus functionDecodeData(Buffer::Instance &,
-                                              bool) override {
-    functionDecodeDataCalled_ = true;
-    return FilterDataStatus::Continue;
-  }
-  virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override {
-    functionDecodeTrailersCalled_ = true;
-    return FilterTrailersStatus::Continue;
-  }
-  bool functionDecodeHeadersCalled_;
-  bool functionDecodeDataCalled_;
-  bool functionDecodeTrailersCalled_;
+                                              bool) override;
+  virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
+  FuncitonFilterTest& testfixture_;
 };
 
 class FuncitonFilterTest : public testing::Test {
 public:
-  FuncitonFilterTest() : childname_("childfilter") {}
+  FuncitonFilterTest() : 
+        functionDecodeHeadersCalled_(false), functionDecodeDataCalled_(false),
+        functionDecodeTrailersCalled_(false), routeMetadataFound_(false), childname_("childfilter") {}
 
+  bool functionDecodeHeadersCalled_;
+  bool functionDecodeDataCalled_;
+  bool functionDecodeTrailersCalled_;
+  bool routeMetadataFound_;
+  
 protected:
   void SetUp() override {
 
@@ -74,7 +72,7 @@ protected:
 
   void initFilter() {
     filter_ =
-        std::make_shared<FunctionalFilterTester>(factory_context_, childname_);
+        std:: make_unique<FunctionalFilterTester>(*this, factory_context_, childname_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -83,9 +81,9 @@ protected:
     // TODO use const
     ProtobufWkt::Struct &functionsstruct =
         (*cluster_metadata_
-              .mutable_filter_metadata())["io.solo.function_router"];
+              .mutable_filter_metadata())[Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER];
     ProtobufWkt::Value &functionstructvalue =
-        (*functionsstruct.mutable_fields())["functions"];
+        (*functionsstruct.mutable_fields())[Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
     ProtobufWkt::Struct *functionstruct =
         functionstructvalue.mutable_struct_value();
     ProtobufWkt::Value &functionstructspecvalue =
@@ -99,23 +97,29 @@ protected:
         ProtobufWkt::Struct();
   }
 
+  void initchildroutemeta() {
+
+    ProtobufWkt::Struct routefunctionmeta;
+    (*route_metadata_.mutable_filter_metadata())[childname_] = routefunctionmeta;
+  }
+
   void initroutemeta() {
 
     ProtobufWkt::Value functionvalue;
     functionvalue.set_string_value("funcname");
 
     ProtobufWkt::Struct routefunctionmeta;
-    (*routefunctionmeta.mutable_fields())["function"] = functionvalue;
+    (*routefunctionmeta.mutable_fields())[Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
 
     // TODO use const
-    (*route_metadata_.mutable_filter_metadata())["io.solo.function_router"] =
+    (*route_metadata_.mutable_filter_metadata())[Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER] =
         routefunctionmeta;
   }
 
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Envoy::Event::MockTimer> *attachmentTimeout_timer_{};
-  std::shared_ptr<FunctionalFilterTester> filter_;
+  std::unique_ptr<FunctionalFilterTester> filter_;
   std::deque<Envoy::Http::AsyncClient::Callbacks *> callbacks_;
 
   ProtobufWkt::Struct *functionsspecstruct_;
@@ -126,6 +130,23 @@ protected:
   std::string childname_;
 };
 
+FilterHeadersStatus FunctionalFilterTester::functionDecodeHeaders(HeaderMap &,
+                                                  bool) {
+  testfixture_.routeMetadataFound_ = (getChildRouteFilterSpec() != nullptr);
+  testfixture_.functionDecodeHeadersCalled_ = true;
+  return FilterHeadersStatus::Continue;
+}
+FilterDataStatus FunctionalFilterTester::functionDecodeData(Buffer::Instance &,
+                                            bool) {
+  testfixture_.functionDecodeDataCalled_ = true;
+  return FilterDataStatus::Continue;
+}
+FilterTrailersStatus FunctionalFilterTester::functionDecodeTrailers(HeaderMap &) {
+  testfixture_.functionDecodeTrailersCalled_ = true;
+  return FilterTrailersStatus::Continue;
+}
+
+
 TEST_F(FuncitonFilterTest, NothingConfigured) {
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
@@ -133,9 +154,9 @@ TEST_F(FuncitonFilterTest, NothingConfigured) {
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  EXPECT_FALSE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_FALSE(functionDecodeHeadersCalled_);
+  EXPECT_FALSE(functionDecodeDataCalled_);
+  EXPECT_FALSE(functionDecodeTrailersCalled_);
 }
 
 TEST_F(FuncitonFilterTest, HaveRouteMeta) {
@@ -155,9 +176,9 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
   const ProtobufWkt::Struct *origspecptr = functionsspecstruct_;
   EXPECT_EQ(origspecptr, receivedspecptr);
 
-  EXPECT_TRUE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_TRUE(functionDecodeHeadersCalled_);
+  EXPECT_FALSE(functionDecodeDataCalled_);
+  EXPECT_FALSE(functionDecodeTrailersCalled_);
 }
 
 TEST_F(FuncitonFilterTest, MissingRouteMeta) {
@@ -178,9 +199,34 @@ TEST_F(FuncitonFilterTest, MissingRouteMeta) {
   // test that we needed errored
   EXPECT_EQ(status, "404");
 
-  EXPECT_FALSE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_FALSE(functionDecodeHeadersCalled_);
+  EXPECT_FALSE(functionDecodeDataCalled_);
+  EXPECT_FALSE(functionDecodeTrailersCalled_);
+}
+
+TEST_F(FuncitonFilterTest, MissingChildRouteMeta) {
+  initclustermeta();
+  initroutemeta();
+
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  filter_->decodeHeaders(headers, true);
+
+  EXPECT_FALSE(routeMetadataFound_);
+}
+
+TEST_F(FuncitonFilterTest, FoundChildRouteMeta) {
+  initclustermeta();
+  initroutemeta();
+  initchildroutemeta();
+
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  filter_->decodeHeaders(headers, true);
+
+  EXPECT_TRUE(routeMetadataFound_);
 }
 
 } // namespace Http

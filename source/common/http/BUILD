@@ -28,6 +28,7 @@ envoy_cc_library(
     hdrs = ["functional_stream_decoder_base.h"],
     repository = "@envoy",
     deps = [
+        "//common/config:solo_well_known_names_lib",
         "//source/common/http:solo_filter_utility_lib",
         "@envoy//include/envoy/server:filter_config_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
