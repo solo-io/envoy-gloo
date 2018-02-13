@@ -5,16 +5,11 @@
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
-#include "metadata_function_retriever.h"
-
 namespace Envoy {
 
 const std::string DEFAULT_LAMBDA_FILTER =
     R"EOF(
 name: io.solo.lambda
-config:
-    access_key: a
-    secret_key: b
 )EOF";
 
 class LambdaFilterIntegrationTest
@@ -24,12 +19,12 @@ public:
   LambdaFilterIntegrationTest()
       : Envoy::HttpIntegrationTest(Envoy::Http::CodecClient::Type::HTTP1,
                                    GetParam()) {}
-
+  
   /**
    * Initializer for an individual integration test.
    */
   void initialize() override {
-
+    autonomous_upstream_ = true;
     config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
 
     config_helper_.addConfigModifier([](envoy::api::v2::Bootstrap &bootstrap) {
@@ -47,6 +42,16 @@ public:
           *metadata, Config::SoloMetadataFilters::get().LAMBDA,
           Config::MetadataLambdaKeys::get().REGION)
           .set_string_value("us-east-1");
+
+      Config::Metadata::mutableMetadataValue(
+          *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+          Config::MetadataLambdaKeys::get().ACCESS_KEY)
+          .set_string_value("acess key");
+
+      Config::Metadata::mutableMetadataValue(
+          *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+          Config::MetadataLambdaKeys::get().SECRET_KEY)
+          .set_string_value("secret dont tell");
     });
 
     config_helper_.addConfigModifier(
@@ -79,9 +84,11 @@ INSTANTIATE_TEST_CASE_P(
     testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(LambdaFilterIntegrationTest, Test1) {
-  Envoy::Http::TestHeaderMapImpl headers{
+  Envoy::Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
+sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_, 0);
+/*
   Envoy::IntegrationStreamDecoderPtr response(
       new Envoy::IntegrationStreamDecoder(*dispatcher_));
   Envoy::FakeStreamPtr request_stream;
@@ -97,12 +104,11 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
   request_stream = fake_upstream_connection->waitForNewStream(*dispatcher_);
   request_stream->waitForEndStream(*dispatcher_);
   response->waitForEndStream();
-
-  EXPECT_NE(0, request_stream->headers()
+*/
+  EXPECT_NE(0, upstream_request_->headers()
                    .get(Envoy::Http::LowerCaseString("authorization"))
                    ->value()
                    .size());
 
-  codec_client_->close();
 }
 } // namespace Envoy
