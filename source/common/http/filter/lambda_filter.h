@@ -20,12 +20,9 @@ namespace Http {
 
 class LambdaFilter : public FunctionalFilterBase {
 public:
-  LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver, Server::Configuration::FactoryContext &ctx,
+  LambdaFilter(FunctionRetrieverSharedPtr retreiver, Server::Configuration::FactoryContext &ctx,
                const std::string &name, LambdaFilterConfigSharedPtr config);
   ~LambdaFilter();
-
-  // Http::StreamFilterBase
-  void onDestroy() override;
 
   // Http::FunctionalFilterBase
   FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
@@ -42,12 +39,14 @@ private:
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();
+  void cleanup();
 
   Envoy::Http::HeaderMap *request_headers_{};
   union{
     AwsAuthenticator aws_authenticator_;
   };
 
+  bool active_{};
 };
 
 } // namespace Http

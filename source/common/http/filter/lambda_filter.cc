@@ -11,6 +11,7 @@
 #include "common/common/hex.h"
 #include "common/common/utility.h"
 #include "common/http/filter_utility.h"
+#include "common/http/utility.h"
 #include "common/http/solo_filter_utility.h"
 
 #include "server/config/network/http_connection_manager.h"
@@ -26,15 +27,8 @@ LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,Server::Co
     cm_(ctx.clusterManager()) {}
 
 LambdaFilter::~LambdaFilter() {
-  
-  // No need to destruct as this has no state.
-  // if this changes, need to make sure only to destruct
-  // if it was initialized.
-  //  aws_authenticator_.~AwsAuthenticator();
-  
+  cleanup();
 }
-
-void LambdaFilter::onDestroy() {}
 
 std::string LambdaFilter::functionUrlPath() {
 
@@ -49,19 +43,23 @@ Envoy::Http::FilterHeadersStatus LambdaFilter::functionDecodeHeaders(Envoy::Http
 
   auto optionalFunction = functionRetriever_->getFunction(*this);
   if (!optionalFunction.valid()) {
+    // This is ours to handle - return error to the user
+    Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
+                             Code::InternalServerError, "AWS Function not available");
+
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
-
+  active_ = true;
   currentFunction_ = std::move(optionalFunction.value());
   // placement new
   new(&aws_authenticator_) AwsAuthenticator(*currentFunction_.access_key_, *currentFunction_.secret_key_);
+  request_headers_ = &headers;
 
-  headers.insertMethod().value().setReference(
+  request_headers_->insertMethod().value().setReference(
       Envoy::Http::Headers::get().MethodValues.Post);
 
-  //  headers.removeContentLength();
-  headers.insertPath().value(functionUrlPath());
-  request_headers_ = &headers;
+  //  request_headers_->removeContentLength();
+  request_headers_->insertPath().value(functionUrlPath());
 
   ENVOY_LOG(debug, "decodeHeaders called end = {}", end_stream);
   if (end_stream) {
@@ -76,11 +74,9 @@ Envoy::Http::FilterHeadersStatus LambdaFilter::functionDecodeHeaders(Envoy::Http
 Envoy::Http::FilterDataStatus
 LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
                                  bool end_stream) {
-
-  // calc hash of data
-  ENVOY_LOG(debug, "decodeData called end = {} data = {}", end_stream,
-            data.length());
-
+  if (!active_) {
+    return Envoy::Http::FilterDataStatus::Continue;
+  }
   aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
@@ -121,15 +117,24 @@ void LambdaFilter::lambdafy() {
 
   aws_authenticator_.sign(request_headers_, std::move(headers),
                          *currentFunction_.region_);
-  request_headers_ = nullptr;
+  cleanup();
 }
 
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
-
-  lambdafy();
+  if (active_) {
+      lambdafy();
+  }
 
   return Envoy::Http::FilterTrailersStatus::Continue;
+}
+
+void LambdaFilter::cleanup() {
+  request_headers_ = nullptr;
+  if (active_) {
+    active_ = false;
+    aws_authenticator_.~AwsAuthenticator();
+  }
 }
 
 } // namespace Http

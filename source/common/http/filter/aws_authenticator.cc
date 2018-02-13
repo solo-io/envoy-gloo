@@ -176,6 +176,8 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   uint8_t out[out_len];
 
   HMAC_CTX ctx;
+  HMAC_CTX_init(&ctx);
+
   HMAC_Init_ex(&ctx, first_key_.data(), first_key_.size(), evp, nullptr);
   HMAC_Update(&ctx,
               reinterpret_cast<const uint8_t *>(CredentialScopeDate.c_str()),

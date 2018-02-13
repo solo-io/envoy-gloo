@@ -14,6 +14,11 @@ envoy_cc_test(
     repository = "@envoy",
     deps = [
         "//:filter_lib",
+        "//test/mocks/lambda:lambda_mocks",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks",
+    
         "@envoy//test/test_common:utility_lib",
     ],
 )

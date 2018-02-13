@@ -9,7 +9,7 @@ http_archive(
 )
 
 
-ENVOY_COMMON_SHA = "619c67c717ed9c8ea2d660f8bf40b811aba0e1b0"  # Feb 12, 2018 (enable fetching the child filter's route metadata.)
+ENVOY_COMMON_SHA = "5bac5d76746016463bdfedd1884f1c266d59ef30"  # Feb 13, 2018 (is_reset_ tp send local reply.)
 
 # load solo common
 git_repository(

@@ -36,7 +36,7 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "function_retrieves_lib",
+    name = "function_retriever_lib",
     srcs = [
         "metadata_function_retriever.cc",
     ],
@@ -64,7 +64,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/common/http/filter:aws_authenticator_lib",
-        "//source/common/http/filter:function_retrieves_lib",
+        "//source/common/http/filter:function_retriever_lib",
         "//source/common/http/filter:lambda_filter_config",
         "@envoy//source/exe:envoy_common_lib",
         "@envoy_common//source/common/http:functional_stream_decoder_base_lib",
