@@ -35,6 +35,9 @@ std::string LambdaFilter::functionUrlPath() {
   std::stringstream val;
   val << "/2015-03-31/functions/" << (*currentFunction_.name_)
       << "/invocations";
+  if ((currentFunction_.qualifier_ != nullptr) && (!currentFunction_.qualifier_->empty())) {
+    val << "?Qualifier=" << (*currentFunction_.qualifier_);
+  }
   return val.str();
 }
 
@@ -98,9 +101,15 @@ void LambdaFilter::lambdafy() {
   std::list<Envoy::Http::LowerCaseString> headers;
 
   headers.push_back(Envoy::Http::LowerCaseString("x-amz-invocation-type"));
-  request_headers_->addCopy(
-      Envoy::Http::LowerCaseString("x-amz-invocation-type"),
-      std::string("RequestResponse"));
+  if (currentFunction_.async_) {
+    request_headers_->addCopy(
+        Envoy::Http::LowerCaseString("x-amz-invocation-type"),
+        std::string("Event"));
+  } else {
+    request_headers_->addCopy(
+        Envoy::Http::LowerCaseString("x-amz-invocation-type"),
+        std::string("RequestResponse"));
+  }
 
   //  headers.push_back(Envoy::Http::LowerCaseString("x-amz-client-context"));
   //  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-client-context"),
