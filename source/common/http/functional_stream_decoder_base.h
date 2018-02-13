@@ -14,12 +14,12 @@ class FunctionalFilterBase : public StreamDecoderFilter,
                              public Logger::Loggable<Logger::Id::filter> {
 public:
   FunctionalFilterBase(FactoryContext &ctx, const std::string &childname)
-      : decoder_callbacks_(nullptr), cm_(ctx.clusterManager()),
-        random_(ctx.random()), childname_(childname), cluster_info_(nullptr),cluster_spec_(nullptr),
-        child_spec_(nullptr), route_info_(nullptr) ,route_spec_(nullptr){}
+      : cm_(ctx.clusterManager()), random_(ctx.random()),
+        childname_(childname) {}
   virtual ~FunctionalFilterBase();
 
   // Http::StreamFilterBase
+  void onDestroy() override;
 
   // Http::StreamDecoderFilter
   FilterHeadersStatus decodeHeaders(HeaderMap &headers,
@@ -33,37 +33,36 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  bool active() const  { return cluster_spec_ != nullptr; }
+  bool active() const { return cluster_spec_ != nullptr; }
   const ProtobufWkt::Struct &getFunctionSpec() const;
   const ProtobufWkt::Struct &getChildFilterSpec() const;
   const ProtobufWkt::Struct *getChildRouteFilterSpec() const;
 
 protected:
-  StreamDecoderFilterCallbacks *decoder_callbacks_;
+  StreamDecoderFilterCallbacks *decoder_callbacks_{};
+  bool is_reset_{};
 
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &m, bool e) PURE;
   virtual FilterDataStatus functionDecodeData(Buffer::Instance &, bool) PURE;
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
 
 private:
-
   Upstream::ClusterManager &cm_;
   Envoy::Runtime::RandomGenerator &random_;
   const std::string &childname_;
 
-  Upstream::ClusterInfoConstSharedPtr cluster_info_;
-  const ProtobufWkt::Struct *cluster_spec_; // function spec is here
-  // mutable as these are modified in a const function. it is ok as the state of the object doesnt
-  // change, it is for lazy loading.
-  mutable const ProtobufWkt::Struct *child_spec_; // childfilter is here 
+  Upstream::ClusterInfoConstSharedPtr cluster_info_{};
+  const ProtobufWkt::Struct *cluster_spec_{}; // function spec is here
+  // mutable as these are modified in a const function. it is ok as the state of
+  // the object doesnt change, it is for lazy loading.
+  mutable const ProtobufWkt::Struct *child_spec_{}; // childfilter is here
 
-  mutable  Router::RouteConstSharedPtr route_info_;
-  mutable const ProtobufWkt::Struct *route_spec_;
+  mutable Router::RouteConstSharedPtr route_info_{};
+  mutable const ProtobufWkt::Struct *route_spec_{};
 
   void tryToGetSpec();
   void findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
-  void
-  tryToGetSpecFromCluster(const std::string &funcname);
+  void tryToGetSpecFromCluster(const std::string &funcname);
   void fetchClusterInfoIfOurs();
   void error();
 };

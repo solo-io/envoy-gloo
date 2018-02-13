@@ -1,6 +1,6 @@
-#include "common/config/solo_well_known_names.h"
 #include "common/http/functional_stream_decoder_base.h"
 
+#include "common/config/solo_well_known_names.h"
 #include "common/http/filter_utility.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
@@ -32,6 +32,8 @@ continue.
 */
 
 FunctionalFilterBase::~FunctionalFilterBase() {}
+
+void FunctionalFilterBase::onDestroy() { is_reset_ = true; }
 
 FilterHeadersStatus FunctionalFilterBase::decodeHeaders(HeaderMap &headers,
                                                         bool end_stream) {
@@ -66,8 +68,9 @@ const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() const {
   RELEASE_ASSERT(child_spec_);
   return *child_spec_;
 }
-  
-const ProtobufWkt::Struct *FunctionalFilterBase::getChildRouteFilterSpec() const {
+
+const ProtobufWkt::Struct *
+FunctionalFilterBase::getChildRouteFilterSpec() const {
 
   if (route_spec_) {
     return route_spec_;
@@ -88,8 +91,8 @@ const ProtobufWkt::Struct *FunctionalFilterBase::getChildRouteFilterSpec() const
 
   const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
-  if  (filter_it != metadata.filter_metadata().end()) {
-      route_spec_ = &filter_it->second;
+  if (filter_it != metadata.filter_metadata().end()) {
+    route_spec_ = &filter_it->second;
   }
 
   return route_spec_;
@@ -101,7 +104,7 @@ void FunctionalFilterBase::tryToGetSpec() {
   if (!routeEntry) {
     return;
   }
-  
+
   fetchClusterInfoIfOurs();
 
   if (!cluster_info_) {
@@ -112,8 +115,8 @@ void FunctionalFilterBase::tryToGetSpec() {
 
   const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
 
-  const auto filter_it =
-      metadata.filter_metadata().find(Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
+  const auto filter_it = metadata.filter_metadata().find(
+      Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     error();
     return;
@@ -134,13 +137,15 @@ void FunctionalFilterBase::tryToGetSpec() {
   error();
 }
 
-void FunctionalFilterBase::findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct) {
+void FunctionalFilterBase::findSingleFunction(
+    const ProtobufWkt::Struct &filter_metadata_struct) {
 
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
 
   // TODO: write code for multiple functions after e2e
 
-  const auto function_it = filter_metadata_fields.find(Config::MetadataFunctionalRouterKeys::get().FUNCTION);
+  const auto function_it = filter_metadata_fields.find(
+      Config::MetadataFunctionalRouterKeys::get().FUNCTION);
   if (function_it == filter_metadata_fields.end()) {
     return;
   }
@@ -155,19 +160,21 @@ void FunctionalFilterBase::findSingleFunction(const ProtobufWkt::Struct &filter_
   tryToGetSpecFromCluster(funcname);
 }
 
-void FunctionalFilterBase::tryToGetSpecFromCluster(const std::string &funcname) {
+void FunctionalFilterBase::tryToGetSpecFromCluster(
+    const std::string &funcname) {
 
   const envoy::api::v2::Metadata &metadata = cluster_info_->metadata();
 
-  const auto filter_it =
-      metadata.filter_metadata().find(Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
+  const auto filter_it = metadata.filter_metadata().find(
+      Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     return;
   }
   const auto &filter_metadata_struct = filter_it->second;
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
 
-  const auto functions_it = filter_metadata_fields.find(Config::MetadataFunctionalRouterKeys::get().FUNCTIONS);
+  const auto functions_it = filter_metadata_fields.find(
+      Config::MetadataFunctionalRouterKeys::get().FUNCTIONS);
   if (functions_it == filter_metadata_fields.end()) {
     return;
   }
@@ -195,11 +202,12 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(const std::string &funcname) 
 }
 
 void FunctionalFilterBase::fetchClusterInfoIfOurs() {
-  
+
   if (cluster_info_) {
     return;
   }
-  Upstream::ClusterInfoConstSharedPtr cluster_info = FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
+  Upstream::ClusterInfoConstSharedPtr cluster_info =
+      FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
 
   const envoy::api::v2::Metadata &metadata = cluster_info->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
@@ -210,7 +218,7 @@ void FunctionalFilterBase::fetchClusterInfoIfOurs() {
 }
 
 void FunctionalFilterBase::error() {
-  // error :( 
+  // error :(
   // free shared pointers.
   cluster_spec_ = nullptr;
   child_spec_ = nullptr;
@@ -218,7 +226,7 @@ void FunctionalFilterBase::error() {
   route_spec_ = nullptr;
   route_info_ = nullptr;
 
-  Utility::sendLocalReply(*decoder_callbacks_, false, Code::NotFound,
+  Utility::sendLocalReply(*decoder_callbacks_, is_reset_, Code::NotFound,
                           "Function not found");
 }
 
