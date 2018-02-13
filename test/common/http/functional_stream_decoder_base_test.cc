@@ -1,8 +1,7 @@
 #include <iostream>
 
-#include "common/http/functional_stream_decoder_base.h"
 #include "common/config/solo_well_known_names.h"
-
+#include "common/http/functional_stream_decoder_base.h"
 #include "common/protobuf/utility.h"
 #include "common/router/config_impl.h"
 
@@ -15,13 +14,13 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::AtLeast;
 using testing::Invoke;
 using testing::Return;
 using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
 using testing::WithArg;
-using testing::AtLeast;
 using testing::_;
 
 namespace Envoy {
@@ -31,31 +30,32 @@ class FuncitonFilterTest;
 
 class FunctionalFilterTester : public FunctionalFilterBase {
 public:
-  FunctionalFilterTester(FuncitonFilterTest& testfixture, FactoryContext &ctx, const std::string &childname)
-      : FunctionalFilterBase(ctx, childname), testfixture_(testfixture){}
+  FunctionalFilterTester(FuncitonFilterTest &testfixture, FactoryContext &ctx,
+                         const std::string &childname)
+      : FunctionalFilterBase(ctx, childname), testfixture_(testfixture) {}
 
   const ProtobufWkt::Struct &getSpec() { return getFunctionSpec(); }
 
   virtual void onDestroy() override {}
-  virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &,
-                                                    bool) override;
+  virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
   virtual FilterDataStatus functionDecodeData(Buffer::Instance &,
                                               bool) override;
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
-  FuncitonFilterTest& testfixture_;
+  FuncitonFilterTest &testfixture_;
 };
 
 class FuncitonFilterTest : public testing::Test {
 public:
-  FuncitonFilterTest() : 
-        functionDecodeHeadersCalled_(false), functionDecodeDataCalled_(false),
-        functionDecodeTrailersCalled_(false), routeMetadataFound_(false), childname_("childfilter") {}
+  FuncitonFilterTest()
+      : functionDecodeHeadersCalled_(false), functionDecodeDataCalled_(false),
+        functionDecodeTrailersCalled_(false), routeMetadataFound_(false),
+        childname_("childfilter") {}
 
   bool functionDecodeHeadersCalled_;
   bool functionDecodeDataCalled_;
   bool functionDecodeTrailersCalled_;
   bool routeMetadataFound_;
-  
+
 protected:
   void SetUp() override {
 
@@ -71,8 +71,8 @@ protected:
   }
 
   void initFilter() {
-    filter_ =
-        std:: make_unique<FunctionalFilterTester>(*this, factory_context_, childname_);
+    filter_ = std::make_unique<FunctionalFilterTester>(*this, factory_context_,
+                                                       childname_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -80,10 +80,11 @@ protected:
 
     // TODO use const
     ProtobufWkt::Struct &functionsstruct =
-        (*cluster_metadata_
-              .mutable_filter_metadata())[Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER];
+        (*cluster_metadata_.mutable_filter_metadata())
+            [Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER];
     ProtobufWkt::Value &functionstructvalue =
-        (*functionsstruct.mutable_fields())[Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
+        (*functionsstruct.mutable_fields())
+            [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
     ProtobufWkt::Struct *functionstruct =
         functionstructvalue.mutable_struct_value();
     ProtobufWkt::Value &functionstructspecvalue =
@@ -100,7 +101,8 @@ protected:
   void initchildroutemeta() {
 
     ProtobufWkt::Struct routefunctionmeta;
-    (*route_metadata_.mutable_filter_metadata())[childname_] = routefunctionmeta;
+    (*route_metadata_.mutable_filter_metadata())[childname_] =
+        routefunctionmeta;
   }
 
   void initroutemeta() {
@@ -109,11 +111,13 @@ protected:
     functionvalue.set_string_value("funcname");
 
     ProtobufWkt::Struct routefunctionmeta;
-    (*routefunctionmeta.mutable_fields())[Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
+    (*routefunctionmeta.mutable_fields())
+        [Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
 
     // TODO use const
-    (*route_metadata_.mutable_filter_metadata())[Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER] =
-        routefunctionmeta;
+    (*route_metadata_.mutable_filter_metadata())
+        [Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER] =
+            routefunctionmeta;
   }
 
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
@@ -131,21 +135,21 @@ protected:
 };
 
 FilterHeadersStatus FunctionalFilterTester::functionDecodeHeaders(HeaderMap &,
-                                                  bool) {
+                                                                  bool) {
   testfixture_.routeMetadataFound_ = (getChildRouteFilterSpec() != nullptr);
   testfixture_.functionDecodeHeadersCalled_ = true;
   return FilterHeadersStatus::Continue;
 }
 FilterDataStatus FunctionalFilterTester::functionDecodeData(Buffer::Instance &,
-                                            bool) {
+                                                            bool) {
   testfixture_.functionDecodeDataCalled_ = true;
   return FilterDataStatus::Continue;
 }
-FilterTrailersStatus FunctionalFilterTester::functionDecodeTrailers(HeaderMap &) {
+FilterTrailersStatus
+FunctionalFilterTester::functionDecodeTrailers(HeaderMap &) {
   testfixture_.functionDecodeTrailersCalled_ = true;
   return FilterTrailersStatus::Continue;
 }
-
 
 TEST_F(FuncitonFilterTest, NothingConfigured) {
 
@@ -163,7 +167,8 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
   initclustermeta();
   initroutemeta();
   auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
-  EXPECT_CALL(factory_context_.cluster_manager_, get(clustername)).Times(AtLeast(1));
+  EXPECT_CALL(factory_context_.cluster_manager_, get(clustername))
+      .Times(AtLeast(1));
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
