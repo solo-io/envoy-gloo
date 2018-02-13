@@ -41,8 +41,8 @@ envoy_cc_library(
         "metadata_function_retriever.cc",
     ],
     hdrs = [
-        "function_retriever.h",
         "function.h",
+        "function_retriever.h",
         "metadata_function_retriever.h",
     ],
     repository = "@envoy",

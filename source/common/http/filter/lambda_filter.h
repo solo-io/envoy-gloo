@@ -7,8 +7,8 @@
 
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
-#include "common/http/filter/lambda_filter_config.h"
 #include "common/http/filter/function_retriever.h"
+#include "common/http/filter/lambda_filter_config.h"
 #include "common/http/functional_stream_decoder_base.h"
 
 #include "server/config/network/http_connection_manager.h"
@@ -20,7 +20,8 @@ namespace Http {
 
 class LambdaFilter : public FunctionalFilterBase {
 public:
-  LambdaFilter(FunctionRetrieverSharedPtr retreiver, Server::Configuration::FactoryContext &ctx,
+  LambdaFilter(FunctionRetrieverSharedPtr retreiver,
+               Server::Configuration::FactoryContext &ctx,
                const std::string &name, LambdaFilterConfigSharedPtr config);
   ~LambdaFilter();
 
@@ -40,7 +41,7 @@ private:
   void cleanup();
 
   Envoy::Http::HeaderMap *request_headers_{};
-  union{
+  union {
     AwsAuthenticator aws_authenticator_;
   };
 

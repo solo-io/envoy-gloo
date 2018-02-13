@@ -12,7 +12,7 @@ class LambdaFilterConfig {
   using ProtoConfig = envoy::api::v2::filter::http::Lambda;
 
 public:
-  LambdaFilterConfig(const ProtoConfig &/*proto_config*/) {}
+  LambdaFilterConfig(const ProtoConfig & /*proto_config*/) {}
 };
 
 typedef std::shared_ptr<LambdaFilterConfig> LambdaFilterConfigSharedPtr;

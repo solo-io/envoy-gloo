@@ -11,51 +11,53 @@
 #include "common/common/hex.h"
 #include "common/common/utility.h"
 #include "common/http/filter_utility.h"
-#include "common/http/utility.h"
 #include "common/http/solo_filter_utility.h"
+#include "common/http/utility.h"
 
 #include "server/config/network/http_connection_manager.h"
 
 namespace Envoy {
 namespace Http {
 
-LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,Server::Configuration::FactoryContext &ctx,
+LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,
+                           Server::Configuration::FactoryContext &ctx,
                            const std::string &name,
                            LambdaFilterConfigSharedPtr config)
     : FunctionalFilterBase(ctx, name), config_(config),
-    functionRetriever_(retreiver),
-    cm_(ctx.clusterManager()) {}
+      functionRetriever_(retreiver), cm_(ctx.clusterManager()) {}
 
-LambdaFilter::~LambdaFilter() {
-  cleanup();
-}
+LambdaFilter::~LambdaFilter() { cleanup(); }
 
 std::string LambdaFilter::functionUrlPath() {
 
   std::stringstream val;
   val << "/2015-03-31/functions/" << (*currentFunction_.name_)
       << "/invocations";
-  if ((currentFunction_.qualifier_ != nullptr) && (!currentFunction_.qualifier_->empty())) {
+  if ((currentFunction_.qualifier_ != nullptr) &&
+      (!currentFunction_.qualifier_->empty())) {
     val << "?Qualifier=" << (*currentFunction_.qualifier_);
   }
   return val.str();
 }
 
-Envoy::Http::FilterHeadersStatus LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
+Envoy::Http::FilterHeadersStatus
+LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
                                     bool end_stream) {
 
   auto optionalFunction = functionRetriever_->getFunction(*this);
   if (!optionalFunction.valid()) {
     // This is ours to handle - return error to the user
     Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
-                             Code::InternalServerError, "AWS Function not available");
+                            Code::InternalServerError,
+                            "AWS Function not available");
 
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
   active_ = true;
   currentFunction_ = std::move(optionalFunction.value());
   // placement new
-  new(&aws_authenticator_) AwsAuthenticator(*currentFunction_.access_key_, *currentFunction_.secret_key_);
+  new (&aws_authenticator_) AwsAuthenticator(*currentFunction_.access_key_,
+                                             *currentFunction_.secret_key_);
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
@@ -69,9 +71,8 @@ Envoy::Http::FilterHeadersStatus LambdaFilter::functionDecodeHeaders(Envoy::Http
     lambdafy();
     return Envoy::Http::FilterHeadersStatus::Continue;
   }
-  
+
   return Envoy::Http::FilterHeadersStatus::StopIteration;
-  
 }
 
 Envoy::Http::FilterDataStatus
@@ -125,14 +126,14 @@ void LambdaFilter::lambdafy() {
   headers.push_back(Envoy::Http::LowerCaseString("content-type"));
 
   aws_authenticator_.sign(request_headers_, std::move(headers),
-                         *currentFunction_.region_);
+                          *currentFunction_.region_);
   cleanup();
 }
 
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
   if (active_) {
-      lambdafy();
+    lambdafy();
   }
 
   return Envoy::Http::FilterTrailersStatus::Continue;

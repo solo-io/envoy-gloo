@@ -28,7 +28,6 @@ class SoloMetadataFilterValues {
 public:
   // Filter namespace for Lambda Filter.
   const std::string LAMBDA = "io.solo.lambda";
-  
 };
 
 typedef ConstSingleton<SoloMetadataFilterValues> SoloMetadataFilters;

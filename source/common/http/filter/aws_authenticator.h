@@ -33,7 +33,7 @@ private:
   static bool lowercasecompare(const Envoy::Http::LowerCaseString &i,
                                const Envoy::Http::LowerCaseString &j);
 
-  const std::string& access_key_;
+  const std::string &access_key_;
   const std::string first_key_;
 
   SHA256_CTX body_sha_;

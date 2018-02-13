@@ -19,10 +19,8 @@ namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-HttpFilterFactoryCb
-LambdaFilterConfigFactory::createFilterFactory(const Json::Object &,
-                                               const std::string &,
-                                               FactoryContext &) {
+HttpFilterFactoryCb LambdaFilterConfigFactory::createFilterFactory(
+    const Json::Object &, const std::string &, FactoryContext &) {
   NOT_IMPLEMENTED;
 }
 
@@ -76,12 +74,14 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
   Http::LambdaFilterConfigSharedPtr config =
       std::make_shared<Http::LambdaFilterConfig>(proto_config);
 
-  Http::FunctionRetrieverSharedPtr functionRetriever = std::make_shared<Http::MetadataFunctionRetriever>();
+  Http::FunctionRetrieverSharedPtr functionRetriever =
+      std::make_shared<Http::MetadataFunctionRetriever>();
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(functionRetriever,
-        context, Config::SoloMetadataFilters::get().LAMBDA, config);
+    auto filter = new Http::LambdaFilter(
+        functionRetriever, context, Config::SoloMetadataFilters::get().LAMBDA,
+        config);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
