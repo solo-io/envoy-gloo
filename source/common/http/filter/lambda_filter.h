@@ -34,8 +34,6 @@ private:
   FunctionRetrieverSharedPtr functionRetriever_;
   Upstream::ClusterManager &cm_;
 
-  StreamDecoderFilterCallbacks *decoder_callbacks_;
-
   Function currentFunction_;
   void lambdafy();
   std::string functionUrlPath();

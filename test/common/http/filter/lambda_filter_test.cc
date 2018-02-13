@@ -55,10 +55,6 @@ protected:
     function_retriever_ = std::make_shared<NiceMock<Envoy::Http::MockFunctionRetriever> >();
     envoy::api::v2::filter::http::Lambda config;
     config_ = std::make_shared<LambdaFilterConfig >(config);
-    initFilter();
-  }
-
-  void initFilter() {
     filter_ = std::make_unique<LambdaFilter>(function_retriever_, factory_context_, "doesn't matter", config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
@@ -66,11 +62,9 @@ protected:
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
 
-  std::unique_ptr<LambdaFilter> filter_;
-  std::shared_ptr<NiceMock<Envoy::Http::MockFunctionRetriever> > function_retriever_;
   LambdaFilterConfigSharedPtr config_;
-
-//  std::deque<Envoy::Http::AsyncClient::Callbacks *> callbacks_;
+  std::unique_ptr<LambdaFilter> filter_;
+  std::shared_ptr<NiceMock<Envoy::Http::MockFunctionRetriever>> function_retriever_;
 };
 
 // see: https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
@@ -115,6 +109,41 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue, filter_->functionDecodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +"/invocations?Qualifier="+ function_retriever_->qualifier_, headers.get_(":path"));
+
+}
+
+// see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
+TEST_F(LambdaFilterTest, FuncWithoutQualifierCalled) {
+
+  EXPECT_CALL(*function_retriever_, getFunction(_))
+      .WillRepeatedly(Return(Function{
+                                &function_retriever_->name_,
+                                nullptr,
+                                function_retriever_->async_,
+                                &function_retriever_->host_,
+                                &function_retriever_->region_,
+                                &function_retriever_->access_key_,
+                                &function_retriever_->secret_key_}));
+
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+  EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue, filter_->functionDecodeHeaders(headers, true));
+
+  EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +"/invocations", headers.get_(":path"));
+
+}
+
+TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
+  function_retriever_->qualifier_ = "";
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+  EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue, filter_->functionDecodeHeaders(headers, true));
+
+  EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +"/invocations", headers.get_(":path"));
 
 }
 

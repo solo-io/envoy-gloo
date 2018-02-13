@@ -42,7 +42,7 @@ void AwsAuthenticator::updatePayloadHash(const Envoy::Buffer::Instance &data) {
   }
 }
 
-const Envoy::Http::HeaderEntry *
+const HeaderEntry *
 AwsAuthenticator::getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
                                        const Envoy::Http::LowerCaseString &im) {
 #define Q(x) #x
@@ -184,18 +184,18 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
               CredentialScopeDate.size());
   HMAC_Final(&ctx, out, &out_len);
 
-  HMAC_Init(&ctx, out, out_len, nullptr);
+  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(region.c_str()),
               region.size());
   HMAC_Final(&ctx, out, &out_len);
 
-  HMAC_Init(&ctx, out, out_len, nullptr);
+  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(SERVICE.c_str()),
               SERVICE.size());
   HMAC_Final(&ctx, out, &out_len);
 
   static std::string aws_request = "aws4_request";
-  HMAC_Init(&ctx, out, out_len, nullptr);
+  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(aws_request.c_str()),
               aws_request.size());
   HMAC_Final(&ctx, out, &out_len);
@@ -208,7 +208,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   CredentialScope + '\n' +
   hashedCanonicalRequest;
   */
-  HMAC_Init(&ctx, out, out_len, nullptr);
+  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(ALGORITHM.c_str()),
               ALGORITHM.size());
   HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>("\n"), 1);
@@ -222,6 +222,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
               reinterpret_cast<const uint8_t *>(hashedCanonicalRequest.c_str()),
               hashedCanonicalRequest.size());
   HMAC_Final(&ctx, out, &out_len);
+  HMAC_CTX_cleanup(&ctx);
 
   std::string signature = Envoy::Hex::encode(out, out_len);
 

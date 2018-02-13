@@ -25,13 +25,13 @@ public:
         const ProtobufWkt::Struct *route_spec));
 
 
-const std::string name_{"name"};
-const std::string qualifier_{"qualifier"};
+std::string name_{"name"};
+std::string qualifier_{"qualifier"};
 bool  async_{false};
-const std::string host_{"host"};
-const std::string region_{"region"};
-const std::string access_key_{"access_key"};
-const std::string secret_key_{"secret_key"};
+std::string host_{"host"};
+std::string region_{"region"};
+std::string access_key_{"access_key"};
+std::string secret_key_{"secret_key"};
 
 
 };
