@@ -11,6 +11,7 @@
 #include "common/common/hex.h"
 #include "common/common/utility.h"
 #include "common/http/headers.h"
+#include "common/http/utility.h"
 
 #include "openssl/digest.h"
 #include "openssl/hmac.h"
@@ -68,6 +69,9 @@ bool AwsAuthenticator::lowercasecompare(const Envoy::Http::LowerCaseString &i,
 void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
                             std::list<Envoy::Http::LowerCaseString> &&headers,
                             const std::string &region) {
+  // we can't use the date provider interface as this is not the date header,
+  // plus the date format is different. use slow method now, optimize in the
+  // future.
   static Envoy::Http::LowerCaseString dateheader =
       Envoy::Http::LowerCaseString("x-amz-date");
   headers.push_back(dateheader);
@@ -77,9 +81,6 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   std::string RequestDateTime =
       Envoy::DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
   request_headers->addReferenceKey(dateheader, RequestDateTime);
-
-  // insert x-amz-date ,
-  // sign Host, as they are a must.
 
   std::stringstream canonicalHeaders;
   std::stringstream signedHeaders;
@@ -118,25 +119,26 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   std::string HTTPRequestMethod = Envoy::Http::Headers::get().MethodValues.Post;
   const Envoy::Http::HeaderString &CanonicalURI =
       request_headers->Path()->value();
-  std::string CanonicalQueryString =
-      Envoy::EMPTY_STRING; // TODO : support query string.
-                           /*
-                             std::string CanonicalRequest =
-                             HTTPRequestMethod + '\n' +
-                             CanonicalURI + '\n' +
-                             CanonicalQueryString + '\n' +
-                             CanonicalHeaders + '\n' +
-                             SignedHeaders + '\n' +
-                             hexpayload;
-                           */
+  auto CanonicalURILen = CanonicalURI.size();
+
+  std::string CanonicalQueryString = Envoy::EMPTY_STRING;
+
+  const char *query_string_start = Utility::findQueryStringStart(CanonicalURI);
+  if (query_string_start != nullptr) {
+    CanonicalURILen = query_string_start - CanonicalURI.c_str();
+
+    // +1 to skip the question mark
+    // These should be sorted alphabetically, but I will leave that to the
+    // caller (which is internal, hence it's ok)
+    CanonicalQueryString = query_string_start + 1;
+  }
 
   SHA256_CTX cononicalRequestHash;
   SHA256_Init(&cononicalRequestHash);
   SHA256_Update(&cononicalRequestHash, HTTPRequestMethod.c_str(),
                 HTTPRequestMethod.size());
   SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, CanonicalURI.c_str(),
-                CanonicalURI.size());
+  SHA256_Update(&cononicalRequestHash, CanonicalURI.c_str(), CanonicalURILen);
   SHA256_Update(&cononicalRequestHash, "\n", 1);
   SHA256_Update(&cononicalRequestHash, CanonicalQueryString.c_str(),
                 CanonicalQueryString.size());
