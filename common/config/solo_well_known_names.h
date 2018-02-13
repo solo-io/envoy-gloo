@@ -28,6 +28,7 @@ class SoloMetadataFilterValues {
 public:
   // Filter namespace for Lambda Filter.
   const std::string LAMBDA = "io.solo.lambda";
+  
 };
 
 typedef ConstSingleton<SoloMetadataFilterValues> SoloMetadataFilters;
@@ -38,13 +39,19 @@ typedef ConstSingleton<SoloMetadataFilterValues> SoloMetadataFilters;
 class MetadataLambdaKeyValues {
 public:
   // Key in the Lambda Filter namespace for function name value.
-  const std::string FUNC_NAME = "function.func_name";
+  const std::string FUNC_NAME = "name";
+  const std::string FUNC_QUALIFIER = "qualifier";
+
+  const std::string FUNC_ASYNC = "async";
 
   // Key in the Lambda Filter namespace for hostname value.
-  const std::string HOSTNAME = "function.hostname";
+  const std::string HOSTNAME = "host";
 
   // Key in the Lambda Filter namespace for region value.
-  const std::string REGION = "function.region";
+  const std::string REGION = "region";
+  // Key in the Lambda Filter namespace for region value.
+  const std::string ACCESS_KEY = "access_key";
+  const std::string SECRET_KEY = "secret_key";
 };
 
 typedef ConstSingleton<MetadataLambdaKeyValues> MetadataLambdaKeys;

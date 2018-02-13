@@ -6,12 +6,18 @@
 #include "test/test_common/utility.h"
 
 #include "fmt/format.h"
-#include "metadata_function_retriever.h"
+#include "common/http/filter/metadata_function_retriever.h"
 
 namespace Envoy {
+namespace Http {
 
 using Http::Function;
 using Http::MetadataFunctionRetriever;
+
+bool operator == (const Function& lhs, const Function& rhs) {
+    return std::tie(*lhs.name_, *lhs.qualifier_, *lhs.region_, *lhs.host_, *lhs.access_key_, *lhs.secret_key_, lhs.async_) ==
+    std::tie(*rhs.name_, *rhs.qualifier_, *rhs.region_, *rhs.host_, *rhs.access_key_, *rhs.secret_key_, rhs.async_);
+}
 
 namespace {
 
@@ -27,195 +33,259 @@ Protobuf::Struct getMetadata(const std::string &json) {
   return metadata;
 }
 
-std::string getRouteJson(const std::string &function_name) {
-  return fmt::format(
-      R"EOF(
-    {{
-      "{}" : "{}",
-    }}
-    )EOF",
-      Config::MetadataLambdaKeys::get().FUNC_NAME, function_name);
-}
-
-std::string getClusterJson(const std::string &hostname,
-                           const std::string &region) {
-  return fmt::format(
-      R"EOF(
-    {{
-      "{}" : "{}",
-      "{}" : "{}",
-    }}
-    )EOF",
-      Config::MetadataLambdaKeys::get().HOSTNAME, hostname,
-      Config::MetadataLambdaKeys::get().REGION, region);
-}
-
 Optional<Function>
-getFunctionFromMetadata(const Protobuf::Struct &route_metadata,
-                        const Protobuf::Struct &cluster_metadata) {
-  MetadataFunctionRetriever functionRetriever(
-      Config::SoloMetadataFilters::get().LAMBDA,
-      Config::MetadataLambdaKeys::get().FUNC_NAME,
-      Config::MetadataLambdaKeys::get().HOSTNAME,
-      Config::MetadataLambdaKeys::get().REGION);
+getFunctionFromMetadata(const Protobuf::Struct &func_metadata,
+                        const Protobuf::Struct &cluster_metadata,
+                        const Protobuf::Struct *route_metadata = nullptr) {
+  MetadataFunctionRetriever functionRetriever;
 
-  return functionRetriever.getFunction(route_metadata.fields(),
-                                       cluster_metadata.fields());
-}
-
-Optional<Function> getFunctionFromJson(const std::string &route_json,
-                                       const std::string &cluster_json) {
-  Protobuf::Struct route_metadata = getMetadata(route_json);
-  Protobuf::Struct cluster_metadata = getMetadata(cluster_json);
-  return getFunctionFromMetadata(route_metadata, cluster_metadata);
-}
-
-Optional<Function> getFunction(const std::string &function_name,
-                               const std::string &hostname,
-                               const std::string &region) {
-  std::string route_json = getRouteJson(function_name);
-  std::string cluster_json = getClusterJson(hostname, region);
-  return getFunctionFromJson(route_json, cluster_json);
+  return functionRetriever.getFunctionFromSpec(func_metadata, cluster_metadata, route_metadata);
 }
 
 } // namespace
 
-TEST(MetadataFunctionRetrieverTest, EmptyJsons) {
-  const std::string &route_json = empty_json;
+class MetadataFunctionRetrieverTest : public testing::Test {
+public:
+Protobuf::Struct func_metadata_;
+Protobuf::Struct cluster_metadata_;
+Protobuf::Struct route_metadata_;
+
+Function configuredFunction_;
+  
+void SetUp() override {
+  buildfunc();
+}
+void buildfunc(){
+  configuredFunction_.name_ = &name_;
+  configuredFunction_.host_ = &host_;
+  configuredFunction_.region_ = &region_;
+  configuredFunction_.access_key_ = &access_key_;
+  configuredFunction_.secret_key_ = &secret_key_;
+  configuredFunction_.qualifier_ = &qualifier_;
+  configuredFunction_.async_ = async_;
+}
+
+Optional<Function> getFunctionFromJson(const std::string &func_json,
+                                       const std::string &cluster_json, std::string route_json = "") {
+    func_metadata_ = getMetadata(func_json);
+    cluster_metadata_ = getMetadata(cluster_json);
+    
+
+    Protobuf::Struct* route_metadata_ptr = nullptr;
+    if (!route_json.empty()) {
+      route_metadata_ = getMetadata(route_json);
+      route_metadata_ptr = &route_metadata_;
+    }
+
+    return getFunctionFromMetadata(func_metadata_, cluster_metadata_, route_metadata_ptr);
+  }
+
+std::string getClusterJson() {
+  std::string json = "{";
+
+  if (!host_.empty()) {
+    json += fmt::format("\"{}\" : \"{}\",",Config::MetadataLambdaKeys::get().HOSTNAME, host_);
+  }
+  if (!region_.empty()) {
+    json += fmt::format("\"{}\" : \"{}\",",Config::MetadataLambdaKeys::get().REGION, region_);
+  }
+  if (!access_key_.empty()) {
+    json += fmt::format("\"{}\" : \"{}\",",Config::MetadataLambdaKeys::get().ACCESS_KEY, access_key_);
+  }
+  if (!secret_key_.empty()) {
+    json += fmt::format("\"{}\" : \"{}\"",Config::MetadataLambdaKeys::get().SECRET_KEY, secret_key_);
+  }
+
+  json += "}";
+
+  return json;
+
+}
+
+
+std::string getFuncJson() {
+  return fmt::format(
+      R"EOF(
+    {{
+      "{}" : "{}",
+      "{}" : "{}"
+    }}
+    )EOF",
+      Config::MetadataLambdaKeys::get().FUNC_NAME, name_,
+      Config::MetadataLambdaKeys::get().FUNC_QUALIFIER, qualifier_);
+}
+
+std::string getRouteJson() {
+  return fmt::format(
+      R"EOF(
+    {{
+      "{}" : {}
+    }}
+    )EOF",
+      Config::MetadataLambdaKeys::get().FUNC_ASYNC, async_?"true":"false");
+}
+
+Optional<Function> getFunction() {
+  std::string func_json = getFuncJson();
+  std::string cluster_json = getClusterJson();
+  std::string route_json = getRouteJson();
+
+  return getFunctionFromJson(func_json, cluster_json, route_json);
+}
+
+
+  std::string name_ = "FunctionName";
+  std::string host_ = "lambda.us-east-1.amazonaws.com";
+  std::string region_ = "us-east-1";
+  std::string access_key_ = "as";
+  std::string secret_key_ = "secretdonttell";
+  std::string qualifier_ = "";
+  bool async_ = false;
+
+};
+
+TEST_F(MetadataFunctionRetrieverTest, EmptyJsons) {
+  const std::string &func_json = empty_json;
   const std::string &cluster_json = empty_json;
 
-  auto function = getFunctionFromJson(route_json, cluster_json);
+  auto function = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(function.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, EmptyRouteJson) {
-  const std::string &route_json = empty_json;
-  std::string cluster_json =
-      getClusterJson("lambda.us-east-1.amazonaws.com", "us-east-1");
+TEST_F(MetadataFunctionRetrieverTest, EmptyRouteJson) {
+  const std::string &func_json = empty_json;
+  std::string cluster_json = getClusterJson();
 
-  auto function = getFunctionFromJson(route_json, cluster_json);
+  auto function = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(function.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, EmptyClusterJson) {
-  std::string route_json = getRouteJson("FunctionName");
+TEST_F(MetadataFunctionRetrieverTest, EmptyClusterJson) {
+  std::string func_json = getFuncJson();
   std::string cluster_json = empty_json;
 
-  auto function = getFunctionFromJson(route_json, cluster_json);
+  auto function = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(function.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, ConfiguredFunction) {
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
+TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunction) {
 
-  std::string route_json = getRouteJson(configuredFunction.func_name_);
-  std::string cluster_json =
-      getClusterJson(configuredFunction.hostname_, configuredFunction.region_);
+  std::string func_json = getFuncJson();
+  std::string cluster_json = getClusterJson();
+  std::string route_json = getRouteJson();
 
-  auto actualFunction = getFunctionFromJson(route_json, cluster_json);
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json, route_json);
 
   EXPECT_TRUE(actualFunction.valid());
-  EXPECT_EQ(actualFunction.value(), configuredFunction);
+  EXPECT_EQ(actualFunction.value(), configuredFunction_);
+}
+TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunctionNoRoute) {
+  // no route makes async false.
+  async_ = false;
+  buildfunc();
+
+  std::string func_json = getFuncJson();
+  std::string cluster_json = getClusterJson();
+
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json);
+
+  EXPECT_TRUE(actualFunction.valid());
+  EXPECT_EQ(actualFunction.value(), configuredFunction_);
 }
 
-TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionOppositeJsons) {
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
+TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionOppositeJsons) {
+  // The cluster metadata JSON is used as the func metadata, and vice versa.
+  std::string func_json = getClusterJson();
+  std::string cluster_json = getFuncJson();
 
-  // The cluster metadata JSON is used as the route metadata, and vice versa.
-  std::string route_json =
-      getClusterJson(configuredFunction.hostname_, configuredFunction.region_);
-  std::string cluster_json = getRouteJson(configuredFunction.func_name_);
-
-  auto actualFunction = getFunctionFromJson(route_json, cluster_json);
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(actualFunction.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
+TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
 
-  std::string route_json = getRouteJson(configuredFunction.func_name_);
+  // delete the hostname line
+  host_ = "";
+
+  std::string func_json = getFuncJson();
 
   // The hostname is missing.
-  std::string cluster_json = fmt::format(
-      R"EOF(
-    {{
-      "{}" : "{}",
-    }}
-    )EOF",
-      Config::MetadataLambdaKeys::get().REGION, configuredFunction.region_);
+  std::string cluster_json = getClusterJson();
 
-  auto actualFunction = getFunctionFromJson(route_json, cluster_json);
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(actualFunction.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
 
-  std::string route_json = getRouteJson(configuredFunction.func_name_);
+TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
+  host_ = "17";
+  std::string hoststring = "\"17\"";
+
+  std::string func_json = getFuncJson();
+  std::string cluster_json = getClusterJson();
 
   // The hostname is an integer.
-  std::string cluster_json = fmt::format(
-      R"EOF(
-    {{
-      "{}" : 17,
-      "{}" : "{}",
-    }}
-    )EOF",
-      Config::MetadataLambdaKeys::get().HOSTNAME,
-      Config::MetadataLambdaKeys::get().REGION, configuredFunction.region_);
+  if (cluster_json.find(hoststring) == std::string::npos) {
+    // broken test
+    FAIL();
+  }
+  cluster_json.replace(cluster_json.find(hoststring),hoststring.size(), "17");
 
-  auto actualFunction = getFunctionFromJson(route_json, cluster_json);
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(actualFunction.valid());
 }
 
-TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
+TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
   std::string empty;
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
-
-  for (auto func_name : {empty, configuredFunction.func_name_}) {
-    for (auto hostname : {empty, configuredFunction.hostname_}) {
-      for (auto region : {empty, configuredFunction.region_}) {
-
-        auto actualFunction = getFunction(func_name, hostname, region);
+  std::string orig_func_name = name_;
+  std::string orig_host = host_;
+  std::string orig_region = region_;
+  for (auto func_name : {empty, orig_func_name}) {
+    for (auto hostname : {empty, orig_host}) {
+      for (auto region : {empty, orig_region}) {
+        name_ = func_name;
+        host_ = hostname;
+        region_ = region;
+        auto actualFunction = getFunction();
 
         if (func_name.empty() || hostname.empty() || region.empty()) {
           EXPECT_FALSE(actualFunction.valid());
+        } else {
+          EXPECT_TRUE(actualFunction.valid());
         }
       }
     }
   }
 }
 
-TEST(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
-  Function configuredFunction{"FunctionName", "lambda.us-east-1.amazonaws.com",
-                              "us-east-1"};
+TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
 
   // The function name key is incorrect.
-  std::string route_json = fmt::format(
-      R"EOF(
-    {{
-      "{}" : "{}",
-    }}
-    )EOF",
-      "NunctionFame", configuredFunction.func_name_);
 
-  std::string cluster_json =
-      getClusterJson(configuredFunction.hostname_, configuredFunction.region_);
+  std::string funcnamekey = "NunctionFame";
 
-  auto actualFunction = getFunctionFromJson(route_json, cluster_json);
+  std::string func_json = getFuncJson();
+  std::string key = Config::MetadataLambdaKeys::get().FUNC_NAME;
+  // The hostname is an integer.
+  if (func_json.find(key) == std::string::npos) {
+    // broken test
+    FAIL();
+  }
+  func_json.replace(func_json.find(key),key.size(), funcnamekey);
+
+
+  std::string cluster_json = getClusterJson();
+
+  auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_FALSE(actualFunction.valid());
 }
 
+}
 } // namespace Envoy

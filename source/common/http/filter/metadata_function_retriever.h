@@ -11,10 +11,8 @@ namespace Http {
 class MetadataFunctionRetriever : public FunctionRetriever {
 public:
   MetadataFunctionRetriever();
-  // Optional<Function> getFunction(const RouteEntry &routeEntry,
-  //                                const ClusterInfo &info) override;
-  // Optional<Function> getFunction(const std::string &cluster_name);
-  Optional<Function> getFunction(const FunctionalFilterBase& filter) override;
+  
+  Optional<Function> getFunctionFromSpec(const Protobuf::Struct &function_spec, const Protobuf::Struct &upstream_spec, const ProtobufWkt::Struct *route_spec) const override;
 };
 
 } // namespace Http

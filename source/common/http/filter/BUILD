@@ -47,8 +47,8 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "@solocommon//source/common/http:functional_stream_decoder_base_lib",
-        "@solocommon//source/common/http:solo_filter_utility_lib",
+        "@envoy_common//source/common/http:functional_stream_decoder_base_lib",
+        "@envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
 
@@ -67,7 +67,7 @@ envoy_cc_library(
         "//source/common/http/filter:function_retrieves_lib",
         "//source/common/http/filter:lambda_filter_config",
         "@envoy//source/exe:envoy_common_lib",
-        "@solocommon//source/common/http:functional_stream_decoder_base_lib",
-        "@solocommon//source/common/http:solo_filter_utility_lib",
+        "@envoy_common//source/common/http:functional_stream_decoder_base_lib",
+        "@envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )

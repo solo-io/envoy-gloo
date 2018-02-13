@@ -5,7 +5,6 @@
 
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/common/logger.h"
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
 #include "common/http/filter/lambda_filter_config.h"

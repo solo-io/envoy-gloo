@@ -7,52 +7,68 @@ namespace Http {
 
 MetadataFunctionRetriever::MetadataFunctionRetriever() {}
 
-#define CLUSTER_FIELDS(FIELD_FUNC)\
-  FIELD_FUNC(host) \
-  FIELD_FUNC(region) \
-  FIELD_FUNC(access_key) \
-  FIELD_FUNC(secret_key)
+#define UPSTREAM_FIELDS(S,FIELD_FUNC)\
+  FIELD_FUNC(S, host) \
+  FIELD_FUNC(S, region) \
+  FIELD_FUNC(S, access_key) \
+  FIELD_FUNC(S, secret_key)
 
-#define FUNC_FIELDS(FIELD_FUNC)\
-  FIELD_FUNC(async) \
-  FIELD_FUNC(name) \
-  FIELD_FUNC(qualifier)
+#define FUNC_FIELDS(S, FIELD_FUNC)\
+  FIELD_FUNC(S, name) \
+  FIELD_FUNC(S, qualifier)
 
-Optional<Function> MetadataFunctionRetriever::getFunction(const FunctionalFilterBase& filter) {
-  const ProtobufWkt::Struct &function_spec = filter.getFunctionSpec();
-  const ProtobufWkt::Struct &filter_spec = filter.getChildFilterSpec();
+#define ROUTE_FIELDS(S, FIELD_FUNC)\
+  FIELD_FUNC(S, async)
 
-  #define CHECK(F) \
-    if (function_spec.fields().find( #F ) == function_spec.fields().end()) { \
-      return {}; \
+Optional<Function> MetadataFunctionRetriever::getFunctionFromSpec(const Protobuf::Struct &function_spec, const Protobuf::Struct &upstream_spec, const ProtobufWkt::Struct *route_spec) const {
+  bool async = false;
+  
+
+  #define CHECK(S,F) \
+    { \
+      const auto& it = S.fields().find( #F ); \
+      if (it == S.fields().end()) { \
+        return {}; \
+      }\
+      if (it->second.kind_case() != ProtobufWkt::Value::kStringValue ) {\
+        return {};\
+      }\
     }
-  FUNC_FIELDS(CHECK);
-  #undef CHECK
 
-  #define CHECK(F) \
-    if (filter_spec.fields().find( #F ) == filter_spec.fields().end()) { \
-      return {}; \
-    }
-  CLUSTER_FIELDS(CHECK);
+  FUNC_FIELDS(function_spec, CHECK);
+  UPSTREAM_FIELDS(upstream_spec, CHECK);
 
-  // function spec contains function details,
+  if (route_spec != nullptr) {
+    // TODO: is this needed? ROUTE_FIELDS((*route_spec), CHECK);
+    const auto& route_fields = route_spec->fields();
+    async = (route_fields.at( "async" ).bool_value());
+  }
+
+  // route spec contains function details,
   // filter spec contains upstream details.
   const auto& function_fields = function_spec.fields();
-  const auto& filter_fields = filter_spec.fields();
+  const auto& upstream_fields = upstream_spec.fields();
 
 
-  #define GETSTRING(FIELD, F) &(FIELD.at( #F ).string_value()),
-  #define GETBOOL(FIELD, F) (FIELD.at( #F ).bool_value()),
+  #define GETSTRING(S, F) &(S.at( #F ).string_value()),
 
-  return Function {
-    GETSTRING(function_fields, name_)
-    GETSTRING(function_fields, qualifier_)
-    GETBOOL(function_fields, async_)
-    GETSTRING(filter_fields, host_)
-    GETSTRING(filter_fields, region_)
-    GETSTRING(filter_fields, access_key_)
-    GETSTRING(filter_fields, secret_key_)
+   Function f = Function {
+    FUNC_FIELDS(function_fields, GETSTRING)
+    async,
+    UPSTREAM_FIELDS(upstream_fields, GETSTRING)
   };
+
+  if (f.name_->empty()) {
+    return {};
+  }
+  if (f.region_->empty()) {
+    return {};
+  }
+  if (f.host_->empty()) {
+    return {};
+  }
+
+  return f;
 }
 
 } // namespace Http

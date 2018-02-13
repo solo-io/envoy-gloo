@@ -9,11 +9,11 @@ http_archive(
 )
 
 
-ENVOY_COMMON_SHA = "0ebe5d56fb7e7a2dfe2a378dd35a6effd8ef9ae8"  # Feb 9, 2018 (constify.)
+ENVOY_COMMON_SHA = "619c67c717ed9c8ea2d660f8bf40b811aba0e1b0"  # Feb 12, 2018 (enable fetching the child filter's route metadata.)
 
 # load solo common
 git_repository(
-    name = "solocommon",
+    name = "envoy_common",
     remote = "git@github.com:solo-io/envoy-common",
     commit = ENVOY_COMMON_SHA,
 )
