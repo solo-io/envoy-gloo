@@ -16,11 +16,6 @@ public:
   MOCK_CONST_METHOD1(getFunction,
                      Optional<Function>(const FunctionalFilterBase &filter));
 
-  MOCK_CONST_METHOD3(getFunctionFromSpec,
-                     Optional<Function>(const Protobuf::Struct &function_spec,
-                                        const Protobuf::Struct &upstream_spec,
-                                        const ProtobufWkt::Struct *route_spec));
-
   std::string name_{"name"};
   std::string qualifier_{"qualifier"};
   bool async_{false};
@@ -28,6 +23,13 @@ public:
   std::string region_{"region"};
   std::string access_key_{"access_key"};
   std::string secret_key_{"secret_key"};
+
+protected:
+  Optional<Function> getFunctionFromSpec(const Protobuf::Struct &,
+                                         const Protobuf::Struct &,
+                                         const ProtobufWkt::Struct *) const {
+    NOT_IMPLEMENTED;
+  }
 };
 
 } // namespace Http

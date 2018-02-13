@@ -161,8 +161,6 @@ TEST_F(LambdaFilterTest, AsyncCalled) {
                                          {":path", "/getsomething"}};
 
   function_retriever_->async_ = true;
-  // async is a copy so rebuild the mock
-  
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
