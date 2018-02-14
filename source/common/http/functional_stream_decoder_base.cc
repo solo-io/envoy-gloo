@@ -38,6 +38,10 @@ void FunctionalFilterBase::onDestroy() { is_reset_ = true; }
 FilterHeadersStatus FunctionalFilterBase::decodeHeaders(HeaderMap &headers,
                                                         bool end_stream) {
   tryToGetSpec();
+  if (error_) {
+    // This means a local reply was sent, so no need to continue in the chain.
+    return FilterHeadersStatus::StopIteration;
+  }
   if (active()) {
     return functionDecodeHeaders(headers, end_stream);
   }
@@ -225,7 +229,7 @@ void FunctionalFilterBase::error() {
   cluster_info_ = nullptr;
   route_spec_ = nullptr;
   route_info_ = nullptr;
-
+  error_ = true;
   Utility::sendLocalReply(*decoder_callbacks_, is_reset_, Code::NotFound,
                           "Function not found");
 }

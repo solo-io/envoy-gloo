@@ -58,7 +58,8 @@ private:
 
   mutable Router::RouteConstSharedPtr route_info_{};
   mutable const ProtobufWkt::Struct *route_spec_{};
-
+  bool error_{};
+  
   void tryToGetSpec();
   void findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
   void tryToGetSpecFromCluster(const std::string &funcname);
