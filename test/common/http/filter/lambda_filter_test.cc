@@ -215,12 +215,8 @@ TEST_F(LambdaFilterTest, InvalidFunction) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
+  EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
             filter_->functionDecodeHeaders(headers, false));
-  Buffer::OwnedImpl data("data");
-
-  EXPECT_EQ(Envoy::Http::FilterDataStatus::Continue,
-            filter_->functionDecodeData(data, false));
 
   Envoy::Http::TestHeaderMapImpl trailers;
   EXPECT_EQ(Envoy::Http::FilterTrailersStatus::Continue,
