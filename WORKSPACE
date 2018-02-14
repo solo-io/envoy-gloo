@@ -9,7 +9,7 @@ http_archive(
 )
 
 
-ENVOY_COMMON_SHA = "5bac5d76746016463bdfedd1884f1c266d59ef30"  # Feb 13, 2018 (is_reset_ tp send local reply.)
+ENVOY_COMMON_SHA = "625e0d4821bdee761a56671e90817e998ad7d5de"  # Feb 13, 2018 (forgot file in rename)
 
 # load solo common
 git_repository(

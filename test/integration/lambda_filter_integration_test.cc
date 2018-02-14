@@ -24,12 +24,11 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-    autonomous_upstream_ = true;
     config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
 
     config_helper_.addConfigModifier([](envoy::api::v2::Bootstrap &bootstrap) {
       auto &lambda_cluster =
-          (*bootstrap.mutable_static_resources()->mutable_clusters())[0];
+          (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
       auto *metadata = lambda_cluster.mutable_metadata();
 
@@ -46,12 +45,29 @@ public:
       Config::Metadata::mutableMetadataValue(
           *metadata, Config::SoloMetadataFilters::get().LAMBDA,
           Config::MetadataLambdaKeys::get().ACCESS_KEY)
-          .set_string_value("acess key");
+          .set_string_value("access key");
 
       Config::Metadata::mutableMetadataValue(
           *metadata, Config::SoloMetadataFilters::get().LAMBDA,
           Config::MetadataLambdaKeys::get().SECRET_KEY)
           .set_string_value("secret dont tell");
+
+    /////
+    // TODO(yuval-k): use consts (filename mess)
+    std::string functionalfilter = "io.solo.function_router";
+    std::string functionsKey = "functions";
+
+    // add the function spec in the cluster config.
+    // TODO(yuval-k): extract this to help method (test utils?)
+    ProtobufWkt::Struct* functionstruct =  Config::Metadata::mutableMetadataValue(
+          *metadata, functionalfilter,
+          functionsKey).mutable_struct_value();
+
+    ProtobufWkt::Value &functionstructspecvalue = (*functionstruct->mutable_fields())["funcname"];
+    ProtobufWkt::Struct* functionsspecstruct = functionstructspecvalue.mutable_struct_value();
+
+    (*functionsspecstruct->mutable_fields())[Config::MetadataLambdaKeys::get().FUNC_NAME].set_string_value("FunctionName");
+    (*functionsspecstruct->mutable_fields())[Config::MetadataLambdaKeys::get().FUNC_QUALIFIER].set_string_value("v1");
     });
 
     config_helper_.addConfigModifier(
@@ -60,11 +76,12 @@ public:
                                ->mutable_virtual_hosts(0)
                                ->mutable_routes(0)
                                ->mutable_metadata();
+    std::string functionalfilter = "io.solo.function_router";
+    std::string functionKey = "function";
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
-              Config::MetadataLambdaKeys::get().FUNC_NAME)
-              .set_string_value("FunctionName");
+              *metadata, functionalfilter,
+              functionKey).set_string_value("funcname");
         });
 
     HttpIntegrationTest::initialize();
@@ -87,7 +104,7 @@ TEST_P(LambdaFilterIntegrationTest, Test1) {
   Envoy::Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
-sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_, 0);
+sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_, 10);
 /*
   Envoy::IntegrationStreamDecoderPtr response(
       new Envoy::IntegrationStreamDecoder(*dispatcher_));
