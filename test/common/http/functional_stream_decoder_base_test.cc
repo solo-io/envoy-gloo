@@ -81,7 +81,7 @@ protected:
     // TODO use const
     ProtobufWkt::Struct &functionsstruct =
         (*cluster_metadata_.mutable_filter_metadata())
-            [Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER];
+            [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER];
     ProtobufWkt::Value &functionstructvalue =
         (*functionsstruct.mutable_fields())
             [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
@@ -116,7 +116,7 @@ protected:
 
     // TODO use const
     (*route_metadata_.mutable_filter_metadata())
-        [Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER] =
+        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
   }
 
@@ -124,7 +124,6 @@ protected:
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Envoy::Event::MockTimer> *attachmentTimeout_timer_{};
   std::unique_ptr<FunctionalFilterTester> filter_;
-  std::deque<Envoy::Http::AsyncClient::Callbacks *> callbacks_;
 
   ProtobufWkt::Struct *functionsspecstruct_;
 

@@ -116,7 +116,7 @@ void FunctionalFilterBase::tryToGetSpec() {
   const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
-      Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
+      Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     error();
     return;
@@ -166,7 +166,7 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   const envoy::api::v2::Metadata &metadata = cluster_info_->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
-      Config::SoloMetadataFilters::get().FUNCTIONAL_ROUTER);
+      Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     return;
   }

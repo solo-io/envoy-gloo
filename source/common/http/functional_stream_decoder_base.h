@@ -33,7 +33,6 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  bool active() const { return cluster_spec_ != nullptr; }
   const ProtobufWkt::Struct &getFunctionSpec() const;
   const ProtobufWkt::Struct &getChildFilterSpec() const;
   const ProtobufWkt::Struct *getChildRouteFilterSpec() const;
@@ -65,6 +64,8 @@ private:
   void tryToGetSpecFromCluster(const std::string &funcname);
   void fetchClusterInfoIfOurs();
   void error();
+  bool active() const { return cluster_spec_ != nullptr; }
+  
 };
 
 } // namespace Http
