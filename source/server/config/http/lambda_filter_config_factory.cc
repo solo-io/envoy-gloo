@@ -54,19 +54,7 @@ ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyConfigProto() {
 std::string LambdaFilterConfigFactory::name() {
   return Config::SoloHttpFilterNames::get().LAMBDA;
 }
-/*  no v1 support
-const envoy::api::v2::filter::http::Lambda
-LambdaFilterConfigFactory::translateLambdaFilter(
-    const Json::Object &json_config) {
-  json_config.validateSchema(LAMBDA_HTTP_FILTER_SCHEMA);
 
-  envoy::api::v2::filter::http::Lambda proto_config;
-  // JSON_UTIL_SET_STRING(json_config, proto_config, access_key);
-  // JSON_UTIL_SET_STRING(json_config, proto_config, secret_key);
-
-  return proto_config;
-}
-*/
 HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
     const envoy::api::v2::filter::http::Lambda &proto_config,
     FactoryContext &context) {
@@ -86,24 +74,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
 }
-/* no v1 support
-const std::string LambdaFilterConfigFactory::LAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
-  {
-    "$schema": "http://json-schema.org/schema#",
-    "type" : "object",
-    "properties" : {
-      "access_key": {
-        "type" : "string"
-      },
-      "secret_key": {
-        "type" : "string"
-      }
-    },
-    "required": ["access_key", "secret_key"],
-    "additionalProperties" : false
-  }
-  )EOF");
-*/
+
 /**
  * Static registration for this sample filter. @see RegisterFactory.
  */
