@@ -50,8 +50,8 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
     Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
                             Code::InternalServerError,
                             "AWS Function not available");
-
-    return Envoy::Http::FilterHeadersStatus::Continue;
+    // Doing continue after a local reply is a bad thing...
+    return Envoy::Http::FilterHeadersStatus::StopIteration;
   }
   active_ = true;
   currentFunction_ = std::move(optionalFunction.value());

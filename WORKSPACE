@@ -8,8 +8,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-
-ENVOY_COMMON_SHA = "625e0d4821bdee761a56671e90817e998ad7d5de"  # Feb 13, 2018 (forgot file in rename)
+ENVOY_COMMON_SHA = "7603007cba8b439c57268fe0b6d0b244fa61efcf"  # Feb 13, 2018 (handle local reply properly.)
 
 # load solo common
 git_repository(
