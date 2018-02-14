@@ -43,7 +43,7 @@ static_resources:
               - match:
                   prefix: /lambda
                 route:
-                  cluster: aws-use-east-1-lambda
+                  cluster: aws-us-east-1-lambda
                 metadata:
                   filter_metadata:
                       io.solo.function_router:
@@ -51,7 +51,7 @@ static_resources:
               - match:
                   prefix: /latestlambda
                 route:
-                  cluster: aws-use-east-1-lambda
+                  cluster: aws-us-east-1-lambda
                 metadata:
                   filter_metadata:
                       io.solo.function_router:
@@ -73,8 +73,9 @@ static_resources:
     - socket_address:
         address: lambda.us-east-1.amazonaws.com
         port_value: 443
-    name: aws-use-east-1-lambda
+    name: aws-us-east-1-lambda
     type: LOGICAL_DNS
+    dns_lookup_family: V4_ONLY
     tls_context: {}
     metadata:
       filter_metadata:
