@@ -19,7 +19,8 @@ public:
   const std::string FUNCTIONAL_ROUTER = "io.solo.function_router";
 };
 
-typedef ConstSingleton<SoloFunctionalFilterFilterNameValues> SoloFunctionalFilterFilterNames;
+typedef ConstSingleton<SoloFunctionalFilterFilterNameValues>
+    SoloFunctionalFilterFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
@@ -30,7 +31,8 @@ public:
   const std::string FUNCTIONAL_ROUTER = "io.solo.function_router";
 };
 
-typedef ConstSingleton<SoloFunctionalFilterMetadataFilterValues>  SoloFunctionalFilterMetadataFilters;
+typedef ConstSingleton<SoloFunctionalFilterMetadataFilterValues>
+    SoloFunctionalFilterMetadataFilters;
 
 /**
  * Keys for MetadataFilterConstants::NATS_STREAMING metadata.

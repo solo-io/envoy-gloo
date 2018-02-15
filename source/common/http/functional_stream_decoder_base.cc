@@ -93,7 +93,7 @@ FunctionalFilterBase::getChildRouteFilterSpec() const {
     return nullptr;
   }
 
-  const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
+  const auto &metadata = routeEntry->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
   if (filter_it != metadata.filter_metadata().end()) {
     route_spec_ = &filter_it->second;
@@ -117,7 +117,7 @@ void FunctionalFilterBase::tryToGetSpec() {
   // So now we know this this route is to a functional upstream. i.e. we must be
   // able to do a function route or error.
 
-  const envoy::api::v2::Metadata &metadata = routeEntry->metadata();
+  const auto &metadata = routeEntry->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
       Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
@@ -167,7 +167,7 @@ void FunctionalFilterBase::findSingleFunction(
 void FunctionalFilterBase::tryToGetSpecFromCluster(
     const std::string &funcname) {
 
-  const envoy::api::v2::Metadata &metadata = cluster_info_->metadata();
+  const auto &metadata = cluster_info_->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
       Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
@@ -213,7 +213,7 @@ void FunctionalFilterBase::fetchClusterInfoIfOurs() {
   Upstream::ClusterInfoConstSharedPtr cluster_info =
       FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
 
-  const envoy::api::v2::Metadata &metadata = cluster_info->metadata();
+  const auto &metadata = cluster_info->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
   if (filter_it != metadata.filter_metadata().end()) {
     cluster_info_ = cluster_info;
