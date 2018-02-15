@@ -122,18 +122,27 @@ protected:
     ProtobufWkt::Value functionvalue;
     functionvalue.set_string_value(functionname_);
 
+
+    ProtobufWkt::Value clustervalue;
+    ProtobufWkt::Struct* clusterstruct = clustervalue.mutable_struct_value();
+    (*clusterstruct->mutable_fields())
+        [Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
+
+    auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
+
     ProtobufWkt::Struct routefunctionmeta;
     (*routefunctionmeta.mutable_fields())
-        [Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
+        [clustername] = clustervalue;
 
     // TODO use const
     (*route_metadata_.mutable_filter_metadata())
         [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
-    route_meta_function_filter_spec_struct_ =
-        &((*route_metadata_.mutable_filter_metadata())
-              [Config::SoloFunctionalFilterMetadataFilters::get()
-                   .FUNCTIONAL_ROUTER]);
+
+
+    (*route_metadata_.mutable_filter_metadata())
+        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+            routefunctionmeta;
   }
 
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
@@ -144,7 +153,6 @@ protected:
   ProtobufWkt::Struct *route_meta_child_spec_struct_;
   ProtobufWkt::Struct *cluster_meta_child_spec_struct_;
 
-  ProtobufWkt::Struct *route_meta_function_filter_spec_struct_;
   envoy::api::v2::core::Metadata route_metadata_;
 
   ProtobufWkt::Struct *cluster_meta_function_spec_struct_;

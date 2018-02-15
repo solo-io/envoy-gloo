@@ -126,8 +126,23 @@ void FunctionalFilterBase::tryToGetSpec() {
     return;
   }
 
+  // this needs to have a field with the name of the cluster:
   const auto &filter_metadata_struct = filter_it->second;
-  findSingleFunction(filter_metadata_struct);
+  const auto &filter_metadata_struct_fields = filter_metadata_struct.fields();
+  
+  const auto cluster_it = filter_metadata_struct_fields.find(cluster_info_->name());
+  if (cluster_it == filter_metadata_struct_fields.end()) {
+    error();
+    return;
+  }
+  // the value is a struct with either a single function of multiple functions with weights.
+  const ProtobufWkt::Value& clustervalue = cluster_it->second;
+  if (clustervalue.kind_case() != ProtobufWkt::Value::kStructValue) {
+    error();
+    return;
+  }
+
+  findSingleFunction(clustervalue.struct_value());
 
   if (active()) {
     // we have spec!
