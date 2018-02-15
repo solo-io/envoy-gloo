@@ -1,6 +1,6 @@
 workspace(name="aws_lambda_filter")
 
-ENVOY_SHA = "29989a38c017d3be5aa3c735a797fcf58b754fe5"  # Jan 16, 2018 (rds: expose route metadata to requestinfo (#2392))
+ENVOY_SHA = "f79a62b7cc9ca55d20104379ee0576617630cdaa"  # Feb 15, 2018 ( test: fix nit after #2591 (#2601) )
 
 http_archive(
     name = "envoy",
@@ -8,7 +8,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "7603007cba8b439c57268fe0b6d0b244fa61efcf"  # Feb 13, 2018 (handle local reply properly.)
+ENVOY_COMMON_SHA = "392bda471d5ab6f718279dedefd0b26301eca797"  # Feb 15, 2018 (compile with latest envoy)
 
 # load solo common
 git_repository(

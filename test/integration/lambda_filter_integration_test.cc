@@ -26,7 +26,7 @@ public:
   void initialize() override {
     config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
 
-    config_helper_.addConfigModifier([](envoy::api::v2::Bootstrap &bootstrap) {
+    config_helper_.addConfigModifier([](envoy::config::bootstrap::v2::Bootstrap &bootstrap) {
       auto &lambda_cluster =
           (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
@@ -71,7 +71,7 @@ public:
     });
 
     config_helper_.addConfigModifier(
-        [](envoy::api::v2::filter::network::HttpConnectionManager &hcm) {
+        [](envoy::config::filter::network::http_connection_manager::v2::HttpConnectionManager &hcm) {
           auto *metadata = hcm.mutable_route_config()
                                ->mutable_virtual_hosts(0)
                                ->mutable_routes(0)
