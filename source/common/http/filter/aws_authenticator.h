@@ -32,6 +32,10 @@ private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
+  static const std::string ALGORITHM;
+  static const std::string SERVICE;
+  static const std::string NEW_LINE;
+
   std::string
   signWithTime(Envoy::Http::HeaderMap *request_headers,
                std::list<Envoy::Http::LowerCaseString> &&headers,
@@ -110,19 +114,14 @@ private:
 
   const std::string *access_key_{};
   std::string first_key_;
-  const std::string *service_;
-  const std::string *method_;
-
-  static const std::string ALGORITHM;
-  static const std::string SERVICE;
-  static const std::string NEW_LINE;
-
+  const std::string *service_{};
+  const std::string *method_{};
   const char *query_string_start_{};
   size_t query_string_len_{};
   const char *url_start_{};
   size_t url_len_{};
 
-  Envoy::Http::HeaderMap *request_headers_;
+  Envoy::Http::HeaderMap *request_headers_{};
   std::list<Envoy::Http::LowerCaseString> sign_headers_;
 };
 
