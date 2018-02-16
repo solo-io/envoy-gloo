@@ -40,24 +40,6 @@ void AwsAuthenticator::updatePayloadHash(const Envoy::Buffer::Instance &data) {
   body_sha_.update(data);
 }
 
-const HeaderEntry *
-AwsAuthenticator::getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
-                                       const Envoy::Http::LowerCaseString &im) {
-#define Q(x) #x
-#define QUOTE(x) Q(x)
-
-#define CHECK_INLINE_HEADER(name)                                              \
-  static Envoy::Http::LowerCaseString name##Str =                              \
-      Envoy::Http::LowerCaseString(std::string(QUOTE(name)), true);            \
-  if (im == name##Str) {                                                       \
-    return request_headers->name();                                            \
-  }
-
-  ALL_INLINE_HEADERS(CHECK_INLINE_HEADER)
-
-  return nullptr;
-}
-
 bool AwsAuthenticator::lowercasecompare(const Envoy::Http::LowerCaseString &i,
                                         const Envoy::Http::LowerCaseString &j) {
   return (i.get() < j.get());
@@ -76,7 +58,6 @@ std::string AwsAuthenticator::addDate(
 }
 
 std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
-
   std::stringstream canonical_headers_stream;
   std::stringstream signed_headers_stream;
 
@@ -85,7 +66,7 @@ std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
     const Envoy::Http::HeaderEntry *headerEntry =
         request_headers_->get(*header);
     if (headerEntry == nullptr) {
-      headerEntry = getMaybeInlineHeader(request_headers_, *header);
+      request_headers_->lookup(*header, &headerEntry);
     }
 
     auto headerName = header->get();

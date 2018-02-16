@@ -58,10 +58,6 @@ private:
                                const std::string &credential_scope,
                                const std::string &request_date_time,
                                const std::string &hashed_canonical_request);
-  //  void lambdafy();
-  const Envoy::Http::HeaderEntry *
-  getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
-                       const Envoy::Http::LowerCaseString &im);
 
   static bool lowercasecompare(const Envoy::Http::LowerCaseString &i,
                                const Envoy::Http::LowerCaseString &j);
