@@ -19,6 +19,7 @@ namespace Http {
 const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
 
 const std::string AwsAuthenticator::SERVICE = "lambda";
+const std::string AwsAuthenticator::NEW_LINE = "\n";
 
 AwsAuthenticator::AwsAuthenticator() {
   // TODO(yuval-k) hardcoded for now
@@ -217,13 +218,8 @@ std::string AwsAuthenticator::computeSignature(
   sighmac.finalize(out, &out_len);
 
   sighmac.init(out, out_len);
-  sighmac.update(ALGORITHM);
-  sighmac.update('\n');
-  sighmac.update(request_date_time);
-  sighmac.update('\n');
-  sighmac.update(CredentialScope);
-  sighmac.update('\n');
-  sighmac.update(hashedCanonicalRequest);
+  sighmac.update({&ALGORITHM, &NEW_LINE, &request_date_time, &NEW_LINE,
+                  &CredentialScope, &NEW_LINE, &hashedCanonicalRequest});
   sighmac.finalize(out, &out_len);
 
   return Envoy::Hex::encode(out, out_len);
@@ -330,6 +326,13 @@ void AwsAuthenticator::HMACSha256::init(const uint8_t *bytes, size_t size) {
 
 void AwsAuthenticator::HMACSha256::update(const std::string &data) {
   update(reinterpret_cast<const uint8_t *>(data.c_str()), data.size());
+}
+
+void AwsAuthenticator::HMACSha256::update(
+    std::initializer_list<const std::string *> strings) {
+  for (auto &&str : strings) {
+    update(*str);
+  }
 }
 
 void AwsAuthenticator::HMACSha256::update(char c) { update(&c, 1); }

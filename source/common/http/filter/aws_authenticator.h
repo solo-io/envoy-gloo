@@ -89,6 +89,8 @@ private:
     void init(const std::string &data);
     void init(const uint8_t *bytes, size_t size);
     void update(const std::string &data);
+    void update(std::initializer_list<const std::string *> strings);
+
     void update(char c);
     void update(const char *chars, size_t size);
     void update(const uint8_t *bytes, size_t size);
@@ -109,6 +111,7 @@ private:
 
   static const std::string ALGORITHM;
   static const std::string SERVICE;
+  static const std::string NEW_LINE;
 
   const char *query_string_start_{};
   size_t query_string_len_{};
