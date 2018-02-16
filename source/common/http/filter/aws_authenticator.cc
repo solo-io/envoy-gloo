@@ -123,22 +123,22 @@ std::string AwsAuthenticator::getBodyHexSha() {
 
 void AwsAuthenticator::fetchUrl() {
 
-  const Envoy::Http::HeaderString &CanonicalURI =
+  const Envoy::Http::HeaderString &canonical_url =
       request_headers_->Path()->value();
-  url_len_ = CanonicalURI.size();
-  url_start_ = CanonicalURI.c_str();
-  const char *query_string_start = Utility::findQueryStringStart(CanonicalURI);
+  url_len_ = canonical_url.size();
+  url_start_ = canonical_url.c_str();
+  const char *query_string_start = Utility::findQueryStringStart(canonical_url);
   // bug in: findQueryStringStart - query_string_start will never be null as
   // implied in config_impl.cc, but rather it is the end iterator of the string.
   if (query_string_start != nullptr) {
     url_len_ = query_string_start - url_start_;
-    if (url_len_ < CanonicalURI.size()) {
+    if (url_len_ < canonical_url.size()) {
       // we now know that query_string_start != std::end
 
       // +1 to skip the question mark
       // These should be sorted alphabetically, but I will leave that to the
       // caller (which is internal, hence it's ok)
-      query_string_len_ = CanonicalURI.size() - url_len_ - 1;
+      query_string_len_ = canonical_url.size() - url_len_ - 1;
       query_string_start_ = query_string_start + 1;
     } else {
       query_string_start = nullptr;
@@ -147,13 +147,13 @@ void AwsAuthenticator::fetchUrl() {
 }
 
 std::string AwsAuthenticator::computeCanonicalRequestHash(
-    const std::string &HTTPRequestMethod, const std::string &canonical_headers,
-    const std::string &SignedHeaders, const std::string &hexpayload) {
+    const std::string &request_method, const std::string &canonical_headers,
+    const std::string &signed_headers, const std::string &hexpayload) {
 
   // Do iternal classes for sha and hmac.
   Sha256 canonicalRequestHash;
 
-  canonicalRequestHash.update(HTTPRequestMethod);
+  canonicalRequestHash.update(request_method);
   canonicalRequestHash.update('\n');
   canonicalRequestHash.update(url_start_, url_len_);
   canonicalRequestHash.update('\n');
@@ -163,7 +163,7 @@ std::string AwsAuthenticator::computeCanonicalRequestHash(
   canonicalRequestHash.update('\n');
   canonicalRequestHash.update(canonical_headers);
   canonicalRequestHash.update('\n');
-  canonicalRequestHash.update(SignedHeaders);
+  canonicalRequestHash.update(signed_headers);
   canonicalRequestHash.update('\n');
   canonicalRequestHash.update(hexpayload);
 
@@ -185,16 +185,16 @@ std::string
 AwsAuthenticator::getCredntialScope(const std::string &region,
                                     const std::string &credentials_scope_date) {
 
-  std::stringstream credentialScopeStream;
-  credentialScopeStream << credentials_scope_date << "/" << region << "/"
+  std::stringstream credential_scope_stream;
+  credential_scope_stream << credentials_scope_date << "/" << region << "/"
                         << (*service_) << "/aws4_request";
-  return credentialScopeStream.str();
+  return credential_scope_stream.str();
 }
 
 std::string AwsAuthenticator::computeSignature(
     const std::string &region, const std::string &credentials_scope_date,
-    const std::string &CredentialScope, const std::string &request_date_time,
-    const std::string &hashedCanonicalRequest) {
+    const std::string &credential_scope, const std::string &request_date_time,
+    const std::string &hashed_canonical_request) {
 
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
@@ -219,7 +219,7 @@ std::string AwsAuthenticator::computeSignature(
 
   sighmac.init(out, out_len);
   sighmac.update({&ALGORITHM, &NEW_LINE, &request_date_time, &NEW_LINE,
-                  &CredentialScope, &NEW_LINE, &hashedCanonicalRequest});
+                  &credential_scope, &NEW_LINE, &hashed_canonical_request});
   sighmac.finalize(out, &out_len);
 
   return Envoy::Hex::encode(out, out_len);
@@ -258,7 +258,7 @@ std::string AwsAuthenticator::signWithTime(
 
   fetchUrl();
 
-  std::string hashedCanonicalRequest = computeCanonicalRequestHash(
+  std::string hashed_canonical_request = computeCanonicalRequestHash(
       *method_, canonical_headers, signed_headers, hexpayload);
   std::string credentials_scope_date = getCredntialScopeDate(now);
   std::string CredentialScope =
@@ -266,7 +266,7 @@ std::string AwsAuthenticator::signWithTime(
 
   std::string signature =
       computeSignature(region, credentials_scope_date, CredentialScope,
-                       request_date_time, hashedCanonicalRequest);
+                       request_date_time, hashed_canonical_request);
 
   std::stringstream authorizationvalue;
   RELEASE_ASSERT(access_key_);
