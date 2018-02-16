@@ -7,7 +7,8 @@
 #include "envoy/router/router.h"
 #include "envoy/upstream/upstream.h"
 
-#include "function.h"
+#include "common/http/filter/function.h"
+#include "common/http/functional_stream_decoder_base.h"
 
 namespace Envoy {
 namespace Http {
@@ -18,8 +19,8 @@ using Upstream::ClusterInfo;
 class FunctionRetriever {
 public:
   virtual ~FunctionRetriever() {}
-  virtual Optional<Function> getFunction(const RouteEntry &routeEntry,
-                                         const ClusterInfo &info) PURE;
+  virtual Optional<Function>
+  getFunction(const MetadataAccessor &metadataccessor) const PURE;
 };
 
 typedef std::shared_ptr<FunctionRetriever> FunctionRetrieverSharedPtr;

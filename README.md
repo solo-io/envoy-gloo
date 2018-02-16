@@ -13,8 +13,12 @@ To build the Envoy static binary:
 
 To run the all tests:
 
-`bazel test //test:*`
+`bazel test //test/...`
+
+To run the all tests in debug mode:
+
+`bazel test //test/... -c dbg`
 
 To run integration tests using a clang build:
 
-`CXX=clang++-5.0 CC=clang-5.0  bazel test -c dbg --config=clang-tsan //test:lambda_filter_integration_test --runs_per_test=10`
+`CXX=clang++-5.0 CC=clang-5.0  bazel test -c dbg --config=clang-tsan //test/integration:lambda_filter_integration_test --runs_per_test=10`

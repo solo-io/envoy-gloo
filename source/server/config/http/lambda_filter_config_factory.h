@@ -24,9 +24,9 @@ public:
   ProtobufTypes::MessagePtr createEmptyConfigProto() override;
 
   std::string name() override;
-
-  static const envoy::api::v2::filter::http::Lambda
-  translateLambdaFilter(const Json::Object &json_config);
+  // no v1 support
+  //  static const envoy::api::v2::filter::http::Lambda
+  //  translateLambdaFilter(const Json::Object &json_config);
 
 private:
   HttpFilterFactoryCb

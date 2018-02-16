@@ -1,4 +1,4 @@
-#include "lambda_filter_config_factory.h"
+#include "server/config/http/lambda_filter_config_factory.h"
 
 #include <string>
 
@@ -6,26 +6,22 @@
 
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
-#include "common/config/solo_well_known_names.h"
+#include "common/config/lambda_well_known_names.h"
+#include "common/http/filter/function.h"
+#include "common/http/filter/lambda_filter.h"
+#include "common/http/filter/lambda_filter_config.h"
+#include "common/http/filter/metadata_function_retriever.h"
 #include "common/protobuf/utility.h"
 
-#include "function.h"
-#include "lambda_filter.h"
 #include "lambda_filter.pb.h"
-#include "lambda_filter_config.h"
-#include "metadata_function_retriever.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-HttpFilterFactoryCb
-LambdaFilterConfigFactory::createFilterFactory(const Json::Object &config,
-                                               const std::string &stat_prefix,
-                                               FactoryContext &context) {
-  UNREFERENCED_PARAMETER(stat_prefix);
-
-  return createFilter(translateLambdaFilter(config), context);
+HttpFilterFactoryCb LambdaFilterConfigFactory::createFilterFactory(
+    const Json::Object &, const std::string &, FactoryContext &) {
+  NOT_IMPLEMENTED;
 }
 
 HttpFilterFactoryCb LambdaFilterConfigFactory::createFilterFactoryFromProto(
@@ -59,18 +55,6 @@ std::string LambdaFilterConfigFactory::name() {
   return Config::SoloHttpFilterNames::get().LAMBDA;
 }
 
-const envoy::api::v2::filter::http::Lambda
-LambdaFilterConfigFactory::translateLambdaFilter(
-    const Json::Object &json_config) {
-  json_config.validateSchema(LAMBDA_HTTP_FILTER_SCHEMA);
-
-  envoy::api::v2::filter::http::Lambda proto_config;
-  JSON_UTIL_SET_STRING(json_config, proto_config, access_key);
-  JSON_UTIL_SET_STRING(json_config, proto_config, secret_key);
-
-  return proto_config;
-}
-
 HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
     const envoy::api::v2::filter::http::Lambda &proto_config,
     FactoryContext &context) {
@@ -79,37 +63,17 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
       std::make_shared<Http::LambdaFilterConfig>(proto_config);
 
   Http::FunctionRetrieverSharedPtr functionRetriever =
-      std::make_shared<Http::MetadataFunctionRetriever>(
-          Config::SoloMetadataFilters::get().LAMBDA,
-          Config::MetadataLambdaKeys::get().FUNC_NAME,
-          Config::MetadataLambdaKeys::get().HOSTNAME,
-          Config::MetadataLambdaKeys::get().REGION);
+      std::make_shared<Http::MetadataFunctionRetriever>();
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(config, functionRetriever,
-                                         context.clusterManager());
+    auto filter = new Http::LambdaFilter(
+        functionRetriever, context, Config::SoloMetadataFilters::get().LAMBDA,
+        config);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
 }
-
-const std::string LambdaFilterConfigFactory::LAMBDA_HTTP_FILTER_SCHEMA(R"EOF(
-  {
-    "$schema": "http://json-schema.org/schema#",
-    "type" : "object",
-    "properties" : {
-      "access_key": {
-        "type" : "string"
-      },
-      "secret_key": {
-        "type" : "string"
-      }
-    },
-    "required": ["access_key", "secret_key"],
-    "additionalProperties" : false
-  }
-  )EOF");
 
 /**
  * Static registration for this sample filter. @see RegisterFactory.

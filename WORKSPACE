@@ -1,11 +1,21 @@
 workspace(name="aws_lambda_filter")
 
-ENVOY_SHA = "29989a38c017d3be5aa3c735a797fcf58b754fe5"  # Jan 16, 2018 (rds: expose route metadata to requestinfo (#2392))
+ENVOY_SHA = "f79a62b7cc9ca55d20104379ee0576617630cdaa"  # Feb 15, 2018 ( test: fix nit after #2591 (#2601) )
 
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
+)
+
+
+ENVOY_COMMON_SHA = "8666e4e2a3c48c51f16c5c1dc1caae166dda84be"  # Feb 15, 2018 (pragma once and formatting.)
+
+# load solo common
+git_repository(
+    name = "envoy_common",
+    remote = "git@github.com:solo-io/envoy-common",
+    commit = ENVOY_COMMON_SHA,
 )
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
