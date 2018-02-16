@@ -195,6 +195,7 @@ std::string AwsAuthenticator::computeSignature(
     const std::string &region, const std::string &credentials_scope_date,
     const std::string &credential_scope, const std::string &request_date_time,
     const std::string &hashed_canonical_request) {
+  static std::string aws_request = "aws4_request";
 
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
@@ -204,23 +205,13 @@ std::string AwsAuthenticator::computeSignature(
   sighmac.update(credentials_scope_date);
   sighmac.finalize(out, &out_len);
 
-  sighmac.init(out, out_len);
-  sighmac.update(region);
-  sighmac.finalize(out, &out_len);
-
-  sighmac.init(out, out_len);
-  sighmac.update(*service_);
-  sighmac.finalize(out, &out_len);
-
-  static std::string aws_request = "aws4_request";
-  sighmac.init(out, out_len);
-  sighmac.update(aws_request);
-  sighmac.finalize(out, &out_len);
-
-  sighmac.init(out, out_len);
-  sighmac.update({&ALGORITHM, &NEW_LINE, &request_date_time, &NEW_LINE,
-                  &credential_scope, &NEW_LINE, &hashed_canonical_request});
-  sighmac.finalize(out, &out_len);
+  recusiveHmacHelper(sighmac, out, out_len, region);
+  recusiveHmacHelper(sighmac, out, out_len, *service_);
+  recusiveHmacHelper(sighmac, out, out_len, aws_request);
+  recusiveHmacHelper<std::initializer_list<const std::string *>>(
+      sighmac, out, out_len,
+      {&ALGORITHM, &NEW_LINE, &request_date_time, &NEW_LINE, &credential_scope,
+       &NEW_LINE, &hashed_canonical_request});
 
   return Envoy::Hex::encode(out, out_len);
 }

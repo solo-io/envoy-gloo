@@ -102,6 +102,14 @@ private:
     bool firstinit{true};
   };
 
+  template <typename T>
+  static void recusiveHmacHelper(HMACSha256 &hmac, uint8_t *out,
+                                 unsigned int &out_len, const T &what) {
+    hmac.init(out, out_len);
+    hmac.update(what);
+    hmac.finalize(out, &out_len);
+  }
+
   Sha256 body_sha_;
 
   const std::string *access_key_{};
