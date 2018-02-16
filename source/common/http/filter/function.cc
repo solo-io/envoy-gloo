@@ -13,10 +13,10 @@ Function::createFunction(Optional<const std::string *> name,
   if (!name.valid()) {
     return {};
   }
-  if (!region.valid()) {
+  if (!host.valid()) {
     return {};
   }
-  if (!host.valid()) {
+  if (!region.valid()) {
     return {};
   }
   if (!access_key.valid()) {
