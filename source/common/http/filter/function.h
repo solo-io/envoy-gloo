@@ -20,7 +20,7 @@ struct Function {
         region_(nullptr), access_key_(nullptr), secret_key_(nullptr) {}
 
   Function(const std::string *name,
-           Optional<const std::string *> const qualifier, bool async,
+           Optional<const std::string *> qualifier, bool async,
            const std::string *host, const std::string *region,
            const std::string *access_key, const std::string *secret_key)
       : name_(name), qualifier_(qualifier), async_(async), host_(host),
