@@ -3,6 +3,7 @@
 #include "envoy/server/filter_config.h"
 #include "envoy/upstream/cluster_manager.h"
 
+#include "envoy/http/metadata_accessor.h"
 #include "common/protobuf/utility.h"
 
 namespace Envoy {
@@ -11,6 +12,7 @@ namespace Http {
 using Envoy::Server::Configuration::FactoryContext;
 
 class FunctionalFilterBase : public StreamDecoderFilter,
+                             public MetadataAccessor,
                              public Logger::Loggable<Logger::Id::filter> {
 public:
   FunctionalFilterBase(FactoryContext &ctx, const std::string &childname)
@@ -33,9 +35,10 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  const ProtobufWkt::Struct &getFunctionSpec() const;
-  const ProtobufWkt::Struct &getChildFilterSpec() const;
-  const ProtobufWkt::Struct *getChildRouteFilterSpec() const;
+  // MetadataAccessor
+  Optional<const ProtobufWkt::Struct *> getFunctionSpec() const;
+  Optional<const ProtobufWkt::Struct *> getClusterMetadata() const;
+  Optional<const ProtobufWkt::Struct *> getRouteMetadata() const;
 
 protected:
   StreamDecoderFilterCallbacks *decoder_callbacks_{};

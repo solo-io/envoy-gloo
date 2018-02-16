@@ -63,18 +63,18 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
   return FilterTrailersStatus::Continue;
 }
 
-const ProtobufWkt::Struct &FunctionalFilterBase::getFunctionSpec() const {
+Optional<const ProtobufWkt::Struct *> FunctionalFilterBase::getFunctionSpec() const {
   RELEASE_ASSERT(cluster_spec_);
-  return *cluster_spec_;
+  return cluster_spec_;
 }
 
-const ProtobufWkt::Struct &FunctionalFilterBase::getChildFilterSpec() const {
+Optional<const ProtobufWkt::Struct *> FunctionalFilterBase::getClusterMetadata() const {
   RELEASE_ASSERT(child_spec_);
-  return *child_spec_;
+  return child_spec_;
 }
 
-const ProtobufWkt::Struct *
-FunctionalFilterBase::getChildRouteFilterSpec() const {
+Optional<const ProtobufWkt::Struct *>
+FunctionalFilterBase::getRouteMetadata() const {
 
   if (route_spec_) {
     return route_spec_;
@@ -84,22 +84,23 @@ FunctionalFilterBase::getChildRouteFilterSpec() const {
     // save the pointer as the metadata is owned by it.
     route_info_ = decoder_callbacks_->route();
     if (!route_info_) {
-      return nullptr;
+      return {};
     }
   }
 
   const Envoy::Router::RouteEntry *routeEntry = route_info_->routeEntry();
   if (!routeEntry) {
-    return nullptr;
+    return {};
   }
 
   const auto &metadata = routeEntry->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
   if (filter_it != metadata.filter_metadata().end()) {
     route_spec_ = &filter_it->second;
+    return route_spec_;
   }
 
-  return route_spec_;
+  return {};
 }
 
 void FunctionalFilterBase::tryToGetSpec() {

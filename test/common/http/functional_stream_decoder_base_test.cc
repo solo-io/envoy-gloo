@@ -34,16 +34,6 @@ public:
                          const std::string &childname)
       : FunctionalFilterBase(ctx, childname), testfixture_(testfixture) {}
 
-  // publicize
-  const ProtobufWkt::Struct &GetFunctionSpec() { return getFunctionSpec(); }
-  const ProtobufWkt::Struct &GetChildFilterSpec() {
-    return getChildFilterSpec();
-  }
-  const ProtobufWkt::Struct *GetChildRouteFilterSpec() {
-    return getChildRouteFilterSpec();
-  }
-
-  virtual void onDestroy() override {}
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
   virtual FilterDataStatus functionDecodeData(Buffer::Instance &,
                                               bool) override;
@@ -145,6 +135,34 @@ protected:
             routefunctionmeta;
   }
 
+  void initroutemetamultiple() {
+
+    ProtobufWkt::Value functionvalue;
+    functionvalue.set_string_value(functionname_);
+
+
+    ProtobufWkt::Value clustervalue;
+    ProtobufWkt::Struct* clusterstruct = clustervalue.mutable_struct_value();
+    (*clusterstruct->mutable_fields())
+        [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS] = functionvalue;
+
+    auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
+
+    ProtobufWkt::Struct routefunctionmeta;
+    (*routefunctionmeta.mutable_fields())
+        [clustername] = clustervalue;
+
+    // TODO use const
+    (*route_metadata_.mutable_filter_metadata())
+        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+            routefunctionmeta;
+
+
+    (*route_metadata_.mutable_filter_metadata())
+        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+            routefunctionmeta;
+  }
+
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Envoy::Event::MockTimer> *attachmentTimeout_timer_{};
@@ -164,7 +182,7 @@ protected:
 
 FilterHeadersStatus FunctionalFilterTester::functionDecodeHeaders(HeaderMap &,
                                                                   bool) {
-  testfixture_.routeMetadataFound_ = (getChildRouteFilterSpec() != nullptr);
+  testfixture_.routeMetadataFound_ = getRouteMetadata().valid();
   testfixture_.functionDecodeHeadersCalled_ = true;
   return FilterHeadersStatus::Continue;
 }
@@ -205,7 +223,7 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  const ProtobufWkt::Struct &receivedspec = filter_->GetFunctionSpec();
+  const ProtobufWkt::Struct &receivedspec = *filter_->getFunctionSpec().value();
 
   EXPECT_NE(nullptr, &receivedspec);
 
@@ -224,15 +242,15 @@ TEST_F(FuncitonFilterTest, MetaNoCopy) {
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  const ProtobufWkt::Struct &funcspec = filter_->GetFunctionSpec();
-  const ProtobufWkt::Struct &childspec = filter_->GetChildFilterSpec();
+  const ProtobufWkt::Struct *funcspec = filter_->getFunctionSpec().value();
+  const ProtobufWkt::Struct *childspec = filter_->getClusterMetadata().value();
   const ProtobufWkt::Struct *routechildspec =
-      filter_->GetChildRouteFilterSpec();
+      filter_->getRouteMetadata().value();
 
   EXPECT_NE(nullptr, routechildspec);
 
-  EXPECT_EQ(cluster_meta_function_spec_struct_, &funcspec);
-  EXPECT_EQ(cluster_meta_child_spec_struct_, &childspec);
+  EXPECT_EQ(cluster_meta_function_spec_struct_, funcspec);
+  EXPECT_EQ(cluster_meta_child_spec_struct_, childspec);
   EXPECT_EQ(route_meta_child_spec_struct_, routechildspec);
 }
 
