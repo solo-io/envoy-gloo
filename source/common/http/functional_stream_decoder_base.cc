@@ -63,12 +63,14 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
   return FilterTrailersStatus::Continue;
 }
 
-Optional<const ProtobufWkt::Struct *> FunctionalFilterBase::getFunctionSpec() const {
+Optional<const ProtobufWkt::Struct *>
+FunctionalFilterBase::getFunctionSpec() const {
   RELEASE_ASSERT(cluster_spec_);
   return cluster_spec_;
 }
 
-Optional<const ProtobufWkt::Struct *> FunctionalFilterBase::getClusterMetadata() const {
+Optional<const ProtobufWkt::Struct *>
+FunctionalFilterBase::getClusterMetadata() const {
   RELEASE_ASSERT(child_spec_);
   return child_spec_;
 }
@@ -130,14 +132,16 @@ void FunctionalFilterBase::tryToGetSpec() {
   // this needs to have a field with the name of the cluster:
   const auto &filter_metadata_struct = filter_it->second;
   const auto &filter_metadata_struct_fields = filter_metadata_struct.fields();
-  
-  const auto cluster_it = filter_metadata_struct_fields.find(cluster_info_->name());
+
+  const auto cluster_it =
+      filter_metadata_struct_fields.find(cluster_info_->name());
   if (cluster_it == filter_metadata_struct_fields.end()) {
     error();
     return;
   }
-  // the value is a struct with either a single function of multiple functions with weights.
-  const ProtobufWkt::Value& clustervalue = cluster_it->second;
+  // the value is a struct with either a single function of multiple functions
+  // with weights.
+  const ProtobufWkt::Value &clustervalue = cluster_it->second;
   if (clustervalue.kind_case() != ProtobufWkt::Value::kStructValue) {
     error();
     return;

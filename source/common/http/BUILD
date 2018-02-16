@@ -29,8 +29,8 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//common/config:solo_well_known_names_lib",
-        "//source/common/http:solo_filter_utility_lib",
         "//include/envoy/http:metadata_accessor_interface",
+        "//source/common/http:solo_filter_utility_lib",
         "@envoy//include/envoy/server:filter_config_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",

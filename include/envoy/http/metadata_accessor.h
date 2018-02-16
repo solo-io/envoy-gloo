@@ -1,11 +1,15 @@
+#pragma once
+
+#include "envoy/common/pure.h"
 #include "envoy/common/optional.h"
+
 #include "common/protobuf/protobuf.h"
 
 namespace Envoy {
 namespace Http {
 
 /**
- * This interface is helper to get metadata structs from various 
+ * This interface is helper to get metadata structs from various
  * objects in the current filter context.
  */
 class MetadataAccessor {
@@ -17,8 +21,8 @@ public:
   // Get the route metadata for the current filter
   virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
 
-  virtual ~MetadataAccessor(){}
+  virtual ~MetadataAccessor() {}
 };
 
-}
-}
+} // namespace Http
+} // namespace Envoy

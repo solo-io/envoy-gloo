@@ -15,5 +15,5 @@ envoy_cc_library(
     deps = [
         "@envoy//include/envoy/common:optional",
         "@envoy//source/common/protobuf",
-        ],
+    ],
 )

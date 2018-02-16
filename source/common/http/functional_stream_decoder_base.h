@@ -1,9 +1,9 @@
 #pragma once
 
+#include "envoy/http/metadata_accessor.h"
 #include "envoy/server/filter_config.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "envoy/http/metadata_accessor.h"
 #include "common/protobuf/utility.h"
 
 namespace Envoy {

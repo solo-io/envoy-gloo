@@ -112,23 +112,20 @@ protected:
     ProtobufWkt::Value functionvalue;
     functionvalue.set_string_value(functionname_);
 
-
     ProtobufWkt::Value clustervalue;
-    ProtobufWkt::Struct* clusterstruct = clustervalue.mutable_struct_value();
+    ProtobufWkt::Struct *clusterstruct = clustervalue.mutable_struct_value();
     (*clusterstruct->mutable_fields())
         [Config::MetadataFunctionalRouterKeys::get().FUNCTION] = functionvalue;
 
     auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
 
     ProtobufWkt::Struct routefunctionmeta;
-    (*routefunctionmeta.mutable_fields())
-        [clustername] = clustervalue;
+    (*routefunctionmeta.mutable_fields())[clustername] = clustervalue;
 
     // TODO use const
     (*route_metadata_.mutable_filter_metadata())
         [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
-
 
     (*route_metadata_.mutable_filter_metadata())
         [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
@@ -140,23 +137,20 @@ protected:
     ProtobufWkt::Value functionvalue;
     functionvalue.set_string_value(functionname_);
 
-
     ProtobufWkt::Value clustervalue;
-    ProtobufWkt::Struct* clusterstruct = clustervalue.mutable_struct_value();
+    ProtobufWkt::Struct *clusterstruct = clustervalue.mutable_struct_value();
     (*clusterstruct->mutable_fields())
         [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS] = functionvalue;
 
     auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
 
     ProtobufWkt::Struct routefunctionmeta;
-    (*routefunctionmeta.mutable_fields())
-        [clustername] = clustervalue;
+    (*routefunctionmeta.mutable_fields())[clustername] = clustervalue;
 
     // TODO use const
     (*route_metadata_.mutable_filter_metadata())
         [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
-
 
     (*route_metadata_.mutable_filter_metadata())
         [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
