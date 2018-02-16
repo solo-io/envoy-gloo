@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <list>
 #include <string>
 
@@ -28,6 +29,27 @@ public:
             const std::string &region);
 
 private:
+  // TODO(yuval-k) can I refactor our the friendliness?
+  friend class AwsAuthenticatorTest;
+  std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
+
+  std::pair<std::string, std::string> &&prepareHeaders();
+
+  std::string getBodyHexSha();
+  void fetchUrl();
+  std::string computeCanonicalRequestHash(const std::string &CanonicalHeaders,
+                                            const std::string &SignedHeaders,
+                                            const std::string &hexpayload);
+  std::string 
+  getCredntialScopeDate(std::chrono::time_point<std::chrono::system_clock> now);
+  std::string getCredntialScope(const std::string &region,
+                                  const std::string &datenow);
+
+  std::string computeSignature(const std::string &region,
+                                 const std::string &CredentialScopeDate,
+                                 const std::string &CredentialScope,
+                                 const std::string &RequestDateTime,
+                                 const std::string &hashedCanonicalRequest);
   //  void lambdafy();
   const Envoy::Http::HeaderEntry *
   getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
@@ -67,15 +89,24 @@ private:
   private:
     HMAC_CTX context_;
     const EVP_MD *evp_;
+    bool firstinit{true};
   };
 
   Sha256 body_sha_;
 
-  const std::string *access_key_;
+  const std::string *access_key_{};
   std::string first_key_;
 
   static const std::string ALGORITHM;
   static const std::string SERVICE;
+
+  const char *query_string_start_{};
+  size_t query_string_len_{};
+  const char *url_start_{};
+  size_t url_len_{};
+
+  Envoy::Http::HeaderMap *request_headers_;
+  std::list<Envoy::Http::LowerCaseString> sign_headers_;
 };
 
 } // namespace Http
