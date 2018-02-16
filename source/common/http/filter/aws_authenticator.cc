@@ -187,7 +187,7 @@ AwsAuthenticator::getCredntialScope(const std::string &region,
 
   std::stringstream credential_scope_stream;
   credential_scope_stream << credentials_scope_date << "/" << region << "/"
-                        << (*service_) << "/aws4_request";
+                          << (*service_) << "/aws4_request";
   return credential_scope_stream.str();
 }
 
