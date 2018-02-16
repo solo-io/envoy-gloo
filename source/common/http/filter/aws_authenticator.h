@@ -31,13 +31,20 @@ public:
 private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
+
+std::string signWithTime(Envoy::Http::HeaderMap *request_headers,
+                            std::list<Envoy::Http::LowerCaseString> &&headers,
+                            const std::string &region,
+    std::chrono::time_point<std::chrono::system_clock> now);
+
   std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
 
-  std::pair<std::string, std::string> &&prepareHeaders();
+  std::pair<std::string, std::string> prepareHeaders();
 
   std::string getBodyHexSha();
   void fetchUrl();
-  std::string computeCanonicalRequestHash(const std::string &CanonicalHeaders,
+  std::string computeCanonicalRequestHash(const std::string &HTTPRequestMethod,
+  const std::string &CanonicalHeaders,
                                             const std::string &SignedHeaders,
                                             const std::string &hexpayload);
   std::string 
@@ -96,6 +103,8 @@ private:
 
   const std::string *access_key_{};
   std::string first_key_;
+  const std::string* service_;
+  const std::string* method_;
 
   static const std::string ALGORITHM;
   static const std::string SERVICE;
