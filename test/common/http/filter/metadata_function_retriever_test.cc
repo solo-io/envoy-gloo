@@ -98,8 +98,8 @@ public:
   void SetUp() override { buildfunc(); }
   void buildfunc() {
     configured_function_.reset(new Function(&name_, &qualifier_, async_, &host_,
-                                           &region_, &access_key_,
-                                           &secret_key_));
+                                            &region_, &access_key_,
+                                            &secret_key_));
   }
 
   Optional<Function> getFunctionFromJson(const std::string &func_json,
