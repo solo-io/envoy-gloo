@@ -10,8 +10,12 @@ using testing::_;
 
 MockFunctionRetriever::MockFunctionRetriever() {
   ON_CALL(*this, getFunction(_))
-      .WillByDefault(Invoke([&](const FunctionalFilterBase &) {
-        return Function{&name_,   &qualifier_,  async_,      &host_,
+      .WillByDefault(Invoke([&](const MetadataAccessor &) {
+        Optional<const std::string *> qualifier;
+        if (!qualifier_.empty()) {
+          qualifier = Optional<const std::string *>(&qualifier_);
+        }
+        return Function{&name_,   qualifier,    async_,      &host_,
                         &region_, &access_key_, &secret_key_};
       }));
 }

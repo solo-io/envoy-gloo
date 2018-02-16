@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "common/config/solo_well_known_names.h"
+#include "common/config/solo_lambda_well_known_names.h"
 #include "common/http/filter/metadata_function_retriever.h"
 #include "common/protobuf/utility.h"
 
@@ -15,10 +15,18 @@ using Http::Function;
 using Http::MetadataFunctionRetriever;
 
 bool operator==(const Function &lhs, const Function &rhs) {
-  return std::tie(*lhs.name_, *lhs.qualifier_, *lhs.region_, *lhs.host_,
-                  *lhs.access_key_, *lhs.secret_key_, lhs.async_) ==
-         std::tie(*rhs.name_, *rhs.qualifier_, *rhs.region_, *rhs.host_,
-                  *rhs.access_key_, *rhs.secret_key_, rhs.async_);
+  bool ret = std::tie(*lhs.name_, *lhs.region_, *lhs.host_, *lhs.access_key_,
+                      *lhs.secret_key_, lhs.async_) ==
+             std::tie(*rhs.name_, *rhs.region_, *rhs.host_, *rhs.access_key_,
+                      *rhs.secret_key_, rhs.async_);
+
+  ret = ret && (!rhs.qualifier_.valid() == !rhs.qualifier_.valid());
+
+  if (ret && rhs.qualifier_.valid()) {
+    ret = ret && (*rhs.qualifier_.value() == *rhs.qualifier_.value());
+  }
+
+  return ret;
 }
 
 namespace {
@@ -35,14 +43,46 @@ Protobuf::Struct getMetadata(const std::string &json) {
   return metadata;
 }
 
+class TesterMetadataAccessor : public MetadataAccessor {
+public:
+  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+    if (function_spec_ != nullptr) {
+      return function_spec_;
+    }
+    return {};
+  }
+
+  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+    if (cluster_metadata_ != nullptr) {
+      return cluster_metadata_;
+    }
+    return {};
+  }
+
+  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+    if (route_metadata_ != nullptr) {
+      return route_metadata_;
+    }
+    return {};
+  }
+
+  const ProtobufWkt::Struct *function_spec_;
+  const ProtobufWkt::Struct *cluster_metadata_;
+  const ProtobufWkt::Struct *route_metadata_;
+};
+
 Optional<Function>
 getFunctionFromMetadata(const Protobuf::Struct &func_metadata,
                         const Protobuf::Struct &cluster_metadata,
                         const Protobuf::Struct *route_metadata = nullptr) {
+  TesterMetadataAccessor testaccessor;
+  testaccessor.function_spec_ = &func_metadata;
+  testaccessor.cluster_metadata_ = &cluster_metadata;
+  testaccessor.route_metadata_ = route_metadata;
+
   MetadataFunctionRetriever functionRetriever;
 
-  return functionRetriever.getFunctionFromSpec(func_metadata, cluster_metadata,
-                                               route_metadata);
+  return functionRetriever.getFunction(testaccessor);
 }
 
 } // namespace

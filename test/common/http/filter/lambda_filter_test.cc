@@ -123,11 +123,13 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
 TEST_F(LambdaFilterTest, FuncWithoutQualifierCalled) {
 
   EXPECT_CALL(*function_retriever_, getFunction(_))
-      .WillRepeatedly(Return(Function{
-          &function_retriever_->name_, nullptr, function_retriever_->async_,
-          &function_retriever_->host_, &function_retriever_->region_,
-          &function_retriever_->access_key_,
-          &function_retriever_->secret_key_}));
+      .WillRepeatedly(Return(Function{&function_retriever_->name_,
+                                      {},
+                                      function_retriever_->async_,
+                                      &function_retriever_->host_,
+                                      &function_retriever_->region_,
+                                      &function_retriever_->access_key_,
+                                      &function_retriever_->secret_key_}));
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

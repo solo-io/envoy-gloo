@@ -19,6 +19,13 @@
 namespace Envoy {
 namespace Http {
 
+const LowerCaseString LambdaFilter::INVOCATION_TYPE("x-amz-invocation-type");
+const std::string LambdaFilter::INVOCATION_TYPE_EVENT("Event");
+const std::string LambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
+const LowerCaseString LambdaFilter::LOG_TYPE("x-amz-log-type");
+const std::string LambdaFilter::LOG_NONE("None");
+
+// TODO(yuval-k) can the config be removed?
 LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,
                            Server::Configuration::FactoryContext &ctx,
                            const std::string &name,
@@ -30,12 +37,11 @@ LambdaFilter::~LambdaFilter() { cleanup(); }
 
 std::string LambdaFilter::functionUrlPath() {
 
+  const auto &currentFunction = currentFunction_.value();
   std::stringstream val;
-  val << "/2015-03-31/functions/" << (*currentFunction_.name_)
-      << "/invocations";
-  if ((currentFunction_.qualifier_ != nullptr) &&
-      (!currentFunction_.qualifier_->empty())) {
-    val << "?Qualifier=" << (*currentFunction_.qualifier_);
+  val << "/2015-03-31/functions/" << (*currentFunction.name_) << "/invocations";
+  if (currentFunction.qualifier_.valid()) {
+    val << "?Qualifier=" << (*currentFunction.qualifier_.value());
   }
   return val.str();
 }
@@ -50,14 +56,15 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
     Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
                             Code::InternalServerError,
                             "AWS Function not available");
-    // Doing continue after a local reply is a bad thing...
+    // Doing continue after a local reply will crash envoy
     return Envoy::Http::FilterHeadersStatus::StopIteration;
   }
-  active_ = true;
-  currentFunction_ = std::move(optionalFunction.value());
-  // placement new
-  new (&aws_authenticator_) AwsAuthenticator(*currentFunction_.access_key_,
-                                             *currentFunction_.secret_key_);
+
+  currentFunction_ = std::move(optionalFunction);
+  const auto &currentFunction = currentFunction_.value();
+
+  aws_authenticator_.init(currentFunction.access_key_,
+                          currentFunction.secret_key_);
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
@@ -66,7 +73,6 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
   //  request_headers_->removeContentLength();
   request_headers_->insertPath().value(functionUrlPath());
 
-  ENVOY_LOG(debug, "decodeHeaders called end = {}", end_stream);
   if (end_stream) {
     lambdafy();
     return Envoy::Http::FilterHeadersStatus::Continue;
@@ -78,73 +84,56 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
 Envoy::Http::FilterDataStatus
 LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
                                  bool end_stream) {
-  if (!active_) {
+  if (!currentFunction_.valid()) {
     return Envoy::Http::FilterDataStatus::Continue;
   }
   aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
-
     lambdafy();
-    // Authorization: AWS4-HMAC-SHA256
-    // Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request,
-    // SignedHeaders=content-type;host;x-amz-date,
-    // Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7
-    // add header ?!
-    // get stream id
     return Envoy::Http::FilterDataStatus::Continue;
   }
 
   return Envoy::Http::FilterDataStatus::StopIterationAndBuffer;
 }
 
-void LambdaFilter::lambdafy() {
-  std::list<Envoy::Http::LowerCaseString> headers;
-
-  headers.push_back(Envoy::Http::LowerCaseString("x-amz-invocation-type"));
-  if (currentFunction_.async_) {
-    request_headers_->addCopy(
-        Envoy::Http::LowerCaseString("x-amz-invocation-type"),
-        std::string("Event"));
-  } else {
-    request_headers_->addCopy(
-        Envoy::Http::LowerCaseString("x-amz-invocation-type"),
-        std::string("RequestResponse"));
-  }
-
-  //  headers.push_back(Envoy::Http::LowerCaseString("x-amz-client-context"));
-  //  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-client-context"),
-  //  std::string(""));
-
-  headers.push_back(Envoy::Http::LowerCaseString("x-amz-log-type"));
-  request_headers_->addCopy(Envoy::Http::LowerCaseString("x-amz-log-type"),
-                            std::string("None"));
-
-  headers.push_back(Envoy::Http::LowerCaseString("host"));
-  request_headers_->insertHost().value(*currentFunction_.host_);
-
-  headers.push_back(Envoy::Http::LowerCaseString("content-type"));
-
-  aws_authenticator_.sign(request_headers_, std::move(headers),
-                          *currentFunction_.region_);
-  cleanup();
-}
-
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
-  if (active_) {
+  if (currentFunction_.valid()) {
     lambdafy();
   }
 
   return Envoy::Http::FilterTrailersStatus::Continue;
 }
 
+void LambdaFilter::lambdafy() {
+  static std::list<Envoy::Http::LowerCaseString> headers;
+
+  const auto &currentFunction = currentFunction_.value();
+
+  const std::string &invocation_type =
+      currentFunction.async_ ? INVOCATION_TYPE_EVENT : INVOCATION_TYPE_REQ_RESP;
+  headers.push_back(INVOCATION_TYPE);
+  request_headers_->addReference(INVOCATION_TYPE, invocation_type);
+
+  headers.push_back(LOG_TYPE);
+  request_headers_->addReference(LOG_TYPE, LOG_NONE);
+
+  // TOOO(yuval-k) constify this and change the header list to
+  // ref-or-inline like in header map
+  headers.push_back(Envoy::Http::LowerCaseString("host"));
+  request_headers_->insertHost().value(*currentFunction.host_);
+
+  headers.push_back(Envoy::Http::LowerCaseString("content-type"));
+
+  aws_authenticator_.sign(request_headers_, std::move(headers),
+                          *currentFunction.region_);
+  cleanup();
+}
+
 void LambdaFilter::cleanup() {
   request_headers_ = nullptr;
-  if (active_) {
-    active_ = false;
-    aws_authenticator_.~AwsAuthenticator();
-  }
+  currentFunction_ = Optional<Function>();
 }
 
 } // namespace Http

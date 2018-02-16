@@ -13,7 +13,7 @@ namespace Http {
 
 struct Function {
   const std::string *name_{nullptr};
-  const std::string *qualifier_{nullptr};
+  Optional<const std::string *> qualifier_;
   bool async_{false};
 
   const std::string *host_{nullptr};

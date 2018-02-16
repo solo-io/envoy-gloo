@@ -47,7 +47,8 @@ static_resources:
                 metadata:
                   filter_metadata:
                       io.solo.function_router:
-                        function: uppercase-v1
+                        aws-us-east-1-lambda:                     
+                          function: uppercase-v1
               - match:
                   prefix: /latestlambda
                 route:
@@ -55,7 +56,8 @@ static_resources:
                 metadata:
                   filter_metadata:
                       io.solo.function_router:
-                        function: uppercase-latest
+                        aws-us-east-1-lambda:
+                          function: uppercase-latest
           http_filters:
           - name: io.solo.lambda
           - name: envoy.router

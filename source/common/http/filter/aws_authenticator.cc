@@ -13,10 +13,6 @@
 #include "common/http/headers.h"
 #include "common/http/utility.h"
 
-#include "openssl/digest.h"
-#include "openssl/hmac.h"
-#include "openssl/sha.h"
-
 namespace Envoy {
 namespace Http {
 
@@ -25,22 +21,19 @@ const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
 const std::string AwsAuthenticator::SERVICE = "lambda";
 
 // TODO: move service to sign function
-AwsAuthenticator::AwsAuthenticator(const std::string &access_key,
-                                   const std::string &secret_key)
-    : access_key_(access_key), first_key_("AWS4" + secret_key) {
-  SHA256_Init(&body_sha_);
+AwsAuthenticator::AwsAuthenticator() {}
+
+void AwsAuthenticator::init(const std::string *access_key,
+                            const std::string *secret_key) {
+  access_key_ = access_key;
+  const std::string &secret_key_ref = *secret_key;
+  first_key_ = "AWS4" + secret_key_ref;
 }
 
 AwsAuthenticator::~AwsAuthenticator() {}
 
 void AwsAuthenticator::updatePayloadHash(const Envoy::Buffer::Instance &data) {
-
-  uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  Envoy::Buffer::RawSlice slices[num_slices];
-  data.getRawSlices(slices, num_slices);
-  for (Envoy::Buffer::RawSlice &slice : slices) {
-    SHA256_Update(&body_sha_, slice.mem_, slice.len_);
-  }
+  body_sha_.update(data);
 }
 
 const HeaderEntry *
@@ -112,7 +105,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   std::string SignedHeaders = signedHeaders.str();
 
   uint8_t payload_out[SHA256_DIGEST_LENGTH];
-  SHA256_Final(payload_out, &body_sha_);
+  body_sha_.finalize(payload_out);
   std::string hexpayload =
       Envoy::Hex::encode(payload_out, SHA256_DIGEST_LENGTH);
 
@@ -120,39 +113,43 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   const Envoy::Http::HeaderString &CanonicalURI =
       request_headers->Path()->value();
   auto CanonicalURILen = CanonicalURI.size();
-
+  size_t CanonicalQueryLen = 0;
   std::string CanonicalQueryString = Envoy::EMPTY_STRING;
 
   const char *query_string_start = Utility::findQueryStringStart(CanonicalURI);
+  // bug in: findQueryStringStart - query_string_start will never be null as
+  // implied in config_impl.cc, but rather it is the end iterator of the string.
   if (query_string_start != nullptr) {
     CanonicalURILen = query_string_start - CanonicalURI.c_str();
+    if (CanonicalURILen < CanonicalURI.size()) {
+      // we now know that query_string_start != std::end
 
-    // +1 to skip the question mark
-    // These should be sorted alphabetically, but I will leave that to the
-    // caller (which is internal, hence it's ok)
-    CanonicalQueryString = query_string_start + 1;
+      // +1 to skip the question mark
+      // These should be sorted alphabetically, but I will leave that to the
+      // caller (which is internal, hence it's ok)
+      CanonicalQueryLen = CanonicalURI.size() - CanonicalURILen - 1;
+      query_string_start = query_string_start + 1;
+    }
   }
+  // Do iternal classes for sha and hmac.
+  Sha256 canonicalRequestHash;
 
-  SHA256_CTX cononicalRequestHash;
-  SHA256_Init(&cononicalRequestHash);
-  SHA256_Update(&cononicalRequestHash, HTTPRequestMethod.c_str(),
-                HTTPRequestMethod.size());
-  SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, CanonicalURI.c_str(), CanonicalURILen);
-  SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, CanonicalQueryString.c_str(),
-                CanonicalQueryString.size());
-  SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, CanonicalHeaders.c_str(),
-                CanonicalHeaders.size());
-  SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, SignedHeaders.c_str(),
-                SignedHeaders.size());
-  SHA256_Update(&cononicalRequestHash, "\n", 1);
-  SHA256_Update(&cononicalRequestHash, hexpayload.c_str(), hexpayload.size());
+  canonicalRequestHash.update(HTTPRequestMethod);
+  canonicalRequestHash.update('\n');
+  canonicalRequestHash.update(CanonicalURI.c_str(), CanonicalURILen);
+  canonicalRequestHash.update('\n');
+  if (query_string_start != nullptr) {
+    canonicalRequestHash.update(query_string_start, CanonicalQueryLen);
+  }
+  canonicalRequestHash.update('\n');
+  canonicalRequestHash.update(CanonicalHeaders);
+  canonicalRequestHash.update('\n');
+  canonicalRequestHash.update(SignedHeaders);
+  canonicalRequestHash.update('\n');
+  canonicalRequestHash.update(hexpayload);
 
   uint8_t cononicalRequestHashOut[SHA256_DIGEST_LENGTH];
-  SHA256_Final(cononicalRequestHashOut, &cononicalRequestHash);
+  canonicalRequestHash.finalize(cononicalRequestHashOut);
 
   //  SHA256(static_cast<const uint8_t*>(static_cast<const
   //  void*>(CanonicalRequest.c_str())), CanonicalRequest.size(), out);
@@ -173,67 +170,109 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
   auto kService = doHMAC(kRegion, tovec(Service));
   auto kSigning = doHMAC(kService, tovec("aws4_request"));
 */
-  auto evp = EVP_sha256();
-  unsigned int out_len = EVP_MD_size(evp);
+  HMACSha256 sighmac;
+  unsigned int out_len = sighmac.length();
   uint8_t out[out_len];
 
-  HMAC_CTX ctx;
-  HMAC_CTX_init(&ctx);
+  sighmac.init(first_key_);
+  sighmac.update(CredentialScopeDate);
+  sighmac.finalize(out, &out_len);
 
-  HMAC_Init_ex(&ctx, first_key_.data(), first_key_.size(), evp, nullptr);
-  HMAC_Update(&ctx,
-              reinterpret_cast<const uint8_t *>(CredentialScopeDate.c_str()),
-              CredentialScopeDate.size());
-  HMAC_Final(&ctx, out, &out_len);
+  sighmac.init(out, out_len);
+  sighmac.update(region);
+  sighmac.finalize(out, &out_len);
 
-  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(region.c_str()),
-              region.size());
-  HMAC_Final(&ctx, out, &out_len);
-
-  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(SERVICE.c_str()),
-              SERVICE.size());
-  HMAC_Final(&ctx, out, &out_len);
+  sighmac.init(out, out_len);
+  sighmac.update(SERVICE);
+  sighmac.finalize(out, &out_len);
 
   static std::string aws_request = "aws4_request";
-  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(aws_request.c_str()),
-              aws_request.size());
-  HMAC_Final(&ctx, out, &out_len);
+  sighmac.init(out, out_len);
+  sighmac.update(aws_request);
+  sighmac.finalize(out, &out_len);
 
-  /*
-
-  std::string StringToSign =
-  Algorithm + '\n' +
-  RequestDateTime + '\n' +
-  CredentialScope + '\n' +
-  hashedCanonicalRequest;
-  */
-  HMAC_Init_ex(&ctx, out, out_len, nullptr, nullptr);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(ALGORITHM.c_str()),
-              ALGORITHM.size());
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>("\n"), 1);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(RequestDateTime.c_str()),
-              RequestDateTime.size());
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>("\n"), 1);
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>(CredentialScope.c_str()),
-              CredentialScope.size());
-  HMAC_Update(&ctx, reinterpret_cast<const uint8_t *>("\n"), 1);
-  HMAC_Update(&ctx,
-              reinterpret_cast<const uint8_t *>(hashedCanonicalRequest.c_str()),
-              hashedCanonicalRequest.size());
-  HMAC_Final(&ctx, out, &out_len);
-  HMAC_CTX_cleanup(&ctx);
+  sighmac.init(out, out_len);
+  sighmac.update(ALGORITHM);
+  sighmac.update('\n');
+  sighmac.update(RequestDateTime);
+  sighmac.update('\n');
+  sighmac.update(CredentialScope);
+  sighmac.update('\n');
+  sighmac.update(hashedCanonicalRequest);
+  sighmac.finalize(out, &out_len);
 
   std::string signature = Envoy::Hex::encode(out, out_len);
 
   std::stringstream authorizationvalue;
+  RELEASE_ASSERT(access_key_);
   authorizationvalue << ALGORITHM << " Credential=" << access_key_ << "/"
                      << CredentialScope << ", SignedHeaders=" << SignedHeaders
                      << ", Signature=" << signature;
 
   request_headers->insertAuthorization().value(authorizationvalue.str());
+}
+
+AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
+
+void AwsAuthenticator::Sha256::update(const Envoy::Buffer::Instance &data) {
+  uint64_t num_slices = data.getRawSlices(nullptr, 0);
+  Envoy::Buffer::RawSlice slices[num_slices];
+  data.getRawSlices(slices, num_slices);
+  for (Envoy::Buffer::RawSlice &slice : slices) {
+    update(static_cast<const uint8_t *>(slice.mem_), slice.len_);
+  }
+}
+
+void AwsAuthenticator::Sha256::update(const std::string &data) {
+  update(data.c_str(), data.size());
+}
+
+void AwsAuthenticator::Sha256::update(const uint8_t *bytes, size_t size) {
+  SHA256_Update(&context_, bytes, size);
+}
+
+void AwsAuthenticator::Sha256::update(const char *chars, size_t size) {
+  update(reinterpret_cast<const uint8_t *>(chars), size);
+}
+
+void AwsAuthenticator::Sha256::update(char c) { update(&c, 1); }
+
+void AwsAuthenticator::Sha256::finalize(uint8_t *out) {
+  SHA256_Final(out, &context_);
+}
+
+AwsAuthenticator::HMACSha256::HMACSha256() : evp_(EVP_sha256()) {
+  HMAC_CTX_init(&context_);
+}
+
+AwsAuthenticator::HMACSha256::~HMACSha256() { HMAC_CTX_cleanup(&context_); }
+
+size_t AwsAuthenticator::HMACSha256::length() { return EVP_MD_size(evp_); }
+
+void AwsAuthenticator::HMACSha256::init(const std::string &data) {
+  init(reinterpret_cast<const uint8_t *>(data.data()), data.size());
+}
+
+void AwsAuthenticator::HMACSha256::init(const uint8_t *bytes, size_t size) {
+  HMAC_Init_ex(&context_, bytes, size, evp_, nullptr);
+}
+
+void AwsAuthenticator::HMACSha256::update(const std::string &data) {
+  update(reinterpret_cast<const uint8_t *>(data.c_str()), data.size());
+}
+
+void AwsAuthenticator::HMACSha256::update(char c) { update(&c, 1); }
+
+void AwsAuthenticator::HMACSha256::update(const char *chars, size_t size) {
+  update(reinterpret_cast<const uint8_t *>(chars), size);
+}
+void AwsAuthenticator::HMACSha256::update(const uint8_t *bytes, size_t size) {
+  HMAC_Update(&context_, bytes, size);
+}
+
+void AwsAuthenticator::HMACSha256::finalize(uint8_t *out,
+                                            unsigned int *out_len) {
+  HMAC_Final(&context_, out, out_len);
 }
 
 } // namespace Http

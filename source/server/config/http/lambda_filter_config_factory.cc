@@ -6,7 +6,7 @@
 
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
-#include "common/config/solo_well_known_names.h"
+#include "common/config/solo_lambda_well_known_names.h"
 #include "common/http/filter/function.h"
 #include "common/http/filter/lambda_filter.h"
 #include "common/http/filter/lambda_filter_config.h"

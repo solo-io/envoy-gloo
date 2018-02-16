@@ -15,5 +15,8 @@ load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 sh_test(
     name = "e2e2e_test",
     srcs = ["e2e2e_test.sh"],
-    data = ["//:envoy", "//test:create_config.sh"],
+    data = [
+        "//:envoy",
+        "//test:create_config.sh",
+    ],
 )

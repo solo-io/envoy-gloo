@@ -31,21 +31,24 @@ public:
   FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
 
 private:
+  static const LowerCaseString INVOCATION_TYPE;
+  static const std::string INVOCATION_TYPE_EVENT;
+  static const std::string INVOCATION_TYPE_REQ_RESP;
+
+  static const LowerCaseString LOG_TYPE;
+  static const std::string LOG_NONE;
+
   const LambdaFilterConfigSharedPtr config_;
   FunctionRetrieverSharedPtr functionRetriever_;
   Upstream::ClusterManager &cm_;
 
-  Function currentFunction_;
+  Optional<Function> currentFunction_;
   void lambdafy();
   std::string functionUrlPath();
   void cleanup();
 
   Envoy::Http::HeaderMap *request_headers_{};
-  union {
-    AwsAuthenticator aws_authenticator_;
-  };
-
-  bool active_{};
+  AwsAuthenticator aws_authenticator_;
 };
 
 } // namespace Http

@@ -13,8 +13,8 @@ public:
   MockFunctionRetriever();
   ~MockFunctionRetriever();
 
-  MOCK_CONST_METHOD1(getFunction,
-                     Optional<Function>(const FunctionalFilterBase &filter));
+  MOCK_CONST_METHOD1(
+      getFunction, Optional<Function>(const MetadataAccessor &metadataccessor));
 
   std::string name_{"name"};
   std::string qualifier_{"qualifier"};
@@ -23,13 +23,6 @@ public:
   std::string region_{"region"};
   std::string access_key_{"access_key"};
   std::string secret_key_{"secret_key"};
-
-protected:
-  Optional<Function> getFunctionFromSpec(const Protobuf::Struct &,
-                                         const Protobuf::Struct &,
-                                         const ProtobufWkt::Struct *) const {
-    NOT_IMPLEMENTED;
-  }
 };
 
 } // namespace Http

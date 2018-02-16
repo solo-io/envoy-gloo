@@ -13,9 +13,13 @@ public:
   MetadataFunctionRetriever();
 
   Optional<Function>
-  getFunctionFromSpec(const Protobuf::Struct &function_spec,
-                      const Protobuf::Struct &upstream_spec,
-                      const ProtobufWkt::Struct *route_spec) const override;
+  getFunction(const MetadataAccessor &metadataccessor) const override;
+
+private:
+  Optional<const std::string *>
+  nonEmptyStringValue(const Protobuf::Struct &spec,
+                      const std::string &key) const;
+  bool boolValue(const Protobuf::Struct &spec, const std::string &key) const;
 };
 
 } // namespace Http
