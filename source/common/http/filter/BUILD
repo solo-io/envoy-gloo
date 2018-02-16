@@ -59,7 +59,6 @@ envoy_cc_library(
         "lambda_filter.cc",
     ],
     hdrs = [
-        "function.h",
         "lambda_filter.h",
     ],
     repository = "@envoy",
