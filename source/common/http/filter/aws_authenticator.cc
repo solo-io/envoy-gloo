@@ -19,7 +19,7 @@ namespace Http {
 const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
 
 const std::string AwsAuthenticator::SERVICE = "lambda";
-const std::string AwsAuthenticator::NEW_LINE = "\n";
+const std::string AwsAuthenticator::NEWLINE = "\n";
 
 AwsAuthenticator::AwsAuthenticator() {
   // TODO(yuval-k) hardcoded for now
@@ -191,8 +191,8 @@ std::string AwsAuthenticator::computeSignature(
   recusiveHmacHelper(sighmac, out, out_len, aws_request);
   recusiveHmacHelper<std::initializer_list<const std::string *>>(
       sighmac, out, out_len,
-      {&ALGORITHM, &NEW_LINE, &request_date_time, &NEW_LINE, &credential_scope,
-       &NEW_LINE, &hashed_canonical_request});
+      {&ALGORITHM, &NEWLINE, &request_date_time, &NEWLINE, &credential_scope,
+       &NEWLINE, &hashed_canonical_request});
 
   return Envoy::Hex::encode(out, out_len);
 }

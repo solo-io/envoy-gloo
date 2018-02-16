@@ -34,7 +34,7 @@ private:
 
   static const std::string ALGORITHM;
   static const std::string SERVICE;
-  static const std::string NEW_LINE;
+  static const std::string NEWLINE;
 
   std::string
   signWithTime(Envoy::Http::HeaderMap *request_headers,
