@@ -57,11 +57,11 @@ Optional<const std::string *>
 MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
                                                const std::string &key) const {
 
-  Optional<const Protobuf::Value *> maybevalue = value(spec, key);
-  if (!maybevalue.valid()) {
+  Optional<const Protobuf::Value *> maybe_value = value(spec, key);
+  if (!maybe_value.valid()) {
     return {};
   }
-  const auto &value = *maybevalue.value();
+  const auto &value = *maybe_value.value();
   if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
     return {};
   }
@@ -76,12 +76,12 @@ MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
 
 bool MetadataFunctionRetriever::boolValue(const Protobuf::Struct &spec,
                                           const std::string &key) const {
-  Optional<const Protobuf::Value *> maybevalue = value(spec, key);
-  if (!maybevalue.valid()) {
+  Optional<const Protobuf::Value *> maybe_value = value(spec, key);
+  if (!maybe_value.valid()) {
     return {};
   }
 
-  const auto &value = *maybevalue.value();
+  const auto &value = *maybe_value.value();
   if (value.kind_case() != ProtobufWkt::Value::kBoolValue) {
     return {};
   }
