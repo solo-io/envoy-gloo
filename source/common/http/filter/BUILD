@@ -30,7 +30,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//:lambda_filter_proto_cc",
-        "//common/config:solo_lambda_well_known_names_lib",
+        "//common/config:lambda_well_known_names_lib",
         "@envoy//source/exe:envoy_common_lib",
     ],
 )
@@ -48,7 +48,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//common/config:solo_lambda_well_known_names_lib",
+        "//common/config:lambda_well_known_names_lib",
         "@envoy_common//source/common/http:functional_stream_decoder_base_lib",
         "@envoy_common//source/common/http:solo_filter_utility_lib",
     ],

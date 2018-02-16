@@ -1,7 +1,7 @@
 #include "common/http/filter/metadata_function_retriever.h"
 
 #include "common/common/macros.h"
-#include "common/config/solo_lambda_well_known_names.h"
+#include "common/config/lambda_well_known_names.h"
 
 namespace Envoy {
 namespace Http {
