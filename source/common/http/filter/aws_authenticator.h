@@ -32,10 +32,11 @@ private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
-std::string signWithTime(Envoy::Http::HeaderMap *request_headers,
-                            std::list<Envoy::Http::LowerCaseString> &&headers,
-                            const std::string &region,
-    std::chrono::time_point<std::chrono::system_clock> now);
+  std::string
+  signWithTime(Envoy::Http::HeaderMap *request_headers,
+               std::list<Envoy::Http::LowerCaseString> &&headers,
+               const std::string &region,
+               std::chrono::time_point<std::chrono::system_clock> now);
 
   std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
 
@@ -43,20 +44,20 @@ std::string signWithTime(Envoy::Http::HeaderMap *request_headers,
 
   std::string getBodyHexSha();
   void fetchUrl();
-  std::string computeCanonicalRequestHash(const std::string &HTTPRequestMethod,
-  const std::string &CanonicalHeaders,
-                                            const std::string &SignedHeaders,
-                                            const std::string &hexpayload);
-  std::string 
+  std::string computeCanonicalRequestHash(const std::string &request_method,
+                                          const std::string &canonical_Headers,
+                                          const std::string &signed_headers,
+                                          const std::string &hexpayload);
+  std::string
   getCredntialScopeDate(std::chrono::time_point<std::chrono::system_clock> now);
   std::string getCredntialScope(const std::string &region,
-                                  const std::string &datenow);
+                                const std::string &datenow);
 
   std::string computeSignature(const std::string &region,
-                                 const std::string &CredentialScopeDate,
-                                 const std::string &CredentialScope,
-                                 const std::string &RequestDateTime,
-                                 const std::string &hashedCanonicalRequest);
+                               const std::string &credential_scope_date,
+                               const std::string &credential_scope,
+                               const std::string &request_date_time,
+                               const std::string &hashed_canonical_request);
   //  void lambdafy();
   const Envoy::Http::HeaderEntry *
   getMaybeInlineHeader(Envoy::Http::HeaderMap *request_headers,
@@ -84,7 +85,7 @@ std::string signWithTime(Envoy::Http::HeaderMap *request_headers,
   public:
     HMACSha256();
     ~HMACSha256();
-    size_t length();
+    size_t length() const;
     void init(const std::string &data);
     void init(const uint8_t *bytes, size_t size);
     void update(const std::string &data);
@@ -103,8 +104,8 @@ std::string signWithTime(Envoy::Http::HeaderMap *request_headers,
 
   const std::string *access_key_{};
   std::string first_key_;
-  const std::string* service_;
-  const std::string* method_;
+  const std::string *service_;
+  const std::string *method_;
 
   static const std::string ALGORITHM;
   static const std::string SERVICE;

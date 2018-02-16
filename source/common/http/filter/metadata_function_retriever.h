@@ -20,6 +20,9 @@ private:
   nonEmptyStringValue(const Protobuf::Struct &spec,
                       const std::string &key) const;
   bool boolValue(const Protobuf::Struct &spec, const std::string &key) const;
+
+  Optional<const Protobuf::Value *> value(const Protobuf::Struct &spec,
+                                          const std::string &key) const;
 };
 
 } // namespace Http

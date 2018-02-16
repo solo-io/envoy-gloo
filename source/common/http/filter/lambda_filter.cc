@@ -31,17 +31,18 @@ LambdaFilter::LambdaFilter(Http::FunctionRetrieverSharedPtr retreiver,
                            const std::string &name,
                            LambdaFilterConfigSharedPtr config)
     : FunctionalFilterBase(ctx, name), config_(config),
-      functionRetriever_(retreiver), cm_(ctx.clusterManager()) {}
+      function_retriever_(retreiver), cm_(ctx.clusterManager()) {}
 
 LambdaFilter::~LambdaFilter() { cleanup(); }
 
 std::string LambdaFilter::functionUrlPath() {
 
-  const auto &currentFunction = currentFunction_.value();
+  const auto &current_function = current_function_.value();
   std::stringstream val;
-  val << "/2015-03-31/functions/" << (*currentFunction.name_) << "/invocations";
-  if (currentFunction.qualifier_.valid()) {
-    val << "?Qualifier=" << (*currentFunction.qualifier_.value());
+  val << "/2015-03-31/functions/" << (*current_function.name_)
+      << "/invocations";
+  if (current_function.qualifier_.valid()) {
+    val << "?Qualifier=" << (*current_function.qualifier_.value());
   }
   return val.str();
 }
@@ -50,8 +51,8 @@ Envoy::Http::FilterHeadersStatus
 LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
                                     bool end_stream) {
 
-  auto optionalFunction = functionRetriever_->getFunction(*this);
-  if (!optionalFunction.valid()) {
+  auto optional_function = function_retriever_->getFunction(*this);
+  if (!optional_function.valid()) {
     // This is ours to handle - return error to the user
     Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
                             Code::InternalServerError,
@@ -60,11 +61,11 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
     return Envoy::Http::FilterHeadersStatus::StopIteration;
   }
 
-  currentFunction_ = std::move(optionalFunction);
-  const auto &currentFunction = currentFunction_.value();
+  current_function_ = std::move(optional_function);
+  const auto &current_function = current_function_.value();
 
-  aws_authenticator_.init(currentFunction.access_key_,
-                          currentFunction.secret_key_);
+  aws_authenticator_.init(current_function.access_key_,
+                          current_function.secret_key_);
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
@@ -84,7 +85,7 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
 Envoy::Http::FilterDataStatus
 LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
                                  bool end_stream) {
-  if (!currentFunction_.valid()) {
+  if (!current_function_.valid()) {
     return Envoy::Http::FilterDataStatus::Continue;
   }
   aws_authenticator_.updatePayloadHash(data);
@@ -99,7 +100,7 @@ LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
 
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
-  if (currentFunction_.valid()) {
+  if (current_function_.valid()) {
     lambdafy();
   }
 
@@ -109,10 +110,11 @@ LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
 void LambdaFilter::lambdafy() {
   static std::list<Envoy::Http::LowerCaseString> headers;
 
-  const auto &currentFunction = currentFunction_.value();
+  const auto &current_function = current_function_.value();
 
-  const std::string &invocation_type =
-      currentFunction.async_ ? INVOCATION_TYPE_EVENT : INVOCATION_TYPE_REQ_RESP;
+  const std::string &invocation_type = current_function.async_
+                                           ? INVOCATION_TYPE_EVENT
+                                           : INVOCATION_TYPE_REQ_RESP;
   headers.push_back(INVOCATION_TYPE);
   request_headers_->addReference(INVOCATION_TYPE, invocation_type);
 
@@ -122,18 +124,18 @@ void LambdaFilter::lambdafy() {
   // TOOO(yuval-k) constify this and change the header list to
   // ref-or-inline like in header map
   headers.push_back(Envoy::Http::LowerCaseString("host"));
-  request_headers_->insertHost().value(*currentFunction.host_);
+  request_headers_->insertHost().value(*current_function.host_);
 
   headers.push_back(Envoy::Http::LowerCaseString("content-type"));
 
   aws_authenticator_.sign(request_headers_, std::move(headers),
-                          *currentFunction.region_);
+                          *current_function.region_);
   cleanup();
 }
 
 void LambdaFilter::cleanup() {
   request_headers_ = nullptr;
-  currentFunction_ = Optional<Function>();
+  current_function_ = Optional<Function>();
 }
 
 } // namespace Http

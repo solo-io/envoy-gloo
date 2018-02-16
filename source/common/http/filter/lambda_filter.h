@@ -39,10 +39,10 @@ private:
   static const std::string LOG_NONE;
 
   const LambdaFilterConfigSharedPtr config_;
-  FunctionRetrieverSharedPtr functionRetriever_;
+  FunctionRetrieverSharedPtr function_retriever_;
   Upstream::ClusterManager &cm_;
 
-  Optional<Function> currentFunction_;
+  Optional<Function> current_function_;
   void lambdafy();
   std::string functionUrlPath();
   void cleanup();

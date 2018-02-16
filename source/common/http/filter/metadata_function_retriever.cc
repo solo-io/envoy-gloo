@@ -34,7 +34,6 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
     Optional<const std::string *> host = nonEmptyStringValue(
         upstream_spec, Config::MetadataLambdaKeys::get().HOSTNAME);
     if (!host.valid()) {
-      ;
       return {};
     }
     f.host_ = host.value();
@@ -47,7 +46,6 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
     }
     f.region_ = region.value();
   }
-
   {
     Optional<const std::string *> access_key = nonEmptyStringValue(
         upstream_spec, Config::MetadataLambdaKeys::get().ACCESS_KEY);
@@ -92,13 +90,11 @@ Optional<const std::string *>
 MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
                                                const std::string &key) const {
 
-  const auto &fields = spec.fields();
-  const auto fields_it = fields.find(key);
-  if (fields_it == fields.end()) {
+  Optional<const Protobuf::Value *> maybevalue = value(spec, key);
+  if (!maybevalue.valid()) {
     return {};
   }
-
-  const auto &value = fields_it->second;
+  const auto &value = *maybevalue.value();
   if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
     return {};
   }
@@ -113,6 +109,22 @@ MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
 
 bool MetadataFunctionRetriever::boolValue(const Protobuf::Struct &spec,
                                           const std::string &key) const {
+  Optional<const Protobuf::Value *> maybevalue = value(spec, key);
+  if (!maybevalue.valid()) {
+    return {};
+  }
+
+  const auto &value = *maybevalue.value();
+  if (value.kind_case() != ProtobufWkt::Value::kBoolValue) {
+    return {};
+  }
+
+  return value.bool_value();
+}
+
+Optional<const Protobuf::Value *>
+MetadataFunctionRetriever::value(const Protobuf::Struct &spec,
+                                 const std::string &key) const {
   const auto &fields = spec.fields();
   const auto fields_it = fields.find(key);
   if (fields_it == fields.end()) {
@@ -120,11 +132,7 @@ bool MetadataFunctionRetriever::boolValue(const Protobuf::Struct &spec,
   }
 
   const auto &value = fields_it->second;
-  if (value.kind_case() != ProtobufWkt::Value::kBoolValue) {
-    return {};
-  }
-
-  return value.bool_value();
+  return &value;
 }
 
 } // namespace Http

@@ -68,16 +68,16 @@ std::string AwsAuthenticator::addDate(
       Envoy::Http::LowerCaseString("x-amz-date");
   sign_headers_.push_back(dateheader);
 
-  std::string RequestDateTime =
+  std::string request_date_time =
       Envoy::DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
-  request_headers_->addReferenceKey(dateheader, RequestDateTime);
-  return RequestDateTime;
+  request_headers_->addReferenceKey(dateheader, request_date_time);
+  return request_date_time;
 }
 
 std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
 
-  std::stringstream canonicalHeaders;
-  std::stringstream signedHeaders;
+  std::stringstream canonical_headers_stream;
+  std::stringstream signed_headers_stream;
 
   for (auto header = sign_headers_.begin(), end = sign_headers_.end();
        header != end; header++) {
@@ -88,25 +88,26 @@ std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
     }
 
     auto headerName = header->get();
-    canonicalHeaders << headerName;
-    signedHeaders << headerName;
+    canonical_headers_stream << headerName;
+    signed_headers_stream << headerName;
 
-    canonicalHeaders << ':';
+    canonical_headers_stream << ':';
     if (headerEntry != nullptr) {
-      canonicalHeaders << headerEntry->value().c_str();
+      canonical_headers_stream << headerEntry->value().c_str();
       // TODO: add warning if null
     }
-    canonicalHeaders << '\n';
+    canonical_headers_stream << '\n';
     std::list<Envoy::Http::LowerCaseString>::const_iterator next = header;
     next++;
     if (next != end) {
-      signedHeaders << ";";
+      signed_headers_stream << ";";
     }
   }
-  std::string CanonicalHeaders = canonicalHeaders.str();
-  std::string SignedHeaders = signedHeaders.str();
-  
-  std::pair<std::string, std::string>  pair = std::make_pair(std::move(CanonicalHeaders), std::move(SignedHeaders));
+  std::string canonical_headers = canonical_headers_stream.str();
+  std::string signed_headers = signed_headers_stream.str();
+
+  std::pair<std::string, std::string> pair =
+      std::make_pair(std::move(canonical_headers), std::move(signed_headers));
   return pair;
 }
 
@@ -145,8 +146,8 @@ void AwsAuthenticator::fetchUrl() {
 }
 
 std::string AwsAuthenticator::computeCanonicalRequestHash(
-    const std::string &HTTPRequestMethod,const std::string &CanonicalHeaders, const std::string &SignedHeaders,
-    const std::string &hexpayload) {
+    const std::string &HTTPRequestMethod, const std::string &canonical_headers,
+    const std::string &SignedHeaders, const std::string &hexpayload) {
 
   // Do iternal classes for sha and hmac.
   Sha256 canonicalRequestHash;
@@ -159,7 +160,7 @@ std::string AwsAuthenticator::computeCanonicalRequestHash(
     canonicalRequestHash.update(query_string_start_, query_string_len_);
   }
   canonicalRequestHash.update('\n');
-  canonicalRequestHash.update(CanonicalHeaders);
+  canonicalRequestHash.update(canonical_headers);
   canonicalRequestHash.update('\n');
   canonicalRequestHash.update(SignedHeaders);
   canonicalRequestHash.update('\n');
@@ -174,38 +175,32 @@ std::string AwsAuthenticator::computeCanonicalRequestHash(
 std::string AwsAuthenticator::getCredntialScopeDate(
     std::chrono::time_point<std::chrono::system_clock> now) {
 
-  std::string CredentialScopeDate =
+  std::string credentials_scope_date =
       Envoy::DateFormatter("%Y%m%d").fromTime(now);
-  return CredentialScopeDate;
+  return credentials_scope_date;
 }
 
-std::string 
+std::string
 AwsAuthenticator::getCredntialScope(const std::string &region,
-                                    const std::string &CredentialScopeDate) {
+                                    const std::string &credentials_scope_date) {
 
   std::stringstream credentialScopeStream;
-  credentialScopeStream << CredentialScopeDate << "/" << region << "/"
+  credentialScopeStream << credentials_scope_date << "/" << region << "/"
                         << (*service_) << "/aws4_request";
   return credentialScopeStream.str();
 }
 
 std::string AwsAuthenticator::computeSignature(
-    const std::string &region, const std::string &CredentialScopeDate,
-    const std::string &CredentialScope, const std::string &RequestDateTime,
+    const std::string &region, const std::string &credentials_scope_date,
+    const std::string &CredentialScope, const std::string &request_date_time,
     const std::string &hashedCanonicalRequest) {
 
-  /*
-  kDate = doHMAC(tovec("AWS4" + kSecret), tovec(CredentialScopeDate));
-  kRegion = doHMAC(kDate, tovec(Region));
-  kService = doHMAC(kRegion, tovec(Service));
-  kSigning = doHMAC(kService, tovec("aws4_request"));
-*/
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
   uint8_t out[out_len];
 
   sighmac.init(first_key_);
-  sighmac.update(CredentialScopeDate);
+  sighmac.update(credentials_scope_date);
   sighmac.finalize(out, &out_len);
 
   sighmac.init(out, out_len);
@@ -224,7 +219,7 @@ std::string AwsAuthenticator::computeSignature(
   sighmac.init(out, out_len);
   sighmac.update(ALGORITHM);
   sighmac.update('\n');
-  sighmac.update(RequestDateTime);
+  sighmac.update(request_date_time);
   sighmac.update('\n');
   sighmac.update(CredentialScope);
   sighmac.update('\n');
@@ -237,47 +232,50 @@ std::string AwsAuthenticator::computeSignature(
 void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
                             std::list<Envoy::Http::LowerCaseString> &&headers,
                             const std::string &region) {
-                            
+
   // we can't use the date provider interface as this is not the date header,
   // plus the date format is different. use slow method now, optimize in the
   // future.
   auto now = std::chrono::system_clock::now();
-    
-  std::string sig = signWithTime(request_headers, std::move(headers), region, now);
+
+  std::string sig =
+      signWithTime(request_headers, std::move(headers), region, now);
   request_headers->insertAuthorization().value(sig);
 }
 
-std::string AwsAuthenticator::signWithTime(Envoy::Http::HeaderMap *request_headers,
-                            std::list<Envoy::Http::LowerCaseString> &&headers,
-                            const std::string &region,
+std::string AwsAuthenticator::signWithTime(
+    Envoy::Http::HeaderMap *request_headers,
+    std::list<Envoy::Http::LowerCaseString> &&headers,
+    const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
   sign_headers_ = std::move(headers);
   request_headers_ = request_headers;
 
-  std::string RequestDateTime = addDate(now);
+  std::string request_date_time = addDate(now);
   sign_headers_.sort(lowercasecompare);
 
   auto &&preparedHeaders = prepareHeaders();
-  std::string CanonicalHeaders = std::move(preparedHeaders.first);
-  std::string SignedHeaders = std::move(preparedHeaders.second);
+  std::string canonical_headers = std::move(preparedHeaders.first);
+  std::string signed_headers = std::move(preparedHeaders.second);
 
   std::string hexpayload = getBodyHexSha();
 
   fetchUrl();
 
-  std::string hashedCanonicalRequest =
-      computeCanonicalRequestHash(*method_, CanonicalHeaders, SignedHeaders, hexpayload);
-  std::string CredentialScopeDate = getCredntialScopeDate(now);
-  std::string CredentialScope = getCredntialScope(region, CredentialScopeDate);
+  std::string hashedCanonicalRequest = computeCanonicalRequestHash(
+      *method_, canonical_headers, signed_headers, hexpayload);
+  std::string credentials_scope_date = getCredntialScopeDate(now);
+  std::string CredentialScope =
+      getCredntialScope(region, credentials_scope_date);
 
   std::string signature =
-      computeSignature(region, CredentialScopeDate, CredentialScope,
-                       RequestDateTime, hashedCanonicalRequest);
+      computeSignature(region, credentials_scope_date, CredentialScope,
+                       request_date_time, hashedCanonicalRequest);
 
   std::stringstream authorizationvalue;
   RELEASE_ASSERT(access_key_);
   authorizationvalue << ALGORITHM << " Credential=" << (*access_key_) << "/"
-                     << CredentialScope << ", SignedHeaders=" << SignedHeaders
+                     << CredentialScope << ", SignedHeaders=" << signed_headers
                      << ", Signature=" << signature;
   return authorizationvalue.str();
 }
@@ -317,7 +315,9 @@ AwsAuthenticator::HMACSha256::HMACSha256() : evp_(EVP_sha256()) {
 
 AwsAuthenticator::HMACSha256::~HMACSha256() { HMAC_CTX_cleanup(&context_); }
 
-size_t AwsAuthenticator::HMACSha256::length() { return EVP_MD_size(evp_); }
+size_t AwsAuthenticator::HMACSha256::length() const {
+  return EVP_MD_size(evp_);
+}
 
 void AwsAuthenticator::HMACSha256::init(const std::string &data) {
   init(reinterpret_cast<const uint8_t *>(data.data()), data.size());
