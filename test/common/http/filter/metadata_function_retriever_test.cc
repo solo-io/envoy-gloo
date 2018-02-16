@@ -93,17 +93,13 @@ public:
   Protobuf::Struct cluster_metadata_;
   Protobuf::Struct route_metadata_;
 
-  Function configuredFunction_;
+  std::unique_ptr<Function> configuredFunction_;
 
   void SetUp() override { buildfunc(); }
   void buildfunc() {
-    configuredFunction_.name_ = &name_;
-    configuredFunction_.host_ = &host_;
-    configuredFunction_.region_ = &region_;
-    configuredFunction_.access_key_ = &access_key_;
-    configuredFunction_.secret_key_ = &secret_key_;
-    configuredFunction_.qualifier_ = &qualifier_;
-    configuredFunction_.async_ = async_;
+    configuredFunction_.reset(new Function(&name_, &qualifier_, async_, &host_,
+                                           &region_, &access_key_,
+                                           &secret_key_));
   }
 
   Optional<Function> getFunctionFromJson(const std::string &func_json,
@@ -226,7 +222,7 @@ TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunction) {
       getFunctionFromJson(func_json, cluster_json, route_json);
 
   EXPECT_TRUE(actualFunction.valid());
-  EXPECT_EQ(actualFunction.value(), configuredFunction_);
+  EXPECT_EQ(actualFunction.value(), *configuredFunction_);
 }
 TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunctionNoRoute) {
   // no route makes async false.
@@ -239,7 +235,7 @@ TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunctionNoRoute) {
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
   EXPECT_TRUE(actualFunction.valid());
-  EXPECT_EQ(actualFunction.value(), configuredFunction_);
+  EXPECT_EQ(actualFunction.value(), *configuredFunction_);
 }
 
 TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionOppositeJsons) {

@@ -38,6 +38,7 @@ envoy_cc_library(
 envoy_cc_library(
     name = "function_retriever_lib",
     srcs = [
+        "function.cc",
         "metadata_function_retriever.cc",
     ],
     hdrs = [
