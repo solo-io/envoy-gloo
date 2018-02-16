@@ -27,7 +27,6 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
   const ProtobufWkt::Struct &function_spec = *maybe_function_spec.value();
   const ProtobufWkt::Struct &upstream_spec = *maybe_upstream_spec.value();
 
-  // internal scope to prevent copy-paste  errors
   Optional<const std::string *> host = nonEmptyStringValue(
       upstream_spec, Config::MetadataLambdaKeys::get().HOSTNAME);
   Optional<const std::string *> region = nonEmptyStringValue(
