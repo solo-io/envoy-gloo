@@ -17,6 +17,6 @@ sh_test(
     srcs = ["e2e2e_test.sh"],
     data = [
         "//:envoy",
-        "//test:create_config.sh",
+        "//e2e:create_config.sh",
     ],
 )

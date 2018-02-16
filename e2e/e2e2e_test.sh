@@ -8,7 +8,7 @@ set -e
 # invoke
 # aws lambda invoke --function-name uppercase --payload '"abc"' /dev/stdout
 
-./create_config.sh || ./test/create_config.sh 
+./create_config.sh || ./e2e/create_config.sh 
 
 ENVOY=${ENVOY:-envoy}
 
