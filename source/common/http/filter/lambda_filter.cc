@@ -31,7 +31,7 @@ LambdaFilter::LambdaFilter(Server::Configuration::FactoryContext &ctx,
                            LambdaFilterConfigSharedPtr config,
                            Http::FunctionRetrieverSharedPtr retreiver)
     : FunctionalFilterBase(ctx, name), config_(config),
-      function_retriever_(retreiver), cm_(ctx.clusterManager()) {}
+      function_retriever_(retreiver) {}
 
 LambdaFilter::~LambdaFilter() { cleanup(); }
 

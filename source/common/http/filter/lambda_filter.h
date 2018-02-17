@@ -41,7 +41,6 @@ private:
 
   const LambdaFilterConfigSharedPtr config_;
   FunctionRetrieverSharedPtr function_retriever_;
-  Upstream::ClusterManager &cm_;
 
   Optional<Function> current_function_;
   void lambdafy();
