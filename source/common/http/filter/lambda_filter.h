@@ -20,9 +20,9 @@ namespace Http {
 
 class LambdaFilter : public FunctionalFilterBase {
 public:
-  LambdaFilter(FunctionRetrieverSharedPtr retreiver,
-               Server::Configuration::FactoryContext &ctx,
-               const std::string &name, LambdaFilterConfigSharedPtr config);
+  LambdaFilter(Server::Configuration::FactoryContext &ctx,
+               const std::string &name, LambdaFilterConfigSharedPtr config,
+               FunctionRetrieverSharedPtr retreiver);
   ~LambdaFilter();
 
   // Http::FunctionalFilterBase

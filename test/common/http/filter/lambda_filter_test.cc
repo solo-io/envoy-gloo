@@ -55,8 +55,8 @@ protected:
         std::make_shared<NiceMock<Envoy::Http::MockFunctionRetriever>>();
     envoy::api::v2::filter::http::Lambda config;
     config_ = std::make_shared<LambdaFilterConfig>(config);
-    filter_ = std::make_unique<LambdaFilter>(
-        function_retriever_, factory_context_, "doesn't matter", config_);
+    filter_ = std::make_unique<LambdaFilter>(factory_context_, "doesn't matter",
+                                             config_, function_retriever_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
