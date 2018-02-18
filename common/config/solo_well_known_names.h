@@ -41,7 +41,11 @@ class MetadataFunctionalRouterKeyValues {
 public:
   // Key in the Functional Router Filter namespace for function value.
   const std::string FUNCTION = "function";
+  const std::string WEIGHTED_FUNCTIONS = "weighted_functions";
   const std::string FUNCTIONS = "functions";
+  const std::string FUNCTIONS_TOTAL_WEIGHT = "total_weight";
+  const std::string WEIGHTED_FUNCTIONS_NAME = "name";
+  const std::string WEIGHTED_FUNCTIONS_WEIGHT = "weight";
 };
 
 typedef ConstSingleton<MetadataFunctionalRouterKeyValues>

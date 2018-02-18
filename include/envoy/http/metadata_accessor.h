@@ -1,7 +1,7 @@
 #pragma once
 
-#include "envoy/common/pure.h"
 #include "envoy/common/optional.h"
+#include "envoy/common/pure.h"
 
 #include "common/protobuf/protobuf.h"
 

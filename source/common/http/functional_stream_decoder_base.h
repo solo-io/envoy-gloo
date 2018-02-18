@@ -49,6 +49,11 @@ protected:
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
 
 private:
+  struct FunctionWeight {
+    uint64_t weight;
+    const std::string *name;
+  };
+
   Upstream::ClusterManager &cm_;
   Envoy::Runtime::RandomGenerator &random_;
   const std::string &childname_;
@@ -64,7 +69,15 @@ private:
   bool error_{};
 
   void tryToGetSpec();
-  void findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
+
+  Optional<const std::string *>
+  findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
+  Optional<const std::string *>
+  findMultileFunction(const ProtobufWkt::Struct &filter_metadata_struct);
+
+  Optional<FunctionWeight>
+  getFuncWeight(const ProtobufWkt::Value &function_weight_value);
+
   void tryToGetSpecFromCluster(const std::string &funcname);
   void fetchClusterInfoIfOurs();
   void error();
