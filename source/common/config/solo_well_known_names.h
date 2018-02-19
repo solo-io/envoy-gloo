@@ -17,10 +17,11 @@ class SoloCommonFilterNameValues {
 public:
   // Functional Router filter
   const std::string FUNCTIONAL_ROUTER = "io.solo.function_router";
+  // Functional Router filter
+  const std::string ROUTE_FAULT = "io.solo.route_fault";
 };
 
-typedef ConstSingleton<SoloCommonFilterNameValues>
-    SoloCommonFilterNames;
+typedef ConstSingleton<SoloCommonFilterNameValues> SoloCommonFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
