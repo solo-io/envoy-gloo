@@ -79,7 +79,7 @@ protected:
     // TODO use const
     ProtobufWkt::Struct &functionsstruct = (*cluster_metadata_
                                                  .mutable_filter_metadata())
-        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER];
+        [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER];
     ProtobufWkt::Value &functionstructvalue =
         (*functionsstruct.mutable_fields())
             [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
@@ -135,11 +135,11 @@ protected:
 
     // TODO use const
     (*route_metadata_.mutable_filter_metadata())
-        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+        [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
 
     (*route_metadata_.mutable_filter_metadata())
-        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+        [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER] =
             routefunctionmeta;
   }
 
@@ -162,7 +162,7 @@ protected:
     MessageUtil::loadFromJson(json, multifunction);
 
     (*route_metadata_.mutable_filter_metadata())
-        [Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER] =
+        [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER] =
             multifunction;
   }
 

@@ -13,26 +13,26 @@ namespace Config {
 /**
  * Well-known http filter names.
  */
-class SoloFunctionalFilterFilterNameValues {
+class SoloCommonFilterNameValues {
 public:
   // Functional Router filter
   const std::string FUNCTIONAL_ROUTER = "io.solo.function_router";
 };
 
-typedef ConstSingleton<SoloFunctionalFilterFilterNameValues>
-    SoloFunctionalFilterFilterNames;
+typedef ConstSingleton<SoloCommonFilterNameValues>
+    SoloCommonFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
  */
-class SoloFunctionalFilterMetadataFilterValues {
+class SoloCommonMetadataFilterValues {
 public:
   // Filter namespace for Functional Router Filter.
   const std::string FUNCTIONAL_ROUTER = "io.solo.function_router";
 };
 
-typedef ConstSingleton<SoloFunctionalFilterMetadataFilterValues>
-    SoloFunctionalFilterMetadataFilters;
+typedef ConstSingleton<SoloCommonMetadataFilterValues>
+    SoloCommonMetadataFilters;
 
 /**
  * Keys for MetadataFilterConstants::NATS_STREAMING metadata.

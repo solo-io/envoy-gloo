@@ -100,7 +100,7 @@ void FunctionalFilterBase::tryToGetSpec() {
   const auto &metadata = routeEntry->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
-      Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
+      Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     error();
     return;
@@ -275,7 +275,7 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   const auto &metadata = cluster_info_->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
-      Config::SoloFunctionalFilterMetadataFilters::get().FUNCTIONAL_ROUTER);
+      Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     return;
   }
