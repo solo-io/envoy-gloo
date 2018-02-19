@@ -8,29 +8,6 @@
 namespace Envoy {
 namespace Http {
 
-// TODO:
-/*
-  1. get route entry
-  1. get the cluster object
-  1. if the cluster object is not ours (the specific subclass function);
-continue.
-  2. get the name of the dest cluster.
-  3. get the metadata()[func_filter][cluster_name][function]
-  if not then
-  3. get the metadata()[func_filter][cluster_name][functions]
-  4. get destination function
-  5. get the threadlocal cluster object, and its metadata
-  6. find the funciton spec in the cluster metadata and return it.
-  store the destination cluster info and a pointer to the spec inside it,
-  and make it available to the sub class as a protected method.
-
-  if no cluster or no function, continue iteration
-  if cluster and function but not function spec, return error to downstream
-
-// fast path: route has no route entry -> goodbye
-
-*/
-
 FunctionalFilterBase::~FunctionalFilterBase() {}
 
 void FunctionalFilterBase::onDestroy() { is_reset_ = true; }
@@ -329,7 +306,6 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
     return;
   }
 
-  // save the cluster info as the spec lives in it.
   cluster_spec_ = &specvalue.struct_value();
 }
 
@@ -344,6 +320,7 @@ void FunctionalFilterBase::fetchClusterInfoIfOurs() {
   const auto &metadata = cluster_info->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
   if (filter_it != metadata.filter_metadata().end()) {
+    // save the cluster info ptr locally as the specs lives in it.
     cluster_info_ = cluster_info;
     child_spec_ = &filter_it->second;
   }
