@@ -77,9 +77,9 @@ protected:
   void initclustermeta() {
 
     // TODO use const
-    ProtobufWkt::Struct &functionsstruct = (*cluster_metadata_
-                                                 .mutable_filter_metadata())
-        [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER];
+    ProtobufWkt::Struct &functionsstruct =
+        (*cluster_metadata_.mutable_filter_metadata())
+            [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER];
     ProtobufWkt::Value &functionstructvalue =
         (*functionsstruct.mutable_fields())
             [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];

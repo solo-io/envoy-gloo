@@ -14,11 +14,11 @@ envoy_cc_library(
     hdrs = ["route_fault.h"],
     repository = "@envoy",
     deps = [
+        "//source/common/config:solo_well_known_names_lib",
         "//source/common/http:route_enabled_filter_wrapper_lib",
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:filter_config_interface",
         "@envoy//source/common/config:filter_json_lib",
-        "//source/common/config:solo_well_known_names_lib",
         "@envoy//source/common/http/filter:fault_filter_lib",
     ],
 )
