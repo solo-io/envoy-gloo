@@ -40,3 +40,17 @@ envoy_cc_library(
         "@envoy//source/common/http:utility_lib",
     ],
 )
+
+envoy_cc_library(
+    name = "route_enabled_filter_wrapper_lib",
+    srcs = [],
+    hdrs = ["route_enabled_filter_wrapper.h"],
+    repository = "@envoy",
+    deps = [
+        "//source/common/http:solo_filter_utility_lib",
+        "@envoy//include/envoy/server:filter_config_interface",
+        "@envoy//source/common/common:assert_lib",
+        "@envoy//source/common/common:utility_lib",
+        "@envoy//source/common/http:utility_lib",
+    ],
+)
