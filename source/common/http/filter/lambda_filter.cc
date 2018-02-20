@@ -50,18 +50,7 @@ std::string LambdaFilter::functionUrlPath() {
 Envoy::Http::FilterHeadersStatus
 LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
                                     bool end_stream) {
-
-  auto optional_function = function_retriever_->getFunction(*this);
-  if (!optional_function.valid()) {
-    // This is ours to handle - return error to the user
-    Utility::sendLocalReply(*decoder_callbacks_, is_reset_,
-                            Code::InternalServerError,
-                            "AWS Function not available");
-    // Doing continue after a local reply will crash envoy
-    return Envoy::Http::FilterHeadersStatus::StopIteration;
-  }
-
-  current_function_ = std::move(optional_function);
+  RELEASE_ASSERT(current_function_.valid());
   const auto &current_function = current_function_.value();
 
   aws_authenticator_.init(current_function.access_key_,
@@ -105,6 +94,11 @@ LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
   }
 
   return Envoy::Http::FilterTrailersStatus::Continue;
+}
+
+bool LambdaFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
+  current_function_ = function_retriever_->getFunction(meta_accessor);
+  return current_function_.valid();
 }
 
 void LambdaFilter::lambdafy() {

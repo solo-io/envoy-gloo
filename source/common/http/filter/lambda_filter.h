@@ -29,6 +29,7 @@ public:
   FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
   FilterDataStatus functionDecodeData(Buffer::Instance &, bool) override;
   FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
+  bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
 private:
   static const LowerCaseString INVOCATION_TYPE;

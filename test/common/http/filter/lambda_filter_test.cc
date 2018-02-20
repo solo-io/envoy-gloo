@@ -79,6 +79,7 @@ TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
 
@@ -93,7 +94,7 @@ TEST_F(LambdaFilterTest, SingsOnDataEndStream) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
             filter_->functionDecodeHeaders(headers, false));
   EXPECT_FALSE(headers.has("Authorization"));
@@ -110,7 +111,7 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
 
@@ -135,6 +136,7 @@ TEST_F(LambdaFilterTest, FuncWithoutQualifierCalled) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
 
@@ -149,6 +151,7 @@ TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
 
@@ -163,6 +166,7 @@ TEST_F(LambdaFilterTest, AsyncCalled) {
                                          {":path", "/getsomething"}};
 
   function_retriever_->async_ = true;
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
@@ -174,6 +178,7 @@ TEST_F(LambdaFilterTest, SyncCalled) {
                                          {":path", "/getsomething"}};
 
   function_retriever_->async_ = false;
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
             filter_->functionDecodeHeaders(headers, true));
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
@@ -185,6 +190,7 @@ TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
+  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
             filter_->functionDecodeHeaders(headers, false));
   Buffer::OwnedImpl data("data");
@@ -205,26 +211,11 @@ TEST_F(LambdaFilterTest, InvalidFunction) {
   EXPECT_CALL(*function_retriever_, getFunction(_))
       .WillRepeatedly(Return(Optional<Function>()));
 
-  std::string status;
-
-  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, false))
-      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
-        status = headers.Status()->value().c_str();
-      }));
-  EXPECT_CALL(filter_callbacks_, encodeData(_, true)).Times(1);
-
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
-            filter_->functionDecodeHeaders(headers, false));
-
-  Envoy::Http::TestHeaderMapImpl trailers;
-  EXPECT_EQ(Envoy::Http::FilterTrailersStatus::Continue,
-            filter_->functionDecodeTrailers(trailers));
-  EXPECT_FALSE(headers.has("Authorization"));
-  EXPECT_EQ("500", status);
+  EXPECT_EQ(false, filter_->retrieveFunction(*filter_));
 }
 
 } // namespace Http
