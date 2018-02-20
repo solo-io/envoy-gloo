@@ -14,6 +14,9 @@ class RouteEnabledFilterWrapper : public StreamDecoderFilter {
                 "T should be a base of StreamDecoderFilter");
 
 public:
+// TODO: besides the name, add a function that accepcts the inside struct
+// and returns a bool.
+// if returns true, then active.
   template <class... Ts>
   RouteEnabledFilterWrapper(const std::string &name, Ts &&... args)
       : inner_(std::forward<Ts>(args)...), name_(name) {}
@@ -31,8 +34,10 @@ public:
       const auto &filtersmeta = re->metadata().filter_metadata();
       const auto filter_it = filtersmeta.find(name_);
       if (filter_it != filtersmeta.end()) {
-        active_ = true;
-        return inner_.decodeHeaders(headers, end_stream);
+        active_ = shouldActivate(filter_it->second);
+        if (active_) {
+          return inner_.decodeHeaders(headers, end_stream);
+        }
       }
     }
     return FilterHeadersStatus::Continue;
@@ -57,6 +62,12 @@ public:
       StreamDecoderFilterCallbacks &decoder_callbacks) override {
     decoder_callbacks_ = &decoder_callbacks;
     inner_.setDecoderFilterCallbacks(decoder_callbacks);
+  }
+
+protected:
+  virtual bool shouldActivate(const ProtobufWkt::Struct &filter_metadata_struct) {
+    UNREFERENCED_PARAMETER(filter_metadata_struct);
+    return true;
   }
 
 private:
