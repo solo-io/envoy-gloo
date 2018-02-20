@@ -55,7 +55,7 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
  */
 Optional<const std::string *>
 MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
-                                               const std::string &key) const {
+                                               const std::string &key) {
 
   Optional<const Protobuf::Value *> maybe_value = value(spec, key);
   if (!maybe_value.valid()) {
@@ -75,7 +75,7 @@ MetadataFunctionRetriever::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
 }
 
 bool MetadataFunctionRetriever::boolValue(const Protobuf::Struct &spec,
-                                          const std::string &key) const {
+                                          const std::string &key) {
   Optional<const Protobuf::Value *> maybe_value = value(spec, key);
   if (!maybe_value.valid()) {
     return {};
@@ -91,7 +91,7 @@ bool MetadataFunctionRetriever::boolValue(const Protobuf::Struct &spec,
 
 Optional<const Protobuf::Value *>
 MetadataFunctionRetriever::value(const Protobuf::Struct &spec,
-                                 const std::string &key) const {
+                                 const std::string &key) {
   const auto &fields = spec.fields();
   const auto fields_it = fields.find(key);
   if (fields_it == fields.end()) {

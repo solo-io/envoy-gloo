@@ -13,9 +13,6 @@
 namespace Envoy {
 namespace Http {
 
-using Router::RouteEntry;
-using Upstream::ClusterInfo;
-
 class FunctionRetriever {
 public:
   virtual ~FunctionRetriever() {}
