@@ -45,6 +45,13 @@ Protobuf::Struct getMetadata(const std::string &json) {
 
 class TesterMetadataAccessor : public MetadataAccessor {
 public:
+  virtual Optional<const std::string *> getFunctionName() const {
+    if (!function_name_.empty()) {
+      return &function_name_;
+    }
+    return {};
+  }
+
   virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
     if (function_spec_ != nullptr) {
       return function_spec_;
@@ -66,6 +73,7 @@ public:
     return {};
   }
 
+  std::string function_name_;
   const ProtobufWkt::Struct *function_spec_;
   const ProtobufWkt::Struct *cluster_metadata_;
   const ProtobufWkt::Struct *route_metadata_;
