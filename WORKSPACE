@@ -9,7 +9,7 @@ http_archive(
 )
 
 
-ENVOY_COMMON_SHA = "8666e4e2a3c48c51f16c5c1dc1caae166dda84be"  # Feb 15, 2018 (pragma once and formatting.)
+ENVOY_COMMON_SHA = "0fefba1a893e9d8e24700b0c5919f301a3d10249"  # Feb 19, 2018 (let the child filter  retrieve the function.)
 
 # load solo common
 git_repository(
