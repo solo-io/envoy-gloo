@@ -40,9 +40,16 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
   return FilterTrailersStatus::Continue;
 }
 
+Optional<const std::string*> FunctionalFilterBase::getFunctionName() const {
+  RELEASE_ASSERT(function_name_);
+  return function_name_;
+}
+
 Optional<const ProtobufWkt::Struct *>
 FunctionalFilterBase::getFunctionSpec() const {
-  RELEASE_ASSERT(cluster_spec_);
+  if (cluster_spec_ == nullptr) {
+    return {};
+  }
   return cluster_spec_;
 }
 
@@ -130,11 +137,18 @@ void FunctionalFilterBase::tryToGetSpec() {
     Optional<const std::string *> maybe_single_func =
         (this->*fptr)(clusterstruct);
     if (maybe_single_func.valid()) {
-      tryToGetSpecFromCluster(*maybe_single_func.value());
-    }
-
-    if (active()) {
-      // we have spec!
+      function_name_ = maybe_single_func.value();
+      cluster_spec_ = nullptr;
+      tryToGetSpecFromCluster(*function_name_);
+      active_ = retrieveFunction(*this);
+      if (!active_) {
+        // we found a function but we are not active. 
+        // this means retrieval failed.
+        // return internal server error
+        // TODO(yuval-k): do we want to return a different error type here?
+        error();
+      }
+      // we found a function so the search is over.
       return;
     }
   }
