@@ -40,7 +40,7 @@ FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
   return FilterTrailersStatus::Continue;
 }
 
-Optional<const std::string*> FunctionalFilterBase::getFunctionName() const {
+Optional<const std::string *> FunctionalFilterBase::getFunctionName() const {
   RELEASE_ASSERT(function_name_);
   return function_name_;
 }
@@ -142,7 +142,7 @@ void FunctionalFilterBase::tryToGetSpec() {
       tryToGetSpecFromCluster(*function_name_);
       active_ = retrieveFunction(*this);
       if (!active_) {
-        // we found a function but we are not active. 
+        // we found a function but we are not active.
         // this means retrieval failed.
         // return internal server error
         // TODO(yuval-k): do we want to return a different error type here?

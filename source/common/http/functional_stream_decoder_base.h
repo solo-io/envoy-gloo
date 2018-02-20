@@ -36,7 +36,7 @@ public:
   }
 
   // MetadataAccessor
-  Optional<const std::string*> getFunctionName() const override;
+  Optional<const std::string *> getFunctionName() const override;
   Optional<const ProtobufWkt::Struct *> getFunctionSpec() const override;
   Optional<const ProtobufWkt::Struct *> getClusterMetadata() const override;
   Optional<const ProtobufWkt::Struct *> getRouteMetadata() const override;
@@ -48,7 +48,8 @@ protected:
   virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &m, bool e) PURE;
   virtual FilterDataStatus functionDecodeData(Buffer::Instance &, bool) PURE;
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
-  virtual bool retrieveFunction(const MetadataAccessor& meta_accessor) PURE;
+  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) PURE;
+
 private:
   struct FunctionWeight {
     uint64_t weight;
@@ -61,7 +62,7 @@ private:
   bool active_{false};
 
   Upstream::ClusterInfoConstSharedPtr cluster_info_{};
-  const std::string *function_name_{}; // function name is here
+  const std::string *function_name_{};        // function name is here
   const ProtobufWkt::Struct *cluster_spec_{}; // function spec is here
   // mutable as these are modified in a const function. it is ok as the state of
   // the object doesnt change, it is for lazy loading.

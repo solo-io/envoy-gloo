@@ -39,8 +39,7 @@ public:
                                               bool) override;
   virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
   FuncitonFilterTest &testfixture_;
-  virtual bool retrieveFunction(const MetadataAccessor& meta_accessor) override;
-  
+  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 };
 
 class FuncitonFilterTest : public testing::Test {
@@ -187,8 +186,9 @@ protected:
   std::string function2name_{"funcname2"};
 };
 
-bool FunctionalFilterTester::retrieveFunction(const MetadataAccessor& meta_accessor) {
-  bool have_function =  meta_accessor.getFunctionSpec().valid();
+bool FunctionalFilterTester::retrieveFunction(
+    const MetadataAccessor &meta_accessor) {
+  bool have_function = meta_accessor.getFunctionSpec().valid();
   return have_function;
 }
 
