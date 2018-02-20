@@ -1,4 +1,4 @@
-workspace(name="aws_lambda_filter")
+workspace(name="aws_lambda")
 
 ENVOY_SHA = "f79a62b7cc9ca55d20104379ee0576617630cdaa"  # Feb 15, 2018 ( test: fix nit after #2591 (#2601) )
 
