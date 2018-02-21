@@ -102,5 +102,31 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
   EXPECT_EQ("123", res);
 }
 
+TEST(Transformer, transform) {
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body("{\"a\":\"456\"}");
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/users/(\\d+)");
+  extractor.set_subgroup(1);
+
+  envoy::api::v2::filter::http::Transformation transformation;
+
+  (*transformation.mutable_extractors())["ext1"] = extractor;
+  transformation.mutable_request_template()->mutable_body()->set_text(
+      "{{extraction(\"ext1\")}}{{a}}{{header(\"x-test\")}}");
+
+  Transformer transformer(transformation);
+  transformer.transform(headers, body);
+
+  std::string res = TestUtility::bufferToString(body);
+
+  EXPECT_EQ("123456789", res);
+}
+
 } // namespace Http
 } // namespace Envoy

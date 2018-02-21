@@ -85,7 +85,7 @@ json TransformerInstance::extracted_callback(Parsed::Arguments args,
   return "";
 }
 
-std::string TransformerInstance::render(std::string input) {
+std::string TransformerInstance::render(const std::string &input) {
   return env_.render(input, context_);
 }
 
@@ -95,9 +95,7 @@ Transformer::Transformer(
 
 Transformer::~Transformer() {}
 
-void transform(HeaderMap &hedader_map, Buffer::Instance &body) {
-  UNREFERENCED_PARAMETER(hedader_map);
-  UNREFERENCED_PARAMETER(body);
+void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
 
   // copied from base64.cc
   std::string bodystring;
@@ -114,19 +112,31 @@ void transform(HeaderMap &hedader_map, Buffer::Instance &body) {
 
   json json_body = json::parse(bodystring);
 
+  std::map<std::string, std::string> extractions;
+
+  const auto &extractors = transformation_.extractors();
+
+  for (auto it = extractors.begin(); it != extractors.end(); it++) {
+    const std::string &name = it->first;
+    const envoy::api::v2::filter::http::Extraction &extractor = it->second;
+
+    extractions[name] = ExtractorUtil::extract(extractor, header_map);
+  }
+
+  TransformerInstance instance(header_map, extractions, json_body);
+  // TODO: remove existing headers?
+  // TODO: change headers?
+  const std::string &input = transformation_.request_template().body().text();
+  auto output = instance.render(input);
+
+  // replace body
+  body.drain(body.length());
+  body.add(output);
+
   /*
   TODO:
-      body to string
-      body string to json
-
-      for ever extraction,
-       extract it and add it to the map
-
       For ever header in the template:
        run it through the extraction, and insert them to the header map;
-
-      run the body through the extraction and update the incoming buffer
-      (i.e. drain and move)
   */
 }
 

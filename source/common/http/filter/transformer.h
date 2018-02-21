@@ -32,7 +32,7 @@ public:
   nlohmann::json extracted_callback(inja::Parsed::Arguments args,
                                     nlohmann::json data);
 
-  std::string render(std::string input);
+  std::string render(const std::string &input);
 
 private:
   inja::Environment env_;
