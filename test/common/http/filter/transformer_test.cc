@@ -120,12 +120,15 @@ TEST(Transformer, transform) {
   transformation.mutable_request_template()->mutable_body()->set_text(
       "{{extraction(\"ext1\")}}{{a}}{{header(\"x-test\")}}");
 
+  (*transformation.mutable_request_template()->mutable_headers())["x-header"].set_text("{{upper(\"abc\")}}");
+
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = TestUtility::bufferToString(body);
 
   EXPECT_EQ("123456789", res);
+  EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
 } // namespace Http

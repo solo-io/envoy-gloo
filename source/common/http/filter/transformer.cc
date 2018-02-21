@@ -13,15 +13,20 @@ using namespace std::placeholders;
 namespace Envoy {
 namespace Http {
 // TODO: move to common
+
+const Envoy::Http::HeaderEntry *getHeader(const HeaderMap &header_map,
+                                          const LowerCaseString &key) {
+  const Envoy::Http::HeaderEntry *header_entry = header_map.get(key);
+  if (!header_entry) {
+    header_map.lookup(key, &header_entry);
+  }
+  return header_entry;
+}
+
 const Envoy::Http::HeaderEntry *getHeader(const HeaderMap &header_map,
                                           std::string &&key) {
   auto lowerkey = LowerCaseString(std::move(key), true);
-
-  const Envoy::Http::HeaderEntry *header_entry = header_map.get(lowerkey);
-  if (!header_entry) {
-    header_map.lookup(lowerkey, &header_entry);
-  }
-  return header_entry;
+  return getHeader(header_map, lowerkey);
 }
 
 std::string ExtractorUtil::extract(
@@ -109,9 +114,9 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
     const char *slice_mem = static_cast<const char *>(slice.mem_);
     bodystring.append(slice_mem, slice.len_);
   }
-
+  // parse the body as json
   json json_body = json::parse(bodystring);
-
+  // get the extractions
   std::map<std::string, std::string> extractions;
 
   const auto &extractors = transformation_.extractors();
@@ -122,10 +127,9 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
 
     extractions[name] = ExtractorUtil::extract(extractor, header_map);
   }
-
+  // start transforming!
   TransformerInstance instance(header_map, extractions, json_body);
-  // TODO: remove existing headers?
-  // TODO: change headers?
+
   const std::string &input = transformation_.request_template().body().text();
   auto output = instance.render(input);
 
@@ -133,11 +137,19 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   body.drain(body.length());
   body.add(output);
 
-  /*
-  TODO:
-      For ever header in the template:
-       run it through the extraction, and insert them to the header map;
-  */
+  // add headers
+  const auto& headers = transformation_.request_template().headers();
+
+  for (auto it = headers.begin(); it != headers.end(); it++) {
+    std::string name = it->first;
+    auto lkname = LowerCaseString(std::move(name), true);
+    const envoy::api::v2::filter::http::InjaTemplate &text = it->second;
+    std::string output = instance.render(text.text());
+    // remove existing headers?    
+    header_map.remove(lkname);
+    header_map.addCopy(lkname, output);
+  }
+
 }
 
 } // namespace Http
