@@ -37,5 +37,5 @@ header_value(name) -> from the original headers
 extracted_value(name, index) -> from the extracted values
 */
 message InjaTemplate {
-    string template = 1;
+    string text = 1;
 }
