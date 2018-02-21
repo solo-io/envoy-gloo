@@ -5,8 +5,11 @@
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
 
-#include "inja.hpp"
+// clang-format off
 #include "json.hpp"
+#include "inja.hpp"
+// clang-format on
+
 #include "transformation_filter.pb.h"
 
 namespace Envoy {
