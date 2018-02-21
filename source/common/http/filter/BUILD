@@ -1,0 +1,65 @@
+licenses(["notice"])  # Apache 2
+
+load(
+    "@envoy//bazel:envoy_build_system.bzl",
+    "envoy_cc_binary",
+    "envoy_cc_library",
+    "envoy_cc_test",
+    "envoy_package",
+)
+
+envoy_package()
+
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+
+envoy_cc_library(
+    name = "transformation_filter_config",
+    hdrs = [
+        "transformation_filter_config.h",
+    ],
+    srcs = [
+        "transformation_filter_config.cc",
+    ],
+    repository = "@envoy",
+    deps = [
+        "//:transformation_filter_proto_cc",
+        "//source/common/config:transformation_well_known_names_lib",
+        "@envoy//source/exe:envoy_common_lib",
+    ],
+)
+
+
+envoy_cc_library(
+    name = "transformation_filter_lib",
+    srcs = [
+        "transformation_filter.cc",
+    ],
+    hdrs = [
+        "transformation_filter.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "//source/common/http/filter:transformer_lib",
+        "//source/common/http/filter:transformation_filter_config",
+        "@envoy//source/exe:envoy_common_lib",
+        "@envoy_common//source/common/http:solo_filter_utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "transformer_lib",
+    srcs = [
+        "transformer.cc",
+    ],
+    hdrs = [
+        "transformer.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "//:transformation_filter_proto_cc",
+        "@json//:json-lib",
+        "@inja//:inja-lib",
+        "@envoy//source/common/protobuf",
+        "@envoy//source/exe:envoy_common_lib",
+    ],
+)

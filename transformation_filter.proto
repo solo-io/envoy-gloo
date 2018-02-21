@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package envoy.api.v2.filter.http;
+
+// [#protodoc-title: Lambda]
+// Lambda :ref:`configuration overview <config_http_filters_lambda>`.
+
+message Transformations {
+    map<string, Transformation> transformations = 1;
+
+}
+// [#proto-status: experimental]
+message Transformation {
+    // Extractors are in the origin request language domain
+    Extractors extractors = 1;
+    // Template is in the transformed request language domain
+    // currently both are JSON
+    RequetTemplate request_template = 2;
+}
+
+message Extractors {
+     // header \ body -> regex with capture groups
+     map<string, Extraction> from = 1;
+}
+message Extraction {
+    string header = 1;
+    // what information to extract. if extraction fails the result is 
+    // an empty value.
+    string regex =  2;
+    uint32 subgroup = 3;
+
+}
+
+message RequetTemplate {
+    map<string, InjaTemplate> headers = 1;
+    InjaTemplate body = 2;
+}
+/*
+custom functions:
+header_value(name) -> from the original headers
+extracted_value(name, index) -> from the extracted values
+*/
+message InjaTemplate {
+    string template = 1;
+}
