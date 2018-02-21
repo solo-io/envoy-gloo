@@ -88,6 +88,6 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                               ->value()
                               .c_str());
   std::string body = TestUtility::bufferToString(upstream_request_->body());
-  EXPECT_EQ("234", body);
+  EXPECT_EQ("abc 234", body);
 }
 } // namespace Envoy
