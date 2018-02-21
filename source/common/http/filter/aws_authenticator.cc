@@ -7,6 +7,7 @@
 
 #include "envoy/http/header_map.h"
 
+#include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
