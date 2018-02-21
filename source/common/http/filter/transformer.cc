@@ -141,7 +141,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   }
 
   // add headers
-  const auto& headers = transformation_.request_template().headers();
+  const auto &headers = transformation_.request_template().headers();
 
   for (auto it = headers.begin(); it != headers.end(); it++) {
     std::string name = it->first;
@@ -152,7 +152,6 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
     header_map.remove(lkname);
     header_map.addCopy(lkname, output);
   }
-
 }
 
 } // namespace Http

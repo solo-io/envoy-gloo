@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/buffer/buffer_impl.h"
 #include "envoy/server/filter_config.h"
 
+#include "common/buffer/buffer_impl.h"
 #include "common/http/filter/transformation_filter_config.h"
 
 #include "transformation_filter.pb.h"
@@ -24,25 +24,24 @@ public:
   void
   setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &callbacks) override {
     callbacks_ = &callbacks;
-     decoder_buffer_limit_ = callbacks.decoderBufferLimit();
+    decoder_buffer_limit_ = callbacks.decoderBufferLimit();
   };
 
 private:
-
-void checkActive();
-bool active() {return transformation_ != nullptr;}
-void resetInternalState();
-void transform();
+  void checkActive();
+  bool active() { return transformation_ != nullptr; }
+  void resetInternalState();
+  void transform();
 
   TransformationFilterConfigSharedPtr config_;
   StreamDecoderFilterCallbacks *callbacks_{};
-  bool stream_destroyed_{};  
+  bool stream_destroyed_{};
   uint32_t decoder_buffer_limit_{};
   HeaderMap *header_map_{nullptr};
   Buffer::OwnedImpl body_{};
-  
+
   Router::RouteConstSharedPtr route_{};
-  const envoy::api::v2::filter::http::Transformation * transformation_{nullptr};
+  const envoy::api::v2::filter::http::Transformation *transformation_{nullptr};
 };
 
 } // namespace Http

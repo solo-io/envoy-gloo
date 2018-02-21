@@ -40,20 +40,20 @@ public:
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
-               HttpConnectionManager & hcm) {
+               HttpConnectionManager &hcm) {
 
           auto *metadata = hcm.mutable_route_config()
                                ->mutable_virtual_hosts(0)
                                ->mutable_routes(0)
                                ->mutable_metadata();
 
-              Config::Metadata::mutableMetadataValue(
-                  *metadata, Config::TransformationMetadataFilters::get().TRANSFORMATION, Config::MetadataTransformationKeys::get().TRANSFORMATION)
-                  .set_string_value("translation1");
+          Config::Metadata::mutableMetadataValue(
+              *metadata,
+              Config::TransformationMetadataFilters::get().TRANSFORMATION,
+              Config::MetadataTransformationKeys::get().TRANSFORMATION)
+              .set_string_value("translation1");
 
-
-
-               });
+        });
 
     HttpIntegrationTest::initialize();
 
@@ -77,10 +77,10 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 
   sendRequestAndWaitForResponse(request_headers, 0, default_response_headers_,
                                 0);
-  
-    EXPECT_STREQ("solo.io", upstream_request_->headers()
-                     .get(Envoy::Http::LowerCaseString("x-solo"))
-                     ->value().c_str());
-  
+
+  EXPECT_STREQ("solo.io", upstream_request_->headers()
+                              .get(Envoy::Http::LowerCaseString("x-solo"))
+                              ->value()
+                              .c_str());
 }
 } // namespace Envoy

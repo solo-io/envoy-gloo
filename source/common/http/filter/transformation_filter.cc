@@ -1,9 +1,10 @@
-#include "common/http/solo_filter_utility.h"
-#include "common/config/transformation_well_known_names.h"
-#include "common/config/metadata.h"
 #include "common/http/filter/transformation_filter.h"
-#include "common/http/utility.h"
+
+#include "common/config/metadata.h"
+#include "common/config/transformation_well_known_names.h"
 #include "common/http/filter/transformer.h"
+#include "common/http/solo_filter_utility.h"
+#include "common/http/utility.h"
 
 namespace Envoy {
 namespace Http {
@@ -19,7 +20,8 @@ void TransformationFilter::onDestroy() {
   stream_destroyed_ = true;
 }
 
-FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map, bool end_stream) {
+FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
+                                                        bool end_stream) {
 
   checkActive();
 
@@ -37,15 +39,18 @@ FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map, b
   return FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data, bool end_stream) {
+FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
+                                                  bool end_stream) {
   if (!active()) {
     return FilterDataStatus::Continue;
   }
 
   body_.move(data);
-  if ((decoder_buffer_limit_ != 0) && (body_.length() > decoder_buffer_limit_)) {
-    Http::Utility::sendLocalReply(*callbacks_, stream_destroyed_, Http::Code::PayloadTooLarge,
-                                "payload too large");
+  if ((decoder_buffer_limit_ != 0) &&
+      (body_.length() > decoder_buffer_limit_)) {
+    Http::Utility::sendLocalReply(*callbacks_, stream_destroyed_,
+                                  Http::Code::PayloadTooLarge,
+                                  "payload too large");
   }
 
   if (end_stream) {
@@ -69,14 +74,15 @@ void TransformationFilter::checkActive() {
     return;
   }
 
-  const Router::RouteEntry *routeEntry  = route_->routeEntry();
+  const Router::RouteEntry *routeEntry = route_->routeEntry();
   if (!routeEntry) {
     return;
   }
 
- const ProtobufWkt::Value& value = Config::Metadata::metadataValue(routeEntry->metadata(),
-                                                  Config::TransformationMetadataFilters::get().TRANSFORMATION,
-                                                  Config::MetadataTransformationKeys::get().TRANSFORMATION);
+  const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
+      routeEntry->metadata(),
+      Config::TransformationMetadataFilters::get().TRANSFORMATION,
+      Config::MetadataTransformationKeys::get().TRANSFORMATION);
 
   if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
     return;
@@ -90,16 +96,13 @@ void TransformationFilter::checkActive() {
   transformation_ = config_->getTranformation(string_value);
 }
 
-void TransformationFilter::transform() {  
+void TransformationFilter::transform() {
   Transformer transformer(*transformation_);
   transformer.transform(*header_map_, body_);
   callbacks_->addDecodedData(body_, false);
 }
 
-void TransformationFilter::resetInternalState() { 
-  body_.drain(body_.length());
-}
-
+void TransformationFilter::resetInternalState() { body_.drain(body_.length()); }
 
 } // namespace Http
 } // namespace Envoy

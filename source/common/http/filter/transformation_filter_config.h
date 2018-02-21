@@ -14,14 +14,14 @@ class TransformationFilterConfig {
 public:
   TransformationFilterConfig(ProtoConfig proto_config);
 
-  bool empty() {
-    return proto_config_.transformations().empty();
-  }
-  
-  const envoy::api::v2::filter::http::Transformation * getTranformation(const std::string & name);
+  bool empty() { return proto_config_.transformations().empty(); }
+
+  const envoy::api::v2::filter::http::Transformation *
+  getTranformation(const std::string &name);
+
 private:
 private:
- ProtoConfig proto_config_;
+  ProtoConfig proto_config_;
 };
 
 typedef std::shared_ptr<TransformationFilterConfig>

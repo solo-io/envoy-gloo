@@ -120,7 +120,8 @@ TEST(Transformer, transform) {
   transformation.mutable_request_template()->mutable_body()->set_text(
       "{{extraction(\"ext1\")}}{{a}}{{header(\"x-test\")}}");
 
-  (*transformation.mutable_request_template()->mutable_headers())["x-header"].set_text("{{upper(\"abc\")}}");
+  (*transformation.mutable_request_template()->mutable_headers())["x-header"]
+      .set_text("{{upper(\"abc\")}}");
 
   Transformer transformer(transformation);
   transformer.transform(headers, body);
