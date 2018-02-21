@@ -10,6 +10,15 @@ namespace Envoy {
 const std::string DEFAULT_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
+config:
+  transformations:
+    translation1:
+      request_template:
+        headers:
+          x-solo:
+            text: solo.io
+        body:
+          text: abc
 )EOF";
 
 class TransformationFilterIntegrationTest
@@ -31,7 +40,20 @@ public:
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
-               HttpConnectionManager & /*hcm*/) {});
+               HttpConnectionManager & hcm) {
+
+          auto *metadata = hcm.mutable_route_config()
+                               ->mutable_virtual_hosts(0)
+                               ->mutable_routes(0)
+                               ->mutable_metadata();
+
+              Config::Metadata::mutableMetadataValue(
+                  *metadata, Config::TransformationMetadataFilters::get().TRANSFORMATION, Config::MetadataTransformationKeys::get().TRANSFORMATION)
+                  .set_string_value("translation1");
+
+
+
+               });
 
     HttpIntegrationTest::initialize();
 
@@ -49,17 +71,16 @@ INSTANTIATE_TEST_CASE_P(
     IpVersions, TransformationFilterIntegrationTest,
     testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
 
-TEST_P(TransformationFilterIntegrationTest, Test1) {
+TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   Envoy::Http::TestHeaderMapImpl request_headers{
-      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
+      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
-  sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
-                                10);
-  /*
-    EXPECT_NE(0, upstream_request_->headers()
-                     .get(Envoy::Http::LowerCaseString("authorization"))
-                     ->value()
-                     .size());
-  */
+  sendRequestAndWaitForResponse(request_headers, 0, default_response_headers_,
+                                0);
+  
+    EXPECT_STREQ("solo.io", upstream_request_->headers()
+                     .get(Envoy::Http::LowerCaseString("x-solo"))
+                     ->value().c_str());
+  
 }
 } // namespace Envoy
