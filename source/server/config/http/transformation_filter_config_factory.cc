@@ -1,8 +1,5 @@
 #include "server/config/http/transformation_filter_config_factory.h"
 
-#include "common/http/filter/transformation_filter.h"
-#include "common/http/filter/transformation_filter_config.h"
-
 #include <string>
 
 #include "envoy/registry/registry.h"
@@ -10,6 +7,8 @@
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
 #include "common/config/transformation_well_known_names.h"
+#include "common/http/filter/transformation_filter.h"
+#include "common/http/filter/transformation_filter_config.h"
 #include "common/protobuf/utility.h"
 
 #include "transformation_filter.pb.h"
@@ -23,7 +22,8 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactory(
   NOT_IMPLEMENTED;
 }
 
-HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactoryFromProto(
+HttpFilterFactoryCb
+TransformationFilterConfigFactory::createFilterFactoryFromProto(
     const Protobuf::Message &config, const std::string &stat_prefix,
     FactoryContext &context) {
   UNREFERENCED_PARAMETER(stat_prefix);
@@ -42,12 +42,15 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactoryFromPr
    * */
 
   return createFilter(
-      dynamic_cast<const envoy::api::v2::filter::http::Transformations &>(config),
+      dynamic_cast<const envoy::api::v2::filter::http::Transformations &>(
+          config),
       context);
 }
 
-ProtobufTypes::MessagePtr TransformationFilterConfigFactory::createEmptyConfigProto() {
-  return ProtobufTypes::MessagePtr{new envoy::api::v2::filter::http::Transformations()};
+ProtobufTypes::MessagePtr
+TransformationFilterConfigFactory::createEmptyConfigProto() {
+  return ProtobufTypes::MessagePtr{
+      new envoy::api::v2::filter::http::Transformations()};
 }
 
 std::string TransformationFilterConfigFactory::name() {
@@ -61,8 +64,8 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilter(
   Http::TransformationFilterConfigSharedPtr config =
       std::make_shared<Http::TransformationFilterConfig>(proto_config);
 
-  return [&context, config](
-             Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
+  return [&context,
+          config](Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new Http::TransformationFilter(config);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});

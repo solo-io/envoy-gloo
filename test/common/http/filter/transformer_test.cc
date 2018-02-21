@@ -39,9 +39,8 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   originalbody["field1"] = "value1";
   std::string path = "/getsomething";
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", path}};
+  Envoy::Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
 
   TransformerInstance t(headers, {}, originalbody);
 
@@ -67,20 +66,20 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
 
 TEST(TransformerInstance, ReplaceFromExtracted) {
   json originalbody;
-  std::map<std::string,std::string> extractions;
+  std::map<std::string, std::string> extractions;
   std::string field = "res";
   extractions["f"] = field;
   Envoy::Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
 
   auto res = t.render("{{extraction(\"f\")}}");
-  
+
   EXPECT_EQ(field, res);
 }
 
 TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::map<std::string,std::string> extractions;
+  std::map<std::string, std::string> extractions;
   extractions["foo"] = "bar";
   Envoy::Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
@@ -90,16 +89,15 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   EXPECT_EQ("", res);
 }
 
-
 TEST(ExtractorUtil, ExtractIdFromHeader) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
- envoy::api::v2::filter::http::Extraction extractor;
- extractor.set_header(":path");
- extractor.set_regex("/users/(\\d+)");
- extractor.set_subgroup(1);
- auto res = ExtractorUtil::extract(extractor, headers);
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/users/(\\d+)");
+  extractor.set_subgroup(1);
+  auto res = ExtractorUtil::extract(extractor, headers);
 
   EXPECT_EQ("123", res);
 }

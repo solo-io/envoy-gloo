@@ -20,6 +20,7 @@ envoy_cc_test(
         "@envoy//test/test_common:utility_lib",
     ],
 )
+
 envoy_cc_test(
     name = "transformer_test",
     srcs = ["transformer_test.cc"],

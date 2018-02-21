@@ -26,10 +26,9 @@ public:
   std::string name() override;
 
 private:
-  HttpFilterFactoryCb
-  createFilter(const envoy::api::v2::filter::http::Transformations &proto_config,
-               FactoryContext &context);
-
+  HttpFilterFactoryCb createFilter(
+      const envoy::api::v2::filter::http::Transformations &proto_config,
+      FactoryContext &context);
 };
 
 } // namespace Configuration

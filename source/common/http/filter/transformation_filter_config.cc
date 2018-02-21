@@ -3,9 +3,8 @@
 namespace Envoy {
 namespace Http {
 
-TransformationFilterConfig::TransformationFilterConfig(const ProtoConfig & /*proto_config*/) {
-
-}
+TransformationFilterConfig::TransformationFilterConfig(
+    const ProtoConfig & /*proto_config*/) {}
 
 } // namespace Http
 } // namespace Envoy

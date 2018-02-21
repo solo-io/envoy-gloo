@@ -19,7 +19,8 @@ public:
   const std::string TRANSFORMATION = "io.solo.transformation";
 };
 
-typedef ConstSingleton<TransformationFilterNameValues> TransformationFilterNames;
+typedef ConstSingleton<TransformationFilterNameValues>
+    TransformationFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
@@ -30,7 +31,8 @@ public:
   const std::string TRANSFORMATION = "io.solo.transformation";
 };
 
-typedef ConstSingleton<TransformationMetadataFilterValues> TransformationMetadataFilters;
+typedef ConstSingleton<TransformationMetadataFilterValues>
+    TransformationMetadataFilters;
 
 /**
  * Keys for MetadataFilterConstants::TRANSFORMATION metadata.
@@ -39,7 +41,8 @@ class MetadataTransformationKeyValues {
 public:
 };
 
-typedef ConstSingleton<MetadataTransformationKeyValues> MetadataTransformationKeys;
+typedef ConstSingleton<MetadataTransformationKeyValues>
+    MetadataTransformationKeys;
 
 } // namespace Config
 } // namespace Envoy

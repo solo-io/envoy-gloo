@@ -26,7 +26,6 @@ namespace Http {
 using Http::TransformationFilterConfig;
 using Server::Configuration::TransformationFilterConfigFactory;
 
-
 TEST(TransformationFilterConfigFactory, EmptyConfig) {
   envoy::api::v2::filter::http::Transformations config;
 

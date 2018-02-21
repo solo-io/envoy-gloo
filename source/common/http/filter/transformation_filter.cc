@@ -3,26 +3,23 @@
 namespace Envoy {
 namespace Http {
 
-TransformationFilter::TransformationFilter(TransformationFilterConfigSharedPtr config) : config_(config) {
+TransformationFilter::TransformationFilter(
+    TransformationFilterConfigSharedPtr config)
+    : config_(config) {}
 
-}
-
-TransformationFilter::~TransformationFilter() {
-
-}
+TransformationFilter::~TransformationFilter() {}
 
 FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &, bool) {
-    return FilterHeadersStatus::Continue;
+  return FilterHeadersStatus::Continue;
 }
 
 FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &, bool) {
-    return FilterDataStatus::Continue;
+  return FilterDataStatus::Continue;
 }
 
 FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
-    return FilterTrailersStatus::Continue;
+  return FilterTrailersStatus::Continue;
 }
-
 
 } // namespace Http
 } // namespace Envoy

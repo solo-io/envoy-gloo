@@ -1,5 +1,5 @@
-#include "common/config/transformation_well_known_names.h"
 #include "common/config/metadata.h"
+#include "common/config/transformation_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -27,13 +27,11 @@ public:
     config_helper_.addFilter(DEFAULT_TRANSFORMATION_FILTER);
 
     config_helper_.addConfigModifier(
-        [](envoy::config::bootstrap::v2::Bootstrap &/*bootstrap*/) {
-        });
+        [](envoy::config::bootstrap::v2::Bootstrap & /*bootstrap*/) {});
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
-               HttpConnectionManager &/*hcm*/) {
-        });
+               HttpConnectionManager & /*hcm*/) {});
 
     HttpIntegrationTest::initialize();
 
@@ -57,11 +55,11 @@ TEST_P(TransformationFilterIntegrationTest, Test1) {
 
   sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
                                 10);
-/*
-  EXPECT_NE(0, upstream_request_->headers()
-                   .get(Envoy::Http::LowerCaseString("authorization"))
-                   ->value()
-                   .size());
-*/
+  /*
+    EXPECT_NE(0, upstream_request_->headers()
+                     .get(Envoy::Http::LowerCaseString("authorization"))
+                     ->value()
+                     .size());
+  */
 }
 } // namespace Envoy
