@@ -39,6 +39,7 @@ typedef ConstSingleton<TransformationMetadataFilterValues>
  */
 class MetadataTransformationKeyValues {
 public:
+  const std::string TRANSFORMATION = "transformation";
 };
 
 typedef ConstSingleton<MetadataTransformationKeyValues>

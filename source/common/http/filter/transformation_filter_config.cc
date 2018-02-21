@@ -4,7 +4,18 @@ namespace Envoy {
 namespace Http {
 
 TransformationFilterConfig::TransformationFilterConfig(
-    const ProtoConfig & /*proto_config*/) {}
+    ProtoConfig proto_config) : proto_config_(proto_config) {}
+
+const envoy::api::v2::filter::http::Transformation * TransformationFilterConfig::getTranformation(const std::string & name) {
+    
+  const auto &transformations = proto_config_.transformations();
+
+  const auto it = transformations.find(name);
+  if (it == transformations.end()) {
+      return nullptr;
+  }
+    return &it->second;
+  }
 
 } // namespace Http
 } // namespace Envoy

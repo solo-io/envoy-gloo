@@ -12,7 +12,11 @@ class TransformationFilterConfig {
   using ProtoConfig = envoy::api::v2::filter::http::Transformations;
 
 public:
-  TransformationFilterConfig(const ProtoConfig &proto_config);
+  TransformationFilterConfig(ProtoConfig proto_config);
+  
+  const envoy::api::v2::filter::http::Transformation * getTranformation(const std::string & name);
+private:
+ ProtoConfig proto_config_;
 };
 
 typedef std::shared_ptr<TransformationFilterConfig>

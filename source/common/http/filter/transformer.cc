@@ -145,7 +145,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
     auto lkname = LowerCaseString(std::move(name), true);
     const envoy::api::v2::filter::http::InjaTemplate &text = it->second;
     std::string output = instance.render(text.text());
-    // remove existing headers?    
+    // remove existing header
     header_map.remove(lkname);
     header_map.addCopy(lkname, output);
   }
