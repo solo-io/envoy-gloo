@@ -38,11 +38,11 @@ void transform();
   StreamDecoderFilterCallbacks *callbacks_{};
   bool stream_destroyed_{};  
   uint32_t decoder_buffer_limit_{};
-  HeaderMap *header_map_;
-  Buffer::OwnedImpl body_;
+  HeaderMap *header_map_{nullptr};
+  Buffer::OwnedImpl body_{};
   
-  Router::RouteConstSharedPtr route_;
-  const envoy::api::v2::filter::http::Transformation * transformation_;
+  Router::RouteConstSharedPtr route_{};
+  const envoy::api::v2::filter::http::Transformation * transformation_{nullptr};
 };
 
 } // namespace Http
