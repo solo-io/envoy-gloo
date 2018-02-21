@@ -66,9 +66,11 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilter(
 
   return [&context,
           config](Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
+    if (!config->empty())  {
     auto filter = new Http::TransformationFilter(config);
-    callbacks.addStreamDecoderFilter(
-        Http::StreamDecoderFilterSharedPtr{filter});
+        callbacks.addStreamDecoderFilter(
+            Http::StreamDecoderFilterSharedPtr{filter});
+    }
   };
 }
 

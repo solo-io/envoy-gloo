@@ -13,8 +13,13 @@ class TransformationFilterConfig {
 
 public:
   TransformationFilterConfig(ProtoConfig proto_config);
+
+  bool empty() {
+    return proto_config_.transformations().empty();
+  }
   
   const envoy::api::v2::filter::http::Transformation * getTranformation(const std::string & name);
+private:
 private:
  ProtoConfig proto_config_;
 };
