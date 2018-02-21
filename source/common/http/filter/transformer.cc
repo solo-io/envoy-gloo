@@ -101,21 +101,23 @@ Transformer::Transformer(
 Transformer::~Transformer() {}
 
 void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
-
+  json json_body;
   // copied from base64.cc
-  std::string bodystring;
-  bodystring.reserve(body.length());
+  if (body.length() > 0) {
+    std::string bodystring;
+    bodystring.reserve(body.length());
 
-  uint64_t num_slices = body.getRawSlices(nullptr, 0);
-  Buffer::RawSlice slices[num_slices];
-  body.getRawSlices(slices, num_slices);
+    uint64_t num_slices = body.getRawSlices(nullptr, 0);
+    Buffer::RawSlice slices[num_slices];
+    body.getRawSlices(slices, num_slices);
 
-  for (Buffer::RawSlice &slice : slices) {
-    const char *slice_mem = static_cast<const char *>(slice.mem_);
-    bodystring.append(slice_mem, slice.len_);
+    for (Buffer::RawSlice &slice : slices) {
+      const char *slice_mem = static_cast<const char *>(slice.mem_);
+      bodystring.append(slice_mem, slice.len_);
+    }
+    // parse the body as json
+    json_body = json::parse(bodystring);
   }
-  // parse the body as json
-  json json_body = json::parse(bodystring);
   // get the extractions
   std::map<std::string, std::string> extractions;
 
@@ -129,13 +131,14 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   }
   // start transforming!
   TransformerInstance instance(header_map, extractions, json_body);
+  if (transformation_.request_template().has_body()) {
+    const std::string &input = transformation_.request_template().body().text();
+    auto output = instance.render(input);
 
-  const std::string &input = transformation_.request_template().body().text();
-  auto output = instance.render(input);
-
-  // replace body
-  body.drain(body.length());
-  body.add(output);
+    // replace body
+    body.drain(body.length());
+    body.add(output);
+  }
 
   // add headers
   const auto& headers = transformation_.request_template().headers();
