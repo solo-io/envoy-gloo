@@ -13,12 +13,17 @@ name: io.solo.transformation
 config:
   transformations:
     translation1:
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
       request_template:
         headers:
           x-solo:
             text: solo.io
         body:
-          text: abc
+          text: abc {{extraction("ext1")}}
 )EOF";
 
 class TransformationFilterIntegrationTest
@@ -73,7 +78,7 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   Envoy::Http::TestHeaderMapImpl request_headers{
-      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/"}};
+      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/users/234"}};
 
   sendRequestAndWaitForResponse(request_headers, 0, default_response_headers_,
                                 0);
@@ -82,5 +87,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                               .get(Envoy::Http::LowerCaseString("x-solo"))
                               ->value()
                               .c_str());
+  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  EXPECT_EQ("234", body);
 }
 } // namespace Envoy
