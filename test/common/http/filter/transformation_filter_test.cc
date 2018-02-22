@@ -52,6 +52,15 @@ public:
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
+  void initFilterWithBodyTemplate(std::string body) {
+
+    auto &transformation = (*config_.mutable_transformations())["abc"];
+    transformation.mutable_request_template()->mutable_body()->set_text(body);
+    initFilter(); // Re-load config.
+
+    addNameToRoute("abc");
+  }
+
   void addNameToRoute(std::string name) {
 
     auto &mymeta =
@@ -77,11 +86,7 @@ TEST_F(TransformationFilterTest, EmptyConfig) {
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeaders) {
-  auto &transformation = (*config_.mutable_transformations())["abc"];
-  transformation.mutable_request_template()->mutable_body()->set_text("solo");
-  initFilter(); // Re-load config.
-
-  addNameToRoute("abc");
+  initFilterWithBodyTemplate("solo");
 
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
@@ -89,12 +94,7 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
 }
 
 TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
-  auto &transformation = (*config_.mutable_transformations())["abc"];
-  transformation.mutable_request_template()->mutable_body()->set_text(
-      "{{nonexistentvar}}");
-  initFilter(); // Re-load config.
-
-  addNameToRoute("abc");
+  initFilterWithBodyTemplate("{{nonexistentvar}}");
 
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
@@ -108,11 +108,7 @@ TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
 }
 
 TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
-  auto &transformation = (*config_.mutable_transformations())["abc"];
-  transformation.mutable_request_template()->mutable_body()->set_text("solo");
-  initFilter(); // Re-load config.
-
-  addNameToRoute("abc");
+  initFilterWithBodyTemplate("solo");
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
   ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
@@ -130,11 +126,7 @@ TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
 }
 
 TEST_F(TransformationFilterTest, HappyPathWithBody) {
-  auto &transformation = (*config_.mutable_transformations())["abc"];
-  transformation.mutable_request_template()->mutable_body()->set_text("{{a}}");
-  initFilter(); // Re-load config.
-
-  addNameToRoute("abc");
+  initFilterWithBodyTemplate("{{a}}");
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
   ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
