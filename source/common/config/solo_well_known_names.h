@@ -52,5 +52,16 @@ public:
 typedef ConstSingleton<MetadataFunctionalRouterKeyValues>
     MetadataFunctionalRouterKeys;
 
+/**
+ * Keys for MetadataFilterConstants::ROUTE_FAULT metadata.
+ */
+class MetadataRouteFaultKeyValues {
+public:
+  // Key in the Route Fault Filter namespace for the fault name.
+  const std::string FAULT_NAME = "fault_name";
+};
+
+typedef ConstSingleton<MetadataRouteFaultKeyValues> MetadataRouteFaultKeys;
+
 } // namespace Config
 } // namespace Envoy

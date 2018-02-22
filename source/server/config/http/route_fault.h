@@ -2,10 +2,11 @@
 
 #include <string>
 
-#include "envoy/config/filter/http/fault/v2/fault.pb.h"
 #include "envoy/server/filter_config.h"
 
 #include "common/config/solo_well_known_names.h"
+
+#include "route_fault.pb.h"
 
 namespace Envoy {
 namespace Server {
@@ -15,7 +16,7 @@ namespace Configuration {
  * Config registration for the fault injection filter. @see
  * NamedHttpFilterConfigFactory.
  */
-class RouteEnabledFaultFilterConfig : public NamedHttpFilterConfigFactory {
+class RouteFaultFilterConfig : public NamedHttpFilterConfigFactory {
 public:
   HttpFilterFactoryCb createFilterFactory(const Json::Object &json_config,
                                           const std::string &stats_prefix,
@@ -27,7 +28,7 @@ public:
 
   ProtobufTypes::MessagePtr createEmptyConfigProto() override {
     return ProtobufTypes::MessagePtr{
-        new envoy::config::filter::http::fault::v2::HTTPFault()};
+        new envoy::api::v2::filter::http::RouteFault()};
   }
 
   std::string name() override {
@@ -35,9 +36,9 @@ public:
   }
 
 private:
-  HttpFilterFactoryCb createFilter(
-      const envoy::config::filter::http::fault::v2::HTTPFault &proto_config,
-      const std::string &stats_prefix, FactoryContext &context);
+  HttpFilterFactoryCb
+  createFilter(const envoy::api::v2::filter::http::RouteFault &proto_config,
+               const std::string &stats_prefix, FactoryContext &context);
 };
 
 } // namespace Configuration
