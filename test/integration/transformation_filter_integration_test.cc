@@ -79,13 +79,13 @@ public:
 
   void processRequest() {
     waitForNextUpstreamRequest();
-    upstream_request_->encodeHeaders(Http::TestHeaderMapImpl{{":status", "200"}}, true);
+    upstream_request_->encodeHeaders(
+        Http::TestHeaderMapImpl{{":status", "200"}}, true);
 
     response_->waitForEndStream();
   }
 
   std::string filter_string_{DEFAULT_TRANSFORMATION_FILTER};
-
 };
 
 INSTANTIATE_TEST_CASE_P(
@@ -112,16 +112,16 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   filter_string_ = BODY_TRANSFORMATION_FILTER;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "POST"},
-                                                 {":authority", "www.solo.io"},
-                                                 {":path", "/users"}};
+  Envoy::Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   // TODO(yuval-k): change this to test a body transformation
-  auto downstream_request = &codec_client_->startRequest(request_headers, *response_);
+  auto downstream_request =
+      &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
 
   processRequest();
-;
+  ;
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("efg", body);
 }
