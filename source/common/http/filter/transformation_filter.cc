@@ -33,7 +33,9 @@ FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
 
   if (end_stream) {
     transform();
-    return FilterHeadersStatus::Continue;
+
+    return is_error() ? FilterHeadersStatus::StopIteration
+                      : FilterHeadersStatus::Continue;
   }
 
   return FilterHeadersStatus::StopIteration;
@@ -48,14 +50,14 @@ FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
   body_.move(data);
   if ((decoder_buffer_limit_ != 0) &&
       (body_.length() > decoder_buffer_limit_)) {
-    Http::Utility::sendLocalReply(*callbacks_, stream_destroyed_,
-                                  Http::Code::PayloadTooLarge,
-                                  "payload too large");
+    error(Error::PayloadTooLarge);
+    return FilterDataStatus::StopIterationNoBuffer;
   }
 
   if (end_stream) {
     transform();
-    return FilterDataStatus::Continue;
+    return is_error() ? FilterDataStatus::StopIterationNoBuffer
+                      : FilterDataStatus::Continue;
   }
 
   return FilterDataStatus::StopIterationNoBuffer;
@@ -65,7 +67,8 @@ FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
   if (active()) {
     transform();
   }
-  return FilterTrailersStatus::Continue;
+  return is_error() ? FilterTrailersStatus::StopIteration
+                    : FilterTrailersStatus::Continue;
 }
 
 void TransformationFilter::checkActive() {
@@ -97,12 +100,47 @@ void TransformationFilter::checkActive() {
 }
 
 void TransformationFilter::transform() {
-  Transformer transformer(*transformation_);
-  transformer.transform(*header_map_, body_);
-  callbacks_->addDecodedData(body_, false);
+  try {
+    Transformer transformer(*transformation_);
+    transformer.transform(*header_map_, body_);
+    callbacks_->addDecodedData(body_, false);
+  } catch (nlohmann::json::parse_error &e) {
+    // json may throw parse error
+    error(Error::JsonParseError);
+  } catch (std::runtime_error &e) {
+    // inja throws runtime error
+    error(Error::TemplateParseError);
+  }
 }
 
 void TransformationFilter::resetInternalState() { body_.drain(body_.length()); }
+
+void TransformationFilter::error(Error error) {
+  error_ = error;
+  resetInternalState();
+  const char *msg;
+  Http::Code code;
+  switch (error) {
+  case Error::PayloadTooLarge: {
+    msg = "payload too large";
+    code = Http::Code::PayloadTooLarge;
+    break;
+  }
+  case Error::JsonParseError: {
+    msg = "bad request";
+    code = Http::Code::BadRequest;
+    break;
+  }
+  case Error::TemplateParseError: {
+    msg = "bad request";
+    code = Http::Code::BadRequest;
+    break;
+  }
+  }
+  Utility::sendLocalReply(*callbacks_, stream_destroyed_, code, msg);
+}
+
+bool TransformationFilter::is_error() { return error_.valid(); }
 
 } // namespace Http
 } // namespace Envoy

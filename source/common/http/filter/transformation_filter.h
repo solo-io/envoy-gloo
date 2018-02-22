@@ -28,10 +28,18 @@ public:
   };
 
 private:
+  enum class Error {
+    PayloadTooLarge,
+    JsonParseError,
+    TemplateParseError,
+  };
+
   void checkActive();
   bool active() { return transformation_ != nullptr; }
-  void resetInternalState();
   void transform();
+  void resetInternalState();
+  void error(Error error);
+  bool is_error();
 
   TransformationFilterConfigSharedPtr config_;
   StreamDecoderFilterCallbacks *callbacks_{};
@@ -42,6 +50,7 @@ private:
 
   Router::RouteConstSharedPtr route_{};
   const envoy::api::v2::filter::http::Transformation *transformation_{nullptr};
+  Optional<Error> error_;
 };
 
 } // namespace Http
