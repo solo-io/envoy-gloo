@@ -76,7 +76,7 @@ TEST_F(TransformationFilterTest, EmptyConfig) {
   EXPECT_EQ(FilterHeadersStatus::Continue, res);
 }
 
-TEST_F(TransformationFilterTest, StopIterationWhenNeedsToTransforms) {
+TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   auto &transformation = (*config_.mutable_transformations())["abc"];
   transformation.mutable_request_template()->mutable_body()->set_text("solo");
   initFilter(); // Re-load config.
@@ -86,6 +86,69 @@ TEST_F(TransformationFilterTest, StopIterationWhenNeedsToTransforms) {
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
   EXPECT_EQ(FilterHeadersStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
+  auto &transformation = (*config_.mutable_transformations())["abc"];
+  transformation.mutable_request_template()->mutable_body()->set_text("{{nonexistentvar}}");
+  initFilter(); // Re-load config.
+
+  addNameToRoute("abc");
+
+  std::string status;
+  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
+      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
+        status = headers.Status()->value().c_str();
+      }));
+
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(FilterHeadersStatus::StopIteration, res);
+  EXPECT_EQ("400", status);
+
+}
+
+TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
+  auto &transformation = (*config_.mutable_transformations())["abc"];
+  transformation.mutable_request_template()->mutable_body()->set_text("solo");
+  initFilter(); // Re-load config.
+
+  addNameToRoute("abc");
+
+  auto resheaders = filter_->decodeHeaders(headers_, false);
+  ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
+
+  std::string status;
+  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
+      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
+        status = headers.Status()->value().c_str();
+      }));
+
+  Buffer::OwnedImpl body("this is not json");  
+  auto res = filter_->decodeData(body, true);
+  EXPECT_EQ(FilterDataStatus::StopIterationNoBuffer, res);
+  EXPECT_EQ("400", status);
+}
+
+TEST_F(TransformationFilterTest, HappyPathWithBody) {
+  auto &transformation = (*config_.mutable_transformations())["abc"];
+  transformation.mutable_request_template()->mutable_body()->set_text("{{a}}");
+  initFilter(); // Re-load config.
+
+  addNameToRoute("abc");
+
+  auto resheaders = filter_->decodeHeaders(headers_, false);
+  ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
+
+  std::string upstream_body;
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
+      .WillOnce(Invoke([&](Buffer::Instance& b, bool) {
+        upstream_body = TestUtility::bufferToString(b);
+      }));
+
+  Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");  
+  auto res = filter_->decodeData(downstream_body, true);
+  EXPECT_EQ(FilterDataStatus::Continue, res);
+  EXPECT_EQ("b", upstream_body);
 }
 
 } // namespace Http
