@@ -90,7 +90,8 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
 
 TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
   auto &transformation = (*config_.mutable_transformations())["abc"];
-  transformation.mutable_request_template()->mutable_body()->set_text("{{nonexistentvar}}");
+  transformation.mutable_request_template()->mutable_body()->set_text(
+      "{{nonexistentvar}}");
   initFilter(); // Re-load config.
 
   addNameToRoute("abc");
@@ -104,7 +105,6 @@ TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
   auto res = filter_->decodeHeaders(headers_, true);
   EXPECT_EQ(FilterHeadersStatus::StopIteration, res);
   EXPECT_EQ("400", status);
-
 }
 
 TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
@@ -123,7 +123,7 @@ TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
         status = headers.Status()->value().c_str();
       }));
 
-  Buffer::OwnedImpl body("this is not json");  
+  Buffer::OwnedImpl body("this is not json");
   auto res = filter_->decodeData(body, true);
   EXPECT_EQ(FilterDataStatus::StopIterationNoBuffer, res);
   EXPECT_EQ("400", status);
@@ -141,11 +141,11 @@ TEST_F(TransformationFilterTest, HappyPathWithBody) {
 
   std::string upstream_body;
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
-      .WillOnce(Invoke([&](Buffer::Instance& b, bool) {
+      .WillOnce(Invoke([&](Buffer::Instance &b, bool) {
         upstream_body = TestUtility::bufferToString(b);
       }));
 
-  Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");  
+  Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
   auto res = filter_->decodeData(downstream_body, true);
   EXPECT_EQ(FilterDataStatus::Continue, res);
   EXPECT_EQ("b", upstream_body);

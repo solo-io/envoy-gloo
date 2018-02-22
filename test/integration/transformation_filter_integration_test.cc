@@ -77,8 +77,9 @@ INSTANTIATE_TEST_CASE_P(
     testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
-  Envoy::Http::TestHeaderMapImpl request_headers{
-      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/users/234"}};
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/234"}};
 
   sendRequestAndWaitForResponse(request_headers, 0, default_response_headers_,
                                 0);
