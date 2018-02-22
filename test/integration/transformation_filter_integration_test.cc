@@ -26,6 +26,17 @@ config:
           text: abc {{extraction("ext1")}}
 )EOF";
 
+const std::string BODY_TRANSFORMATION_FILTER =
+    R"EOF(
+name: io.solo.transformation
+config:
+  transformations:
+    translation1:
+      request_template:
+        body:
+          text: "{{abc}}"
+)EOF";
+
 class TransformationFilterIntegrationTest
     : public Envoy::HttpIntegrationTest,
       public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
@@ -38,7 +49,7 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-    config_helper_.addFilter(DEFAULT_TRANSFORMATION_FILTER);
+    config_helper_.addFilter(filter_string_);
 
     config_helper_.addConfigModifier(
         [](envoy::config::bootstrap::v2::Bootstrap & /*bootstrap*/) {});
@@ -66,17 +77,14 @@ public:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
-  /**
-   * Initialize before every test.
-   */
-  void SetUp() override { initialize(); }
-
   void processRequest() {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(Http::TestHeaderMapImpl{{":status", "200"}}, true);
 
     response_->waitForEndStream();
   }
+
+  std::string filter_string_{DEFAULT_TRANSFORMATION_FILTER};
 
 };
 
@@ -85,6 +93,7 @@ INSTANTIATE_TEST_CASE_P(
     testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
+  initialize();
   Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
                                                  {":authority", "www.solo.io"},
                                                  {":path", "/users/234"}};
@@ -101,22 +110,20 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 }
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  filter_string_ = BODY_TRANSFORMATION_FILTER;
+  initialize();
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "POST"},
                                                  {":authority", "www.solo.io"},
-                                                 {":path", "/users/234"}};
+                                                 {":path", "/users"}};
   // TODO(yuval-k): change this to test a body transformation
   auto downstream_request = &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
 
   processRequest();
-
-  EXPECT_STREQ("solo.io", upstream_request_->headers()
-                              .get(Envoy::Http::LowerCaseString("x-solo"))
-                              ->value()
-                              .c_str());
+;
   std::string body = TestUtility::bufferToString(upstream_request_->body());
-  EXPECT_EQ("abc 234", body);
+  EXPECT_EQ("efg", body);
 }
 
 } // namespace Envoy
