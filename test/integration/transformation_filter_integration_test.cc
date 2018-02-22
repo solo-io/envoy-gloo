@@ -70,6 +70,14 @@ public:
    * Initialize before every test.
    */
   void SetUp() override { initialize(); }
+
+  void processRequest() {
+    waitForNextUpstreamRequest();
+    upstream_request_->encodeHeaders(Http::TestHeaderMapImpl{{":status", "200"}}, true);
+
+    response_->waitForEndStream();
+  }
+
 };
 
 INSTANTIATE_TEST_CASE_P(
@@ -81,8 +89,8 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                                                  {":authority", "www.solo.io"},
                                                  {":path", "/users/234"}};
 
-  sendRequestAndWaitForResponse(request_headers, 0, default_response_headers_,
-                                0);
+  codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
+  processRequest();
 
   EXPECT_STREQ("solo.io", upstream_request_->headers()
                               .get(Envoy::Http::LowerCaseString("x-solo"))
@@ -91,4 +99,24 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("abc 234", body);
 }
+
+TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/234"}};
+  // TODO(yuval-k): change this to test a body transformation
+  auto downstream_request = &codec_client_->startRequest(request_headers, *response_);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest();
+
+  EXPECT_STREQ("solo.io", upstream_request_->headers()
+                              .get(Envoy::Http::LowerCaseString("x-solo"))
+                              ->value()
+                              .c_str());
+  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  EXPECT_EQ("abc 234", body);
+}
+
 } // namespace Envoy
