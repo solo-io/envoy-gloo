@@ -3,50 +3,22 @@
 #include "common/config/solo_well_known_names.h"
 #include "common/http/filter_utility.h"
 #include "common/http/solo_filter_utility.h"
-#include "common/http/utility.h"
 
 namespace Envoy {
 namespace Http {
 
-FunctionalFilterBase::~FunctionalFilterBase() {}
+using Envoy::Server::Configuration::FactoryContext;
 
-void FunctionalFilterBase::onDestroy() { is_reset_ = true; }
+FunctionRetrieverMetadataAccessor::~FunctionRetrieverMetadataAccessor() {}
 
-FilterHeadersStatus FunctionalFilterBase::decodeHeaders(HeaderMap &headers,
-                                                        bool end_stream) {
-  tryToGetSpec();
-  if (error_) {
-    // This means a local reply was sent, so no need to continue in the chain.
-    return FilterHeadersStatus::StopIteration;
-  }
-  if (active()) {
-    return functionDecodeHeaders(headers, end_stream);
-  }
-  return FilterHeadersStatus::Continue;
-}
-
-FilterDataStatus FunctionalFilterBase::decodeData(Buffer::Instance &data,
-                                                  bool end_stream) {
-  if (active()) {
-    return functionDecodeData(data, end_stream);
-  }
-  return FilterDataStatus::Continue;
-}
-
-FilterTrailersStatus FunctionalFilterBase::decodeTrailers(HeaderMap &trailers) {
-  if (active()) {
-    return functionDecodeTrailers(trailers);
-  }
-  return FilterTrailersStatus::Continue;
-}
-
-Optional<const std::string *> FunctionalFilterBase::getFunctionName() const {
+Optional<const std::string *>
+FunctionRetrieverMetadataAccessor::getFunctionName() const {
   RELEASE_ASSERT(function_name_);
   return function_name_;
 }
 
 Optional<const ProtobufWkt::Struct *>
-FunctionalFilterBase::getFunctionSpec() const {
+FunctionRetrieverMetadataAccessor::getFunctionSpec() const {
   if (cluster_spec_ == nullptr) {
     return {};
   }
@@ -54,13 +26,13 @@ FunctionalFilterBase::getFunctionSpec() const {
 }
 
 Optional<const ProtobufWkt::Struct *>
-FunctionalFilterBase::getClusterMetadata() const {
+FunctionRetrieverMetadataAccessor::getClusterMetadata() const {
   RELEASE_ASSERT(child_spec_);
   return child_spec_;
 }
 
 Optional<const ProtobufWkt::Struct *>
-FunctionalFilterBase::getRouteMetadata() const {
+FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
 
   if (route_spec_) {
     return route_spec_;
@@ -89,17 +61,18 @@ FunctionalFilterBase::getRouteMetadata() const {
   return {};
 }
 
-void FunctionalFilterBase::tryToGetSpec() {
+Optional<FunctionRetrieverMetadataAccessor::Result>
+FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   const Envoy::Router::RouteEntry *routeEntry =
       SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
   if (!routeEntry) {
-    return;
+    return {};
   }
 
   fetchClusterInfoIfOurs();
 
   if (!cluster_info_) {
-    return;
+    return {};
   }
   // So now we know this this route is to a functional upstream. i.e. we must be
   // able to do a function route or error.
@@ -109,8 +82,7 @@ void FunctionalFilterBase::tryToGetSpec() {
   const auto filter_it = metadata.filter_metadata().find(
       Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
-    error();
-    return;
+    return Result::Error;
   }
 
   // this needs to have a field with the name of the cluster:
@@ -120,46 +92,38 @@ void FunctionalFilterBase::tryToGetSpec() {
   const auto cluster_it =
       filter_metadata_struct_fields.find(cluster_info_->name());
   if (cluster_it == filter_metadata_struct_fields.end()) {
-    error();
-    return;
+    return Result::Error;
   }
   // the value is a struct with either a single function of multiple functions
   // with weights.
   const ProtobufWkt::Value &clustervalue = cluster_it->second;
   if (clustervalue.kind_case() != ProtobufWkt::Value::kStructValue) {
-    error();
-    return;
+    return Result::Error;
   }
   const auto &clusterstruct = clustervalue.struct_value();
 
-  for (auto &&fptr : {&FunctionalFilterBase::findSingleFunction,
-                      &FunctionalFilterBase::findMultileFunction}) {
+  for (auto &&fptr :
+       {&FunctionRetrieverMetadataAccessor::findSingleFunction,
+        &FunctionRetrieverMetadataAccessor::findMultileFunction}) {
     Optional<const std::string *> maybe_single_func =
         (this->*fptr)(clusterstruct);
     if (maybe_single_func.valid()) {
+      // we found a function so the search is over.
       function_name_ = maybe_single_func.value();
       cluster_spec_ = nullptr;
       tryToGetSpecFromCluster(*function_name_);
-      active_ = retrieveFunction(*this);
-      if (!active_) {
-        // we found a function but we are not active.
-        // this means retrieval failed.
-        // return internal server error
-        // TODO(yuval-k): do we want to return a different error type here?
-        error();
-      }
-      // we found a function so the search is over.
-      return;
+
+      return Result::Active;
     }
   }
 
   // Function not found :(
   // return a 404
-
-  error();
+  return Result::Error;
 }
 
-Optional<const std::string *> FunctionalFilterBase::findSingleFunction(
+Optional<const std::string *>
+FunctionRetrieverMetadataAccessor::findSingleFunction(
     const ProtobufWkt::Struct &filter_metadata_struct) {
 
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
@@ -180,7 +144,8 @@ Optional<const std::string *> FunctionalFilterBase::findSingleFunction(
   return Optional<const std::string *>(&value.string_value());
 }
 
-Optional<const std::string *> FunctionalFilterBase::findMultileFunction(
+Optional<const std::string *>
+FunctionRetrieverMetadataAccessor::findMultileFunction(
     const ProtobufWkt::Struct &filter_metadata_struct) {
 
   const auto &filter_metadata_fields = filter_metadata_struct.fields();
@@ -250,8 +215,8 @@ Optional<const std::string *> FunctionalFilterBase::findMultileFunction(
   return {};
 }
 
-Optional<FunctionalFilterBase::FunctionWeight>
-FunctionalFilterBase::getFuncWeight(
+Optional<FunctionRetrieverMetadataAccessor::FunctionWeight>
+FunctionRetrieverMetadataAccessor::getFuncWeight(
     const ProtobufWkt::Value &function_weight_value) {
 
   if (function_weight_value.kind_case() != ProtobufWkt::Value::kStructValue) {
@@ -283,7 +248,7 @@ FunctionalFilterBase::getFuncWeight(
   return FunctionWeight{weight, &name_value.string_value()};
 }
 
-void FunctionalFilterBase::tryToGetSpecFromCluster(
+void FunctionRetrieverMetadataAccessor::tryToGetSpecFromCluster(
     const std::string &funcname) {
 
   const auto &metadata = cluster_info_->metadata();
@@ -323,7 +288,7 @@ void FunctionalFilterBase::tryToGetSpecFromCluster(
   cluster_spec_ = &specvalue.struct_value();
 }
 
-void FunctionalFilterBase::fetchClusterInfoIfOurs() {
+void FunctionRetrieverMetadataAccessor::fetchClusterInfoIfOurs() {
 
   if (cluster_info_) {
     return;
@@ -338,19 +303,6 @@ void FunctionalFilterBase::fetchClusterInfoIfOurs() {
     cluster_info_ = cluster_info;
     child_spec_ = &filter_it->second;
   }
-}
-
-void FunctionalFilterBase::error() {
-  // error :(
-  // free shared pointers.
-  cluster_spec_ = nullptr;
-  child_spec_ = nullptr;
-  cluster_info_ = nullptr;
-  route_spec_ = nullptr;
-  route_info_ = nullptr;
-  error_ = true;
-  Utility::sendLocalReply(*decoder_callbacks_, is_reset_, Code::NotFound,
-                          "Function not found");
 }
 
 } // namespace Http

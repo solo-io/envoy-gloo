@@ -4,36 +4,34 @@
 #include "envoy/server/filter_config.h"
 #include "envoy/upstream/cluster_manager.h"
 
+#include "common/http/utility.h"
 #include "common/protobuf/utility.h"
 
 namespace Envoy {
 namespace Http {
 
-using Envoy::Server::Configuration::FactoryContext;
-
-class FunctionalFilterBase : public StreamDecoderFilter,
-                             public MetadataAccessor,
-                             public Logger::Loggable<Logger::Id::filter> {
+class FunctionRetriever {
 public:
-  FunctionalFilterBase(FactoryContext &ctx, const std::string &childname)
+  virtual ~FunctionRetriever() {}
+  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) PURE;
+};
+
+class FunctionRetrieverMetadataAccessor : public MetadataAccessor {
+public:
+  FunctionRetrieverMetadataAccessor(
+      Envoy::Server::Configuration::FactoryContext &ctx,
+      const std::string &childname)
       : cm_(ctx.clusterManager()), random_(ctx.random()),
         childname_(childname) {}
-  virtual ~FunctionalFilterBase();
 
-  // Http::StreamFilterBase
-  void onDestroy() override;
+  ~FunctionRetrieverMetadataAccessor();
 
-  // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap &headers,
-                                    bool end_stream) override;
-  FilterDataStatus decodeData(Buffer::Instance &data, bool end_stream) override;
+  enum class Result {
+    Error,
+    Active,
+  };
 
-  FilterTrailersStatus decodeTrailers(HeaderMap &trailers) override;
-
-  void setDecoderFilterCallbacks(
-      StreamDecoderFilterCallbacks &decoder_callbacks) override {
-    decoder_callbacks_ = &decoder_callbacks;
-  }
+  Optional<Result> tryToGetSpec();
 
   // MetadataAccessor
   Optional<const std::string *> getFunctionName() const override;
@@ -41,14 +39,10 @@ public:
   Optional<const ProtobufWkt::Struct *> getClusterMetadata() const override;
   Optional<const ProtobufWkt::Struct *> getRouteMetadata() const override;
 
-protected:
-  StreamDecoderFilterCallbacks *decoder_callbacks_{};
-  bool is_reset_{};
-
-  virtual FilterHeadersStatus functionDecodeHeaders(HeaderMap &m, bool e) PURE;
-  virtual FilterDataStatus functionDecodeData(Buffer::Instance &, bool) PURE;
-  virtual FilterTrailersStatus functionDecodeTrailers(HeaderMap &) PURE;
-  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) PURE;
+  void
+  setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &decoder_callbacks) {
+    decoder_callbacks_ = &decoder_callbacks;
+  }
 
 private:
   struct FunctionWeight {
@@ -59,7 +53,6 @@ private:
   Upstream::ClusterManager &cm_;
   Envoy::Runtime::RandomGenerator &random_;
   const std::string &childname_;
-  bool active_{false};
 
   Upstream::ClusterInfoConstSharedPtr cluster_info_{};
   const std::string *function_name_{};        // function name is here
@@ -70,9 +63,8 @@ private:
 
   mutable Router::RouteConstSharedPtr route_info_{};
   mutable const ProtobufWkt::Struct *route_spec_{};
-  bool error_{};
 
-  void tryToGetSpec();
+  StreamDecoderFilterCallbacks *decoder_callbacks_{};
 
   Optional<const std::string *>
   findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
@@ -84,8 +76,95 @@ private:
 
   void tryToGetSpecFromCluster(const std::string &funcname);
   void fetchClusterInfoIfOurs();
-  void error();
-  bool active() const { return active_; }
+};
+
+template <typename MixinBase> class FunctionalFilterMixin : public MixinBase {
+
+  static_assert(std::is_base_of<StreamDecoderFilter, MixinBase>::value,
+                "Base must be StreamDecoderFilter or StreamFilter");
+  static_assert(std::is_base_of<FunctionRetriever, MixinBase>::value,
+                "Base must be StreamDecoderFilter or StreamFilter");
+
+public:
+  FunctionalFilterMixin(Envoy::Server::Configuration::FactoryContext &ctx,
+                        const std::string &childname)
+      : metadata_accessor_(ctx, childname) {}
+  virtual ~FunctionalFilterMixin() {}
+
+  // Http::StreamFilterBase
+  void onDestroy() override {
+    is_reset_ = true;
+    MixinBase::onDestroy();
+  }
+
+  // Http::StreamDecoderFilter
+  FilterHeadersStatus decodeHeaders(HeaderMap &headers,
+                                    bool end_stream) override {
+    auto mayberesult = metadata_accessor_.tryToGetSpec();
+    // no function
+    if (!mayberesult.valid()) {
+      return FilterHeadersStatus::Continue;
+    }
+
+    // get the function:
+    auto result = mayberesult.value();
+
+    switch (result) {
+    case FunctionRetrieverMetadataAccessor::Result::Active: {
+      // we should have a function!
+      active_ = MixinBase::retrieveFunction(metadata_accessor_);
+      if (active_) {
+        return MixinBase::decodeHeaders(headers, end_stream);
+      } else {
+        // we found a function but we are not active.
+        // this means retrieval failed.
+        // return internal server error
+        // TODO(yuval-k): do we want to return a different error type here?
+
+        error();
+        return FilterHeadersStatus::StopIteration;
+      }
+    }
+    default:
+      // Not active, this means some sort of error..
+      error();
+      return FilterHeadersStatus::StopIteration;
+    }
+  }
+
+  FilterDataStatus decodeData(Buffer::Instance &data,
+                              bool end_stream) override {
+    if (active_) {
+      return MixinBase::decodeData(data, end_stream);
+    }
+    return FilterDataStatus::Continue;
+  }
+
+  FilterTrailersStatus decodeTrailers(HeaderMap &trailers) override {
+    if (active_) {
+      return MixinBase::decodeTrailers(trailers);
+    }
+    return FilterTrailersStatus::Continue;
+  }
+
+  void setDecoderFilterCallbacks(
+      StreamDecoderFilterCallbacks &decoder_callbacks) override {
+    decoder_callbacks_ = &decoder_callbacks;
+    metadata_accessor_.setDecoderFilterCallbacks(decoder_callbacks);
+    MixinBase::setDecoderFilterCallbacks(decoder_callbacks);
+  }
+
+  StreamDecoderFilterCallbacks *decoder_callbacks_{};
+
+private:
+  FunctionRetrieverMetadataAccessor metadata_accessor_;
+  bool is_reset_{false};
+  bool active_{false};
+
+  void error() {
+    Utility::sendLocalReply(*decoder_callbacks_, is_reset_, Code::NotFound,
+                            "Function not found");
+  }
 };
 
 } // namespace Http
