@@ -14,6 +14,7 @@ namespace Http {
  */
 class MetadataAccessor {
 public:
+  // Get the name of the function.
   virtual Optional<const std::string *> getFunctionName() const PURE;
   // Get the function to route to in the current cluster.
   virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const PURE;
@@ -21,9 +22,22 @@ public:
   virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const PURE;
   // Get the route metadata for the current filter
   virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
-  // TODO: get function name for things like NATs without predefined topics.
 
   virtual ~MetadataAccessor() {}
+};
+
+/**
+ * This interface should be implemented by function filters. the
+ * retrieveFunction will be invoked prior to decode headers to allow the filter
+ * to get a function.
+ * */
+class FunctionalFilter {
+public:
+  // Get a function via the metadata accessor. return true for success, false
+  // for failure.
+  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) PURE;
+
+  virtual ~FunctionalFilter() {}
 };
 
 } // namespace Http

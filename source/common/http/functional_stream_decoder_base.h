@@ -10,12 +10,6 @@
 namespace Envoy {
 namespace Http {
 
-class FunctionRetriever {
-public:
-  virtual ~FunctionRetriever() {}
-  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) PURE;
-};
-
 class FunctionRetrieverMetadataAccessor : public MetadataAccessor {
 public:
   FunctionRetrieverMetadataAccessor(
@@ -82,13 +76,15 @@ template <typename MixinBase> class FunctionalFilterMixin : public MixinBase {
 
   static_assert(std::is_base_of<StreamDecoderFilter, MixinBase>::value,
                 "Base must be StreamDecoderFilter or StreamFilter");
-  static_assert(std::is_base_of<FunctionRetriever, MixinBase>::value,
+  static_assert(std::is_base_of<FunctionalFilter, MixinBase>::value,
                 "Base must be StreamDecoderFilter or StreamFilter");
 
 public:
+  template <class... Ts>
   FunctionalFilterMixin(Envoy::Server::Configuration::FactoryContext &ctx,
-                        const std::string &childname)
-      : metadata_accessor_(ctx, childname) {}
+                        const std::string &childname, Ts &&... args)
+      : MixinBase(std::forward<Ts>(args)...),
+        metadata_accessor_(ctx, childname) {}
   virtual ~FunctionalFilterMixin() {}
 
   // Http::StreamFilterBase
