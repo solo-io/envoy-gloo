@@ -95,8 +95,10 @@ std::string TransformerInstance::render(const std::string &input) {
 }
 
 Transformer::Transformer(
-    const envoy::api::v2::filter::http::Transformation &transformation)
-    : transformation_(transformation) {}
+    const envoy::api::v2::filter::http::Transformation &transformation,
+    bool advanced_templates)
+    : transformation_(transformation), advanced_templates_(advanced_templates) {
+}
 
 Transformer::~Transformer() {}
 
@@ -126,8 +128,11 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
     const std::string &name = it->first;
     const envoy::api::v2::filter::http::Extraction &extractor = it->second;
-
-    extractions[name] = ExtractorUtil::extract(extractor, header_map);
+    if (advanced_templates_) {
+      extractions[name] = ExtractorUtil::extract(extractor, header_map);
+    } else {
+      json_body[name] = ExtractorUtil::extract(extractor, header_map);
+    }
   }
   // start transforming!
   TransformerInstance instance(header_map, extractions, json_body);

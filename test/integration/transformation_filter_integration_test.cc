@@ -11,6 +11,7 @@ const std::string DEFAULT_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
+  advanced_templates: true
   transformations:
     translation1:
       extractors:
@@ -30,6 +31,7 @@ const std::string BODY_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
+  advanced_templates: true
   transformations:
     translation1:
       request_template:

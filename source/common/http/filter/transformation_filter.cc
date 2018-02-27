@@ -101,14 +101,14 @@ void TransformationFilter::checkActive() {
 
 void TransformationFilter::transform() {
   try {
-    Transformer transformer(*transformation_);
+    Transformer transformer(*transformation_, config_->advanced_templates());
     transformer.transform(*header_map_, body_);
     callbacks_->addDecodedData(body_, false);
   } catch (nlohmann::json::parse_error &e) {
     // json may throw parse error
     error(Error::JsonParseError);
   } catch (std::runtime_error &e) {
-    // inja throws runtime error
+    // inja may throw runtime error
     error(Error::TemplateParseError);
   }
 }

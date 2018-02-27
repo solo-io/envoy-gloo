@@ -123,7 +123,36 @@ TEST(Transformer, transform) {
   (*transformation.mutable_request_template()->mutable_headers())["x-header"]
       .set_text("{{upper(\"abc\")}}");
 
-  Transformer transformer(transformation);
+  Transformer transformer(transformation, true);
+  transformer.transform(headers, body);
+
+  std::string res = TestUtility::bufferToString(body);
+
+  EXPECT_EQ("123456789", res);
+  EXPECT_EQ("ABC", headers.get_("x-header"));
+}
+TEST(Transformer, transformsimpl) {
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body("{\"a\":\"456\"}");
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/users/(\\d+)");
+  extractor.set_subgroup(1);
+
+  envoy::api::v2::filter::http::Transformation transformation;
+
+  (*transformation.mutable_extractors())["ext1"] = extractor;
+  transformation.mutable_request_template()->mutable_body()->set_text(
+      "{{ext1}}{{a}}{{header(\"x-test\")}}");
+
+  (*transformation.mutable_request_template()->mutable_headers())["x-header"]
+      .set_text("{{upper(\"abc\")}}");
+
+  Transformer transformer(transformation, false);
   transformer.transform(headers, body);
 
   std::string res = TestUtility::bufferToString(body);

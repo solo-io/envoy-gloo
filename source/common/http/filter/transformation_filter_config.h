@@ -15,6 +15,7 @@ public:
   TransformationFilterConfig(ProtoConfig proto_config);
 
   bool empty() { return proto_config_.transformations().empty(); }
+  bool advanced_templates() { return proto_config_.advanced_templates(); }
 
   const envoy::api::v2::filter::http::Transformation *
   getTranformation(const std::string &name);
