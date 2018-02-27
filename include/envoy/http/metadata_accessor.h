@@ -8,27 +8,34 @@
 namespace Envoy {
 namespace Http {
 
+class FilterMetadataAccessor {
+public:
+
+  // Get the cluster metadata for the current filter
+  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const PURE;
+  // Get the route metadata for the current filter
+  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
+
+  virtual ~FilterMetadataAccessor() {}
+
+};
 /**
  * This interface is helper to get metadata structs from various
  * objects in the current filter context.
  */
-class MetadataAccessor {
+class MetadataAccessor : public FilterMetadataAccessor {
 public:
   // Get the name of the function.
   virtual Optional<const std::string *> getFunctionName() const PURE;
   // Get the function to route to in the current cluster.
   virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const PURE;
-  // Get the cluster metadata for the current filter
-  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const PURE;
-  // Get the route metadata for the current filter
-  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
 
   virtual ~MetadataAccessor() {}
 };
 
 /**
  * This interface should be implemented by function filters. the
- * retrieveFunction will be invoked prior to decode headers to allow the filter
+ * retrieveFunction will be invoked prior to decodeHeaders to allow the filter
  * to get a function.
  * */
 class FunctionalFilter {
