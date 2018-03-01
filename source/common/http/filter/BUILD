@@ -49,8 +49,8 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/common/config:lambda_well_known_names_lib",
-        "@envoy_common//include/envoy/http:metadata_accessor_interface",
-        "@envoy_common//source/common/http:solo_filter_utility_lib",
+        "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
+        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
 
@@ -68,7 +68,7 @@ envoy_cc_library(
         "//source/common/http/filter:function_retriever_lib",
         "//source/common/http/filter:lambda_filter_config",
         "@envoy//source/exe:envoy_common_lib",
-        "@envoy_common//include/envoy/http:metadata_accessor_interface",
-        "@envoy_common//source/common/http:solo_filter_utility_lib",
+        "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
+        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
