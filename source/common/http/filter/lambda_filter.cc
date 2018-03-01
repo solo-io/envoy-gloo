@@ -26,14 +26,11 @@ const LowerCaseString LambdaFilter::LOG_TYPE("x-amz-log-type");
 const std::string LambdaFilter::LOG_NONE("None");
 
 // TODO(yuval-k) can the config be removed?
-LambdaFilter::LambdaFilter(Server::Configuration::FactoryContext &ctx,
-                           const std::string &name,
-                           LambdaFilterConfigSharedPtr config,
+LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
                            Http::FunctionRetrieverSharedPtr retreiver)
-    : FunctionalFilterBase(ctx, name), config_(config),
-      function_retriever_(retreiver) {}
+    : config_(config), function_retriever_(retreiver) {}
 
-LambdaFilter::~LambdaFilter() { cleanup(); }
+LambdaFilter::~LambdaFilter() {}
 
 std::string LambdaFilter::functionUrlPath() {
 
@@ -48,8 +45,7 @@ std::string LambdaFilter::functionUrlPath() {
 }
 
 Envoy::Http::FilterHeadersStatus
-LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
-                                    bool end_stream) {
+LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
   RELEASE_ASSERT(current_function_.valid());
   const auto &current_function = current_function_.value();
 
@@ -72,8 +68,7 @@ LambdaFilter::functionDecodeHeaders(Envoy::Http::HeaderMap &headers,
 }
 
 Envoy::Http::FilterDataStatus
-LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
-                                 bool end_stream) {
+LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
   if (!current_function_.valid()) {
     return Envoy::Http::FilterDataStatus::Continue;
   }
@@ -88,7 +83,7 @@ LambdaFilter::functionDecodeData(Envoy::Buffer::Instance &data,
 }
 
 Envoy::Http::FilterTrailersStatus
-LambdaFilter::functionDecodeTrailers(Envoy::Http::HeaderMap &) {
+LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
   if (current_function_.valid()) {
     lambdafy();
   }

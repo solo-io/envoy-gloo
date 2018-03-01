@@ -22,19 +22,27 @@ using testing::WithArg;
 using testing::_;
 
 namespace Envoy {
+namespace Http {
 
 using Http::LambdaFilterConfig;
 using Server::Configuration::LambdaFilterConfigFactory;
 
-namespace {
-/*
-LambdaFilterConfig
-constructLambdaFilterConfigFromJson(const Json::Object &config) {
-  auto proto_config = LambdaFilterConfigFactory::translateLambdaFilter(config);
-  return LambdaFilterConfig(proto_config);
-}
-*/
-} // namespace
+// Nothing here as we mock the function retriever
+class NothingMetadataAccessor : public MetadataAccessor {
+public:
+  virtual Optional<const std::string *> getFunctionName() const { return {}; }
+  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+    return {};
+  }
+  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+    return {};
+  }
+  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+    return {};
+  }
+
+  virtual ~NothingMetadataAccessor() {}
+};
 
 TEST(LambdaFilterConfigTest, EmptyConfig) {
   envoy::api::v2::filter::http::Lambda config;
@@ -42,8 +50,6 @@ TEST(LambdaFilterConfigTest, EmptyConfig) {
   // shouldnt throw.
   LambdaFilterConfig cfg(config);
 }
-
-namespace Http {
 
 class LambdaFilterTest : public testing::Test {
 public:
@@ -55,8 +61,7 @@ protected:
         std::make_shared<NiceMock<Envoy::Http::MockFunctionRetriever>>();
     envoy::api::v2::filter::http::Lambda config;
     config_ = std::make_shared<LambdaFilterConfig>(config);
-    filter_ = std::make_unique<LambdaFilter>(factory_context_, "doesn't matter",
-                                             config_, function_retriever_);
+    filter_ = std::make_unique<LambdaFilter>(config_, function_retriever_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -79,9 +84,9 @@ TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
 
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
@@ -94,14 +99,14 @@ TEST_F(LambdaFilterTest, SingsOnDataEndStream) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
-            filter_->functionDecodeHeaders(headers, false));
+            filter_->decodeHeaders(headers, false));
   EXPECT_FALSE(headers.has("Authorization"));
   Buffer::OwnedImpl data("data");
 
   EXPECT_EQ(Envoy::Http::FilterDataStatus::Continue,
-            filter_->functionDecodeData(data, true));
+            filter_->decodeData(data, true));
 
   EXPECT_TRUE(headers.has("Authorization"));
 }
@@ -111,9 +116,9 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
                 "/invocations?Qualifier=" + function_retriever_->qualifier_,
@@ -136,9 +141,9 @@ TEST_F(LambdaFilterTest, FuncWithoutQualifierCalled) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
                 "/invocations",
@@ -151,9 +156,9 @@ TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
                 "/invocations",
@@ -166,9 +171,9 @@ TEST_F(LambdaFilterTest, AsyncCalled) {
                                          {":path", "/getsomething"}};
 
   function_retriever_->async_ = true;
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
 }
 
@@ -178,9 +183,9 @@ TEST_F(LambdaFilterTest, SyncCalled) {
                                          {":path", "/getsomething"}};
 
   function_retriever_->async_ = false;
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::Continue,
-            filter_->functionDecodeHeaders(headers, true));
+            filter_->decodeHeaders(headers, true));
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
@@ -190,18 +195,18 @@ TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  ASSERT_EQ(true, filter_->retrieveFunction(*filter_));
+  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(Envoy::Http::FilterHeadersStatus::StopIteration,
-            filter_->functionDecodeHeaders(headers, false));
+            filter_->decodeHeaders(headers, false));
   Buffer::OwnedImpl data("data");
 
   EXPECT_EQ(Envoy::Http::FilterDataStatus::StopIterationAndBuffer,
-            filter_->functionDecodeData(data, false));
+            filter_->decodeData(data, false));
   EXPECT_FALSE(headers.has("Authorization"));
 
   Envoy::Http::TestHeaderMapImpl trailers;
   EXPECT_EQ(Envoy::Http::FilterTrailersStatus::Continue,
-            filter_->functionDecodeTrailers(trailers));
+            filter_->decodeTrailers(trailers));
 
   EXPECT_TRUE(headers.has("Authorization"));
 }
@@ -215,7 +220,7 @@ TEST_F(LambdaFilterTest, InvalidFunction) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
 
-  EXPECT_EQ(false, filter_->retrieveFunction(*filter_));
+  EXPECT_EQ(false, filter_->retrieveFunction(NothingMetadataAccessor()));
 }
 
 } // namespace Http

@@ -16,4 +16,7 @@ envoy_cc_library(
     name = "lambda_well_known_names_lib",
     hdrs = ["lambda_well_known_names.h"],
     repository = "@envoy",
+    deps = [
+        "@envoy//source/common/singleton:const_singleton",
+    ],
 )

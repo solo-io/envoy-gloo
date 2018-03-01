@@ -3,13 +3,13 @@
 #include <map>
 #include <string>
 
+#include "envoy/http/metadata_accessor.h"
 #include "envoy/upstream/cluster_manager.h"
 
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
 #include "common/http/filter/function_retriever.h"
 #include "common/http/filter/lambda_filter_config.h"
-#include "common/http/functional_stream_decoder_base.h"
 
 #include "server/config/network/http_connection_manager.h"
 
@@ -18,17 +18,27 @@
 namespace Envoy {
 namespace Http {
 
-class LambdaFilter : public FunctionalFilterBase {
+/*
+ * A filter to make calls to AWS Lambda. Note that as a functional filter,
+ * it expects retrieveFunction to be called before decodeHeaders.
+ */
+class LambdaFilter : public StreamDecoderFilter, public FunctionalFilter {
 public:
-  LambdaFilter(Server::Configuration::FactoryContext &ctx,
-               const std::string &name, LambdaFilterConfigSharedPtr config,
+  LambdaFilter(LambdaFilterConfigSharedPtr config,
                FunctionRetrieverSharedPtr retreiver);
   ~LambdaFilter();
+  
+  // Http::StreamFilterBase
+  void onDestroy() override {}
+  
+  // Http::StreamDecoderFilter
+  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
+  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
+  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
+  void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &) override {}
+  
 
-  // Http::FunctionalFilterBase
-  FilterHeadersStatus functionDecodeHeaders(HeaderMap &, bool) override;
-  FilterDataStatus functionDecodeData(Buffer::Instance &, bool) override;
-  FilterTrailersStatus functionDecodeTrailers(HeaderMap &) override;
+  // Http::FunctionalFilter
   bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
 private:

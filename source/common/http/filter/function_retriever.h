@@ -4,11 +4,11 @@
 
 #include "envoy/common/optional.h"
 #include "envoy/common/pure.h"
+#include "envoy/http/metadata_accessor.h"
 #include "envoy/router/router.h"
 #include "envoy/upstream/upstream.h"
 
 #include "common/http/filter/function.h"
-#include "common/http/functional_stream_decoder_base.h"
 
 namespace Envoy {
 namespace Http {

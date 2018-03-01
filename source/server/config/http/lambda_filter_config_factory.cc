@@ -11,6 +11,7 @@
 #include "common/http/filter/lambda_filter.h"
 #include "common/http/filter/lambda_filter_config.h"
 #include "common/http/filter/metadata_function_retriever.h"
+#include "common/http/functional_stream_decoder_base.h"
 #include "common/protobuf/utility.h"
 
 #include "lambda_filter.pb.h"
@@ -18,6 +19,8 @@
 namespace Envoy {
 namespace Server {
 namespace Configuration {
+
+typedef Http::FunctionalFilterMixin<Http::LambdaFilter> MixedLambdaFilter;
 
 HttpFilterFactoryCb LambdaFilterConfigFactory::createFilterFactory(
     const Json::Object &, const std::string &, FactoryContext &) {
@@ -67,7 +70,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
 
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::LambdaFilter(
+    auto filter = new MixedLambdaFilter(
         context, Config::SoloMetadataFilters::get().LAMBDA, config,
         functionRetriever);
     callbacks.addStreamDecoderFilter(
