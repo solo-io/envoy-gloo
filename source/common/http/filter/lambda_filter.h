@@ -27,16 +27,15 @@ public:
   LambdaFilter(LambdaFilterConfigSharedPtr config,
                FunctionRetrieverSharedPtr retreiver);
   ~LambdaFilter();
-  
+
   // Http::StreamFilterBase
   void onDestroy() override {}
-  
+
   // Http::StreamDecoderFilter
   FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
   FilterDataStatus decodeData(Buffer::Instance &, bool) override;
   FilterTrailersStatus decodeTrailers(HeaderMap &) override;
   void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &) override {}
-  
 
   // Http::FunctionalFilter
   bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
