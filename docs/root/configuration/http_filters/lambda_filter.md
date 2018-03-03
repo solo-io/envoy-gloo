@@ -1,5 +1,11 @@
 # Lambda
 
+!!! attention
+    The Lambda HTTP filter is **experimental**, and is not meant to be used in production yet. It
+    is being released for initial feedback and for further development, testing, and verification.
+    This warning will be removed when we feel that the filter has received enough testing and API
+    stability to call it generally production ready.
+
 ## Overview
 
 Lambda is an HTTP filter which enables Envoy to integrate with

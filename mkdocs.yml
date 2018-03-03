@@ -14,3 +14,5 @@ copyright: © Copyright 2018, envoy-lambda Project Authors
 theme: readthedocs
 extra_css: [extra.css]
 version: 1.0
+markdown_extensions:
+  - admonition
