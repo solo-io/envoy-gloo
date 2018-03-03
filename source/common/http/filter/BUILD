@@ -41,7 +41,7 @@ envoy_cc_library(
         "//source/common/http/filter:transformation_filter_config",
         "//source/common/http/filter:transformer_lib",
         "@envoy//source/exe:envoy_common_lib",
-        "@envoy_common//source/common/http:solo_filter_utility_lib",
+        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
 
