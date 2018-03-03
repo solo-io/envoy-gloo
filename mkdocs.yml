@@ -1,0 +1,16 @@
+site_name: Envoy Transformation HTTP Filter
+pages:
+    - Envoy Transformation HTTP filter documentation: index.md
+    - Configuration reference:
+        - HTTP filters:
+            - Transformation: root/configuration/http_filters/transformation_filter.md
+    - v2 API reference:
+        - Filters:
+            - HTTP filters:
+                - Transformation: root/api-v2/config/filter/http/http.md
+repo_url: https://github.com/solo-io/envoy-transformation/
+site_author: envoy-transformation Project Authors
+copyright: © Copyright 2018, envoy-transformation Project Authors
+theme: readthedocs
+extra_css: [extra.css]
+version: 1.0
