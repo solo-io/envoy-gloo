@@ -1,0 +1,16 @@
+site_name: envoy Lambda HTTP Filter
+pages:
+    - Envoy Lambda HTTP filter documentation: index.md
+    - Configuration reference:
+        - HTTP filters:
+            - Lambda: root/configuration/http_filters/lambda_filter.md
+    - v2 API reference:
+        - Filters:
+            - HTTP filters:
+                - Lambda: root/api-v2/config/filter/http/http.md
+repo_url: https://github.com/solo-io/envoy-lambda/
+site_author: envoy-lambda Project Authors
+copyright: © Copyright 2018, envoy-lambda Project Authors
+theme: readthedocs
+extra_css: [extra.css]
+version: 1.0
