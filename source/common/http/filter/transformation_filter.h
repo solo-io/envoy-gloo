@@ -65,7 +65,7 @@ private:
   void requestError();
   void responseError();
   void resetInternalState();
-  void error(Error error);
+  void error(Error error, std::string msg = "");
   bool is_error();
 
   TransformationFilterConfigSharedPtr config_;

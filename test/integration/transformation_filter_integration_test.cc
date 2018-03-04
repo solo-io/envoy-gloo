@@ -130,7 +130,6 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   initialize();
   Envoy::Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  // TODO(yuval-k): change this to test a body transformation
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
@@ -148,7 +147,6 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   initialize();
   Envoy::Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  // TODO(yuval-k): change this to test a body transformation
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
@@ -159,7 +157,24 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("efg", body);
   std::string rbody = response_->body();
-  EXPECT_EQ("bad request", rbody);
+  EXPECT_NE(std::string::npos, rbody.find("bad request"));
+}
+
+TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
+  transform_response_ = true;
+  filter_string_ = BODY_TRANSFORMATION_FILTER;
+  initialize();
+  Envoy::Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto downstream_request =
+      &codec_client_->startRequest(request_headers, *response_);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest("{\"abc\":\"soloio\"}");
+
+  std::string rbody = response_->body();
+  EXPECT_EQ("soloio", rbody);
 }
 
 } // namespace Envoy

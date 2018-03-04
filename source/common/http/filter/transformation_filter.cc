@@ -175,10 +175,10 @@ void TransformationFilter::transformRequest() {
 
   } catch (nlohmann::json::parse_error &e) {
     // json may throw parse error
-    error(Error::JsonParseError);
+    error(Error::JsonParseError, e.what());
   } catch (std::runtime_error &e) {
     // inja may throw runtime error
-    error(Error::TemplateParseError);
+    error(Error::TemplateParseError, e.what());
   }
 
   if (is_error()) {
@@ -199,10 +199,10 @@ void TransformationFilter::transformResponse() {
     }
   } catch (nlohmann::json::parse_error &e) {
     // json may throw parse error
-    error(Error::JsonParseError);
+    error(Error::JsonParseError, e.what());
   } catch (std::runtime_error &e) {
     // inja may throw runtime error
-    error(Error::TemplateParseError);
+    error(Error::TemplateParseError, e.what());
   }
 
   if (is_error()) {
@@ -230,7 +230,7 @@ void TransformationFilter::resetInternalState() {
   response_body_.drain(response_body_.length());
 }
 
-void TransformationFilter::error(Error error) {
+void TransformationFilter::error(Error error, std::string msg) {
   error_ = error;
   resetInternalState();
   switch (error) {
@@ -249,6 +249,13 @@ void TransformationFilter::error(Error error) {
     error_code_ = Http::Code::BadRequest;
     break;
   }
+  }
+  if (!msg.empty()) {
+    if (error_messgae_.empty()) {
+      error_messgae_ = std::move(msg);
+    } else {
+      error_messgae_ = error_messgae_ + ": " + msg;
+    }
   }
 }
 
