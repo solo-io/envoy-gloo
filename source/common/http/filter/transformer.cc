@@ -142,10 +142,10 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
 
     // remove content length, as we have new body.
     header_map.removeContentLength();
-
     // replace body
     body.drain(body.length());
     body.add(output);
+    header_map.insertContentLength().value(body.length());
   }
 
   // add headers

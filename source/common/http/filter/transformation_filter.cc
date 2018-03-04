@@ -1,5 +1,6 @@
 #include "common/http/filter/transformation_filter.h"
 
+#include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/config/transformation_well_known_names.h"
 #include "common/http/filter/transformer.h"
@@ -23,16 +24,16 @@ void TransformationFilter::onDestroy() {
 FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
                                                         bool end_stream) {
 
-  checkActive();
+  checkRequestActive();
 
-  if (!active()) {
+  if (!requestActive()) {
     return FilterHeadersStatus::Continue;
   }
 
   header_map_ = &header_map;
 
   if (end_stream) {
-    transform();
+    transformRequest();
 
     return is_error() ? FilterHeadersStatus::StopIteration
                       : FilterHeadersStatus::Continue;
@@ -43,19 +44,20 @@ FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
 
 FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
                                                   bool end_stream) {
-  if (!active()) {
+  if (!requestActive()) {
     return FilterDataStatus::Continue;
   }
 
-  body_.move(data);
+  request_body_.move(data);
   if ((decoder_buffer_limit_ != 0) &&
-      (body_.length() > decoder_buffer_limit_)) {
+      (request_body_.length() > decoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
+    requestError();
     return FilterDataStatus::StopIterationNoBuffer;
   }
 
   if (end_stream) {
-    transform();
+    transformRequest();
     return is_error() ? FilterDataStatus::StopIterationNoBuffer
                       : FilterDataStatus::Continue;
   }
@@ -64,46 +66,113 @@ FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 }
 
 FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
-  if (active()) {
-    transform();
+  if (requestActive()) {
+    transformRequest();
   }
   return is_error() ? FilterTrailersStatus::StopIteration
                     : FilterTrailersStatus::Continue;
 }
 
-void TransformationFilter::checkActive() {
-  route_ = callbacks_->route();
-  if (!route_) {
-    return;
+FilterHeadersStatus TransformationFilter::encodeHeaders(HeaderMap &header_map,
+                                                        bool end_stream) {
+
+  checkResponseActive();
+
+  if (!responseActive()) {
+    return FilterHeadersStatus::Continue;
   }
 
-  const Router::RouteEntry *routeEntry = route_->routeEntry();
+  header_map_ = &header_map;
+
+  if (end_stream) {
+    transformResponse();
+    return FilterHeadersStatus::Continue;
+  }
+
+  return FilterHeadersStatus::StopIteration;
+}
+
+FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
+                                                  bool end_stream) {
+  if (!responseActive()) {
+    return FilterDataStatus::Continue;
+  }
+
+  response_body_.move(data);
+  if ((encoder_buffer_limit_ != 0) &&
+      (response_body_.length() > encoder_buffer_limit_)) {
+    error(Error::PayloadTooLarge);
+    responseError();
+    return FilterDataStatus::Continue;
+  }
+
+  if (end_stream) {
+    transformResponse();
+    return FilterDataStatus::Continue;
+  }
+
+  return FilterDataStatus::StopIterationNoBuffer;
+}
+
+FilterTrailersStatus TransformationFilter::encodeTrailers(HeaderMap &) {
+  if (responseActive()) {
+    transformResponse();
+  }
+  return FilterTrailersStatus::Continue;
+}
+
+void TransformationFilter::checkRequestActive() {
+  request_transformation_ = getTransformFromRoute(
+      decoder_callbacks_->route(),
+      Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION);
+}
+
+void TransformationFilter::checkResponseActive() {
+  response_transformation_ = getTransformFromRoute(
+      encoder_callbacks_->route(),
+      Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION);
+}
+
+const envoy::api::v2::filter::http::Transformation *
+TransformationFilter::getTransformFromRoute(
+    const Router::RouteConstSharedPtr &route, const std::string &key) {
+
+  if (!route) {
+    return nullptr;
+  }
+
+  const Router::RouteEntry *routeEntry = route->routeEntry();
   if (!routeEntry) {
-    return;
+    return nullptr;
   }
 
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
-      Config::TransformationMetadataFilters::get().TRANSFORMATION,
-      Config::MetadataTransformationKeys::get().TRANSFORMATION);
+      Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
 
   if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
-    return;
+    return nullptr;
   }
 
   const auto &string_value = value.string_value();
   if (string_value.empty()) {
-    return;
+    return nullptr;
   }
 
-  transformation_ = config_->getTranformation(string_value);
+  return config_->getTranformation(string_value);
 }
 
-void TransformationFilter::transform() {
+void TransformationFilter::transformRequest() {
   try {
-    Transformer transformer(*transformation_, config_->advanced_templates());
-    transformer.transform(*header_map_, body_);
-    callbacks_->addDecodedData(body_, false);
+    Transformer transformer(*request_transformation_,
+                            config_->advanced_templates());
+    transformer.transform(*header_map_, request_body_);
+    if (request_body_.length() > 0) {
+      decoder_callbacks_->addDecodedData(request_body_, false);
+    } else {
+      header_map_->removeContentType();
+    }
+
   } catch (nlohmann::json::parse_error &e) {
     // json may throw parse error
     error(Error::JsonParseError);
@@ -111,33 +180,76 @@ void TransformationFilter::transform() {
     // inja may throw runtime error
     error(Error::TemplateParseError);
   }
+
+  if (is_error()) {
+    requestError();
+  }
 }
 
-void TransformationFilter::resetInternalState() { body_.drain(body_.length()); }
+void TransformationFilter::transformResponse() {
+  try {
+    Transformer transformer(*response_transformation_,
+                            config_->advanced_templates());
+    transformer.transform(*header_map_, response_body_);
+
+    if (response_body_.length() > 0) {
+      encoder_callbacks_->addEncodedData(response_body_, false);
+    } else {
+      header_map_->removeContentType();
+    }
+  } catch (nlohmann::json::parse_error &e) {
+    // json may throw parse error
+    error(Error::JsonParseError);
+  } catch (std::runtime_error &e) {
+    // inja may throw runtime error
+    error(Error::TemplateParseError);
+  }
+
+  if (is_error()) {
+    responseError();
+  }
+}
+
+void TransformationFilter::requestError() {
+  ASSERT(is_error());
+  Utility::sendLocalReply(*decoder_callbacks_, stream_destroyed_, error_code_,
+                          error_messgae_);
+}
+
+void TransformationFilter::responseError() {
+  ASSERT(is_error());
+  header_map_->Status()->value(enumToInt(error_code_));
+  Buffer::OwnedImpl data(error_messgae_);
+  header_map_->removeContentType();
+  header_map_->insertContentLength().value(data.length());
+  encoder_callbacks_->addEncodedData(data, false);
+}
+
+void TransformationFilter::resetInternalState() {
+  request_body_.drain(request_body_.length());
+  response_body_.drain(response_body_.length());
+}
 
 void TransformationFilter::error(Error error) {
   error_ = error;
   resetInternalState();
-  const char *msg;
-  Http::Code code;
   switch (error) {
   case Error::PayloadTooLarge: {
-    msg = "payload too large";
-    code = Http::Code::PayloadTooLarge;
+    error_messgae_ = "payload too large";
+    error_code_ = Http::Code::PayloadTooLarge;
     break;
   }
   case Error::JsonParseError: {
-    msg = "bad request";
-    code = Http::Code::BadRequest;
+    error_messgae_ = "bad request";
+    error_code_ = Http::Code::BadRequest;
     break;
   }
   case Error::TemplateParseError: {
-    msg = "bad request";
-    code = Http::Code::BadRequest;
+    error_messgae_ = "bad request";
+    error_code_ = Http::Code::BadRequest;
     break;
   }
   }
-  Utility::sendLocalReply(*callbacks_, stream_destroyed_, code, msg);
 }
 
 bool TransformationFilter::is_error() { return error_.valid(); }

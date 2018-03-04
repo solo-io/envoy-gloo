@@ -67,7 +67,7 @@ public:
         *(*route_metadata_.mutable_filter_metadata())
              [Config::TransformationMetadataFilters::get().TRANSFORMATION]
                  .mutable_fields();
-    mymeta[Config::MetadataTransformationKeys::get().TRANSFORMATION]
+    mymeta[Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION]
         .set_string_value(name);
   }
 

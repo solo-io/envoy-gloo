@@ -57,8 +57,8 @@ public:
         [](envoy::config::bootstrap::v2::Bootstrap & /*bootstrap*/) {});
 
     config_helper_.addConfigModifier(
-        [](envoy::config::filter::network::http_connection_manager::v2::
-               HttpConnectionManager &hcm) {
+        [this](envoy::config::filter::network::http_connection_manager::v2::
+                   HttpConnectionManager &hcm) {
 
           auto *metadata = hcm.mutable_route_config()
                                ->mutable_virtual_hosts(0)
@@ -68,9 +68,17 @@ public:
           Config::Metadata::mutableMetadataValue(
               *metadata,
               Config::TransformationMetadataFilters::get().TRANSFORMATION,
-              Config::MetadataTransformationKeys::get().TRANSFORMATION)
+              Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION)
               .set_string_value("translation1");
 
+          if (transform_response_) {
+            Config::Metadata::mutableMetadataValue(
+                *metadata,
+                Config::TransformationMetadataFilters::get().TRANSFORMATION,
+                Config::MetadataTransformationKeys::get()
+                    .RESPONSE_TRANSFORMATION)
+                .set_string_value("translation1");
+          }
         });
 
     HttpIntegrationTest::initialize();
@@ -79,15 +87,21 @@ public:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
-  void processRequest() {
+  void processRequest(std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
-        Http::TestHeaderMapImpl{{":status", "200"}}, true);
+        Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
+
+    if (!body.empty()) {
+      Buffer::OwnedImpl data(body);
+      upstream_request_->encodeData(data, true);
+    }
 
     response_->waitForEndStream();
   }
 
   std::string filter_string_{DEFAULT_TRANSFORMATION_FILTER};
+  bool transform_response_{false};
 };
 
 INSTANTIATE_TEST_CASE_P(
@@ -123,9 +137,29 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   codec_client_->sendData(*downstream_request, data, true);
 
   processRequest();
-  ;
+
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("efg", body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
+  transform_response_ = true;
+  filter_string_ = BODY_TRANSFORMATION_FILTER;
+  initialize();
+  Envoy::Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  // TODO(yuval-k): change this to test a body transformation
+  auto downstream_request =
+      &codec_client_->startRequest(request_headers, *response_);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest();
+
+  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  EXPECT_EQ("efg", body);
+  std::string rbody = response_->body();
+  EXPECT_EQ("bad request", rbody);
 }
 
 } // namespace Envoy
