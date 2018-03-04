@@ -145,7 +145,9 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
     // replace body
     body.drain(body.length());
     body.add(output);
-    header_map.insertContentLength().value(body.length());
+    if (body.length() > 0) {
+      header_map.insertContentLength().value(body.length());
+    }
   }
 
   // add headers
