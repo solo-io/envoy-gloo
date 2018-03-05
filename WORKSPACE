@@ -14,11 +14,10 @@ http_archive(
 
 ENVOY_COMMON_SHA = "ee625c53848d990dd7e5b87c5fbcd2776054e9f8"  # Feb 26, 2018 (split metadata accessor)
 
-# load solo common
-git_repository(
+http_archive(
     name = "solo_envoy_common",
-    remote = "git@github.com:solo-io/envoy-common",
-    commit = ENVOY_COMMON_SHA,
+    strip_prefix = "envoy-common-" + ENVOY_COMMON_SHA,
+    url = "https://github.com/solo-io/envoy-common/archive/" + ENVOY_COMMON_SHA + ".zip",
 )
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
