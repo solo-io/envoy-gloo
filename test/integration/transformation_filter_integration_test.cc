@@ -39,6 +39,24 @@ config:
           text: "{{abc}}"
 )EOF";
 
+const std::string PATH_TO_PATH_TRANSFORMATION_FILTER =
+    R"EOF(
+name: io.solo.transformation
+config:
+  advanced_templates: false
+  transformations:
+    translation1:
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
+      request_template:
+        headers: { ":path": {"text": "/solo/{{ext1}}"} }
+        body:
+          text: soloio
+)EOF";
+
 class TransformationFilterIntegrationTest
     : public Envoy::HttpIntegrationTest,
       public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
@@ -125,6 +143,21 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   EXPECT_EQ("abc 234", body);
 }
 
+TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
+  filter_string_ = PATH_TO_PATH_TRANSFORMATION_FILTER;
+  initialize();
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/234"}};
+
+  codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
+  processRequest();
+
+  EXPECT_STREQ("/solo/234", upstream_request_->headers().Path()
+                              ->value()
+                              .c_str());
+}
+
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   filter_string_ = BODY_TRANSFORMATION_FILTER;
   initialize();
@@ -176,5 +209,6 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   std::string rbody = response_->body();
   EXPECT_EQ("soloio", rbody);
 }
+
 
 } // namespace Envoy
