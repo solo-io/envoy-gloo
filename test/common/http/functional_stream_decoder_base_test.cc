@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "envoy/http/metadata_accessor.h"
+
 #include "common/config/solo_well_known_names.h"
 #include "common/http/functional_stream_decoder_base.h"
 #include "common/protobuf/utility.h"
@@ -29,7 +31,7 @@ namespace Http {
 class FuncitonFilterTest;
 
 class FunctionalFilterTester : public StreamDecoderFilter,
-                               public FunctionRetriever {
+                               public FunctionalFilter {
 public:
   virtual FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
   virtual FilterDataStatus decodeData(Buffer::Instance &, bool) override;
