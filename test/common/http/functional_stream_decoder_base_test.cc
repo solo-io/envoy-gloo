@@ -54,6 +54,9 @@ public:
   const MetadataAccessor *meta_accessor_;
 };
 
+typedef Http::FunctionalFilterMixin<FunctionalFilterTester>
+    MixedFunctionalFilterTester;
+
 class FunctionFilterTest : public testing::Test {
 public:
   FunctionFilterTest() : childname_("childfilter") {}
@@ -173,7 +176,7 @@ protected:
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Envoy::Event::MockTimer> *attachmentTimeout_timer_{};
-  std::unique_ptr<FunctionalFilterTester> filter_;
+  std::unique_ptr<MixedFunctionalFilterTester> filter_;
 
   ProtobufWkt::Struct *route_meta_child_spec_struct_;
   ProtobufWkt::Struct *cluster_meta_child_spec_struct_;
