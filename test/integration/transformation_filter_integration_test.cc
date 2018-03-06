@@ -57,6 +57,18 @@ config:
           text: soloio
 )EOF";
 
+const std::string EMPTY_BODY_TRANSFORMATION_FILTER =
+    R"EOF(
+name: io.solo.transformation
+config:
+  advanced_templates: false
+  transformations:
+    translation1:
+      request_template:
+        body:
+          text: ""
+)EOF";
+
 class TransformationFilterIntegrationTest
     : public Envoy::HttpIntegrationTest,
       public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
@@ -153,9 +165,8 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
   codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
   processRequest();
 
-  EXPECT_STREQ("/solo/234", upstream_request_->headers().Path()
-                              ->value()
-                              .c_str());
+  EXPECT_STREQ("/solo/234",
+               upstream_request_->headers().Path()->value().c_str());
 }
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
@@ -210,5 +221,38 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   EXPECT_EQ("soloio", rbody);
 }
 
+TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
+  filter_string_ = EMPTY_BODY_TRANSFORMATION_FILTER;
+  transform_response_ = true;
+  initialize();
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "POST"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/empty-body-test"}};
+  auto downstream_request =
+      &codec_client_->startRequest(request_headers, *response_);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest("{\"abc\":\"soloio\"}");
+
+  std::string rbody = response_->body();
+  const auto &rheaders = response_->headers();
+  EXPECT_EQ("", rbody);
+  EXPECT_EQ(nullptr, rheaders.TransferEncoding());
+  EXPECT_EQ(nullptr, rheaders.ContentType());
+  if (rheaders.ContentLength() != nullptr) {
+    EXPECT_STREQ("0", rheaders.ContentLength()->value().c_str());
+  }
+  // verify response
+
+  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  const auto &headers = upstream_request_->headers();
+  EXPECT_EQ("", body);
+  EXPECT_EQ(nullptr, headers.TransferEncoding());
+  EXPECT_EQ(nullptr, headers.ContentType());
+  if (headers.ContentLength() != nullptr) {
+    EXPECT_STREQ("0", headers.ContentLength()->value().c_str());
+  }
+}
 
 } // namespace Envoy
