@@ -28,31 +28,35 @@ using testing::_;
 namespace Envoy {
 namespace Http {
 
-class FuncitonFilterTest;
+class FunctionFilterTest;
 
 class FunctionalFilterTester : public StreamDecoderFilter,
                                public FunctionalFilter {
 public:
-  virtual FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
-  virtual FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  virtual FilterTrailersStatus decodeTrailers(HeaderMap &) override;
+  // Http::StreamFilterBase
   void onDestroy() override {}
+
+  // Http::StreamDecoderFilter
+  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
+  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
+  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
   void setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &) override {}
 
-  virtual bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
+  // Http::FunctionalFilter
+  bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
-  bool functionDecodeHeadersCalled_{false};
-  bool functionDecodeDataCalled_{false};
-  bool functionDecodeTrailersCalled_{false};
+  bool decodeHeadersCalled_{false};
+  bool decodeDataCalled_{false};
+  bool decodeTrailersCalled_{false};
   std::string functionCalled_;
   bool routeMetadataFound_;
 
   const MetadataAccessor *meta_accessor_;
 };
 
-class FuncitonFilterTest : public testing::Test {
+class FunctionFilterTest : public testing::Test {
 public:
-  FuncitonFilterTest() : childname_("childfilter") {}
+  FunctionFilterTest() : childname_("childfilter") {}
 
 protected:
   void SetUp() override {
@@ -194,7 +198,7 @@ bool FunctionalFilterTester::retrieveFunction(
 
 FilterHeadersStatus FunctionalFilterTester::decodeHeaders(HeaderMap &, bool) {
   routeMetadataFound_ = meta_accessor_->getRouteMetadata().valid();
-  functionDecodeHeadersCalled_ = true;
+  decodeHeadersCalled_ = true;
   functionCalled_ = (*meta_accessor_->getFunctionSpec().value())
                         .fields()
                         .at("name")
@@ -203,28 +207,28 @@ FilterHeadersStatus FunctionalFilterTester::decodeHeaders(HeaderMap &, bool) {
 }
 
 FilterDataStatus FunctionalFilterTester::decodeData(Buffer::Instance &, bool) {
-  functionDecodeDataCalled_ = true;
+  decodeDataCalled_ = true;
   return FilterDataStatus::Continue;
 }
 
 FilterTrailersStatus FunctionalFilterTester::decodeTrailers(HeaderMap &) {
-  functionDecodeTrailersCalled_ = true;
+  decodeTrailersCalled_ = true;
   return FilterTrailersStatus::Continue;
 }
 
-TEST_F(FuncitonFilterTest, NothingConfigured) {
+TEST_F(FunctionFilterTest, NothingConfigured) {
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  EXPECT_FALSE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_FALSE(filter_->decodeHeadersCalled_);
+  EXPECT_FALSE(filter_->decodeDataCalled_);
+  EXPECT_FALSE(filter_->decodeTrailersCalled_);
 }
 
-TEST_F(FuncitonFilterTest, HaveRouteMeta) {
+TEST_F(FunctionFilterTest, HaveRouteMeta) {
   initclustermeta();
   initroutemeta();
   auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
@@ -241,12 +245,12 @@ TEST_F(FuncitonFilterTest, HaveRouteMeta) {
 
   EXPECT_NE(nullptr, &receivedspec);
 
-  EXPECT_TRUE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_TRUE(filter_->decodeHeadersCalled_);
+  EXPECT_FALSE(filter_->decodeDataCalled_);
+  EXPECT_FALSE(filter_->decodeTrailersCalled_);
 }
 
-TEST_F(FuncitonFilterTest, MetaNoCopy) {
+TEST_F(FunctionFilterTest, MetaNoCopy) {
   initclustermeta();
   initroutemeta();
   initchildroutemeta();
@@ -270,7 +274,7 @@ TEST_F(FuncitonFilterTest, MetaNoCopy) {
   EXPECT_EQ(route_meta_child_spec_struct_, routechildspec);
 }
 
-TEST_F(FuncitonFilterTest, MissingRouteMeta) {
+TEST_F(FunctionFilterTest, MissingRouteMeta) {
   initclustermeta();
 
   std::string status;
@@ -288,12 +292,12 @@ TEST_F(FuncitonFilterTest, MissingRouteMeta) {
   // test that we needed errored
   EXPECT_EQ(status, "404");
 
-  EXPECT_FALSE(filter_->functionDecodeHeadersCalled_);
-  EXPECT_FALSE(filter_->functionDecodeDataCalled_);
-  EXPECT_FALSE(filter_->functionDecodeTrailersCalled_);
+  EXPECT_FALSE(filter_->decodeHeadersCalled_);
+  EXPECT_FALSE(filter_->decodeDataCalled_);
+  EXPECT_FALSE(filter_->decodeTrailersCalled_);
 }
 
-TEST_F(FuncitonFilterTest, MissingChildRouteMeta) {
+TEST_F(FunctionFilterTest, MissingChildRouteMeta) {
   initclustermeta();
   initroutemeta();
 
@@ -305,7 +309,7 @@ TEST_F(FuncitonFilterTest, MissingChildRouteMeta) {
   EXPECT_FALSE(filter_->routeMetadataFound_);
 }
 
-TEST_F(FuncitonFilterTest, FoundChildRouteMeta) {
+TEST_F(FunctionFilterTest, FoundChildRouteMeta) {
   initclustermeta();
   initroutemeta();
   initchildroutemeta();
@@ -318,7 +322,7 @@ TEST_F(FuncitonFilterTest, FoundChildRouteMeta) {
   EXPECT_TRUE(filter_->routeMetadataFound_);
 }
 
-TEST_F(FuncitonFilterTest, FindMultiFunctions) {
+TEST_F(FunctionFilterTest, FindMultiFunctions) {
   initclustermeta();
   initroutemetamultiple();
   EXPECT_CALL(factory_context_.random_, random()).WillOnce(Return(0));
@@ -328,11 +332,11 @@ TEST_F(FuncitonFilterTest, FindMultiFunctions) {
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  EXPECT_TRUE(filter_->functionDecodeHeadersCalled_);
+  EXPECT_TRUE(filter_->decodeHeadersCalled_);
   EXPECT_EQ(functionname_, filter_->functionCalled_);
 }
 
-TEST_F(FuncitonFilterTest, FindMultiFunctions2) {
+TEST_F(FunctionFilterTest, FindMultiFunctions2) {
   initclustermeta();
   initroutemetamultiple();
 
@@ -343,7 +347,7 @@ TEST_F(FuncitonFilterTest, FindMultiFunctions2) {
                                          {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
-  EXPECT_TRUE(filter_->functionDecodeHeadersCalled_);
+  EXPECT_TRUE(filter_->decodeHeadersCalled_);
   EXPECT_EQ(function2name_, filter_->functionCalled_);
 }
 
