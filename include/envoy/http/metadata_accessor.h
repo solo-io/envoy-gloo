@@ -10,14 +10,12 @@ namespace Http {
 
 class FilterMetadataAccessor {
 public:
-
   // Get the cluster metadata for the current filter
   virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const PURE;
   // Get the route metadata for the current filter
   virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
 
   virtual ~FilterMetadataAccessor() {}
-
 };
 /**
  * This interface is helper to get metadata structs from various
