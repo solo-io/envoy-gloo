@@ -10,12 +10,15 @@
 #include "common/http/filter/transformation_filter.h"
 #include "common/http/filter/transformation_filter_config.h"
 #include "common/protobuf/utility.h"
+#include "common/http/functional_stream_decoder_base.h"
 
 #include "transformation_filter.pb.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
+
+typedef Http::FunctionalFilterMixin<Http::TransformationFilter> MixedTransformationFilter;
 
 HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactory(
     const Json::Object &, const std::string &, FactoryContext &) {
@@ -69,6 +72,8 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilter(
     if (!config->empty()) {
       auto filter = new Http::TransformationFilter(config);
       callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
+      auto func_filter = new MixedTransformationFilter(context, Config::TransformationFilterNames::get().TRANSFORMATION, config);
+      callbacks.addStreamFilter(Http::StreamFilterSharedPtr{func_filter});
     }
   };
 }
