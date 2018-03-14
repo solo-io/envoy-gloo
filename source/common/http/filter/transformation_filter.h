@@ -1,7 +1,7 @@
 #pragma once
 
-#include "envoy/server/filter_config.h"
 #include "envoy/http/metadata_accessor.h"
+#include "envoy/server/filter_config.h"
 
 #include "common/buffer/buffer_impl.h"
 #include "common/http/filter/transformation_filter_config.h"
@@ -12,11 +12,13 @@ namespace Envoy {
 namespace Http {
 
 /**
- * Translation we can be used either as a functional filter, or a non functional filter.
+ * Translation we can be used either as a functional filter, or a non functional
+ * filter.
  */
-class TransformationFilter : public StreamFilter , public FunctionalFilter {
+class TransformationFilter : public StreamFilter, public FunctionalFilter {
 public:
-  TransformationFilter(TransformationFilterConfigSharedPtr config);
+  TransformationFilter(TransformationFilterConfigSharedPtr config,
+                       bool functional);
   ~TransformationFilter();
 
   // Http::FunctionalFilterBase
@@ -24,7 +26,6 @@ public:
 
   // Http::FunctionalFilter
   bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
-  
 
   // Http::StreamDecoderFilter
   FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
@@ -87,7 +88,8 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  Optional<const std::string*> current_function_{};
+  bool functional_{};
+  Optional<const std::string *> current_function_{};
 
   const envoy::api::v2::filter::http::Transformation *request_transformation_{
       nullptr};

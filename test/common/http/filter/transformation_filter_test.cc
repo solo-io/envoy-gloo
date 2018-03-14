@@ -48,7 +48,7 @@ public:
   void initFilter() {
     Envoy::Http::TransformationFilterConfigSharedPtr configptr(
         new TransformationFilterConfig(config_));
-    filter_ = std::make_unique<TransformationFilter>(configptr);
+    filter_ = std::make_unique<TransformationFilter>(configptr, false);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 

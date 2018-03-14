@@ -11,8 +11,8 @@ namespace Envoy {
 namespace Http {
 
 TransformationFilter::TransformationFilter(
-    TransformationFilterConfigSharedPtr config)
-    : config_(config) {}
+    TransformationFilterConfigSharedPtr config, bool functional)
+    : config_(config), functional_(functional) {}
 
 TransformationFilter::~TransformationFilter() {}
 
@@ -21,11 +21,12 @@ void TransformationFilter::onDestroy() {
   stream_destroyed_ = true;
 }
 
-bool TransformationFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
+bool TransformationFilter::retrieveFunction(
+    const MetadataAccessor &meta_accessor) {
   current_function_ = meta_accessor.getFunctionName();
   return true;
 }
-  
+
 FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
                                                         bool end_stream) {
 
@@ -88,7 +89,8 @@ FilterHeadersStatus TransformationFilter::encodeHeaders(HeaderMap &header_map,
   checkResponseActive();
 
   if (!responseActive()) {
-    // this also covers the is_error() case. as is_error() == true implies responseActive() == false
+    // this also covers the is_error() case. as is_error() == true implies
+    // responseActive() == false
     return FilterHeadersStatus::Continue;
   }
 
@@ -135,13 +137,13 @@ void TransformationFilter::checkRequestActive() {
   request_transformation_ = getTransformFromRoute(
       decoder_callbacks_->route(),
       Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION);
-  
-  if (current_function_.valid()) {
+
+  if (functional_) {
     if (!request_transformation_) {
       error(Error::TransformationNotFound);
       requestError();
     }
-  }      
+  }
 }
 
 void TransformationFilter::checkResponseActive() {
@@ -168,9 +170,9 @@ TransformationFilter::getTransformFromRoute(
       Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
 
   // if we are not in functional mode, we expect a string:
-  if (!current_function_.valid()) {
-    if (value.kind_case() == ProtobufWkt::Value::kStringValue) {
+  if (!functional_) {
 
+    if (value.kind_case() == ProtobufWkt::Value::kStringValue) {
       const auto &string_value = value.string_value();
       if (string_value.empty()) {
         return nullptr;
@@ -179,48 +181,50 @@ TransformationFilter::getTransformFromRoute(
       return config_->getTranformation(string_value);
     }
   } else {
-      // if we are in functional mode, we expect a mapping:
-      if (value.kind_case() != ProtobufWkt::Value::kStructValue) {
-        return nullptr;  
-      }
-      
-      // ok we have a struct; this means that we need to retreive the function from the route
-      // and get the function that way
+    if (!current_function_.valid()) {
+      return nullptr;
+    }
+    // if we are in functional mode, we expect a mapping:
+    if (value.kind_case() != ProtobufWkt::Value::kStructValue) {
+      return nullptr;
+    }
 
-      const auto &cluster_struct_value = value.struct_value();
+    // ok we have a struct; this means that we need to retreive the function
+    // from the route and get the function that way
 
-      const auto &cluster_fields = cluster_struct_value.fields();
+    const auto &cluster_struct_value = value.struct_value();
 
-      const auto cluster_it = cluster_fields.find(routeEntry->clusterName());
-      if (cluster_it == cluster_fields.end()) {
-        return nullptr;
-      }
+    const auto &cluster_fields = cluster_struct_value.fields();
 
-      const auto &functions_value = cluster_it->second;
+    const auto cluster_it = cluster_fields.find(routeEntry->clusterName());
+    if (cluster_it == cluster_fields.end()) {
+      return nullptr;
+    }
 
-      if (functions_value.kind_case() != ProtobufWkt::Value::kStructValue) {
-        return nullptr;  
-      }
+    const auto &functions_value = cluster_it->second;
 
-      const auto &functions_fields = functions_value.struct_value().fields();
+    if (functions_value.kind_case() != ProtobufWkt::Value::kStructValue) {
+      return nullptr;
+    }
 
-      const auto functions_it = functions_fields.find(*current_function_.value());
-      if (functions_it == functions_fields.end()) {
-        return nullptr;
-      }
-      
-      const auto &transformation_value = functions_it->second;
+    const auto &functions_fields = functions_value.struct_value().fields();
 
-      if (transformation_value.kind_case() != ProtobufWkt::Value::kStringValue) {
-        return nullptr;  
-      }
-      const auto &string_value = transformation_value.string_value();
+    const auto functions_it = functions_fields.find(*current_function_.value());
+    if (functions_it == functions_fields.end()) {
+      return nullptr;
+    }
 
-      return config_->getTranformation(string_value);
+    const auto &transformation_value = functions_it->second;
+
+    if (transformation_value.kind_case() != ProtobufWkt::Value::kStringValue) {
+      return nullptr;
+    }
+    const auto &string_value = transformation_value.string_value();
+
+    return config_->getTranformation(string_value);
   }
 
   return nullptr;
-  
 }
 
 void TransformationFilter::transformRequest() {

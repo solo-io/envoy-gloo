@@ -214,7 +214,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
       &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
-
+  // TODO add another test that the upstream body was not changed
   processRequest("{\"abc\":\"soloio\"}");
 
   std::string rbody = response_->body();
