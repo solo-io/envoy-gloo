@@ -19,7 +19,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/common/http/filter:transformation_filter_lib",
-        "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
         "@envoy//source/exe:envoy_common_lib",
+        "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
     ],
 )
