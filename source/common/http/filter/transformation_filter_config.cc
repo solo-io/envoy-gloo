@@ -7,7 +7,7 @@ TransformationFilterConfig::TransformationFilterConfig(ProtoConfig proto_config)
     : proto_config_(proto_config) {}
 
 const envoy::api::v2::filter::http::Transformation *
-TransformationFilterConfig::getTranformation(const std::string &name) {
+TransformationFilterConfig::getTranformation(const std::string &name) const {
 
   const auto &transformations = proto_config_.transformations();
 

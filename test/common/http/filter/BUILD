@@ -10,7 +10,7 @@ envoy_package()
 
 envoy_cc_test(
     name = "transformation_filter_test",
-    srcs = ["transformation_filter_test.cc"],
+    srcs = ["transformation_filter_test.cc", "functional_transformation_filter_test.cc"],
     repository = "@envoy",
     deps = [
         "//:filter_lib",

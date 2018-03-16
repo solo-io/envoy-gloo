@@ -18,7 +18,7 @@ namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-typedef Http::FunctionalFilterMixin<Http::TransformationFilter>
+typedef Http::FunctionalFilterMixin<Http::FunctionalTransformationFilter>
     MixedTransformationFilter;
 
 HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactory(
@@ -65,17 +65,17 @@ HttpFilterFactoryCb TransformationFilterConfigFactory::createFilter(
     const envoy::api::v2::filter::http::Transformations &proto_config,
     FactoryContext &context) {
 
-  Http::TransformationFilterConfigSharedPtr config =
+  Http::TransformationFilterConfigConstSharedPtr config =
       std::make_shared<Http::TransformationFilterConfig>(proto_config);
 
   return [&context,
           config](Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
     if (!config->empty()) {
-      auto filter = new Http::TransformationFilter(config, false);
+      auto filter = new Http::TransformationFilter(config);
       callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
       auto func_filter = new MixedTransformationFilter(
           context, Config::TransformationFilterNames::get().TRANSFORMATION,
-          config, true);
+          config);
       callbacks.addStreamFilter(Http::StreamFilterSharedPtr{func_filter});
     }
   };

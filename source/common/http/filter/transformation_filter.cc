@@ -10,24 +10,24 @@
 namespace Envoy {
 namespace Http {
 
-TransformationFilter::TransformationFilter(
-    TransformationFilterConfigSharedPtr config, bool functional)
-    : config_(config), functional_(functional) {}
+TransformationFilterBase::TransformationFilterBase(
+    TransformationFilterConfigConstSharedPtr config)
+    : config_(config) {}
 
-TransformationFilter::~TransformationFilter() {}
+TransformationFilterBase::~TransformationFilterBase() {}
 
-void TransformationFilter::onDestroy() {
+void TransformationFilterBase::onDestroy() {
   resetInternalState();
   stream_destroyed_ = true;
 }
 
-bool TransformationFilter::retrieveFunction(
+bool FunctionalTransformationFilter::retrieveFunction(
     const MetadataAccessor &meta_accessor) {
   current_function_ = meta_accessor.getFunctionName();
   return true;
 }
 
-FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
+FilterHeadersStatus TransformationFilterBase::decodeHeaders(HeaderMap &header_map,
                                                         bool end_stream) {
 
   checkRequestActive();
@@ -52,7 +52,7 @@ FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
   return FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
+FilterDataStatus TransformationFilterBase::decodeData(Buffer::Instance &data,
                                                   bool end_stream) {
   if (!requestActive()) {
     return FilterDataStatus::Continue;
@@ -75,7 +75,7 @@ FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
   return FilterDataStatus::StopIterationNoBuffer;
 }
 
-FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
+FilterTrailersStatus TransformationFilterBase::decodeTrailers(HeaderMap &) {
   if (requestActive()) {
     transformRequest();
   }
@@ -83,7 +83,7 @@ FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
                     : FilterTrailersStatus::Continue;
 }
 
-FilterHeadersStatus TransformationFilter::encodeHeaders(HeaderMap &header_map,
+FilterHeadersStatus TransformationFilterBase::encodeHeaders(HeaderMap &header_map,
                                                         bool end_stream) {
 
   checkResponseActive();
@@ -104,7 +104,7 @@ FilterHeadersStatus TransformationFilter::encodeHeaders(HeaderMap &header_map,
   return FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
+FilterDataStatus TransformationFilterBase::encodeData(Buffer::Instance &data,
                                                   bool end_stream) {
   if (!responseActive()) {
     return FilterDataStatus::Continue;
@@ -126,34 +126,36 @@ FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
   return FilterDataStatus::StopIterationNoBuffer;
 }
 
-FilterTrailersStatus TransformationFilter::encodeTrailers(HeaderMap &) {
+FilterTrailersStatus TransformationFilterBase::encodeTrailers(HeaderMap &) {
   if (responseActive()) {
     transformResponse();
   }
   return FilterTrailersStatus::Continue;
 }
 
-void TransformationFilter::checkRequestActive() {
+void TransformationFilterBase::checkRequestActive() {
   request_transformation_ = getTransformFromRoute(
       decoder_callbacks_->route(),
       Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION);
+}
 
-  if (functional_) {
-    if (!request_transformation_) {
+void FunctionalTransformationFilter::checkRequestActive() {
+    TransformationFilterBase::checkRequestActive();
+
+    if (!requestActive()) {
       error(Error::TransformationNotFound);
       requestError();
     }
-  }
 }
 
-void TransformationFilter::checkResponseActive() {
+void TransformationFilterBase::checkResponseActive() {
   response_transformation_ = getTransformFromRoute(
       encoder_callbacks_->route(),
       Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION);
 }
 
 const envoy::api::v2::filter::http::Transformation *
-TransformationFilter::getTransformFromRoute(
+TransformationFilterBase::getTransformFromRoute(
     const Router::RouteConstSharedPtr &route, const std::string &key) {
 
   if (!route) {
@@ -165,69 +167,82 @@ TransformationFilter::getTransformFromRoute(
     return nullptr;
   }
 
+  return getTransformFromRouteEntry(routeEntry, key);
+}
+
+const envoy::api::v2::filter::http::Transformation *
+TransformationFilter::getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
+                        const std::string &key) {
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
       Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
 
   // if we are not in functional mode, we expect a string:
-  if (!functional_) {
-
-    if (value.kind_case() == ProtobufWkt::Value::kStringValue) {
+    if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
+        return nullptr;
+    }
       const auto &string_value = value.string_value();
       if (string_value.empty()) {
         return nullptr;
       }
 
       return config_->getTranformation(string_value);
-    }
-  } else {
-    if (!current_function_.valid()) {
-      return nullptr;
-    }
-    // if we are in functional mode, we expect a mapping:
-    if (value.kind_case() != ProtobufWkt::Value::kStructValue) {
-      return nullptr;
-    }
-
-    // ok we have a struct; this means that we need to retreive the function
-    // from the route and get the function that way
-
-    const auto &cluster_struct_value = value.struct_value();
-
-    const auto &cluster_fields = cluster_struct_value.fields();
-
-    const auto cluster_it = cluster_fields.find(routeEntry->clusterName());
-    if (cluster_it == cluster_fields.end()) {
-      return nullptr;
-    }
-
-    const auto &functions_value = cluster_it->second;
-
-    if (functions_value.kind_case() != ProtobufWkt::Value::kStructValue) {
-      return nullptr;
-    }
-
-    const auto &functions_fields = functions_value.struct_value().fields();
-
-    const auto functions_it = functions_fields.find(*current_function_.value());
-    if (functions_it == functions_fields.end()) {
-      return nullptr;
-    }
-
-    const auto &transformation_value = functions_it->second;
-
-    if (transformation_value.kind_case() != ProtobufWkt::Value::kStringValue) {
-      return nullptr;
-    }
-    const auto &string_value = transformation_value.string_value();
-
-    return config_->getTranformation(string_value);
-  }
-
-  return nullptr;
 }
 
-void TransformationFilter::transformRequest() {
+const envoy::api::v2::filter::http::Transformation *
+FunctionalTransformationFilter::getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
+                        const std::string &key) {
+
+
+  const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
+      routeEntry->metadata(),
+      Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
+
+  if (!current_function_.valid()) {
+    return nullptr;
+  }
+
+  if (value.kind_case() != ProtobufWkt::Value::kStructValue) {
+    return nullptr;
+  }
+
+  // ok we have a struct; this means that we need to retreive the function
+  // from the route and get the function that way
+
+  const auto &cluster_struct_value = value.struct_value();
+
+  const auto &cluster_fields = cluster_struct_value.fields();
+
+  const auto cluster_it = cluster_fields.find(routeEntry->clusterName());
+  if (cluster_it == cluster_fields.end()) {
+    return nullptr;
+  }
+
+  const auto &functions_value = cluster_it->second;
+
+  if (functions_value.kind_case() != ProtobufWkt::Value::kStructValue) {
+    return nullptr;
+  }
+
+  const auto &functions_fields = functions_value.struct_value().fields();
+
+  const auto functions_it = functions_fields.find(*current_function_.value());
+  if (functions_it == functions_fields.end()) {
+    return nullptr;
+  }
+
+  const auto &transformation_value = functions_it->second;
+
+  if (transformation_value.kind_case() != ProtobufWkt::Value::kStringValue) {
+    return nullptr;
+  }
+  const auto &string_value = transformation_value.string_value();
+
+  return config_->getTranformation(string_value);
+}
+
+
+void TransformationFilterBase::transformRequest() {
   try {
     Transformer transformer(*request_transformation_,
                             config_->advanced_templates());
@@ -251,7 +266,7 @@ void TransformationFilter::transformRequest() {
   }
 }
 
-void TransformationFilter::transformResponse() {
+void TransformationFilterBase::transformResponse() {
   try {
     Transformer transformer(*response_transformation_,
                             config_->advanced_templates());
@@ -275,13 +290,13 @@ void TransformationFilter::transformResponse() {
   }
 }
 
-void TransformationFilter::requestError() {
+void TransformationFilterBase::requestError() {
   ASSERT(is_error());
   Utility::sendLocalReply(*decoder_callbacks_, stream_destroyed_, error_code_,
                           error_messgae_);
 }
 
-void TransformationFilter::responseError() {
+void TransformationFilterBase::responseError() {
   ASSERT(is_error());
   header_map_->Status()->value(enumToInt(error_code_));
   Buffer::OwnedImpl data(error_messgae_);
@@ -290,12 +305,12 @@ void TransformationFilter::responseError() {
   encoder_callbacks_->addEncodedData(data, false);
 }
 
-void TransformationFilter::resetInternalState() {
+void TransformationFilterBase::resetInternalState() {
   request_body_.drain(request_body_.length());
   response_body_.drain(response_body_.length());
 }
 
-void TransformationFilter::error(Error error, std::string msg) {
+void TransformationFilterBase::error(Error error, std::string msg) {
   error_ = error;
   resetInternalState();
   switch (error) {
@@ -329,7 +344,7 @@ void TransformationFilter::error(Error error, std::string msg) {
   }
 }
 
-bool TransformationFilter::is_error() { return error_.valid(); }
+bool TransformationFilterBase::is_error() { return error_.valid(); }
 
 } // namespace Http
 } // namespace Envoy

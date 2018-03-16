@@ -14,19 +14,18 @@ class TransformationFilterConfig {
 public:
   TransformationFilterConfig(ProtoConfig proto_config);
 
-  bool empty() { return proto_config_.transformations().empty(); }
-  bool advanced_templates() { return proto_config_.advanced_templates(); }
+  bool empty() const { return proto_config_.transformations().empty(); }
+  bool advanced_templates() const { return proto_config_.advanced_templates(); }
 
   const envoy::api::v2::filter::http::Transformation *
-  getTranformation(const std::string &name);
+  getTranformation(const std::string &name) const;
 
-private:
 private:
   ProtoConfig proto_config_;
 };
 
-typedef std::shared_ptr<TransformationFilterConfig>
-    TransformationFilterConfigSharedPtr;
+typedef std::shared_ptr<const TransformationFilterConfig>
+    TransformationFilterConfigConstSharedPtr;
 
 } // namespace Http
 } // namespace Envoy

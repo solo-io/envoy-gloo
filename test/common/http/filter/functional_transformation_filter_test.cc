@@ -24,18 +24,27 @@ using testing::_;
 namespace Envoy {
 namespace Http {
 
+class FunctionNameMetadataAccessor : public MetadataAccessor {
+public:
+  virtual Optional<const std::string *> getFunctionName() const { if (function_name_.empty()) return {}; return &function_name_; }
+  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+    return {};
+  }
+  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+    return {};
+  }
+  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+    return {};
+  }
+
+  virtual ~FunctionNameMetadataAccessor() {}
+  std::string function_name_;
+};
+
 using Http::TransformationFilterConfig;
 using Server::Configuration::TransformationFilterConfigFactory;
 
-TEST(TransformationFilterConfigFactory, EmptyConfig) {
-  envoy::api::v2::filter::http::Transformations config;
-
-  // shouldnt throw.
-  TransformationFilterConfig cfg(config);
-  EXPECT_TRUE(cfg.empty());
-}
-
-class TransformationFilterTest : public testing::Test {
+class FunctionalTransformationFilterTest : public testing::Test {
 public:
   void SetUp() override {
 
@@ -43,13 +52,21 @@ public:
     Router::MockRouteEntry &routerentry =
         filter_callbacks_.route_->route_entry_;
     ON_CALL(routerentry, metadata()).WillByDefault(ReturnRef(route_metadata_));
+
+    // todo - make cluster manager return something with metadata
+    // add function name to the route
+
+    cluster_name_ = filter_callbacks_.route_->route_entry_.cluster_name_;
+    function_name_ = "funcname";
   }
 
   void initFilter() {
     Envoy::Http::TransformationFilterConfigConstSharedPtr configptr(
         new TransformationFilterConfig(config_));
-    filter_ = std::make_unique<TransformationFilter>(configptr);
+    filter_ = std::make_unique<Http::FunctionalTransformationFilter>(configptr);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
+    fnma_.function_name_ = function_name_;
+    filter_->retrieveFunction(fnma_);
   }
 
   void initFilterWithBodyTemplate(std::string body) {
@@ -67,8 +84,12 @@ public:
         *(*route_metadata_.mutable_filter_metadata())
              [Config::TransformationMetadataFilters::get().TRANSFORMATION]
                  .mutable_fields();
-    mymeta[Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION]
-        .set_string_value(name);
+    auto* s = mymeta[Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION].mutable_struct_value();
+
+    auto* cluster_fields =
+              (*s->mutable_fields())[cluster_name_].mutable_struct_value()->mutable_fields();
+
+    (*cluster_fields)[function_name_].set_string_value(name);
   }
 
   envoy::api::v2::filter::http::Transformations config_;
@@ -76,56 +97,15 @@ public:
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
   NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  std::unique_ptr<TransformationFilter> filter_;
+  std::unique_ptr<Http::FunctionalTransformationFilter> filter_;
   envoy::api::v2::core::Metadata route_metadata_;
+  std::string cluster_name_;
+  std::string function_name_;
+  FunctionNameMetadataAccessor fnma_;
 };
 
-TEST_F(TransformationFilterTest, EmptyConfig) {
-  auto res = filter_->decodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::Continue, res);
-}
 
-TEST_F(TransformationFilterTest, TransformsOnHeaders) {
-  initFilterWithBodyTemplate("solo");
-
-  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
-  auto res = filter_->decodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::Continue, res);
-}
-
-TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
-  initFilterWithBodyTemplate("{{nonexistentvar}}");
-
-  std::string status;
-  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
-        status = headers.Status()->value().c_str();
-      }));
-
-  auto res = filter_->decodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::StopIteration, res);
-  EXPECT_EQ("400", status);
-}
-
-TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
-  initFilterWithBodyTemplate("solo");
-
-  auto resheaders = filter_->decodeHeaders(headers_, false);
-  ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
-
-  std::string status;
-  EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
-        status = headers.Status()->value().c_str();
-      }));
-
-  Buffer::OwnedImpl body("this is not json");
-  auto res = filter_->decodeData(body, true);
-  EXPECT_EQ(FilterDataStatus::StopIterationNoBuffer, res);
-  EXPECT_EQ("400", status);
-}
-
-TEST_F(TransformationFilterTest, HappyPathWithBody) {
+TEST_F(FunctionalTransformationFilterTest, HappyPathWithBody) {
   initFilterWithBodyTemplate("{{a}}");
 
   auto resheaders = filter_->decodeHeaders(headers_, false);

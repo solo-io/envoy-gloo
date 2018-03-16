@@ -15,17 +15,13 @@ namespace Http {
  * Translation we can be used either as a functional filter, or a non functional
  * filter.
  */
-class TransformationFilter : public StreamFilter, public FunctionalFilter {
+class TransformationFilterBase : public StreamFilter {
 public:
-  TransformationFilter(TransformationFilterConfigSharedPtr config,
-                       bool functional);
-  ~TransformationFilter();
+  TransformationFilterBase(TransformationFilterConfigConstSharedPtr config);
+  ~TransformationFilterBase();
 
   // Http::FunctionalFilterBase
   void onDestroy() override;
-
-  // Http::FunctionalFilter
-  bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
   // Http::StreamDecoderFilter
   FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
@@ -53,7 +49,7 @@ public:
     encoder_buffer_limit_ = callbacks.encoderBufferLimit();
   };
 
-private:
+protected:
   enum class Error {
     PayloadTooLarge,
     JsonParseError,
@@ -61,24 +57,32 @@ private:
     TransformationNotFound,
   };
 
-  void checkRequestActive();
-  void checkResponseActive();
+  virtual void checkRequestActive();
+  virtual void checkResponseActive();
 
-  const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRoute(const Router::RouteConstSharedPtr &route,
-                        const std::string &key);
+  virtual const envoy::api::v2::filter::http::Transformation *
+  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
+                        const std::string &key) PURE;
 
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
-  void transformRequest();
-  void transformResponse();
   void requestError();
   void responseError();
-  void resetInternalState();
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  TransformationFilterConfigSharedPtr config_;
+  TransformationFilterConfigConstSharedPtr config_;
+
+private:
+
+const envoy::api::v2::filter::http::Transformation *
+  getTransformFromRoute(const Router::RouteConstSharedPtr &route,
+                        const std::string &key);
+
+  void transformRequest();
+  void transformResponse();
+  void resetInternalState();
+
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
   StreamEncoderFilterCallbacks *encoder_callbacks_{};
   bool stream_destroyed_{};
@@ -88,8 +92,6 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  bool functional_{};
-  Optional<const std::string *> current_function_{};
 
   const envoy::api::v2::filter::http::Transformation *request_transformation_{
       nullptr};
@@ -99,6 +101,36 @@ private:
   Http::Code error_code_;
   std::string error_messgae_;
 };
+
+class TransformationFilter : public TransformationFilterBase {
+  public:
+  using TransformationFilterBase::TransformationFilterBase;
+  protected:
+
+  const envoy::api::v2::filter::http::Transformation *
+  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
+                        const std::string &key) override;
+
+};
+
+class FunctionalTransformationFilter : public TransformationFilterBase, public FunctionalFilter {
+  public:
+  using TransformationFilterBase::TransformationFilterBase;
+
+  // Http::FunctionalFilter
+  bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
+
+  protected:
+
+  virtual void checkRequestActive();
+  const envoy::api::v2::filter::http::Transformation *
+  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
+                        const std::string &key) override;
+private:
+  Optional<const std::string *> current_function_{};
+
+};
+
 
 } // namespace Http
 } // namespace Envoy
