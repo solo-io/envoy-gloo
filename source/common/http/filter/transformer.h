@@ -37,6 +37,8 @@ public:
 
   std::string render(const std::string &input);
 
+  void useDotNotation() {env_.set_element_notation(inja::ElementNotation::Dot);}
+
 private:
   inja::Environment env_;
   const HeaderMap &header_map_;
