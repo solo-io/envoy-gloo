@@ -62,7 +62,7 @@ protected:
 
   virtual const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                        const std::string &key) PURE;
+                             const std::string &key) PURE;
 
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
@@ -74,8 +74,7 @@ protected:
   TransformationFilterConfigConstSharedPtr config_;
 
 private:
-
-const envoy::api::v2::filter::http::Transformation *
+  const envoy::api::v2::filter::http::Transformation *
   getTransformFromRoute(const Router::RouteConstSharedPtr &route,
                         const std::string &key);
 
@@ -92,7 +91,6 @@ const envoy::api::v2::filter::http::Transformation *
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-
   const envoy::api::v2::filter::http::Transformation *request_transformation_{
       nullptr};
   const envoy::api::v2::filter::http::Transformation *response_transformation_{
@@ -103,34 +101,32 @@ const envoy::api::v2::filter::http::Transformation *
 };
 
 class TransformationFilter : public TransformationFilterBase {
-  public:
+public:
   using TransformationFilterBase::TransformationFilterBase;
-  protected:
 
+protected:
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                        const std::string &key) override;
-
+                             const std::string &key) override;
 };
 
-class FunctionalTransformationFilter : public TransformationFilterBase, public FunctionalFilter {
-  public:
+class FunctionalTransformationFilter : public TransformationFilterBase,
+                                       public FunctionalFilter {
+public:
   using TransformationFilterBase::TransformationFilterBase;
 
   // Http::FunctionalFilter
   bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
-  protected:
-
+protected:
   virtual void checkRequestActive();
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                        const std::string &key) override;
+                             const std::string &key) override;
+
 private:
   Optional<const std::string *> current_function_{};
-
 };
-
 
 } // namespace Http
 } // namespace Envoy

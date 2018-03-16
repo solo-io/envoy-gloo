@@ -26,7 +26,11 @@ namespace Http {
 
 class FunctionNameMetadataAccessor : public MetadataAccessor {
 public:
-  virtual Optional<const std::string *> getFunctionName() const { if (function_name_.empty()) return {}; return &function_name_; }
+  virtual Optional<const std::string *> getFunctionName() const {
+    if (function_name_.empty())
+      return {};
+    return &function_name_;
+  }
   virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
     return {};
   }
@@ -84,10 +88,13 @@ public:
         *(*route_metadata_.mutable_filter_metadata())
              [Config::TransformationMetadataFilters::get().TRANSFORMATION]
                  .mutable_fields();
-    auto* s = mymeta[Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION].mutable_struct_value();
+    auto *s =
+        mymeta[Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION]
+            .mutable_struct_value();
 
-    auto* cluster_fields =
-              (*s->mutable_fields())[cluster_name_].mutable_struct_value()->mutable_fields();
+    auto *cluster_fields = (*s->mutable_fields())[cluster_name_]
+                               .mutable_struct_value()
+                               ->mutable_fields();
 
     (*cluster_fields)[function_name_].set_string_value(name);
   }
@@ -103,7 +110,6 @@ public:
   std::string function_name_;
   FunctionNameMetadataAccessor fnma_;
 };
-
 
 TEST_F(FunctionalTransformationFilterTest, HappyPathWithBody) {
   initFilterWithBodyTemplate("{{a}}");

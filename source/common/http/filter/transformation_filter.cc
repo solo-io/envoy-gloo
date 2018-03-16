@@ -27,8 +27,9 @@ bool FunctionalTransformationFilter::retrieveFunction(
   return true;
 }
 
-FilterHeadersStatus TransformationFilterBase::decodeHeaders(HeaderMap &header_map,
-                                                        bool end_stream) {
+FilterHeadersStatus
+TransformationFilterBase::decodeHeaders(HeaderMap &header_map,
+                                        bool end_stream) {
 
   checkRequestActive();
 
@@ -53,7 +54,7 @@ FilterHeadersStatus TransformationFilterBase::decodeHeaders(HeaderMap &header_ma
 }
 
 FilterDataStatus TransformationFilterBase::decodeData(Buffer::Instance &data,
-                                                  bool end_stream) {
+                                                      bool end_stream) {
   if (!requestActive()) {
     return FilterDataStatus::Continue;
   }
@@ -83,8 +84,9 @@ FilterTrailersStatus TransformationFilterBase::decodeTrailers(HeaderMap &) {
                     : FilterTrailersStatus::Continue;
 }
 
-FilterHeadersStatus TransformationFilterBase::encodeHeaders(HeaderMap &header_map,
-                                                        bool end_stream) {
+FilterHeadersStatus
+TransformationFilterBase::encodeHeaders(HeaderMap &header_map,
+                                        bool end_stream) {
 
   checkResponseActive();
 
@@ -105,7 +107,7 @@ FilterHeadersStatus TransformationFilterBase::encodeHeaders(HeaderMap &header_ma
 }
 
 FilterDataStatus TransformationFilterBase::encodeData(Buffer::Instance &data,
-                                                  bool end_stream) {
+                                                      bool end_stream) {
   if (!responseActive()) {
     return FilterDataStatus::Continue;
   }
@@ -140,12 +142,12 @@ void TransformationFilterBase::checkRequestActive() {
 }
 
 void FunctionalTransformationFilter::checkRequestActive() {
-    TransformationFilterBase::checkRequestActive();
+  TransformationFilterBase::checkRequestActive();
 
-    if (!requestActive()) {
-      error(Error::TransformationNotFound);
-      requestError();
-    }
+  if (!requestActive()) {
+    error(Error::TransformationNotFound);
+    requestError();
+  }
 }
 
 void TransformationFilterBase::checkResponseActive() {
@@ -171,28 +173,27 @@ TransformationFilterBase::getTransformFromRoute(
 }
 
 const envoy::api::v2::filter::http::Transformation *
-TransformationFilter::getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                        const std::string &key) {
+TransformationFilter::getTransformFromRouteEntry(
+    const Router::RouteEntry *routeEntry, const std::string &key) {
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
       Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
 
   // if we are not in functional mode, we expect a string:
-    if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
-        return nullptr;
-    }
-      const auto &string_value = value.string_value();
-      if (string_value.empty()) {
-        return nullptr;
-      }
+  if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
+    return nullptr;
+  }
+  const auto &string_value = value.string_value();
+  if (string_value.empty()) {
+    return nullptr;
+  }
 
-      return config_->getTranformation(string_value);
+  return config_->getTranformation(string_value);
 }
 
 const envoy::api::v2::filter::http::Transformation *
-FunctionalTransformationFilter::getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                        const std::string &key) {
-
+FunctionalTransformationFilter::getTransformFromRouteEntry(
+    const Router::RouteEntry *routeEntry, const std::string &key) {
 
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
@@ -240,7 +241,6 @@ FunctionalTransformationFilter::getTransformFromRouteEntry(const Router::RouteEn
 
   return config_->getTranformation(string_value);
 }
-
 
 void TransformationFilterBase::transformRequest() {
   try {

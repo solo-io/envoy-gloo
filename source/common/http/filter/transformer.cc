@@ -132,11 +132,12 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
       extractions[name] = ExtractorUtil::extract(extractor, header_map);
     } else {
       std::string name_to_split = name;
-      json* current = &json_body;
-      for (size_t pos = name_to_split.find("."); pos != std::string::npos; pos = name_to_split.find(".")) {
-          auto&& field_name = name_to_split.substr(0, pos);
-          current = &(*current)[field_name];
-          name_to_split.erase(0, pos + 1);
+      json *current = &json_body;
+      for (size_t pos = name_to_split.find("."); pos != std::string::npos;
+           pos = name_to_split.find(".")) {
+        auto &&field_name = name_to_split.substr(0, pos);
+        current = &(*current)[field_name];
+        name_to_split.erase(0, pos + 1);
       }
       (*current)[name_to_split] = ExtractorUtil::extract(extractor, header_map);
     }
