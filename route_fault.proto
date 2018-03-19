@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package envoy.api.v2.filter.http;
+
+import "envoy/config/filter/http/fault/v2/fault.proto";
+
+message RouteFault {
+    string fault_name = 1;
+    envoy.config.filter.http.fault.v2.HTTPFault http_fault = 2;
+}
