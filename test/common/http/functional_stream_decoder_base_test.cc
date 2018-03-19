@@ -81,12 +81,18 @@ protected:
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
-  void initclustermeta() {
+  void initclustermeta(bool passthrough = false) {
 
     // TODO use const
     ProtobufWkt::Struct &functionsstruct =
         (*cluster_metadata_.mutable_filter_metadata())
             [Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER];
+
+    // passthrough to false for tests
+    (*functionsstruct.mutable_fields())
+        [Config::MetadataFunctionalRouterKeys::get().PASSTHROUGH]
+            .set_bool_value(passthrough);
+
     ProtobufWkt::Value &functionstructvalue =
         (*functionsstruct.mutable_fields())
             [Config::MetadataFunctionalRouterKeys::get().FUNCTIONS];
@@ -275,6 +281,17 @@ TEST_F(FunctionFilterTest, MetaNoCopy) {
   EXPECT_EQ(cluster_meta_function_spec_struct_, funcspec);
   EXPECT_EQ(cluster_meta_child_spec_struct_, childspec);
   EXPECT_EQ(route_meta_child_spec_struct_, routechildspec);
+}
+
+TEST_F(FunctionFilterTest, MissingRouteMetaPassThrough) {
+  initclustermeta(true);
+
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  FilterHeadersStatus headerstatus = filter_->decodeHeaders(headers, true);
+  EXPECT_FALSE(filter_->decodeHeadersCalled_);
+  EXPECT_EQ(FilterHeadersStatus::Continue, headerstatus);
 }
 
 TEST_F(FunctionFilterTest, MissingRouteMeta) {

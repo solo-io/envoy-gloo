@@ -75,14 +75,17 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
     return {};
   }
   // So now we know this this route is to a functional upstream. i.e. we must be
-  // able to do a function route or error.
+  // able to do a function route or error. unless passthrough is allowed on the
+  // upstream.
 
   const auto &metadata = routeEntry->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
       Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
-    return Result::Error;
+    return canPassthrough()
+               ? Optional<FunctionRetrieverMetadataAccessor::Result>()
+               : Result::Error;
   }
 
   // this needs to have a field with the name of the cluster:
@@ -120,6 +123,32 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   // Function not found :(
   // return a 404
   return Result::Error;
+}
+
+bool FunctionRetrieverMetadataAccessor::canPassthrough() {
+
+  const auto &metadata = cluster_info_->metadata();
+
+  const auto filter_it = metadata.filter_metadata().find(
+      Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
+  if (filter_it == metadata.filter_metadata().end()) {
+    return true;
+  }
+  const auto &filter_metadata_struct = filter_it->second;
+  const auto &filter_metadata_fields = filter_metadata_struct.fields();
+
+  const auto passthrough_it = filter_metadata_fields.find(
+      Config::MetadataFunctionalRouterKeys::get().PASSTHROUGH);
+  if (passthrough_it == filter_metadata_fields.end()) {
+    return true;
+  }
+
+  const auto &functionsvalue = passthrough_it->second;
+  if (functionsvalue.kind_case() != ProtobufWkt::Value::kBoolValue) {
+    return true;
+  }
+
+  return functionsvalue.bool_value();
 }
 
 Optional<const std::string *>

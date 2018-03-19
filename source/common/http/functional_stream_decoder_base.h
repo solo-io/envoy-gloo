@@ -60,6 +60,8 @@ private:
 
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
 
+  bool canPassthrough();
+
   Optional<const std::string *>
   findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
   Optional<const std::string *>

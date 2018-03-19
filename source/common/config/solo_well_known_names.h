@@ -41,6 +41,7 @@ typedef ConstSingleton<SoloCommonMetadataFilterValues>
 class MetadataFunctionalRouterKeyValues {
 public:
   // Key in the Functional Router Filter namespace for function value.
+  const std::string PASSTHROUGH = "passthrough";
   const std::string FUNCTION = "function";
   const std::string WEIGHTED_FUNCTIONS = "weighted_functions";
   const std::string FUNCTIONS = "functions";
