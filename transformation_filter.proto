@@ -16,7 +16,7 @@ message Transformation {
     map<string, Extraction> extractors = 1;
     // Template is in the transformed request language domain
     // currently both are JSON
-    RequetTemplate request_template = 2;
+    TransformationTemplate transformation_template = 2;
 }
 
 message Extraction {
@@ -28,9 +28,13 @@ message Extraction {
 
 }
 
-message RequetTemplate {
+message TransformationTemplate {
     map<string, InjaTemplate> headers = 1;
-    InjaTemplate body = 2;
+    oneof body_transformation {
+        InjaTemplate body = 2;
+        Passthrough passthrough = 3;
+    }
+
 }
 /*
 custom functions:
@@ -39,4 +43,7 @@ extracted_value(name, index) -> from the extracted values
 */
 message InjaTemplate {
     string text = 1;
+}
+
+message Passthrough {
 }

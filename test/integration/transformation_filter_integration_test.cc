@@ -19,7 +19,7 @@ config:
           header: :path
           regex: /users/(\d+)
           subgroup: 1
-      request_template:
+      transformation_template:
         headers:
           x-solo:
             text: solo.io
@@ -34,7 +34,7 @@ config:
   advanced_templates: true
   transformations:
     translation1:
-      request_template:
+      transformation_template:
         body:
           text: "{{abc}}"
 )EOF";
@@ -51,7 +51,7 @@ config:
           header: :path
           regex: /users/(\d+)
           subgroup: 1
-      request_template:
+      transformation_template:
         headers: { ":path": {"text": "/solo/{{ext1}}"} }
         body:
           text: soloio
@@ -64,7 +64,7 @@ config:
   advanced_templates: false
   transformations:
     translation1:
-      request_template:
+      transformation_template:
         body:
           text: ""
 )EOF";

@@ -55,7 +55,7 @@ public:
   void initFilterWithBodyTemplate(std::string body) {
 
     auto &transformation = (*config_.mutable_transformations())["abc"];
-    transformation.mutable_request_template()->mutable_body()->set_text(body);
+    transformation.mutable_transformation_template()->mutable_body()->set_text(body);
     initFilter(); // Re-load config.
 
     addNameToRoute("abc");

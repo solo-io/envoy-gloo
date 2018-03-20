@@ -43,7 +43,7 @@ TransformationFilterBase::decodeHeaders(HeaderMap &header_map,
 
   header_map_ = &header_map;
 
-  if (end_stream) {
+  if (end_stream || isPassthrough(*request_transformation_)) {
     transformRequest();
 
     return is_error() ? FilterHeadersStatus::StopIteration
@@ -98,7 +98,7 @@ TransformationFilterBase::encodeHeaders(HeaderMap &header_map,
 
   header_map_ = &header_map;
 
-  if (end_stream) {
+  if (end_stream || isPassthrough(*response_transformation_)) {
     transformResponse();
     return FilterHeadersStatus::Continue;
   }

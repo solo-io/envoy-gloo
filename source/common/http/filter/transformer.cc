@@ -149,20 +149,27 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
     instance.useDotNotation();
   }
 
-  if (transformation_.request_template().has_body()) {
-    const std::string &input = transformation_.request_template().body().text();
-    auto output = instance.render(input);
+  switch (transformation_.transformation_template().body_transformation_case()) {
+    case envoy::api::v2::filter::http::TransformationTemplate::kBody: {
+      const std::string &input = transformation_.transformation_template().body().text();
+      auto output = instance.render(input);
 
-    // remove content length, as we have new body.
-    header_map.removeContentLength();
-    // replace body
-    body.drain(body.length());
-    body.add(output);
-    header_map.insertContentLength().value(body.length());
+      // remove content length, as we have new body.
+      header_map.removeContentLength();
+      // replace body
+      body.drain(body.length());
+      body.add(output);
+      header_map.insertContentLength().value(body.length());
+      break;
+    }
+    case envoy::api::v2::filter::http::TransformationTemplate::kPassthrough:
+    case envoy::api::v2::filter::http::TransformationTemplate::BODY_TRANSFORMATION_NOT_SET: {
+      break;
+    }
   }
 
   // add headers
-  const auto &headers = transformation_.request_template().headers();
+  const auto &headers = transformation_.transformation_template().headers();
 
   for (auto it = headers.begin(); it != headers.end(); it++) {
     std::string name = it->first;
