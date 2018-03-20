@@ -244,8 +244,10 @@ FunctionalTransformationFilter::getTransformFromRouteEntry(
 
 void TransformationFilterBase::transformRequest() {
   try {
+    // 'move' the transformation
     Transformer transformer(*request_transformation_,
                             config_->advanced_templates());
+    request_transformation_ = nullptr;
     transformer.transform(*header_map_, request_body_);
     if (request_body_.length() > 0) {
       decoder_callbacks_->addDecodedData(request_body_, false);
@@ -270,6 +272,7 @@ void TransformationFilterBase::transformResponse() {
   try {
     Transformer transformer(*response_transformation_,
                             config_->advanced_templates());
+    response_transformation_ = nullptr;
     transformer.transform(*header_map_, response_body_);
 
     if (response_body_.length() > 0) {
