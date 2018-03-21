@@ -69,6 +69,23 @@ config:
           text: ""
 )EOF";
 
+const std::string PASSTHROUGH_TRANSFORMATION_FILTER =
+    R"EOF(
+name: io.solo.transformation
+config:
+  advanced_templates: true
+  transformations:
+    translation1:
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
+      transformation_template:
+        headers: { "x-solo": {"text": "{{extraction(\"ext1\")}}"} }
+        passthrough: {}
+)EOF";
+
 class TransformationFilterIntegrationTest
     : public Envoy::HttpIntegrationTest,
       public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
@@ -253,6 +270,28 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   if (headers.ContentLength() != nullptr) {
     EXPECT_STREQ("0", headers.ContentLength()->value().c_str());
   }
+}
+
+TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
+  filter_string_ = PASSTHROUGH_TRANSFORMATION_FILTER;
+  initialize();
+  std::string origBody = "{\"abc\":\"efg\"}";
+  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/12347"}};
+  auto downstream_request =
+      &codec_client_->startRequest(request_headers, *response_);
+  Buffer::OwnedImpl data(origBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest();
+
+  EXPECT_STREQ("12347", upstream_request_->headers()
+                              .get(Envoy::Http::LowerCaseString("x-solo"))
+                              ->value()
+                              .c_str());
+  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  EXPECT_EQ(origBody, body);
 }
 
 } // namespace Envoy

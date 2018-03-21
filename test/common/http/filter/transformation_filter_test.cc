@@ -61,6 +61,15 @@ public:
     addNameToRoute("abc");
   }
 
+  void initFilterWithBodyPassthrough() {
+
+    auto &transformation = (*config_.mutable_transformations())["abc"];
+    transformation.mutable_transformation_template()->mutable_passthrough();
+    initFilter(); // Re-load config.
+
+    addNameToRoute("abc");
+  }
+
   void addNameToRoute(std::string name) {
 
     auto &mymeta =
@@ -141,6 +150,17 @@ TEST_F(TransformationFilterTest, HappyPathWithBody) {
   auto res = filter_->decodeData(downstream_body, true);
   EXPECT_EQ(FilterDataStatus::Continue, res);
   EXPECT_EQ("b", upstream_body);
+}
+
+TEST_F(TransformationFilterTest, HappyPathWithBodyPassthrough) {
+  initFilterWithBodyPassthrough();
+
+  auto resheaders = filter_->decodeHeaders(headers_, false);
+  EXPECT_EQ(FilterHeadersStatus::Continue, resheaders);
+
+  Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
+  auto res = filter_->decodeData(downstream_body, true);
+  EXPECT_EQ(FilterDataStatus::Continue, res);
 }
 
 } // namespace Http
