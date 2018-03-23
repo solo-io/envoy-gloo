@@ -72,10 +72,10 @@ protected:
   bool is_error();
 
   TransformationFilterConfigConstSharedPtr config_;
-  
+
 private:
-  
-  static bool isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
+  static bool
+  isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
     return t.transformation_template().has_passthrough();
   }
 

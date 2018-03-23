@@ -287,9 +287,9 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   processRequest();
 
   EXPECT_STREQ("12347", upstream_request_->headers()
-                              .get(Envoy::Http::LowerCaseString("x-solo"))
-                              ->value()
-                              .c_str());
+                            .get(Envoy::Http::LowerCaseString("x-solo"))
+                            ->value()
+                            .c_str());
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ(origBody, body);
 }
