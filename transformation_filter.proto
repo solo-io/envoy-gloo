@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package envoy.api.v2.filter.http;
 
+option go_package = "transformation";
+
 // [#protodoc-title: Lambda]
 // Lambda :ref:`configuration overview <config_http_filters_lambda>`.
 
