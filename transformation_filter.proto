@@ -35,8 +35,8 @@ message TransformationTemplate {
     oneof body_transformation {
         InjaTemplate body = 2;
         Passthrough passthrough = 3;
+        MergeExtractorsToBody merge_extractors_to_body = 4;
     }
-
 }
 /*
 custom functions:
@@ -48,4 +48,8 @@ message InjaTemplate {
 }
 
 message Passthrough {
+}
+
+message MergeExtractorsToBody {
+
 }

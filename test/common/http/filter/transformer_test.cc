@@ -120,7 +120,8 @@ TEST(Transformer, transform) {
   transformation.mutable_transformation_template()->mutable_body()->set_text(
       "{{extraction(\"ext1\")}}{{a}}{{header(\"x-test\")}}");
 
-  (*transformation.mutable_transformation_template()->mutable_headers())["x-header"]
+  (*transformation.mutable_transformation_template()
+        ->mutable_headers())["x-header"]
       .set_text("{{upper(\"abc\")}}");
 
   Transformer transformer(transformation, true);
@@ -150,7 +151,8 @@ TEST(Transformer, transformSimple) {
   transformation.mutable_transformation_template()->mutable_body()->set_text(
       "{{ext1}}{{a}}{{header(\"x-test\")}}");
 
-  (*transformation.mutable_transformation_template()->mutable_headers())["x-header"]
+  (*transformation.mutable_transformation_template()
+        ->mutable_headers())["x-header"]
       .set_text("{{upper(\"abc\")}}");
 
   Transformer transformer(transformation, false);
@@ -180,7 +182,8 @@ TEST(Transformer, transformSimpleNestedStructs) {
   transformation.mutable_transformation_template()->mutable_body()->set_text(
       "{{ext1.field1}}{{a}}{{header(\"x-test\")}}");
 
-  (*transformation.mutable_transformation_template()->mutable_headers())["x-header"]
+  (*transformation.mutable_transformation_template()
+        ->mutable_headers())["x-header"]
       .set_text("{{upper(\"abc\")}}");
 
   Transformer transformer(transformation, false);
@@ -204,7 +207,8 @@ TEST(Transformer, transformPassthrough) {
   envoy::api::v2::filter::http::Transformation transformation;
 
   transformation.mutable_transformation_template()->mutable_passthrough();
-  (*transformation.mutable_transformation_template()->mutable_headers())["x-header"]
+  (*transformation.mutable_transformation_template()
+        ->mutable_headers())["x-header"]
       .set_text("{{default(a,\"default\")}}");
 
   Transformer transformer(transformation, true);
@@ -214,6 +218,34 @@ TEST(Transformer, transformPassthrough) {
 
   EXPECT_EQ(emptyBody, res);
   EXPECT_EQ("default", headers.get_("x-header"));
+}
+
+TEST(Transformer, transformMergeExtractorsToBody) {
+  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  // in passthrough mode the filter gives us an empty body
+  std::string emptyBody = "";
+  Buffer::OwnedImpl body(emptyBody);
+
+  envoy::api::v2::filter::http::Transformation transformation;
+
+  transformation.mutable_transformation_template()
+      ->mutable_merge_extractors_to_body();
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/users/(\\d+)");
+  extractor.set_subgroup(1);
+  (*transformation.mutable_extractors())["ext1"] = extractor;
+
+  Transformer transformer(transformation, false);
+  transformer.transform(headers, body);
+
+  std::string res = TestUtility::bufferToString(body);
+
+  EXPECT_EQ("{\"ext1\":\"123\"}", res);
 }
 
 TEST(Transformer, transformBodyNotSet) {
@@ -226,8 +258,10 @@ TEST(Transformer, transformBodyNotSet) {
 
   envoy::api::v2::filter::http::Transformation transformation;
 
-  // trying to get a value from the body; which should be available in default mode
-  (*transformation.mutable_transformation_template()->mutable_headers())["x-header"]
+  // trying to get a value from the body; which should be available in default
+  // mode
+  (*transformation.mutable_transformation_template()
+        ->mutable_headers())["x-header"]
       .set_text("{{a}}");
 
   Transformer transformer(transformation, true);
