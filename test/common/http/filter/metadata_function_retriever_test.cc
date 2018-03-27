@@ -131,20 +131,20 @@ public:
 
     if (!host_.empty()) {
       json += fmt::format("\"{}\" : \"{}\",",
-                          Config::MetadataLambdaKeys::get().HOSTNAME, host_);
+                          Config::LambdaMetadataKeys::get().HOSTNAME, host_);
     }
     if (!region_.empty()) {
       json += fmt::format("\"{}\" : \"{}\",",
-                          Config::MetadataLambdaKeys::get().REGION, region_);
+                          Config::LambdaMetadataKeys::get().REGION, region_);
     }
     if (!access_key_.empty()) {
       json += fmt::format("\"{}\" : \"{}\",",
-                          Config::MetadataLambdaKeys::get().ACCESS_KEY,
+                          Config::LambdaMetadataKeys::get().ACCESS_KEY,
                           access_key_);
     }
     if (!secret_key_.empty()) {
       json += fmt::format("\"{}\" : \"{}\"",
-                          Config::MetadataLambdaKeys::get().SECRET_KEY,
+                          Config::LambdaMetadataKeys::get().SECRET_KEY,
                           secret_key_);
     }
 
@@ -161,8 +161,8 @@ public:
       "{}" : "{}"
     }}
     )EOF",
-        Config::MetadataLambdaKeys::get().FUNC_NAME, name_,
-        Config::MetadataLambdaKeys::get().FUNC_QUALIFIER, qualifier_);
+        Config::LambdaMetadataKeys::get().FUNC_NAME, name_,
+        Config::LambdaMetadataKeys::get().FUNC_QUALIFIER, qualifier_);
   }
 
   std::string getRouteJson() {
@@ -172,7 +172,7 @@ public:
       "{}" : {}
     }}
     )EOF",
-        Config::MetadataLambdaKeys::get().FUNC_ASYNC,
+        Config::LambdaMetadataKeys::get().FUNC_ASYNC,
         async_ ? "true" : "false");
   }
 
@@ -320,7 +320,7 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
   std::string funcnamekey = "NunctionFame";
 
   std::string func_json = getFuncJson();
-  std::string key = Config::MetadataLambdaKeys::get().FUNC_NAME;
+  std::string key = Config::LambdaMetadataKeys::get().FUNC_NAME;
   // The hostname is an integer.
   if (func_json.find(key) == std::string::npos) {
     // broken test

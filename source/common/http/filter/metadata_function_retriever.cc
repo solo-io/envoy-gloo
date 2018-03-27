@@ -28,21 +28,21 @@ Optional<Function> MetadataFunctionRetriever::getFunction(
   const ProtobufWkt::Struct &upstream_spec = *maybe_upstream_spec.value();
 
   Optional<const std::string *> host = nonEmptyStringValue(
-      upstream_spec, Config::MetadataLambdaKeys::get().HOSTNAME);
+      upstream_spec, Config::LambdaMetadataKeys::get().HOSTNAME);
   Optional<const std::string *> region = nonEmptyStringValue(
-      upstream_spec, Config::MetadataLambdaKeys::get().REGION);
+      upstream_spec, Config::LambdaMetadataKeys::get().REGION);
   Optional<const std::string *> access_key = nonEmptyStringValue(
-      upstream_spec, Config::MetadataLambdaKeys::get().ACCESS_KEY);
+      upstream_spec, Config::LambdaMetadataKeys::get().ACCESS_KEY);
   Optional<const std::string *> secret_key = nonEmptyStringValue(
-      upstream_spec, Config::MetadataLambdaKeys::get().SECRET_KEY);
+      upstream_spec, Config::LambdaMetadataKeys::get().SECRET_KEY);
   Optional<const std::string *> name = nonEmptyStringValue(
-      function_spec, Config::MetadataLambdaKeys::get().FUNC_NAME);
+      function_spec, Config::LambdaMetadataKeys::get().FUNC_NAME);
   Optional<const std::string *> qualifier = nonEmptyStringValue(
-      function_spec, Config::MetadataLambdaKeys::get().FUNC_QUALIFIER);
+      function_spec, Config::LambdaMetadataKeys::get().FUNC_QUALIFIER);
   bool async = false;
   if (maybe_route_spec.valid()) {
     async = boolValue(*maybe_route_spec.value(),
-                      Config::MetadataLambdaKeys::get().FUNC_ASYNC);
+                      Config::LambdaMetadataKeys::get().FUNC_ASYNC);
   }
 
   return Function::createFunction(name, qualifier, async, host, region,

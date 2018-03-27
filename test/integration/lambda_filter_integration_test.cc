@@ -34,23 +34,23 @@ public:
           auto *metadata = lambda_cluster.mutable_metadata();
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
-              Config::MetadataLambdaKeys::get().HOSTNAME)
+              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
+              Config::LambdaMetadataKeys::get().HOSTNAME)
               .set_string_value("lambda.us-east-1.amazonaws.com");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
-              Config::MetadataLambdaKeys::get().REGION)
+              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
+              Config::LambdaMetadataKeys::get().REGION)
               .set_string_value("us-east-1");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
-              Config::MetadataLambdaKeys::get().ACCESS_KEY)
+              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
+              Config::LambdaMetadataKeys::get().ACCESS_KEY)
               .set_string_value("access key");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
-              Config::MetadataLambdaKeys::get().SECRET_KEY)
+              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
+              Config::LambdaMetadataKeys::get().SECRET_KEY)
               .set_string_value("secret dont tell");
 
           /////
@@ -71,10 +71,10 @@ public:
               functionstructspecvalue.mutable_struct_value();
 
           (*functionsspecstruct
-                ->mutable_fields())[Config::MetadataLambdaKeys::get().FUNC_NAME]
+                ->mutable_fields())[Config::LambdaMetadataKeys::get().FUNC_NAME]
               .set_string_value("FunctionName");
           (*functionsspecstruct->mutable_fields())
-              [Config::MetadataLambdaKeys::get().FUNC_QUALIFIER]
+              [Config::LambdaMetadataKeys::get().FUNC_QUALIFIER]
                   .set_string_value("v1");
         });
 

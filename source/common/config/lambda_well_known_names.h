@@ -13,31 +13,29 @@ namespace Config {
 /**
  * Well-known http filter names.
  */
-class SoloLambdaHttpFilterNameValues {
+class LambdaHttpFilterNameValues {
 public:
   // Lambda filter
   const std::string LAMBDA = "io.solo.lambda";
 };
 
-typedef ConstSingleton<SoloLambdaHttpFilterNameValues>
-    SoloLambdaHttpFilterNames;
+typedef ConstSingleton<LambdaHttpFilterNameValues> LambdaHttpFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
  */
-class SoloLambdaMetadataFilterValues {
+class LambdaMetadataFilterValues {
 public:
   // Filter namespace for Lambda Filter.
   const std::string LAMBDA = "io.solo.lambda";
 };
 
-typedef ConstSingleton<SoloLambdaMetadataFilterValues>
-    SoloLambdaMetadataFilters;
+typedef ConstSingleton<LambdaMetadataFilterValues> LambdaMetadataFilters;
 
 /**
  * Keys for MetadataFilterConstants::LAMBDA metadata.
  */
-class MetadataLambdaKeyValues {
+class LambdaMetadataKeyValues {
 public:
   // Key in the Lambda Filter namespace for function name value.
   const std::string FUNC_NAME = "name";
@@ -57,7 +55,7 @@ public:
   const std::string SECRET_KEY = "secret_key";
 };
 
-typedef ConstSingleton<MetadataLambdaKeyValues> MetadataLambdaKeys;
+typedef ConstSingleton<LambdaMetadataKeyValues> LambdaMetadataKeys;
 
 } // namespace Config
 } // namespace Envoy
