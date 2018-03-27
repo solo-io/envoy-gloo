@@ -13,24 +13,26 @@ namespace Config {
 /**
  * Well-known http filter names.
  */
-class SoloHttpFilterNameValues {
+class SoloLambdaHttpFilterNameValues {
 public:
   // Lambda filter
   const std::string LAMBDA = "io.solo.lambda";
 };
 
-typedef ConstSingleton<SoloHttpFilterNameValues> SoloHttpFilterNames;
+typedef ConstSingleton<SoloLambdaHttpFilterNameValues>
+    SoloLambdaHttpFilterNames;
 
 /**
  * Well-known metadata filter namespaces.
  */
-class SoloMetadataFilterValues {
+class SoloLambdaMetadataFilterValues {
 public:
   // Filter namespace for Lambda Filter.
   const std::string LAMBDA = "io.solo.lambda";
 };
 
-typedef ConstSingleton<SoloMetadataFilterValues> SoloMetadataFilters;
+typedef ConstSingleton<SoloLambdaMetadataFilterValues>
+    SoloLambdaMetadataFilters;
 
 /**
  * Keys for MetadataFilterConstants::LAMBDA metadata.

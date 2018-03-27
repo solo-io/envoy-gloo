@@ -55,7 +55,7 @@ ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyConfigProto() {
 }
 
 std::string LambdaFilterConfigFactory::name() {
-  return Config::SoloHttpFilterNames::get().LAMBDA;
+  return Config::SoloLambdaHttpFilterNames::get().LAMBDA;
 }
 
 HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
@@ -71,7 +71,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
   return [&context, config, functionRetriever](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new MixedLambdaFilter(
-        context, Config::SoloMetadataFilters::get().LAMBDA, config,
+        context, Config::SoloLambdaMetadataFilters::get().LAMBDA, config,
         functionRetriever);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});

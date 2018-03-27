@@ -34,22 +34,22 @@ public:
           auto *metadata = lambda_cluster.mutable_metadata();
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
               Config::MetadataLambdaKeys::get().HOSTNAME)
               .set_string_value("lambda.us-east-1.amazonaws.com");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
               Config::MetadataLambdaKeys::get().REGION)
               .set_string_value("us-east-1");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
               Config::MetadataLambdaKeys::get().ACCESS_KEY)
               .set_string_value("access key");
 
           Config::Metadata::mutableMetadataValue(
-              *metadata, Config::SoloMetadataFilters::get().LAMBDA,
+              *metadata, Config::SoloLambdaMetadataFilters::get().LAMBDA,
               Config::MetadataLambdaKeys::get().SECRET_KEY)
               .set_string_value("secret dont tell");
 
