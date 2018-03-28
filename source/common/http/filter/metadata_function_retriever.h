@@ -14,15 +14,6 @@ public:
 
   Optional<Function>
   getFunction(const MetadataAccessor &metadataccessor) const override;
-
-private:
-  static Optional<const std::string *>
-  nonEmptyStringValue(const Protobuf::Struct &spec, const std::string &key);
-
-  static bool boolValue(const Protobuf::Struct &spec, const std::string &key);
-
-  static Optional<const Protobuf::Value *> value(const Protobuf::Struct &spec,
-                                                 const std::string &key);
 };
 
 } // namespace Http

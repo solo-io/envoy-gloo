@@ -50,6 +50,7 @@ envoy_cc_library(
     deps = [
         "//source/common/config:lambda_well_known_names_lib",
         "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
+        "@solo_envoy_common//source/common/config:solo_metadata_lib",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
