@@ -79,7 +79,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
 }
 
 /**
- * Static registration for this sample filter. @see RegisterFactory.
+ * Static registration for the AWS Lambda filter. @see RegisterFactory.
  */
 static Envoy::Registry::RegisterFactory<
     LambdaFilterConfigFactory,
