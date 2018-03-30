@@ -16,6 +16,7 @@ message Transformation {
     // currently both are JSON
     oneof transformation_type {
         TransformationTemplate transformation_template = 1;
+        HeaderBodyTransform header_body_transform = 2;
     }
 }
 
@@ -50,8 +51,9 @@ message InjaTemplate {
     string text = 1;
 }
 
-message Passthrough {
-}
+message Passthrough {}
 
-message MergeExtractorsToBody {
-}
+message MergeExtractorsToBody {}
+
+message HeaderBodyTransform {}
+ 

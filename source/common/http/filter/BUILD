@@ -38,11 +38,28 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        "//source/common/http/filter:body_header_transformer_lib",
         "//source/common/http/filter:transformation_filter_config",
         "//source/common/http/filter:transformer_lib",
         "@envoy//source/exe:envoy_common_lib",
         "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "body_header_transformer_lib",
+    srcs = [
+        "body_header_transformer.cc",
+    ],
+    hdrs = [
+        "body_header_transformer.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "@envoy//source/common/http:header_map_lib",
+        "@envoy//source/exe:envoy_common_lib",
+        "@json//:json-lib",
     ],
 )
 

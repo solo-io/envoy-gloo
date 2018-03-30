@@ -94,12 +94,15 @@ private:
   void addEncoderData(Buffer::Instance &data);
   void transformSomething(
       const envoy::api::v2::filter::http::Transformation **transformation,
-      Buffer::Instance &body,
+      HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilterBase::*responeWithError)(),
       void (TransformationFilterBase::*addData)(Buffer::Instance &));
   void transformTemplate(
       const envoy::api::v2::filter::http::TransformationTemplate &,
-      Buffer::Instance &body,
+      HeaderMap &header_map, Buffer::Instance &body,
+      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+  void transformBodyHeaderTransformer(
+      HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilterBase::*addData)(Buffer::Instance &));
 
   void resetInternalState();
@@ -109,7 +112,8 @@ private:
   bool stream_destroyed_{};
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
-  HeaderMap *header_map_{nullptr};
+  HeaderMap *request_headers_{nullptr};
+  HeaderMap *response_headers_{nullptr};
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 

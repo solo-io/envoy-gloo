@@ -36,3 +36,13 @@ envoy_cc_test(
         "@envoy//test/test_common:utility_lib",
     ],
 )
+
+envoy_cc_test(
+    name = "body_header_transformer_test",
+    srcs = ["body_header_transformer_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/common/http/filter:body_header_transformer_lib",
+        "@envoy//test/test_common:utility_lib",
+    ],
+)

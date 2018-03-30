@@ -3,6 +3,7 @@
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/config/transformation_well_known_names.h"
+#include "common/http/filter/body_header_transformer.h"
 #include "common/http/filter/transformer.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
@@ -41,7 +42,7 @@ TransformationFilterBase::decodeHeaders(HeaderMap &header_map,
     return FilterHeadersStatus::Continue;
   }
 
-  header_map_ = &header_map;
+  request_headers_ = &header_map;
 
   if (end_stream || isPassthrough(*request_transformation_)) {
     transformRequest();
@@ -96,7 +97,7 @@ TransformationFilterBase::encodeHeaders(HeaderMap &header_map,
     return FilterHeadersStatus::Continue;
   }
 
-  header_map_ = &header_map;
+  response_headers_ = &header_map;
 
   if (end_stream || isPassthrough(*response_transformation_)) {
     transformResponse();
@@ -243,14 +244,14 @@ FunctionalTransformationFilter::getTransformFromRouteEntry(
 }
 
 void TransformationFilterBase::transformRequest() {
-  transformSomething(&request_transformation_, request_body_,
+  transformSomething(&request_transformation_, *request_headers_, request_body_,
                      &TransformationFilterBase::requestError,
                      &TransformationFilterBase::addDecoderData);
 }
 
 void TransformationFilterBase::transformResponse() {
-  transformSomething(&response_transformation_, response_body_,
-                     &TransformationFilterBase::responseError,
+  transformSomething(&response_transformation_, *response_headers_,
+                     response_body_, &TransformationFilterBase::responseError,
                      &TransformationFilterBase::addEncoderData);
 }
 
@@ -264,16 +265,20 @@ void TransformationFilterBase::addEncoderData(Buffer::Instance &data) {
 
 void TransformationFilterBase::transformSomething(
     const envoy::api::v2::filter::http::Transformation **transformation,
-    Buffer::Instance &body,
+    HeaderMap &header_map, Buffer::Instance &body,
     void (TransformationFilterBase::*responeWithError)(),
     void (TransformationFilterBase::*addData)(Buffer::Instance &)) {
 
   switch ((*transformation)->transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    transformTemplate((*transformation)->transformation_template(), body,
-                      addData);
+    transformTemplate((*transformation)->transformation_template(), header_map,
+                      body, addData);
     break;
-    // TODO: add stuff
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
+    transformBodyHeaderTransformer(header_map, body, addData);
+    break;
+  case envoy::api::v2::filter::http::Transformation::
+      TRANSFORMATION_TYPE_NOT_SET:
     break;
   }
 
@@ -285,16 +290,16 @@ void TransformationFilterBase::transformSomething(
 
 void TransformationFilterBase::transformTemplate(
     const envoy::api::v2::filter::http::TransformationTemplate &transformation,
-    Buffer::Instance &body,
+    HeaderMap &header_map, Buffer::Instance &body,
     void (TransformationFilterBase::*addData)(Buffer::Instance &)) {
   try {
     Transformer transformer(transformation);
-    transformer.transform(*header_map_, body);
+    transformer.transform(header_map, body);
 
     if (body.length() > 0) {
       (this->*addData)(body);
     } else {
-      header_map_->removeContentType();
+      header_map.removeContentType();
     }
   } catch (nlohmann::json::parse_error &e) {
     // json may throw parse error
@@ -302,6 +307,24 @@ void TransformationFilterBase::transformTemplate(
   } catch (std::runtime_error &e) {
     // inja may throw runtime error
     error(Error::TemplateParseError, e.what());
+  }
+}
+
+void TransformationFilterBase::transformBodyHeaderTransformer(
+    HeaderMap &header_map, Buffer::Instance &body,
+    void (TransformationFilterBase::*addData)(Buffer::Instance &)) {
+  try {
+    BodyHeaderTransformer transformer;
+    transformer.transform(header_map, body);
+
+    if (body.length() > 0) {
+      (this->*addData)(body);
+    } else {
+      header_map.removeContentType();
+    }
+  } catch (nlohmann::json::parse_error &e) {
+    // json may throw parse error
+    error(Error::JsonParseError, e.what());
   }
 }
 
@@ -313,10 +336,10 @@ void TransformationFilterBase::requestError() {
 
 void TransformationFilterBase::responseError() {
   ASSERT(is_error());
-  header_map_->Status()->value(enumToInt(error_code_));
+  response_headers_->Status()->value(enumToInt(error_code_));
   Buffer::OwnedImpl data(error_messgae_);
-  header_map_->removeContentType();
-  header_map_->insertContentLength().value(data.length());
+  response_headers_->removeContentType();
+  response_headers_->insertContentLength().value(data.length());
   encoder_callbacks_->addEncodedData(data, false);
 }
 
