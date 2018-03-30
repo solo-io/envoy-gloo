@@ -50,9 +50,8 @@ private:
 
 class Transformer {
 public:
-  Transformer(
-      const envoy::api::v2::filter::http::Transformation &transformation,
-      bool advanced_templates);
+  Transformer(const envoy::api::v2::filter::http::TransformationTemplate
+                  &transformation);
   ~Transformer();
 
   void transform(HeaderMap &map, Buffer::Instance &body);
@@ -68,8 +67,7 @@ private:
 
     std::aligned_storage<TransformerImplSize, TransformerImplAlign>::type impl_;
   */
-  const envoy::api::v2::filter::http::Transformation &transformation_;
-  bool advanced_templates_{};
+  const envoy::api::v2::filter::http::TransformationTemplate &transformation_;
 };
 
 } // namespace Http

@@ -243,40 +243,56 @@ FunctionalTransformationFilter::getTransformFromRouteEntry(
 }
 
 void TransformationFilterBase::transformRequest() {
-  try {
-    // 'move' the transformation
-    Transformer transformer(*request_transformation_,
-                            config_->advanced_templates());
-    request_transformation_ = nullptr;
-    transformer.transform(*header_map_, request_body_);
-    if (request_body_.length() > 0) {
-      decoder_callbacks_->addDecodedData(request_body_, false);
-    } else {
-      header_map_->removeContentType();
-    }
-
-  } catch (nlohmann::json::parse_error &e) {
-    // json may throw parse error
-    error(Error::JsonParseError, e.what());
-  } catch (std::runtime_error &e) {
-    // inja may throw runtime error
-    error(Error::TemplateParseError, e.what());
-  }
-
-  if (is_error()) {
-    requestError();
-  }
+  transformSomething(&request_transformation_, request_body_,
+                     &TransformationFilterBase::requestError,
+                     &TransformationFilterBase::addDecoderData);
 }
 
 void TransformationFilterBase::transformResponse() {
-  try {
-    Transformer transformer(*response_transformation_,
-                            config_->advanced_templates());
-    response_transformation_ = nullptr;
-    transformer.transform(*header_map_, response_body_);
+  transformSomething(&response_transformation_, response_body_,
+                     &TransformationFilterBase::responseError,
+                     &TransformationFilterBase::addEncoderData);
+}
 
-    if (response_body_.length() > 0) {
-      encoder_callbacks_->addEncodedData(response_body_, false);
+void TransformationFilterBase::addDecoderData(Buffer::Instance &data) {
+  decoder_callbacks_->addDecodedData(data, false);
+}
+
+void TransformationFilterBase::addEncoderData(Buffer::Instance &data) {
+  encoder_callbacks_->addEncodedData(data, false);
+}
+
+void TransformationFilterBase::transformSomething(
+    const envoy::api::v2::filter::http::Transformation **transformation,
+    Buffer::Instance &body,
+    void (TransformationFilterBase::*responeWithError)(),
+    void (TransformationFilterBase::*addData)(Buffer::Instance &)) {
+
+  switch ((*transformation)->transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    transformTemplate((*transformation)->transformation_template(), body,
+                      addData);
+    break;
+    // TODO: add stuff
+    break;
+  }
+
+  *transformation = nullptr;
+  if (is_error()) {
+    (this->*responeWithError)();
+  }
+}
+
+void TransformationFilterBase::transformTemplate(
+    const envoy::api::v2::filter::http::TransformationTemplate &transformation,
+    Buffer::Instance &body,
+    void (TransformationFilterBase::*addData)(Buffer::Instance &)) {
+  try {
+    Transformer transformer(transformation);
+    transformer.transform(*header_map_, body);
+
+    if (body.length() > 0) {
+      (this->*addData)(body);
     } else {
       header_map_->removeContentType();
     }
@@ -286,10 +302,6 @@ void TransformationFilterBase::transformResponse() {
   } catch (std::runtime_error &e) {
     // inja may throw runtime error
     error(Error::TemplateParseError, e.what());
-  }
-
-  if (is_error()) {
-    responseError();
   }
 }
 

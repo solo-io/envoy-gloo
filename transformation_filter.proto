@@ -6,19 +6,17 @@ option go_package = "transformation";
 
 // [#protodoc-title: Lambda]
 // Lambda :ref:`configuration overview <config_http_filters_lambda>`.
-
 message Transformations {
     map<string, Transformation> transformations = 1;
-    bool advanced_templates = 2;
-
 }
+
 // [#proto-status: experimental]
 message Transformation {
-    // Extractors are in the origin request language domain
-    map<string, Extraction> extractors = 1;
     // Template is in the transformed request language domain
     // currently both are JSON
-    TransformationTemplate transformation_template = 2;
+    oneof transformation_type {
+        TransformationTemplate transformation_template = 1;
+    }
 }
 
 message Extraction {
@@ -27,17 +25,22 @@ message Extraction {
     // an empty value.
     string regex =  2;
     uint32 subgroup = 3;
-
 }
 
 message TransformationTemplate {
-    map<string, InjaTemplate> headers = 1;
+    bool advanced_templates = 1;
+    // Extractors are in the origin request language domain
+    map<string, Extraction> extractors = 2;
+
+    map<string, InjaTemplate> headers = 3;
+
     oneof body_transformation {
-        InjaTemplate body = 2;
-        Passthrough passthrough = 3;
-        MergeExtractorsToBody merge_extractors_to_body = 4;
+        InjaTemplate body = 4;
+        Passthrough passthrough = 5;
+        MergeExtractorsToBody merge_extractors_to_body = 6;
     }
 }
+
 /*
 custom functions:
 header_value(name) -> from the original headers
@@ -51,5 +54,4 @@ message Passthrough {
 }
 
 message MergeExtractorsToBody {
-
 }

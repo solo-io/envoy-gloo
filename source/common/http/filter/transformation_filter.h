@@ -76,7 +76,11 @@ protected:
 private:
   static bool
   isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
-    return t.transformation_template().has_passthrough();
+    if (t.transformation_type_case() ==
+        envoy::api::v2::filter::http::Transformation::kTransformationTemplate) {
+      return t.transformation_template().has_passthrough();
+    }
+    return false;
   }
 
   const envoy::api::v2::filter::http::Transformation *
@@ -85,6 +89,19 @@ private:
 
   void transformRequest();
   void transformResponse();
+
+  void addDecoderData(Buffer::Instance &data);
+  void addEncoderData(Buffer::Instance &data);
+  void transformSomething(
+      const envoy::api::v2::filter::http::Transformation **transformation,
+      Buffer::Instance &body,
+      void (TransformationFilterBase::*responeWithError)(),
+      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+  void transformTemplate(
+      const envoy::api::v2::filter::http::TransformationTemplate &,
+      Buffer::Instance &body,
+      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+
   void resetInternalState();
 
   StreamDecoderFilterCallbacks *decoder_callbacks_{};

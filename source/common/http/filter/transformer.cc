@@ -95,10 +95,8 @@ std::string TransformerInstance::render(const std::string &input) {
 }
 
 Transformer::Transformer(
-    const envoy::api::v2::filter::http::Transformation &transformation,
-    bool advanced_templates)
-    : transformation_(transformation), advanced_templates_(advanced_templates) {
-}
+    const envoy::api::v2::filter::http::TransformationTemplate &transformation)
+    : transformation_(transformation) {}
 
 Transformer::~Transformer() {}
 
@@ -128,7 +126,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
     const std::string &name = it->first;
     const envoy::api::v2::filter::http::Extraction &extractor = it->second;
-    if (advanced_templates_) {
+    if (transformation_.advanced_templates()) {
       extractions[name] = ExtractorUtil::extract(extractor, header_map);
     } else {
       std::string name_to_split = name;
@@ -145,15 +143,13 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   // start transforming!
   TransformerInstance instance(header_map, extractions, json_body);
 
-  if (!advanced_templates_) {
+  if (!transformation_.advanced_templates()) {
     instance.useDotNotation();
   }
 
-  switch (
-      transformation_.transformation_template().body_transformation_case()) {
+  switch (transformation_.body_transformation_case()) {
   case envoy::api::v2::filter::http::TransformationTemplate::kBody: {
-    const std::string &input =
-        transformation_.transformation_template().body().text();
+    const std::string &input = transformation_.body().text();
     auto output = instance.render(input);
 
     // remove content length, as we have new body.
@@ -185,7 +181,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   }
 
   // add headers
-  const auto &headers = transformation_.transformation_template().headers();
+  const auto &headers = transformation_.headers();
 
   for (auto it = headers.begin(); it != headers.end(); it++) {
     std::string name = it->first;

@@ -11,15 +11,15 @@ const std::string DEFAULT_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  advanced_templates: true
   transformations:
     translation1:
-      extractors:
-        ext1:
-          header: :path
-          regex: /users/(\d+)
-          subgroup: 1
       transformation_template:
+        advanced_templates: true
+        extractors:
+          ext1:
+            header: :path
+            regex: /users/(\d+)
+            subgroup: 1
         headers:
           x-solo:
             text: solo.io
@@ -31,10 +31,10 @@ const std::string BODY_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  advanced_templates: true
   transformations:
     translation1:
       transformation_template:
+        advanced_templates: true
         body:
           text: "{{abc}}"
 )EOF";
@@ -43,15 +43,15 @@ const std::string PATH_TO_PATH_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  advanced_templates: false
   transformations:
     translation1:
-      extractors:
-        ext1:
-          header: :path
-          regex: /users/(\d+)
-          subgroup: 1
       transformation_template:
+        advanced_templates: false
+        extractors:
+          ext1:
+            header: :path
+            regex: /users/(\d+)
+            subgroup: 1
         headers: { ":path": {"text": "/solo/{{ext1}}"} }
         body:
           text: soloio
@@ -61,10 +61,10 @@ const std::string EMPTY_BODY_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  advanced_templates: false
   transformations:
     translation1:
       transformation_template:
+        advanced_templates: false
         body:
           text: ""
 )EOF";
@@ -73,15 +73,15 @@ const std::string PASSTHROUGH_TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  advanced_templates: true
   transformations:
     translation1:
-      extractors:
-        ext1:
-          header: :path
-          regex: /users/(\d+)
-          subgroup: 1
       transformation_template:
+        advanced_templates: true
+        extractors:
+          ext1:
+            header: :path
+            regex: /users/(\d+)
+            subgroup: 1
         headers: { "x-solo": {"text": "{{extraction(\"ext1\")}}"} }
         passthrough: {}
 )EOF";
