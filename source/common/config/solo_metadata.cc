@@ -8,7 +8,7 @@ SoloMetadata::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
                                   const std::string &key) {
 
   absl::optional<const Protobuf::Value *> maybe_value = value(spec, key);
-  if (!maybe_value.valid()) {
+  if (!maybe_value.has_value()) {
     return {};
   }
   const auto &value = *maybe_value.value();
@@ -27,7 +27,7 @@ SoloMetadata::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
 bool SoloMetadata::boolValue(const Protobuf::Struct &spec,
                              const std::string &key) {
   absl::optional<const Protobuf::Value *> maybe_value = value(spec, key);
-  if (!maybe_value.valid()) {
+  if (!maybe_value.has_value()) {
     return {};
   }
 
