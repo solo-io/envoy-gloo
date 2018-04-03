@@ -11,13 +11,13 @@ using Envoy::Server::Configuration::FactoryContext;
 
 FunctionRetrieverMetadataAccessor::~FunctionRetrieverMetadataAccessor() {}
 
-Optional<const std::string *>
+absl::optional<const std::string *>
 FunctionRetrieverMetadataAccessor::getFunctionName() const {
   RELEASE_ASSERT(function_name_);
   return function_name_;
 }
 
-Optional<const ProtobufWkt::Struct *>
+absl::optional<const ProtobufWkt::Struct *>
 FunctionRetrieverMetadataAccessor::getFunctionSpec() const {
   if (cluster_spec_ == nullptr) {
     return {};
@@ -25,13 +25,13 @@ FunctionRetrieverMetadataAccessor::getFunctionSpec() const {
   return cluster_spec_;
 }
 
-Optional<const ProtobufWkt::Struct *>
+absl::optional<const ProtobufWkt::Struct *>
 FunctionRetrieverMetadataAccessor::getClusterMetadata() const {
   RELEASE_ASSERT(child_spec_);
   return child_spec_;
 }
 
-Optional<const ProtobufWkt::Struct *>
+absl::optional<const ProtobufWkt::Struct *>
 FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
 
   if (route_spec_) {
@@ -61,7 +61,7 @@ FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
   return {};
 }
 
-Optional<FunctionRetrieverMetadataAccessor::Result>
+absl::optional<FunctionRetrieverMetadataAccessor::Result>
 FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   const Envoy::Router::RouteEntry *routeEntry =
       SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
@@ -84,7 +84,7 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
       Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
     return canPassthrough()
-               ? Optional<FunctionRetrieverMetadataAccessor::Result>()
+               ? absl::optional<FunctionRetrieverMetadataAccessor::Result>()
                : Result::Error;
   }
 
@@ -108,9 +108,9 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   for (auto &&fptr :
        {&FunctionRetrieverMetadataAccessor::findSingleFunction,
         &FunctionRetrieverMetadataAccessor::findMultileFunction}) {
-    Optional<const std::string *> maybe_single_func =
+    absl::optional<const std::string *> maybe_single_func =
         (this->*fptr)(clusterstruct);
-    if (maybe_single_func.valid()) {
+    if (maybe_single_func.has_value()) {
       // we found a function so the search is over.
       function_name_ = maybe_single_func.value();
       cluster_spec_ = nullptr;
@@ -151,7 +151,7 @@ bool FunctionRetrieverMetadataAccessor::canPassthrough() {
   return functionsvalue.bool_value();
 }
 
-Optional<const std::string *>
+absl::optional<const std::string *>
 FunctionRetrieverMetadataAccessor::findSingleFunction(
     const ProtobufWkt::Struct &filter_metadata_struct) {
 
@@ -170,10 +170,10 @@ FunctionRetrieverMetadataAccessor::findSingleFunction(
     return {};
   }
 
-  return Optional<const std::string *>(&value.string_value());
+  return absl::optional<const std::string *>(&value.string_value());
 }
 
-Optional<const std::string *>
+absl::optional<const std::string *>
 FunctionRetrieverMetadataAccessor::findMultileFunction(
     const ProtobufWkt::Struct &filter_metadata_struct) {
 
@@ -228,7 +228,7 @@ FunctionRetrieverMetadataAccessor::findMultileFunction(
   for (const ProtobufWkt::Value &function : functions_list.values()) {
 
     auto maybe_fw = getFuncWeight(function);
-    if (!maybe_fw.valid()) {
+    if (!maybe_fw.has_value()) {
       return {};
     }
 
@@ -236,7 +236,7 @@ FunctionRetrieverMetadataAccessor::findMultileFunction(
     end = begin + fw.weight;
     if (((selected_value >= begin) && (selected_value < end)) ||
         (end >= total_function_weight)) {
-      return Optional<const std::string *>(fw.name);
+      return absl::optional<const std::string *>(fw.name);
     }
     begin = end;
   }
@@ -244,7 +244,7 @@ FunctionRetrieverMetadataAccessor::findMultileFunction(
   return {};
 }
 
-Optional<FunctionRetrieverMetadataAccessor::FunctionWeight>
+absl::optional<FunctionRetrieverMetadataAccessor::FunctionWeight>
 FunctionRetrieverMetadataAccessor::getFuncWeight(
     const ProtobufWkt::Value &function_weight_value) {
 

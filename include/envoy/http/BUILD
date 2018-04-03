@@ -11,9 +11,9 @@ envoy_package()
 envoy_cc_library(
     name = "metadata_accessor_interface",
     hdrs = ["metadata_accessor.h"],
+    external_deps = ["abseil_optional"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/common:optional",
         "@envoy//source/common/protobuf",
     ],
 )

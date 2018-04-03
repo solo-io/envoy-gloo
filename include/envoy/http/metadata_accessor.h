@@ -1,9 +1,10 @@
 #pragma once
 
-#include "envoy/common/optional.h"
 #include "envoy/common/pure.h"
 
 #include "common/protobuf/protobuf.h"
+
+#include "absl/types/optional.h"
 
 namespace Envoy {
 namespace Http {
@@ -11,9 +12,11 @@ namespace Http {
 class FilterMetadataAccessor {
 public:
   // Get the cluster metadata for the current filter
-  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const PURE;
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getClusterMetadata() const PURE;
   // Get the route metadata for the current filter
-  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const PURE;
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getRouteMetadata() const PURE;
 
   virtual ~FilterMetadataAccessor() {}
 };
@@ -24,9 +27,10 @@ public:
 class MetadataAccessor : public FilterMetadataAccessor {
 public:
   // Get the name of the function.
-  virtual Optional<const std::string *> getFunctionName() const PURE;
+  virtual absl::optional<const std::string *> getFunctionName() const PURE;
   // Get the function to route to in the current cluster.
-  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const PURE;
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getFunctionSpec() const PURE;
 
   virtual ~MetadataAccessor() {}
 };

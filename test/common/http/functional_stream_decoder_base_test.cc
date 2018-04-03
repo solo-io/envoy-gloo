@@ -200,13 +200,13 @@ protected:
 
 bool FunctionalFilterTester::retrieveFunction(
     const MetadataAccessor &meta_accessor) {
-  bool have_function = meta_accessor.getFunctionSpec().valid();
+  bool have_function = meta_accessor.getFunctionSpec().has_value();
   meta_accessor_ = &meta_accessor;
   return have_function;
 }
 
 FilterHeadersStatus FunctionalFilterTester::decodeHeaders(HeaderMap &, bool) {
-  routeMetadataFound_ = meta_accessor_->getRouteMetadata().valid();
+  routeMetadataFound_ = meta_accessor_->getRouteMetadata().has_value();
   decodeHeadersCalled_ = true;
   functionCalled_ = (*meta_accessor_->getFunctionSpec().value())
                         .fields()

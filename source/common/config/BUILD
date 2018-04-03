@@ -16,9 +16,9 @@ envoy_cc_library(
     name = "solo_metadata_lib",
     srcs = ["solo_metadata.cc"],
     hdrs = ["solo_metadata.h"],
+    external_deps = ["abseil_optional"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/common:optional",
         "@envoy//source/common/protobuf",
     ],
 )

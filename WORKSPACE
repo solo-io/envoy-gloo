@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "f79a62b7cc9ca55d20104379ee0576617630cdaa"  # Feb 15, 2018 ( test: fix nit after #2591 (#2601) )
+ENVOY_SHA = "4dd49d8809f7aaa580538b3c228dd99a2fae92a4"  # Mar 20, 2018 (v1.6.0)
 
 http_archive(
     name = "envoy",

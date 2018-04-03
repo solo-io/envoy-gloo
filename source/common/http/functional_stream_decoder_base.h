@@ -25,13 +25,14 @@ public:
     Active,
   };
 
-  Optional<Result> tryToGetSpec();
+  absl::optional<Result> tryToGetSpec();
 
   // MetadataAccessor
-  Optional<const std::string *> getFunctionName() const override;
-  Optional<const ProtobufWkt::Struct *> getFunctionSpec() const override;
-  Optional<const ProtobufWkt::Struct *> getClusterMetadata() const override;
-  Optional<const ProtobufWkt::Struct *> getRouteMetadata() const override;
+  absl::optional<const std::string *> getFunctionName() const override;
+  absl::optional<const ProtobufWkt::Struct *> getFunctionSpec() const override;
+  absl::optional<const ProtobufWkt::Struct *>
+  getClusterMetadata() const override;
+  absl::optional<const ProtobufWkt::Struct *> getRouteMetadata() const override;
 
   void
   setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &decoder_callbacks) {
@@ -62,12 +63,12 @@ private:
 
   bool canPassthrough();
 
-  Optional<const std::string *>
+  absl::optional<const std::string *>
   findSingleFunction(const ProtobufWkt::Struct &filter_metadata_struct);
-  Optional<const std::string *>
+  absl::optional<const std::string *>
   findMultileFunction(const ProtobufWkt::Struct &filter_metadata_struct);
 
-  Optional<FunctionWeight>
+  absl::optional<FunctionWeight>
   getFuncWeight(const ProtobufWkt::Value &function_weight_value);
 
   void tryToGetSpecFromCluster(const std::string &funcname);
@@ -100,7 +101,7 @@ public:
                                     bool end_stream) override {
     auto mayberesult = metadata_accessor_.tryToGetSpec();
     // no function
-    if (!mayberesult.valid()) {
+    if (!mayberesult.has_value()) {
       return FilterHeadersStatus::Continue;
     }
 
