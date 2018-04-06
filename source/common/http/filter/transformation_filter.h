@@ -145,7 +145,7 @@ public:
   bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
 
 protected:
-  virtual void checkRequestActive();
+  virtual void checkRequestActive() override;
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
                              const std::string &key) override;
