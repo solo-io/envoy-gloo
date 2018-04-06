@@ -51,7 +51,7 @@ private:
   const LambdaFilterConfigSharedPtr config_;
   FunctionRetrieverSharedPtr function_retriever_;
 
-  Optional<Function> current_function_;
+  absl::optional<Function> current_function_;
   void lambdafy();
   std::string functionUrlPath();
   void cleanup();

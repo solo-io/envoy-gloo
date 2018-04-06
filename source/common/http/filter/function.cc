@@ -3,32 +3,32 @@
 namespace Envoy {
 namespace Http {
 
-Optional<Function>
-Function::createFunction(Optional<const std::string *> name,
-                         Optional<const std::string *> qualifier, bool async,
-                         Optional<const std::string *> host,
-                         Optional<const std::string *> region,
-                         Optional<const std::string *> access_key,
-                         Optional<const std::string *> secret_key) {
-  if (!name.valid()) {
+absl::optional<Function>
+Function::createFunction(absl::optional<const std::string *> name,
+                         absl::optional<const std::string *> qualifier,
+                         bool async, absl::optional<const std::string *> host,
+                         absl::optional<const std::string *> region,
+                         absl::optional<const std::string *> access_key,
+                         absl::optional<const std::string *> secret_key) {
+  if (!name.has_value()) {
     return {};
   }
-  if (!host.valid()) {
+  if (!host.has_value()) {
     return {};
   }
-  if (!region.valid()) {
+  if (!region.has_value()) {
     return {};
   }
-  if (!access_key.valid()) {
+  if (!access_key.has_value()) {
     return {};
   }
-  if (!secret_key.valid()) {
+  if (!secret_key.has_value()) {
     return {};
   }
   const Function f =
       Function(name.value(), qualifier, async, host.value(), region.value(),
                access_key.value(), secret_key.value());
-  return Optional<Function>(f);
+  return absl::optional<Function>(f);
 }
 
 } // namespace Http

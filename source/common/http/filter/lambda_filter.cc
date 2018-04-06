@@ -38,7 +38,7 @@ std::string LambdaFilter::functionUrlPath() {
   std::stringstream val;
   val << "/2015-03-31/functions/" << (*current_function.name_)
       << "/invocations";
-  if (current_function.qualifier_.valid()) {
+  if (current_function.qualifier_.has_value()) {
     val << "?Qualifier=" << (*current_function.qualifier_.value());
   }
   return val.str();
@@ -46,7 +46,7 @@ std::string LambdaFilter::functionUrlPath() {
 
 Envoy::Http::FilterHeadersStatus
 LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
-  RELEASE_ASSERT(current_function_.valid());
+  RELEASE_ASSERT(current_function_.has_value());
   const auto &current_function = current_function_.value();
 
   aws_authenticator_.init(current_function.access_key_,
@@ -69,7 +69,7 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
 
 Envoy::Http::FilterDataStatus
 LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
-  if (!current_function_.valid()) {
+  if (!current_function_.has_value()) {
     return Envoy::Http::FilterDataStatus::Continue;
   }
   aws_authenticator_.updatePayloadHash(data);
@@ -84,7 +84,7 @@ LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
 
 Envoy::Http::FilterTrailersStatus
 LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
-  if (current_function_.valid()) {
+  if (current_function_.has_value()) {
     lambdafy();
   }
 
@@ -93,7 +93,7 @@ LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
 
 bool LambdaFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
   current_function_ = function_retriever_->getFunction(meta_accessor);
-  return current_function_.valid();
+  return current_function_.has_value();
 }
 
 void LambdaFilter::lambdafy() {
@@ -124,7 +124,7 @@ void LambdaFilter::lambdafy() {
 
 void LambdaFilter::cleanup() {
   request_headers_ = nullptr;
-  current_function_ = Optional<Function>();
+  current_function_ = absl::optional<Function>();
 }
 
 } // namespace Http

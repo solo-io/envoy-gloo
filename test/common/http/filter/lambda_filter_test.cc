@@ -30,14 +30,17 @@ using Server::Configuration::LambdaFilterConfigFactory;
 // Nothing here as we mock the function retriever
 class NothingMetadataAccessor : public MetadataAccessor {
 public:
-  virtual Optional<const std::string *> getFunctionName() const { return {}; }
-  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+  virtual absl::optional<const std::string *> getFunctionName() const {
     return {};
   }
-  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
     return {};
   }
-  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getClusterMetadata() const {
+    return {};
+  }
+  virtual absl::optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
     return {};
   }
 
@@ -214,7 +217,7 @@ TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
 TEST_F(LambdaFilterTest, InvalidFunction) {
   // invalid function
   EXPECT_CALL(*function_retriever_, getFunction(_))
-      .WillRepeatedly(Return(Optional<Function>()));
+      .WillRepeatedly(Return(absl::optional<Function>()));
 
   Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

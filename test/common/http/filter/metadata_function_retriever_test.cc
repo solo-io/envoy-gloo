@@ -20,9 +20,9 @@ bool operator==(const Function &lhs, const Function &rhs) {
              std::tie(*rhs.name_, *rhs.region_, *rhs.host_, *rhs.access_key_,
                       *rhs.secret_key_, rhs.async_);
 
-  ret = ret && (!rhs.qualifier_.valid() == !rhs.qualifier_.valid());
+  ret = ret && (!rhs.qualifier_.has_value() == !rhs.qualifier_.has_value());
 
-  if (ret && rhs.qualifier_.valid()) {
+  if (ret && rhs.qualifier_.has_value()) {
     ret = ret && (*rhs.qualifier_.value() == *rhs.qualifier_.value());
   }
 
@@ -45,28 +45,29 @@ Protobuf::Struct getMetadata(const std::string &json) {
 
 class TesterMetadataAccessor : public MetadataAccessor {
 public:
-  virtual Optional<const std::string *> getFunctionName() const {
+  virtual absl::optional<const std::string *> getFunctionName() const {
     if (!function_name_.empty()) {
       return &function_name_;
     }
     return {};
   }
 
-  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+  virtual absl::optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
     if (function_spec_ != nullptr) {
       return function_spec_;
     }
     return {};
   }
 
-  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getClusterMetadata() const {
     if (cluster_metadata_ != nullptr) {
       return cluster_metadata_;
     }
     return {};
   }
 
-  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
     if (route_metadata_ != nullptr) {
       return route_metadata_;
     }
@@ -79,7 +80,7 @@ public:
   const ProtobufWkt::Struct *route_metadata_;
 };
 
-Optional<Function>
+absl::optional<Function>
 getFunctionFromMetadata(const Protobuf::Struct &func_metadata,
                         const Protobuf::Struct &cluster_metadata,
                         const Protobuf::Struct *route_metadata = nullptr) {
@@ -110,9 +111,9 @@ public:
                                             &secret_key_));
   }
 
-  Optional<Function> getFunctionFromJson(const std::string &func_json,
-                                         const std::string &cluster_json,
-                                         std::string route_json = "") {
+  absl::optional<Function> getFunctionFromJson(const std::string &func_json,
+                                               const std::string &cluster_json,
+                                               std::string route_json = "") {
     func_metadata_ = getMetadata(func_json);
     cluster_metadata_ = getMetadata(cluster_json);
 
@@ -176,7 +177,7 @@ public:
         async_ ? "true" : "false");
   }
 
-  Optional<Function> getFunction() {
+  absl::optional<Function> getFunction() {
     std::string func_json = getFuncJson();
     std::string cluster_json = getClusterJson();
     std::string route_json = getRouteJson();
@@ -199,7 +200,7 @@ TEST_F(MetadataFunctionRetrieverTest, EmptyJsons) {
 
   auto function = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(function.valid());
+  EXPECT_FALSE(function.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, EmptyRouteJson) {
@@ -208,7 +209,7 @@ TEST_F(MetadataFunctionRetrieverTest, EmptyRouteJson) {
 
   auto function = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(function.valid());
+  EXPECT_FALSE(function.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, EmptyClusterJson) {
@@ -217,7 +218,7 @@ TEST_F(MetadataFunctionRetrieverTest, EmptyClusterJson) {
 
   auto function = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(function.valid());
+  EXPECT_FALSE(function.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunction) {
@@ -229,7 +230,7 @@ TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunction) {
   auto actualFunction =
       getFunctionFromJson(func_json, cluster_json, route_json);
 
-  EXPECT_TRUE(actualFunction.valid());
+  EXPECT_TRUE(actualFunction.has_value());
   EXPECT_EQ(actualFunction.value(), *configured_function_);
 }
 TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunctionNoRoute) {
@@ -242,7 +243,7 @@ TEST_F(MetadataFunctionRetrieverTest, ConfiguredFunctionNoRoute) {
 
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_TRUE(actualFunction.valid());
+  EXPECT_TRUE(actualFunction.has_value());
   EXPECT_EQ(actualFunction.value(), *configured_function_);
 }
 
@@ -253,7 +254,7 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionOppositeJsons) {
 
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(actualFunction.valid());
+  EXPECT_FALSE(actualFunction.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
@@ -268,7 +269,7 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionMissingField) {
 
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(actualFunction.valid());
+  EXPECT_FALSE(actualFunction.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
@@ -287,7 +288,7 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionNonStringField) {
 
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(actualFunction.valid());
+  EXPECT_FALSE(actualFunction.has_value());
 }
 
 TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
@@ -304,9 +305,9 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionEmptyField) {
         auto actualFunction = getFunction();
 
         if (func_name.empty() || hostname.empty() || region.empty()) {
-          EXPECT_FALSE(actualFunction.valid());
+          EXPECT_FALSE(actualFunction.has_value());
         } else {
-          EXPECT_TRUE(actualFunction.valid());
+          EXPECT_TRUE(actualFunction.has_value());
         }
       }
     }
@@ -332,7 +333,7 @@ TEST_F(MetadataFunctionRetrieverTest, MisconfiguredFunctionIncorrectFieldName) {
 
   auto actualFunction = getFunctionFromJson(func_json, cluster_json);
 
-  EXPECT_FALSE(actualFunction.valid());
+  EXPECT_FALSE(actualFunction.has_value());
 }
 
 } // namespace Http

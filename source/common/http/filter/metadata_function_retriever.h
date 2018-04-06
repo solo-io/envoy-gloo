@@ -12,7 +12,7 @@ class MetadataFunctionRetriever : public FunctionRetriever {
 public:
   MetadataFunctionRetriever();
 
-  Optional<Function>
+  absl::optional<Function>
   getFunction(const MetadataAccessor &metadataccessor) const override;
 };
 

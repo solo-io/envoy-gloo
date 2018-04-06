@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "envoy/common/optional.h"
 #include "envoy/common/pure.h"
 #include "envoy/http/metadata_accessor.h"
 #include "envoy/router/router.h"
@@ -10,13 +9,15 @@
 
 #include "common/http/filter/function.h"
 
+#include "absl/types/optional.h"
+
 namespace Envoy {
 namespace Http {
 
 class FunctionRetriever {
 public:
   virtual ~FunctionRetriever() {}
-  virtual Optional<Function>
+  virtual absl::optional<Function>
   getFunction(const MetadataAccessor &metadataccessor) const PURE;
 };
 

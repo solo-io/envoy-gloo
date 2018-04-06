@@ -13,8 +13,8 @@ public:
   MockFunctionRetriever();
   ~MockFunctionRetriever();
 
-  MOCK_CONST_METHOD1(
-      getFunction, Optional<Function>(const MetadataAccessor &metadataccessor));
+  MOCK_CONST_METHOD1(getFunction, absl::optional<Function>(
+                                      const MetadataAccessor &metadataccessor));
 
   std::string name_{"name"};
   std::string qualifier_{"qualifier"};
