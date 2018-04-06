@@ -121,7 +121,7 @@ private:
       nullptr};
   const envoy::api::v2::filter::http::Transformation *response_transformation_{
       nullptr};
-  Optional<Error> error_;
+  absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;
 };
@@ -151,7 +151,7 @@ protected:
                              const std::string &key) override;
 
 private:
-  Optional<const std::string *> current_function_{};
+  absl::optional<const std::string *> current_function_{};
 };
 
 } // namespace Http

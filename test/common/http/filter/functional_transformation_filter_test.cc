@@ -26,18 +26,19 @@ namespace Http {
 
 class FunctionNameMetadataAccessor : public MetadataAccessor {
 public:
-  virtual Optional<const std::string *> getFunctionName() const {
+  virtual absl::optional<const std::string *> getFunctionName() const {
     if (function_name_.empty())
       return {};
     return &function_name_;
   }
-  virtual Optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
+  virtual absl::optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
     return {};
   }
-  virtual Optional<const ProtobufWkt::Struct *> getClusterMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *>
+  getClusterMetadata() const {
     return {};
   }
-  virtual Optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
+  virtual absl::optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
     return {};
   }
 

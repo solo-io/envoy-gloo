@@ -200,7 +200,7 @@ FunctionalTransformationFilter::getTransformFromRouteEntry(
       routeEntry->metadata(),
       Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
 
-  if (!current_function_.valid()) {
+  if (!current_function_.has_value()) {
     return nullptr;
   }
 
@@ -382,7 +382,7 @@ void TransformationFilterBase::error(Error error, std::string msg) {
   }
 }
 
-bool TransformationFilterBase::is_error() { return error_.valid(); }
+bool TransformationFilterBase::is_error() { return error_.has_value(); }
 
 } // namespace Http
 } // namespace Envoy

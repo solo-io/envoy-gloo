@@ -2,7 +2,7 @@ workspace(name="transformation_filter")
 # use skylark for native git
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "f79a62b7cc9ca55d20104379ee0576617630cdaa"  # Feb 15, 2018 ( test: fix nit after #2591 (#2601) )
+ENVOY_SHA = "4dd49d8809f7aaa580538b3c228dd99a2fae92a4"  # Mar 20, 2018 (v1.6.0)
 
 http_archive(
     name = "envoy",
@@ -10,7 +10,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "ee625c53848d990dd7e5b87c5fbcd2776054e9f8"  # Feb 26, 2018 (split metadata accessor)
+ENVOY_COMMON_SHA = "2bc9569aec056df65bb4f67f0c47be968cac6256"  # Apr 3, 2018 (Fix compilation of `SoloMetadata` (#8))
 
 http_archive(
     name = "solo_envoy_common",
