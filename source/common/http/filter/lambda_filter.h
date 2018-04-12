@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 
+#include "envoy/http/filter.h"
 #include "envoy/http/metadata_accessor.h"
 #include "envoy/upstream/cluster_manager.h"
 
@@ -10,8 +11,6 @@
 #include "common/http/filter/function.h"
 #include "common/http/filter/function_retriever.h"
 #include "common/http/filter/lambda_filter_config.h"
-
-#include "server/config/network/http_connection_manager.h"
 
 #include "lambda_filter.pb.h"
 
