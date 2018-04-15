@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "4dd49d8809f7aaa580538b3c228dd99a2fae92a4"  # Mar 20, 2018 (v1.6.0)
+ENVOY_SHA = "d41d06eb614fd49f19422d9eed9235c320af9229"  # April 10, 2018 (gRPC/JSON transcoder: enable preserving route after headers modified)
 
 http_archive(
     name = "envoy",
