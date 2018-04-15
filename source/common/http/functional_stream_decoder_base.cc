@@ -7,7 +7,7 @@
 namespace Envoy {
 namespace Http {
 
-using Envoy::Server::Configuration::FactoryContext;
+using Server::Configuration::FactoryContext;
 
 FunctionRetrieverMetadataAccessor::~FunctionRetrieverMetadataAccessor() {}
 
@@ -46,7 +46,7 @@ FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
     }
   }
 
-  const Envoy::Router::RouteEntry *routeEntry = route_info_->routeEntry();
+  const Router::RouteEntry *routeEntry = route_info_->routeEntry();
   if (!routeEntry) {
     return {};
   }
@@ -63,7 +63,7 @@ FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
 
 absl::optional<FunctionRetrieverMetadataAccessor::Result>
 FunctionRetrieverMetadataAccessor::tryToGetSpec() {
-  const Envoy::Router::RouteEntry *routeEntry =
+  const Router::RouteEntry *routeEntry =
       SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
   if (!routeEntry) {
     return {};

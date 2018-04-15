@@ -75,8 +75,8 @@ protected:
         routefunctionmeta;
   }
 
-  NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
+  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
   std::unique_ptr<RouteEnabledFilterWrapper<WrapperFilterTester>> filter_;
   std::string childname_;
   envoy::api::v2::core::Metadata route_metadata_;
@@ -98,9 +98,9 @@ FilterTrailersStatus WrapperFilterTester::decodeTrailers(HeaderMap &) {
 }
 
 TEST_F(WrapperFilterTest, NothingConfigured) {
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_FALSE(functionDecodeHeadersCalled_);
@@ -108,9 +108,9 @@ TEST_F(WrapperFilterTest, NothingConfigured) {
 
 TEST_F(WrapperFilterTest, CallsChildIfEnabled) {
   initchildroutemeta();
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_TRUE(functionDecodeHeadersCalled_);

@@ -12,9 +12,8 @@ namespace Http {
 
 class FunctionRetrieverMetadataAccessor : public MetadataAccessor {
 public:
-  FunctionRetrieverMetadataAccessor(
-      Envoy::Server::Configuration::FactoryContext &ctx,
-      const std::string &childname)
+  FunctionRetrieverMetadataAccessor(Server::Configuration::FactoryContext &ctx,
+                                    const std::string &childname)
       : cm_(ctx.clusterManager()), random_(ctx.random()),
         childname_(childname) {}
 
@@ -46,7 +45,7 @@ private:
   };
 
   Upstream::ClusterManager &cm_;
-  Envoy::Runtime::RandomGenerator &random_;
+  Runtime::RandomGenerator &random_;
   const std::string &childname_;
 
   Upstream::ClusterInfoConstSharedPtr cluster_info_{};
@@ -84,7 +83,7 @@ template <typename MixinBase> class FunctionalFilterMixin : public MixinBase {
 
 public:
   template <class... Ts>
-  FunctionalFilterMixin(Envoy::Server::Configuration::FactoryContext &ctx,
+  FunctionalFilterMixin(Server::Configuration::FactoryContext &ctx,
                         const std::string &childname, Ts &&... args)
       : MixinBase(std::forward<Ts>(args)...),
         metadata_accessor_(ctx, childname) {}

@@ -25,12 +25,11 @@ private:
 
 typedef std::shared_ptr<RouteFaultFilterConfig> RouteFaultFilterConfigSharedPtr;
 
-class RouteFaultFilter
-    : public Http::RouteEnabledFilterWrapper<Http::FaultFilter> {
+class RouteFaultFilter : public RouteEnabledFilterWrapper<FaultFilter> {
 public:
   RouteFaultFilter(RouteFaultFilterConfigSharedPtr route_filter_config,
-                   Http::FaultFilterConfigSharedPtr filter_config)
-      : Http::RouteEnabledFilterWrapper<Http::FaultFilter>(
+                   FaultFilterConfigSharedPtr filter_config)
+      : RouteEnabledFilterWrapper<FaultFilter>(
             Config::SoloCommonFilterNames::get().ROUTE_FAULT, filter_config),
         route_filter_config_(route_filter_config) {}
 
@@ -39,7 +38,7 @@ protected:
   shouldActivate(const ProtobufWkt::Struct &filter_metadata_struct) override;
 
 private:
-  Http::RouteFaultFilterConfigSharedPtr route_filter_config_;
+  RouteFaultFilterConfigSharedPtr route_filter_config_;
 };
 
 } // namespace Http

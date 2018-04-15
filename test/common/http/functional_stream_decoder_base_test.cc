@@ -54,7 +54,7 @@ public:
   const MetadataAccessor *meta_accessor_;
 };
 
-typedef Http::FunctionalFilterMixin<FunctionalFilterTester>
+typedef FunctionalFilterMixin<FunctionalFilterTester>
     MixedFunctionalFilterTester;
 
 class FunctionFilterTest : public testing::Test {
@@ -179,9 +179,9 @@ protected:
             multifunction;
   }
 
-  NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
-  NiceMock<Envoy::Event::MockTimer> *attachmentTimeout_timer_{};
+  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+  NiceMock<Event::MockTimer> *attachmentTimeout_timer_{};
   std::unique_ptr<MixedFunctionalFilterTester> filter_;
 
   ProtobufWkt::Struct *route_meta_child_spec_struct_;
@@ -227,9 +227,9 @@ FilterTrailersStatus FunctionalFilterTester::decodeTrailers(HeaderMap &) {
 
 TEST_F(FunctionFilterTest, NothingConfigured) {
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_FALSE(filter_->decodeHeadersCalled_);
@@ -244,9 +244,9 @@ TEST_F(FunctionFilterTest, HaveRouteMeta) {
   EXPECT_CALL(factory_context_.cluster_manager_, get(clustername))
       .Times(AtLeast(1));
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   const ProtobufWkt::Struct &receivedspec =
@@ -264,9 +264,9 @@ TEST_F(FunctionFilterTest, MetaNoCopy) {
   initroutemeta();
   initchildroutemeta();
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   const ProtobufWkt::Struct *funcspec =
@@ -286,9 +286,9 @@ TEST_F(FunctionFilterTest, MetaNoCopy) {
 TEST_F(FunctionFilterTest, MissingRouteMetaPassThrough) {
   initclustermeta(true);
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   FilterHeadersStatus headerstatus = filter_->decodeHeaders(headers, true);
   EXPECT_FALSE(filter_->decodeHeadersCalled_);
   EXPECT_EQ(FilterHeadersStatus::Continue, headerstatus);
@@ -304,9 +304,9 @@ TEST_F(FunctionFilterTest, MissingRouteMeta) {
         status = headers.Status()->value().c_str();
       }));
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   // test that we needed errored
@@ -321,9 +321,9 @@ TEST_F(FunctionFilterTest, MissingChildRouteMeta) {
   initclustermeta();
   initroutemeta();
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_FALSE(filter_->routeMetadataFound_);
@@ -334,9 +334,9 @@ TEST_F(FunctionFilterTest, FoundChildRouteMeta) {
   initroutemeta();
   initchildroutemeta();
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_TRUE(filter_->routeMetadataFound_);
@@ -347,9 +347,9 @@ TEST_F(FunctionFilterTest, FindMultiFunctions) {
   initroutemetamultiple();
   EXPECT_CALL(factory_context_.random_, random()).WillOnce(Return(0));
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_TRUE(filter_->decodeHeadersCalled_);
@@ -362,9 +362,9 @@ TEST_F(FunctionFilterTest, FindMultiFunctions2) {
 
   EXPECT_CALL(factory_context_.random_, random()).WillOnce(Return(6));
 
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {":path", "/getsomething"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
   filter_->decodeHeaders(headers, true);
 
   EXPECT_TRUE(filter_->decodeHeadersCalled_);
