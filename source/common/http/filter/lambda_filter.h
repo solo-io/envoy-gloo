@@ -55,7 +55,7 @@ private:
   std::string functionUrlPath();
   void cleanup();
 
-  Envoy::Http::HeaderMap *request_headers_{};
+  HeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;
 };
 

@@ -45,13 +45,12 @@ public:
 
   void set_guide_test_params(AwsAuthenticator &aws) {
     aws.service_ = &SERVICE;
-    aws.method_ = &Envoy::Http::Headers::get().MethodValues.Get;
+    aws.method_ = &Headers::get().MethodValues.Get;
   }
 
   std::string
-  signWithTime(AwsAuthenticator &aws, Envoy::Http::HeaderMap *request_headers,
-               std::list<Envoy::Http::LowerCaseString> &&headers,
-               const std::string &region,
+  signWithTime(AwsAuthenticator &aws, HeaderMap *request_headers,
+               std::list<LowerCaseString> &&headers, const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now) {
     return aws.signWithTime(request_headers, std::move(headers), region, now);
   }
@@ -78,7 +77,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
-  Envoy::Http::TestHeaderMapImpl headers;
+  TestHeaderMapImpl headers;
   headers.insertPath().value(url + "?" + query);
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("www.solo.io"));
@@ -100,7 +99,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   std::string accesskey = "AKIDEXAMPLE";
 
   std::string url = "/?Param1=value1&Param2=value2";
-  Envoy::Http::TestHeaderMapImpl headers;
+  TestHeaderMapImpl headers;
   headers.insertPath().value(url);
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("example.amazonaws.com"));
@@ -121,7 +120,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   auto timet = std::mktime(&timeinfo);
   std::chrono::time_point<std::chrono::system_clock> awstime =
       std::chrono::system_clock::from_time_t(timet);
-  ASSERT_EQ(Envoy::DateFormatter("%Y%m%dT%H%M%SZ").fromTime(awstime),
+  ASSERT_EQ(DateFormatter("%Y%m%dT%H%M%SZ").fromTime(awstime),
             "20150830T123600Z");
 
   std::string sig;

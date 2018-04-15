@@ -69,7 +69,7 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
       std::make_shared<Http::MetadataFunctionRetriever>();
 
   return [&context, config, functionRetriever](
-             Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
+             Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new MixedLambdaFilter(
         context, Config::LambdaMetadataFilters::get().LAMBDA, config,
         functionRetriever);
@@ -81,9 +81,8 @@ HttpFilterFactoryCb LambdaFilterConfigFactory::createFilter(
 /**
  * Static registration for the AWS Lambda filter. @see RegisterFactory.
  */
-static Envoy::Registry::RegisterFactory<
-    LambdaFilterConfigFactory,
-    Envoy::Server::Configuration::NamedHttpFilterConfigFactory>
+static Registry::RegisterFactory<LambdaFilterConfigFactory,
+                                 NamedHttpFilterConfigFactory>
     register_;
 
 } // namespace Configuration

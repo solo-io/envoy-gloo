@@ -26,7 +26,7 @@ const std::string LambdaFilter::LOG_NONE("None");
 
 // TODO(yuval-k) can the config be removed?
 LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
-                           Http::FunctionRetrieverSharedPtr retreiver)
+                           FunctionRetrieverSharedPtr retreiver)
     : config_(config), function_retriever_(retreiver) {}
 
 LambdaFilter::~LambdaFilter() {}
@@ -43,8 +43,8 @@ std::string LambdaFilter::functionUrlPath() {
   return val.str();
 }
 
-Envoy::Http::FilterHeadersStatus
-LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
+FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
+                                                bool end_stream) {
   RELEASE_ASSERT(current_function_.has_value());
   const auto &current_function = current_function_.value();
 
@@ -53,41 +53,40 @@ LambdaFilter::decodeHeaders(Envoy::Http::HeaderMap &headers, bool end_stream) {
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
-      Envoy::Http::Headers::get().MethodValues.Post);
+      Headers::get().MethodValues.Post);
 
   //  request_headers_->removeContentLength();
   request_headers_->insertPath().value(functionUrlPath());
 
   if (end_stream) {
     lambdafy();
-    return Envoy::Http::FilterHeadersStatus::Continue;
+    return FilterHeadersStatus::Continue;
   }
 
-  return Envoy::Http::FilterHeadersStatus::StopIteration;
+  return FilterHeadersStatus::StopIteration;
 }
 
-Envoy::Http::FilterDataStatus
-LambdaFilter::decodeData(Envoy::Buffer::Instance &data, bool end_stream) {
+FilterDataStatus LambdaFilter::decodeData(Buffer::Instance &data,
+                                          bool end_stream) {
   if (!current_function_.has_value()) {
-    return Envoy::Http::FilterDataStatus::Continue;
+    return FilterDataStatus::Continue;
   }
   aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
     lambdafy();
-    return Envoy::Http::FilterDataStatus::Continue;
+    return FilterDataStatus::Continue;
   }
 
-  return Envoy::Http::FilterDataStatus::StopIterationAndBuffer;
+  return FilterDataStatus::StopIterationAndBuffer;
 }
 
-Envoy::Http::FilterTrailersStatus
-LambdaFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
+FilterTrailersStatus LambdaFilter::decodeTrailers(HeaderMap &) {
   if (current_function_.has_value()) {
     lambdafy();
   }
 
-  return Envoy::Http::FilterTrailersStatus::Continue;
+  return FilterTrailersStatus::Continue;
 }
 
 bool LambdaFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
@@ -96,7 +95,7 @@ bool LambdaFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
 }
 
 void LambdaFilter::lambdafy() {
-  static std::list<Envoy::Http::LowerCaseString> headers;
+  static std::list<LowerCaseString> headers;
 
   const auto &current_function = current_function_.value();
 
@@ -111,10 +110,10 @@ void LambdaFilter::lambdafy() {
 
   // TOOO(yuval-k) constify this and change the header list to
   // ref-or-inline like in header map
-  headers.push_back(Envoy::Http::LowerCaseString("host"));
+  headers.push_back(LowerCaseString("host"));
   request_headers_->insertHost().value(*current_function.host_);
 
-  headers.push_back(Envoy::Http::LowerCaseString("content-type"));
+  headers.push_back(LowerCaseString("content-type"));
 
   aws_authenticator_.sign(request_headers_, std::move(headers),
                           *current_function.region_);

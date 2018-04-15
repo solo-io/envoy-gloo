@@ -22,10 +22,10 @@ public:
 
   void init(const std::string *access_key, const std::string *secret_key);
 
-  void updatePayloadHash(const Envoy::Buffer::Instance &data);
+  void updatePayloadHash(const Buffer::Instance &data);
 
-  void sign(Envoy::Http::HeaderMap *request_headers,
-            std::list<Envoy::Http::LowerCaseString> &&headers_to_sign,
+  void sign(HeaderMap *request_headers,
+            std::list<LowerCaseString> &&headers_to_sign,
             const std::string &region);
 
 private:
@@ -37,8 +37,7 @@ private:
   static const std::string NEWLINE;
 
   std::string
-  signWithTime(Envoy::Http::HeaderMap *request_headers,
-               std::list<Envoy::Http::LowerCaseString> &&headers,
+  signWithTime(HeaderMap *request_headers, std::list<LowerCaseString> &&headers,
                const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now);
 
@@ -63,14 +62,14 @@ private:
                                const std::string &request_date_time,
                                const std::string &hashed_canonical_request);
 
-  static bool lowercasecompare(const Envoy::Http::LowerCaseString &i,
-                               const Envoy::Http::LowerCaseString &j);
+  static bool lowercasecompare(const LowerCaseString &i,
+                               const LowerCaseString &j);
 
   class Sha256 {
   public:
     static const int LENGTH = SHA256_DIGEST_LENGTH;
     Sha256();
-    void update(const Envoy::Buffer::Instance &data);
+    void update(const Buffer::Instance &data);
     void update(const std::string &data);
     void update(char c);
     void update(const uint8_t *bytes, size_t size);
@@ -121,8 +120,8 @@ private:
   const char *url_start_{};
   size_t url_len_{};
 
-  Envoy::Http::HeaderMap *request_headers_{};
-  std::list<Envoy::Http::LowerCaseString> sign_headers_;
+  HeaderMap *request_headers_{};
+  std::list<LowerCaseString> sign_headers_;
 };
 
 } // namespace Http

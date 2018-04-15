@@ -13,12 +13,11 @@ name: io.solo.lambda
 )EOF";
 
 class LambdaFilterIntegrationTest
-    : public Envoy::HttpIntegrationTest,
-      public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
+    : public HttpIntegrationTest,
+      public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   LambdaFilterIntegrationTest()
-      : Envoy::HttpIntegrationTest(Envoy::Http::CodecClient::Type::HTTP1,
-                                   GetParam()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
 
   /**
    * Initializer for an individual integration test.
@@ -114,17 +113,17 @@ public:
 
 INSTANTIATE_TEST_CASE_P(
     IpVersions, LambdaFilterIntegrationTest,
-    testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
+    testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(LambdaFilterIntegrationTest, Test1) {
-  Envoy::Http::TestHeaderMapImpl request_headers{
+  Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
   sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
                                 10);
 
   EXPECT_NE(0, upstream_request_->headers()
-                   .get(Envoy::Http::LowerCaseString("authorization"))
+                   .get(Http::LowerCaseString("authorization"))
                    ->value()
                    .size());
 }

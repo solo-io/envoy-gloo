@@ -11,9 +11,6 @@
 namespace Envoy {
 namespace Http {
 
-using Http::Function;
-using Http::MetadataFunctionRetriever;
-
 bool operator==(const Function &lhs, const Function &rhs) {
   bool ret = std::tie(*lhs.name_, *lhs.region_, *lhs.host_, *lhs.access_key_,
                       *lhs.secret_key_, lhs.async_) ==

@@ -25,7 +25,7 @@ const std::string AwsAuthenticator::NEWLINE = "\n";
 AwsAuthenticator::AwsAuthenticator() {
   // TODO(yuval-k) hardcoded for now
   service_ = &SERVICE;
-  method_ = &Envoy::Http::Headers::get().MethodValues.Post;
+  method_ = &Headers::get().MethodValues.Post;
 }
 
 void AwsAuthenticator::init(const std::string *access_key,
@@ -37,23 +37,21 @@ void AwsAuthenticator::init(const std::string *access_key,
 
 AwsAuthenticator::~AwsAuthenticator() {}
 
-void AwsAuthenticator::updatePayloadHash(const Envoy::Buffer::Instance &data) {
+void AwsAuthenticator::updatePayloadHash(const Buffer::Instance &data) {
   body_sha_.update(data);
 }
 
-bool AwsAuthenticator::lowercasecompare(const Envoy::Http::LowerCaseString &i,
-                                        const Envoy::Http::LowerCaseString &j) {
+bool AwsAuthenticator::lowercasecompare(const LowerCaseString &i,
+                                        const LowerCaseString &j) {
   return (i.get() < j.get());
 }
 
 std::string AwsAuthenticator::addDate(
     std::chrono::time_point<std::chrono::system_clock> now) {
-  static Envoy::Http::LowerCaseString dateheader =
-      Envoy::Http::LowerCaseString("x-amz-date");
+  static LowerCaseString dateheader = LowerCaseString("x-amz-date");
   sign_headers_.push_back(dateheader);
 
-  std::string request_date_time =
-      Envoy::DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
+  std::string request_date_time = DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
   request_headers_->addReferenceKey(dateheader, request_date_time);
   return request_date_time;
 }
@@ -64,8 +62,7 @@ std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
 
   for (auto header = sign_headers_.begin(), end = sign_headers_.end();
        header != end; header++) {
-    const Envoy::Http::HeaderEntry *headerEntry =
-        request_headers_->get(*header);
+    const HeaderEntry *headerEntry = request_headers_->get(*header);
     if (headerEntry == nullptr) {
       request_headers_->lookup(*header, &headerEntry);
     }
@@ -80,7 +77,7 @@ std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
       // TODO: add warning if null
     }
     canonical_headers_stream << '\n';
-    std::list<Envoy::Http::LowerCaseString>::const_iterator next = header;
+    std::list<LowerCaseString>::const_iterator next = header;
     next++;
     if (next != end) {
       signed_headers_stream << ";";
@@ -98,15 +95,13 @@ std::string AwsAuthenticator::getBodyHexSha() {
 
   uint8_t payload_out[SHA256_DIGEST_LENGTH];
   body_sha_.finalize(payload_out);
-  std::string hexpayload =
-      Envoy::Hex::encode(payload_out, SHA256_DIGEST_LENGTH);
+  std::string hexpayload = Hex::encode(payload_out, SHA256_DIGEST_LENGTH);
   return hexpayload;
 }
 
 void AwsAuthenticator::fetchUrl() {
 
-  const Envoy::Http::HeaderString &canonical_url =
-      request_headers_->Path()->value();
+  const HeaderString &canonical_url = request_headers_->Path()->value();
   url_len_ = canonical_url.size();
   url_start_ = canonical_url.c_str();
   const char *query_string_start = Utility::findQueryStringStart(canonical_url);
@@ -152,14 +147,13 @@ std::string AwsAuthenticator::computeCanonicalRequestHash(
   uint8_t cononicalRequestHashOut[SHA256_DIGEST_LENGTH];
 
   canonicalRequestHash.finalize(cononicalRequestHashOut);
-  return Envoy::Hex::encode(cononicalRequestHashOut, SHA256_DIGEST_LENGTH);
+  return Hex::encode(cononicalRequestHashOut, SHA256_DIGEST_LENGTH);
 }
 
 std::string AwsAuthenticator::getCredntialScopeDate(
     std::chrono::time_point<std::chrono::system_clock> now) {
 
-  std::string credentials_scope_date =
-      Envoy::DateFormatter("%Y%m%d").fromTime(now);
+  std::string credentials_scope_date = DateFormatter("%Y%m%d").fromTime(now);
   return credentials_scope_date;
 }
 
@@ -195,11 +189,11 @@ std::string AwsAuthenticator::computeSignature(
       {&ALGORITHM, &NEWLINE, &request_date_time, &NEWLINE, &credential_scope,
        &NEWLINE, &hashed_canonical_request});
 
-  return Envoy::Hex::encode(out, out_len);
+  return Hex::encode(out, out_len);
 }
 
-void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
-                            std::list<Envoy::Http::LowerCaseString> &&headers,
+void AwsAuthenticator::sign(HeaderMap *request_headers,
+                            std::list<LowerCaseString> &&headers,
                             const std::string &region) {
 
   // we can't use the date provider interface as this is not the date header,
@@ -213,8 +207,7 @@ void AwsAuthenticator::sign(Envoy::Http::HeaderMap *request_headers,
 }
 
 std::string AwsAuthenticator::signWithTime(
-    Envoy::Http::HeaderMap *request_headers,
-    std::list<Envoy::Http::LowerCaseString> &&headers,
+    HeaderMap *request_headers, std::list<LowerCaseString> &&headers,
     const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
   sign_headers_ = std::move(headers);
@@ -251,11 +244,11 @@ std::string AwsAuthenticator::signWithTime(
 
 AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
 
-void AwsAuthenticator::Sha256::update(const Envoy::Buffer::Instance &data) {
+void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  Envoy::Buffer::RawSlice slices[num_slices];
+  Buffer::RawSlice slices[num_slices];
   data.getRawSlices(slices, num_slices);
-  for (Envoy::Buffer::RawSlice &slice : slices) {
+  for (Buffer::RawSlice &slice : slices) {
     update(static_cast<const uint8_t *>(slice.mem_), slice.len_);
   }
 }
