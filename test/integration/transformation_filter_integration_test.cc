@@ -87,12 +87,11 @@ config:
 )EOF";
 
 class TransformationFilterIntegrationTest
-    : public Envoy::HttpIntegrationTest,
-      public testing::TestWithParam<Envoy::Network::Address::IpVersion> {
+    : public HttpIntegrationTest,
+      public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   TransformationFilterIntegrationTest()
-      : Envoy::HttpIntegrationTest(Envoy::Http::CodecClient::Type::HTTP1,
-                                   GetParam()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
 
   /**
    * Initializer for an individual integration test.
@@ -153,19 +152,19 @@ public:
 
 INSTANTIATE_TEST_CASE_P(
     IpVersions, TransformationFilterIntegrationTest,
-    testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()));
+    testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
-                                                 {":authority", "www.solo.io"},
-                                                 {":path", "/users/234"}};
+  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                          {":authority", "www.solo.io"},
+                                          {":path", "/users/234"}};
 
   codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
   processRequest();
 
   EXPECT_STREQ("solo.io", upstream_request_->headers()
-                              .get(Envoy::Http::LowerCaseString("x-solo"))
+                              .get(Http::LowerCaseString("x-solo"))
                               ->value()
                               .c_str());
   std::string body = TestUtility::bufferToString(upstream_request_->body());
@@ -175,9 +174,9 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
   filter_string_ = PATH_TO_PATH_TRANSFORMATION_FILTER;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
-                                                 {":authority", "www.solo.io"},
-                                                 {":path", "/users/234"}};
+  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                          {":authority", "www.solo.io"},
+                                          {":path", "/users/234"}};
 
   codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
   processRequest();
@@ -189,7 +188,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   filter_string_ = BODY_TRANSFORMATION_FILTER;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{
+  Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
@@ -206,7 +205,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   transform_response_ = true;
   filter_string_ = BODY_TRANSFORMATION_FILTER;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{
+  Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
@@ -225,7 +224,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   transform_response_ = true;
   filter_string_ = BODY_TRANSFORMATION_FILTER;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{
+  Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
@@ -242,9 +241,9 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   filter_string_ = EMPTY_BODY_TRANSFORMATION_FILTER;
   transform_response_ = true;
   initialize();
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "POST"},
-                                                 {":authority", "www.solo.io"},
-                                                 {":path", "/empty-body-test"}};
+  Http::TestHeaderMapImpl request_headers{{":method", "POST"},
+                                          {":authority", "www.solo.io"},
+                                          {":path", "/empty-body-test"}};
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
@@ -276,9 +275,9 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   filter_string_ = PASSTHROUGH_TRANSFORMATION_FILTER;
   initialize();
   std::string origBody = "{\"abc\":\"efg\"}";
-  Envoy::Http::TestHeaderMapImpl request_headers{{":method", "GET"},
-                                                 {":authority", "www.solo.io"},
-                                                 {":path", "/users/12347"}};
+  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+                                          {":authority", "www.solo.io"},
+                                          {":path", "/users/12347"}};
   auto downstream_request =
       &codec_client_->startRequest(request_headers, *response_);
   Buffer::OwnedImpl data(origBody);
@@ -287,7 +286,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   processRequest();
 
   EXPECT_STREQ("12347", upstream_request_->headers()
-                            .get(Envoy::Http::LowerCaseString("x-solo"))
+                            .get(Http::LowerCaseString("x-solo"))
                             ->value()
                             .c_str());
   std::string body = TestUtility::bufferToString(upstream_request_->body());

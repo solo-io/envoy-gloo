@@ -22,10 +22,10 @@ namespace Envoy {
 namespace Http {
 
 TEST(BodyHeaderTransformer, transform) {
-  Envoy::Http::TestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {"x-test", "789"},
+                            {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
   BodyHeaderTransformer transformer;

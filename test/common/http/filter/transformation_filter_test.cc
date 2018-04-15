@@ -24,7 +24,6 @@ using testing::_;
 namespace Envoy {
 namespace Http {
 
-using Http::TransformationFilterConfig;
 using Server::Configuration::TransformationFilterConfigFactory;
 
 TEST(TransformationFilterConfigFactory, EmptyConfig) {
@@ -46,7 +45,7 @@ public:
   }
 
   void initFilter() {
-    Envoy::Http::TransformationFilterConfigConstSharedPtr configptr(
+    TransformationFilterConfigConstSharedPtr configptr(
         new TransformationFilterConfig(config_));
     filter_ = std::make_unique<TransformationFilter>(configptr);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
@@ -91,10 +90,10 @@ public:
   }
 
   envoy::api::v2::filter::http::Transformations config_;
-  Envoy::Http::TestHeaderMapImpl headers_{
+  TestHeaderMapImpl headers_{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
-  NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::core::Metadata route_metadata_;
 };

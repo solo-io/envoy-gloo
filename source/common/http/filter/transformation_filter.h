@@ -36,7 +36,7 @@ public:
 
   // Http::StreamEncoderFilter
   FilterHeadersStatus encode100ContinueHeaders(HeaderMap &) override {
-    return Http::FilterHeadersStatus::Continue;
+    return FilterHeadersStatus::Continue;
   }
   FilterHeadersStatus encodeHeaders(HeaderMap &headers,
                                     bool end_stream) override;
@@ -122,7 +122,7 @@ private:
   const envoy::api::v2::filter::http::Transformation *response_transformation_{
       nullptr};
   absl::optional<Error> error_;
-  Http::Code error_code_;
+  Code error_code_;
   std::string error_messgae_;
 };
 

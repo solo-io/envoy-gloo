@@ -30,12 +30,11 @@ void BodyHeaderTransformer::transform(HeaderMap &header_map,
 
   json &headers = json_body["headers"];
   header_map.iterate(
-      [](const Http::HeaderEntry &header,
-         void *context) -> Http::HeaderMap::Iterate {
+      [](const HeaderEntry &header, void *context) -> HeaderMap::Iterate {
         json *headers_ptr = static_cast<json *>(context);
         json &headers = *headers_ptr;
         headers[header.key().c_str()] = header.value().c_str();
-        return Http::HeaderMap::Iterate::Continue;
+        return HeaderMap::Iterate::Continue;
       },
       &headers);
 

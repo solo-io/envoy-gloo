@@ -46,7 +46,6 @@ public:
   std::string function_name_;
 };
 
-using Http::TransformationFilterConfig;
 using Server::Configuration::TransformationFilterConfigFactory;
 
 class FunctionalTransformationFilterTest : public testing::Test {
@@ -66,9 +65,9 @@ public:
   }
 
   void initFilter() {
-    Envoy::Http::TransformationFilterConfigConstSharedPtr configptr(
+    TransformationFilterConfigConstSharedPtr configptr(
         new TransformationFilterConfig(config_));
-    filter_ = std::make_unique<Http::FunctionalTransformationFilter>(configptr);
+    filter_ = std::make_unique<FunctionalTransformationFilter>(configptr);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
     fnma_.function_name_ = function_name_;
     filter_->retrieveFunction(fnma_);
@@ -102,11 +101,11 @@ public:
   }
 
   envoy::api::v2::filter::http::Transformations config_;
-  Envoy::Http::TestHeaderMapImpl headers_{
+  TestHeaderMapImpl headers_{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
-  NiceMock<Envoy::Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  std::unique_ptr<Http::FunctionalTransformationFilter> filter_;
+  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  std::unique_ptr<FunctionalTransformationFilter> filter_;
   envoy::api::v2::core::Metadata route_metadata_;
   std::string cluster_name_;
   std::string function_name_;

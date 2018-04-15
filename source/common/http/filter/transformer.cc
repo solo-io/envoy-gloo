@@ -14,17 +14,16 @@ namespace Envoy {
 namespace Http {
 // TODO: move to common
 
-const Envoy::Http::HeaderEntry *getHeader(const HeaderMap &header_map,
-                                          const LowerCaseString &key) {
-  const Envoy::Http::HeaderEntry *header_entry = header_map.get(key);
+const HeaderEntry *getHeader(const HeaderMap &header_map,
+                             const LowerCaseString &key) {
+  const HeaderEntry *header_entry = header_map.get(key);
   if (!header_entry) {
     header_map.lookup(key, &header_entry);
   }
   return header_entry;
 }
 
-const Envoy::Http::HeaderEntry *getHeader(const HeaderMap &header_map,
-                                          std::string &&key) {
+const HeaderEntry *getHeader(const HeaderMap &header_map, std::string &&key) {
   auto lowerkey = LowerCaseString(std::move(key), true);
   return getHeader(header_map, lowerkey);
 }
@@ -33,7 +32,7 @@ std::string ExtractorUtil::extract(
     const envoy::api::v2::filter::http::Extraction &extractor,
     const HeaderMap &header_map) {
   std::string headername = extractor.header();
-  const Envoy::Http::HeaderEntry *header_entry =
+  const HeaderEntry *header_entry =
       getHeader(header_map, std::move(headername));
   if (!header_entry) {
     return "";
@@ -72,7 +71,7 @@ TransformerInstance::TransformerInstance(
 
 json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
   std::string headername = env_.get_argument<std::string>(args, 0, data);
-  const Envoy::Http::HeaderEntry *header_entry =
+  const HeaderEntry *header_entry =
       getHeader(header_map_, std::move(headername));
   if (!header_entry) {
     return "";

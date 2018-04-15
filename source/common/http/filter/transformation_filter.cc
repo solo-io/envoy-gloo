@@ -354,22 +354,22 @@ void TransformationFilterBase::error(Error error, std::string msg) {
   switch (error) {
   case Error::PayloadTooLarge: {
     error_messgae_ = "payload too large";
-    error_code_ = Http::Code::PayloadTooLarge;
+    error_code_ = Code::PayloadTooLarge;
     break;
   }
   case Error::JsonParseError: {
     error_messgae_ = "bad request";
-    error_code_ = Http::Code::BadRequest;
+    error_code_ = Code::BadRequest;
     break;
   }
   case Error::TemplateParseError: {
     error_messgae_ = "bad request";
-    error_code_ = Http::Code::BadRequest;
+    error_code_ = Code::BadRequest;
     break;
   }
   case Error::TransformationNotFound: {
     error_messgae_ = "transformation for function not found";
-    error_code_ = Http::Code::NotFound;
+    error_code_ = Code::NotFound;
     break;
   }
   }
