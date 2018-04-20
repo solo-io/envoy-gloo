@@ -17,12 +17,13 @@ namespace Config {
 class SoloMetadata {
 public:
   static absl::optional<const std::string *>
-  nonEmptyStringValue(const Protobuf::Struct &spec, const std::string &key);
+  nonEmptyStringValue(const ProtobufWkt::Struct &spec, const std::string &key);
 
-  static bool boolValue(const Protobuf::Struct &spec, const std::string &key);
+  static bool boolValue(const ProtobufWkt::Struct &spec,
+                        const std::string &key);
 
-  static absl::optional<const Protobuf::Value *>
-  value(const Protobuf::Struct &spec, const std::string &key);
+  static absl::optional<const ProtobufWkt::Value *>
+  value(const ProtobufWkt::Struct &spec, const std::string &key);
 };
 
 } // namespace Config

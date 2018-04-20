@@ -7,7 +7,7 @@ absl::optional<const std::string *>
 SoloMetadata::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
                                   const std::string &key) {
 
-  absl::optional<const Protobuf::Value *> maybe_value = value(spec, key);
+  absl::optional<const ProtobufWkt::Value *> maybe_value = value(spec, key);
   if (!maybe_value.has_value()) {
     return {};
   }
@@ -24,9 +24,9 @@ SoloMetadata::nonEmptyStringValue(const ProtobufWkt::Struct &spec,
   return absl::optional<const std::string *>(&string_value);
 }
 
-bool SoloMetadata::boolValue(const Protobuf::Struct &spec,
+bool SoloMetadata::boolValue(const ProtobufWkt::Struct &spec,
                              const std::string &key) {
-  absl::optional<const Protobuf::Value *> maybe_value = value(spec, key);
+  absl::optional<const ProtobufWkt::Value *> maybe_value = value(spec, key);
   if (!maybe_value.has_value()) {
     return {};
   }
@@ -39,8 +39,8 @@ bool SoloMetadata::boolValue(const Protobuf::Struct &spec,
   return value.bool_value();
 }
 
-absl::optional<const Protobuf::Value *>
-SoloMetadata::value(const Protobuf::Struct &spec, const std::string &key) {
+absl::optional<const ProtobufWkt::Value *>
+SoloMetadata::value(const ProtobufWkt::Struct &spec, const std::string &key) {
   const auto &fields = spec.fields();
   const auto fields_it = fields.find(key);
   if (fields_it == fields.end()) {

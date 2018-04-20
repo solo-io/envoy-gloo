@@ -3,8 +3,8 @@
 namespace Envoy {
 namespace Http {
 
-const Router::RouteEntry *SoloFilterUtility::resolveRouteEntry(
-    StreamFilterCallbacks *filter_callbacks) {
+const Router::RouteEntry *
+SoloFilterUtility::resolveRouteEntry(StreamFilterCallbacks *filter_callbacks) {
   Router::RouteConstSharedPtr route = filter_callbacks->route();
   if (!route) {
     return nullptr;
@@ -13,8 +13,8 @@ const Router::RouteEntry *SoloFilterUtility::resolveRouteEntry(
   return route->routeEntry();
 }
 
-const std::string *SoloFilterUtility::resolveClusterName(
-    StreamFilterCallbacks *filter_callbacks) {
+const std::string *
+SoloFilterUtility::resolveClusterName(StreamFilterCallbacks *filter_callbacks) {
   const Router::RouteEntry *route_entry = resolveRouteEntry(filter_callbacks);
   if (!route_entry) {
     return nullptr;
