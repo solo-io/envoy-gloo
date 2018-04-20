@@ -1,7 +1,7 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "47c63e59bb7d30f199fb20bf431ea17eace72946"  # April 19, 2018 (Add perFilerConfigObject to store pre-processed per-route-config) 
- 
+ENVOY_SHA = "47c63e59bb7d30f199fb20bf431ea17eace72946"  # April 19, 2018 (Add perFilerConfigObject to store pre-processed per-route-config)
+
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
