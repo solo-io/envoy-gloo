@@ -26,16 +26,16 @@ public:
    * nullptr if no route was selected.
    */
   static const Router::RouteEntry *
-  resolveRouteEntry(StreamDecoderFilterCallbacks *decoder_callbacks);
+  resolveRouteEntry(StreamFilterCallbacks *filter_callbacks);
 
   /**
    * Resolve the cluster name.
-   * @param decoder_callbacks supplies the decoder callback of filter.
+   * @param filter_callbacks supplies the encoder\decoder callback of filter.
    * @return the name of the cluster selected for this request. Note: this will
    * be nullptr if no route was selected.
    */
   static const std::string *
-  resolveClusterName(StreamDecoderFilterCallbacks *decoder_callbacks);
+  resolveClusterName(StreamFilterCallbacks *filter_callbacks);
 };
 
 } // namespace Http
