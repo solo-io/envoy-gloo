@@ -38,5 +38,35 @@ public:
   resolveClusterName(StreamFilterCallbacks *filter_callbacks);
 };
 
+class PerFilterConfigUtilBase {
+protected:
+  PerFilterConfigUtilBase(const std::string &filter_name)
+      : filter_name_(filter_name) {}
+  const Router::RouteSpecificFilterConfig *
+  getPerFilterBaseConfig(StreamFilterCallbacks &filter_callbacks);
+
+private:
+  const std::string &filter_name_;
+  Router::RouteConstSharedPtr route_info_{};
+};
+
+template <class ConfigType>
+class PerFilterConfigUtil : public PerFilterConfigUtilBase {
+
+  static_assert(
+      std::is_base_of<Router::RouteSpecificFilterConfig, ConfigType>::value,
+      "ConfigType must be a subclass of Router::RouteSpecificFilterConfig");
+
+public:
+  PerFilterConfigUtil(const std::string &filter_name)
+      : PerFilterConfigUtilBase(filter_name) {}
+
+  const ConfigType *
+  getPerFilterConfig(StreamFilterCallbacks &filter_callbacks) {
+    return dynamic_cast<const ConfigType *>(
+        getPerFilterBaseConfig(filter_callbacks));
+  }
+};
+
 } // namespace Http
 } // namespace Envoy

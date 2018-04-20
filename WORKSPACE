@@ -1,7 +1,7 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "d41d06eb614fd49f19422d9eed9235c320af9229"  # April 10, 2018 (gRPC/JSON transcoder: enable preserving route after headers modified)
-
+ENVOY_SHA = "47c63e59bb7d30f199fb20bf431ea17eace72946"  # April 19, 2018 (Add perFilerConfigObject to store pre-processed per-route-config) 
+ 
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
