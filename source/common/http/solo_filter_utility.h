@@ -38,18 +38,55 @@ public:
   resolveClusterName(StreamFilterCallbacks *filter_callbacks);
 };
 
+/**
+ * Base class that retrieves the current route config. Do not use directly. use
+ * via PerFilterConfigUtil.
+ */
 class PerFilterConfigUtilBase {
 protected:
+  /**
+   * @param filter_name The name of the filter who's route config should be
+   * fetched. NOTE: the filter name is not copied - the provided string must out
+   * live the instance of this class.
+   */
   PerFilterConfigUtilBase(const std::string &filter_name)
       : filter_name_(filter_name) {}
+
+  /**
+   * Gets the route config. first from the routeEntry(), if not found thene from
+   * the route(), and finally from routeEntry()->virtualhost().
+   *
+   * @return The route config if found. nullptr if not found. The returned
+   * pointer is guaranteed to live atleast until the next invocaiton of this
+   * method.
+   */
   const Router::RouteSpecificFilterConfig *
   getPerFilterBaseConfig(StreamFilterCallbacks &filter_callbacks);
 
 private:
+  // The filter name who's config is needed
   const std::string &filter_name_;
+  // Pointer to the route object. it is saved here to guarantee the lifetime of
+  // the returned config.
   Router::RouteConstSharedPtr route_info_{};
 };
 
+/**
+ * A helper class to get a perfilter config. If your filter has a perfilter
+ * config, you can use this class to access it in a uniform way.
+ *
+ * Use it as a member in your filter class:
+ *
+ *     class MyFilter : public StreamDecoderFilter {
+ *       ...
+ *       PerFilterConfigUtil<MyFilterConfig> per_filter_config_;
+ *     };
+ *
+ *    MyFilter::decodeHeaders(...) {
+ *      auto&& cfg = per_filter_config_.getPerFilterConfig(callbacks_)
+ *    }
+ *
+ */
 template <class ConfigType>
 class PerFilterConfigUtil : public PerFilterConfigUtilBase {
 
@@ -58,9 +95,16 @@ class PerFilterConfigUtil : public PerFilterConfigUtilBase {
       "ConfigType must be a subclass of Router::RouteSpecificFilterConfig");
 
 public:
-  PerFilterConfigUtil(const std::string &filter_name)
-      : PerFilterConfigUtilBase(filter_name) {}
+  using PerFilterConfigUtilBase::PerFilterConfigUtilBase;
 
+  /**
+   * Gets the route config. first from the routeEntry(), if not found thene from
+   * the route(), and finally from routeEntry()->virtualhost().
+   *
+   * @return The route config if found. nullptr if not found. The returned
+   * pointer is guaranteed to live atleast until the next invocaiton of this
+   * method.
+   */
   const ConfigType *
   getPerFilterConfig(StreamFilterCallbacks &filter_callbacks) {
     return dynamic_cast<const ConfigType *>(
