@@ -95,7 +95,13 @@ class PerFilterConfigUtil : public PerFilterConfigUtilBase {
       "ConfigType must be a subclass of Router::RouteSpecificFilterConfig");
 
 public:
-  using PerFilterConfigUtilBase::PerFilterConfigUtilBase;
+  /**
+   * @param filter_name The name of the filter who's route config should be
+   * fetched. NOTE: the filter name is not copied - the provided string must out
+   * live the instance of this class.
+   */
+  PerFilterConfigUtil(const std::string &filter_name)
+      : PerFilterConfigUtilBase(filter_name) {}
 
   /**
    * Gets the route config. first from the routeEntry(), if not found thene from
