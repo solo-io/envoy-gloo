@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package envoy.api.v2.filter.http;
+
+// [#protodoc-title: Cache]
+
+// [#proto-status: experimental]
+message CacheFilterRouteConfig {
+    bool is_cacheable = 1;
+}
