@@ -2,7 +2,7 @@
 
 #include "common/http/solo_filter_utility.h"
 
-#include "test/mocks/http/mocks.h"
+#include "test/mocks/router/mocks.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -24,7 +24,11 @@ const std::string FILTER_NAME = "filter_name";
 
 class PerFilterConfigUtilTest : public testing::Test {
 public:
-  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  std::shared_ptr<Router::MockRoute> route_;
+
+  void SetUp() override {
+    route_.reset(new testing::NiceMock<Router::MockRoute>());
+  }
 };
 
 class RouteSpecificFilterConfig : public Router::RouteSpecificFilterConfig {};
@@ -33,79 +37,74 @@ TEST_F(PerFilterConfigUtilTest, NoRouteEntry) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(*filter_callbacks_.route_, routeEntry())
-      .WillOnce(Return(nullptr));
-  EXPECT_CALL(*filter_callbacks_.route_, perFilterConfig(FILTER_NAME))
-      .WillOnce(Return(&r));
+  EXPECT_CALL(*route_, routeEntry()).WillOnce(Return(nullptr));
+  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
 
-  PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-  EXPECT_EQ(&r, util.getPerFilterConfig(filter_callbacks_));
+  EXPECT_EQ(
+      &r, SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+              FILTER_NAME, route_));
 }
 
-TEST_F(PerFilterConfigUtilTest, HaveRouteEntry) {
+TEST_F(PerFilterConfigUtilTest, ConfigInRouteEntry) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
       .WillOnce(Return(&r));
-  EXPECT_CALL(*filter_callbacks_.route_, perFilterConfig(FILTER_NAME)).Times(0);
 
-  PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-  EXPECT_EQ(&r, util.getPerFilterConfig(filter_callbacks_));
+  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).Times(0);
+  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
+      .Times(0);
+
+  EXPECT_EQ(
+      &r, SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+              FILTER_NAME, route_));
 }
 
-TEST_F(PerFilterConfigUtilTest, HaveRouteEntryNoCfg) {
+TEST_F(PerFilterConfigUtilTest, CfgInRouteNotInRouteEntry) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
       .WillOnce(Return(nullptr));
-  EXPECT_CALL(*filter_callbacks_.route_, perFilterConfig(FILTER_NAME))
-      .WillOnce(Return(&r));
+  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
+  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
+      .Times(0);
 
-  PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-  EXPECT_EQ(&r, util.getPerFilterConfig(filter_callbacks_));
+  EXPECT_EQ(
+      &r, SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+              FILTER_NAME, route_));
 }
 
 TEST_F(PerFilterConfigUtilTest, HaveVirtualHost) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
       .WillOnce(Return(nullptr));
-  EXPECT_CALL(*filter_callbacks_.route_, perFilterConfig(FILTER_NAME))
-      .WillOnce(Return(nullptr));
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_.virtual_host_,
-              perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(nullptr));
+  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
       .WillOnce(Return(&r));
 
-  PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-  EXPECT_EQ(&r, util.getPerFilterConfig(filter_callbacks_));
+  EXPECT_EQ(
+      &r, SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+              FILTER_NAME, route_));
 }
 
 TEST_F(PerFilterConfigUtilTest, NothingIsStored) {
 
-  PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-  EXPECT_EQ(nullptr, util.getPerFilterConfig(filter_callbacks_));
+  EXPECT_EQ(
+      nullptr,
+      SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+          FILTER_NAME, route_));
 }
 
-TEST_F(PerFilterConfigUtilTest, RouteInfoIsStored) {
+TEST_F(PerFilterConfigUtilTest, NullReturnsNull) {
 
-  RouteSpecificFilterConfig r;
-  EXPECT_CALL(*filter_callbacks_.route_, perFilterConfig(FILTER_NAME))
-      .WillOnce(Return(&r));
-  long use_count = filter_callbacks_.route_.use_count();
-
-  {
-    PerFilterConfigUtil<RouteSpecificFilterConfig> util(FILTER_NAME);
-    util.getPerFilterConfig(filter_callbacks_);
-    EXPECT_EQ(use_count + 1, filter_callbacks_.route_.use_count());
-  }
-
-  EXPECT_EQ(use_count, filter_callbacks_.route_.use_count());
+  EXPECT_EQ(
+      nullptr,
+      SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
+          FILTER_NAME, nullptr));
 }
 
 } // namespace Http

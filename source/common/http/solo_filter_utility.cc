@@ -24,27 +24,26 @@ SoloFilterUtility::resolveClusterName(StreamFilterCallbacks *filter_callbacks) {
 }
 
 const Router::RouteSpecificFilterConfig *
-PerFilterConfigUtilBase::getPerFilterBaseConfig(
-    StreamFilterCallbacks &filter_callbacks) {
-  route_info_ = filter_callbacks.route();
-  if (!route_info_) {
-    return {};
+SoloFilterUtility::resolvePerFilterBaseConfig(
+    const std::string &filter_name, const Router::RouteConstSharedPtr &route) {
+  if (!route) {
+    return nullptr;
   }
 
   const Router::RouteSpecificFilterConfig *maybe_filter_config{};
 
-  const Router::RouteEntry *routeEntry = route_info_->routeEntry();
+  const Router::RouteEntry *routeEntry = route->routeEntry();
   if (routeEntry) {
-    maybe_filter_config = routeEntry->perFilterConfig(filter_name_);
+    maybe_filter_config = routeEntry->perFilterConfig(filter_name);
   }
 
   if (!maybe_filter_config) {
-    maybe_filter_config = route_info_->perFilterConfig(filter_name_);
+    maybe_filter_config = route->perFilterConfig(filter_name);
   }
 
   if (!maybe_filter_config && routeEntry) {
     maybe_filter_config =
-        routeEntry->virtualHost().perFilterConfig(filter_name_);
+        routeEntry->virtualHost().perFilterConfig(filter_name);
   }
   return maybe_filter_config;
 }
