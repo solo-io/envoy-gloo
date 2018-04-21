@@ -30,7 +30,7 @@ public:
 
   /**
    * Resolve the cluster name.
-   * @param filter_callbacks supplies the encoder\decoder callback of filter.
+   * @param filter_callbacks supplies the encoder/decoder callback of filter.
    * @return the name of the cluster selected for this request. Note: this will
    * be nullptr if no route was selected.
    */
@@ -38,8 +38,20 @@ public:
   resolveClusterName(StreamFilterCallbacks *filter_callbacks);
 
   /**
-   * Gets the route config. first from the routeEntry(), if not found thene from
-   * the route(), and finally from routeEntry()->virtualhost().
+   * Retreives the route specific config. Route specific config can be in a few
+   * places, that are checked in order. The first config found is returned. The
+   * order is:
+   * - the routeEntry() (for config that's applied on weighted clusters)
+   * - the route
+   * - and finally from the virtual host object (routeEntry()->virtualhost()).
+   *
+   * To use, simply:
+   *
+   *     auto route = stream_callbacks_.route();
+   *     const auto* config =
+   *         SoloFilterUtility::resolvePerFilterConfig(FILTER_NAME, route);
+   *
+   * See notes about config's lifetime below.
    *
    * @param filter_name The name of the filter who's route config should be
    * fetched.
