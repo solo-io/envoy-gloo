@@ -24,6 +24,5 @@ envoy_cc_library(
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//source/common/http:headers_lib",
         "@envoy//source/common/http:utility_lib",
-        "@solo_envoy_common//source/common/buffer:buffer_utility_lib",
     ],
 )

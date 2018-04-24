@@ -17,6 +17,7 @@ envoy_cc_test(
     deps = [
         "//:filter_lib",
         "//test/mocks/cache:cache_mocks",
+        "@envoy//test/mocks/buffer:buffer_mocks",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
