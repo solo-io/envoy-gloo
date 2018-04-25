@@ -90,10 +90,9 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   // So now we know this this route is to a functional upstream. i.e. we must be
   // able to do a function route or error. unless passthrough is allowed on the
   // upstream.
-  const auto *filter_config =
-      SoloFilterUtility::resolvePerFilterConfig<
-          FunctionalFilterMixinRouteFilterConfig>(
-          Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER, route_info_);
+  const auto *filter_config = SoloFilterUtility::resolvePerFilterConfig<
+      FunctionalFilterMixinRouteFilterConfig>(
+      Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER, route_info_);
   if (!filter_config) {
     // check if we have metadata (i.e. gloo is not updated)
     // TODO(yuval-k): this will be removed in the future.
@@ -408,7 +407,7 @@ public:
  * Static registration for the Google Cloud Functions filter. @see
  * RegisterFactory.
  */
-static Envoy::Registry::RegisterFactory<
+static Registry::RegisterFactory<
     FunctionBaseFilterFactory,
     Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
