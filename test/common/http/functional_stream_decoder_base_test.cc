@@ -81,7 +81,7 @@ protected:
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
-  void initclustermeta(bool passthrough = false) {
+  void initClusterMeta(bool passthrough = false) {
 
     // TODO use const
     ProtobufWkt::Struct &functionsstruct =
@@ -131,7 +131,7 @@ protected:
         &((*route_metadata_.mutable_filter_metadata())[childname_]);
   }
 
-  void initrouteperfilter() {
+  void initRoutePerFilter() {
     route_function_.function_name_ = functionname_;
 
     ON_CALL(
@@ -140,7 +140,7 @@ protected:
         .WillByDefault(Return(&route_function_));
   }
 
-  void initroutemeta() {
+  void initRouteMeta() {
 
     ProtobufWkt::Value functionvalue;
     functionvalue.set_string_value(functionname_);
@@ -165,7 +165,7 @@ protected:
             routefunctionmeta;
   }
 
-  void initroutemetamultiple() {
+  void initRouteMetamultiple() {
 
     ProtobufWkt::Struct multifunction;
     auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
@@ -249,8 +249,8 @@ TEST_F(FunctionFilterTest, NothingConfigured) {
 }
 
 TEST_F(FunctionFilterTest, HappyPathPerFilter) {
-  initclustermeta();
-  initrouteperfilter();
+  initClusterMeta();
+  initRoutePerFilter();
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
@@ -262,8 +262,8 @@ TEST_F(FunctionFilterTest, HappyPathPerFilter) {
 }
 
 TEST_F(FunctionFilterTest, HaveRouteMeta) {
-  initclustermeta();
-  initroutemeta();
+  initClusterMeta();
+  initRouteMeta();
   auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
   EXPECT_CALL(factory_context_.cluster_manager_, get(clustername))
       .Times(AtLeast(1));
@@ -284,8 +284,8 @@ TEST_F(FunctionFilterTest, HaveRouteMeta) {
 }
 
 TEST_F(FunctionFilterTest, MetaNoCopy) {
-  initclustermeta();
-  initroutemeta();
+  initClusterMeta();
+  initRouteMeta();
   initchildroutemeta();
 
   TestHeaderMapImpl headers{{":method", "GET"},
@@ -308,7 +308,7 @@ TEST_F(FunctionFilterTest, MetaNoCopy) {
 }
 
 TEST_F(FunctionFilterTest, MissingRouteMetaPassThrough) {
-  initclustermeta(true);
+  initClusterMeta(true);
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
@@ -319,7 +319,7 @@ TEST_F(FunctionFilterTest, MissingRouteMetaPassThrough) {
 }
 
 TEST_F(FunctionFilterTest, MissingRouteMeta) {
-  initclustermeta();
+  initClusterMeta();
 
   std::string status;
 
@@ -342,8 +342,8 @@ TEST_F(FunctionFilterTest, MissingRouteMeta) {
 }
 
 TEST_F(FunctionFilterTest, MissingChildRouteMeta) {
-  initclustermeta();
-  initroutemeta();
+  initClusterMeta();
+  initRouteMeta();
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
@@ -354,8 +354,8 @@ TEST_F(FunctionFilterTest, MissingChildRouteMeta) {
 }
 
 TEST_F(FunctionFilterTest, FoundChildRouteMeta) {
-  initclustermeta();
-  initroutemeta();
+  initClusterMeta();
+  initRouteMeta();
   initchildroutemeta();
 
   TestHeaderMapImpl headers{{":method", "GET"},
@@ -367,8 +367,8 @@ TEST_F(FunctionFilterTest, FoundChildRouteMeta) {
 }
 
 TEST_F(FunctionFilterTest, FindMultiFunctions) {
-  initclustermeta();
-  initroutemetamultiple();
+  initClusterMeta();
+  initRouteMetamultiple();
   EXPECT_CALL(factory_context_.random_, random()).WillOnce(Return(0));
 
   TestHeaderMapImpl headers{{":method", "GET"},
@@ -381,8 +381,8 @@ TEST_F(FunctionFilterTest, FindMultiFunctions) {
 }
 
 TEST_F(FunctionFilterTest, FindMultiFunctions2) {
-  initclustermeta();
-  initroutemetamultiple();
+  initClusterMeta();
+  initRouteMetamultiple();
 
   EXPECT_CALL(factory_context_.random_, random()).WillOnce(Return(6));
 
