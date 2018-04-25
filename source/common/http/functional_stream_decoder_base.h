@@ -10,6 +10,11 @@
 namespace Envoy {
 namespace Http {
 
+struct FunctionalFilterMixinRouteFilterConfig
+    : public Router::RouteSpecificFilterConfig {
+  std::string function_name_;
+};
+
 class FunctionRetrieverMetadataAccessor : public MetadataAccessor {
 public:
   FunctionRetrieverMetadataAccessor(Server::Configuration::FactoryContext &ctx,
@@ -60,6 +65,8 @@ private:
 
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
 
+  absl::optional<Result>
+  tryToGetSpecLegacy(const Router::RouteEntry *routeEntry);
   bool canPassthrough();
 
   absl::optional<const std::string *>

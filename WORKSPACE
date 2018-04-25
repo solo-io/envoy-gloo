@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "47c63e59bb7d30f199fb20bf431ea17eace72946"  # April 19, 2018 (Add perFilerConfigObject to store pre-processed per-route-config)
+ENVOY_SHA = "d8d089a6088591e681c43aabdbc671b4f8e59d0d"  # Apr 24, 2018 (http: Adding flexible remove function to HeaderMap
 
 http_archive(
     name = "envoy",

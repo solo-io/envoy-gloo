@@ -1,8 +1,15 @@
 #include "common/http/functional_stream_decoder_base.h"
 
+#include "envoy/registry/registry.h"
+
 #include "common/config/solo_well_known_names.h"
 #include "common/http/filter_utility.h"
 #include "common/http/solo_filter_utility.h"
+#include "common/protobuf/utility.h"
+
+#include "extensions/filters/http/common/empty_http_filter_config.h"
+
+#include "functional_base.pb.validate.h"
 
 namespace Envoy {
 namespace Http {
@@ -63,8 +70,13 @@ FunctionRetrieverMetadataAccessor::getRouteMetadata() const {
 
 absl::optional<FunctionRetrieverMetadataAccessor::Result>
 FunctionRetrieverMetadataAccessor::tryToGetSpec() {
-  const Router::RouteEntry *routeEntry =
-      SoloFilterUtility::resolveRouteEntry(decoder_callbacks_);
+
+  route_info_ = decoder_callbacks_->route();
+  if (!route_info_) {
+    return {};
+  }
+
+  const Router::RouteEntry *routeEntry = route_info_->routeEntry();
   if (!routeEntry) {
     return {};
   }
@@ -74,18 +86,43 @@ FunctionRetrieverMetadataAccessor::tryToGetSpec() {
   if (!cluster_info_) {
     return {};
   }
+
   // So now we know this this route is to a functional upstream. i.e. we must be
   // able to do a function route or error. unless passthrough is allowed on the
   // upstream.
+  const FunctionalFilterMixinRouteFilterConfig *filter_config =
+      SoloFilterUtility::resolvePerFilterConfig<
+          FunctionalFilterMixinRouteFilterConfig>(
+          Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER, route_info_);
+  if (!filter_config) {
+    // check if we have metadata (i.e. gloo is not updated)
+    // TODO: this will be removed in the future.
+    auto legacy_result = tryToGetSpecLegacy(routeEntry);
+    if (legacy_result.has_value()) {
+      return legacy_result.value();
+    }
 
+    // this cast should never fail, but maybe we don't have a config...
+    return canPassthrough()
+               ? absl::optional<FunctionRetrieverMetadataAccessor::Result>()
+               : Result::Error;
+  }
+
+  function_name_ = &filter_config->function_name_;
+  tryToGetSpecFromCluster(*function_name_);
+
+  return Result::Active;
+}
+
+absl::optional<FunctionRetrieverMetadataAccessor::Result>
+FunctionRetrieverMetadataAccessor::tryToGetSpecLegacy(
+    const Router::RouteEntry *routeEntry) {
   const auto &metadata = routeEntry->metadata();
 
   const auto filter_it = metadata.filter_metadata().find(
       Config::SoloCommonMetadataFilters::get().FUNCTIONAL_ROUTER);
   if (filter_it == metadata.filter_metadata().end()) {
-    return canPassthrough()
-               ? absl::optional<FunctionRetrieverMetadataAccessor::Result>()
-               : Result::Error;
+    return {};
   }
 
   // this needs to have a field with the name of the cluster:
@@ -333,6 +370,48 @@ void FunctionRetrieverMetadataAccessor::fetchClusterInfoIfOurs() {
     child_spec_ = &filter_it->second;
   }
 }
+
+// register the factory as it is a must if you use the base filter
+
+class FunctionBaseFilterFactory
+    : public Extensions::HttpFilters::Common::EmptyHttpFilterConfig {
+public:
+  // Server::Configuration::NamedHttpFilterConfigFactory
+  std::string name() override {
+    return Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER;
+  }
+
+  // Server::Configuration::EmptyHttpFilterConfig
+  Server::Configuration::HttpFilterFactoryCb
+  createFilter(const std::string &, FactoryContext &) override {
+    return [](Http::FilterChainFactoryCallbacks &) -> void {};
+  }
+
+  ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override {
+    return ProtobufTypes::MessagePtr{
+        new envoy::api::v2::filter::http::FunctionalFilterRouteConfig()};
+  }
+
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfig(const Protobuf::Message &source) override {
+    const envoy::api::v2::filter::http::FunctionalFilterRouteConfig &cfg =
+        MessageUtil::downcastAndValidate<
+            const envoy::api::v2::filter::http::FunctionalFilterRouteConfig &>(
+            source);
+    auto obj = std::make_shared<Http::FunctionalFilterMixinRouteFilterConfig>();
+    obj->function_name_ = cfg.function_name();
+    return obj;
+  }
+};
+
+/**
+ * Static registration for the Google Cloud Functions filter. @see
+ * RegisterFactory.
+ */
+static Envoy::Registry::RegisterFactory<
+    FunctionBaseFilterFactory,
+    Server::Configuration::NamedHttpFilterConfigFactory>
+    register_;
 
 } // namespace Http
 } // namespace Envoy

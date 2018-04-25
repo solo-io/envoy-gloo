@@ -131,6 +131,15 @@ protected:
         &((*route_metadata_.mutable_filter_metadata())[childname_]);
   }
 
+  void initrouteperfilter() {
+    route_function_.function_name_ = functionname_;
+
+    ON_CALL(
+        filter_callbacks_.route_->route_entry_,
+        perFilterConfig(Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER))
+        .WillByDefault(Return(&route_function_));
+  }
+
   void initroutemeta() {
 
     ProtobufWkt::Value functionvalue;
@@ -196,6 +205,8 @@ protected:
   std::string childname_;
   std::string functionname_{"funcname"};
   std::string function2name_{"funcname2"};
+
+  Http::FunctionalFilterMixinRouteFilterConfig route_function_;
 };
 
 bool FunctionalFilterTester::retrieveFunction(
@@ -235,6 +246,19 @@ TEST_F(FunctionFilterTest, NothingConfigured) {
   EXPECT_FALSE(filter_->decodeHeadersCalled_);
   EXPECT_FALSE(filter_->decodeDataCalled_);
   EXPECT_FALSE(filter_->decodeTrailersCalled_);
+}
+
+TEST_F(FunctionFilterTest, HappyPathPerFilter) {
+  initclustermeta();
+  initrouteperfilter();
+
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
+  filter_->decodeHeaders(headers, true);
+
+  EXPECT_TRUE(filter_->decodeHeadersCalled_);
+  EXPECT_EQ(functionname_, filter_->functionCalled_);
 }
 
 TEST_F(FunctionFilterTest, HaveRouteMeta) {
