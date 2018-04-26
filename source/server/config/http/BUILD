@@ -14,7 +14,7 @@ envoy_cc_library(
     hdrs = ["cache_filter_config_factory.h"],
     repository = "@envoy",
     deps = [
-        "//source/common/cache:cache_lib",
+        "//source/common/cache/in_memory:cache_lib",
         "//source/common/config:cache_well_known_names_lib",
         "//source/common/http/filter:cache_filter_lib",
         "@envoy//source/common/config:well_known_names",
