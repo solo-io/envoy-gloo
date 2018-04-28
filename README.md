@@ -29,3 +29,11 @@ To run integration tests using a clang build:
 ```
 $ CXX=clang++-5.0 CC=clang-5.0 bazel test -c dbg --config=clang-tsan //test/integration:cache_filter_integration_test
 ```
+
+## E2E
+
+To run the e2e test:
+
+```
+$ bazel test //e2e/...
+```
