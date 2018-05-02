@@ -44,4 +44,11 @@ static_resources:
         port_value: 4222
     name: cluster_0
     type: STRICT_DNS
+  - connect_timeout: 5.000s
+    hosts:
+    - socket_address:
+        address: 127.0.0.1
+        port_value: 6379
+    name: redis
+    type: STRICT_DNS
 EOF
