@@ -81,7 +81,7 @@ class ManyRequestTestCase(unittest.TestCase):
     self.__start_envoy()
 
     # Make multiple requests to test that the upstream call counter stays 1.
-    for i in xrange(100):
+    for _ in xrange(100):
       self.__make_request(httplib.OK)
 
 if __name__ == "__main__":
