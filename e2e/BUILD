@@ -16,10 +16,12 @@ py_test(
     name = "e2e_test",
     srcs = [
         "e2e_test.py",
+        "server.py",
         "upstream.py",
     ],
     data = [
         "//:envoy",
+        "//api/envoy/service/cache/v2:cache.proto",
         "//e2e:create_config.sh",
     ],
 )

@@ -1,3 +1,4 @@
+import grpc
 import httplib
 import logging
 import os
@@ -6,6 +7,15 @@ import signal
 import subprocess
 import time
 import unittest
+
+# Generate Python code.
+# See: https://grpc.io/docs/tutorials/basic/python.html
+os.system("python -m grpc_tools.protoc -I./api/envoy/service/cache/v2/ "
+          "--python_out=. --grpc_python_out=. ./api/envoy/service/cache/v2/cache.proto")
+
+import cache_pb2
+import cache_pb2_grpc
+
 
 def envoy_preexec_fn():
   import ctypes
@@ -16,15 +26,14 @@ def envoy_preexec_fn():
 
 DEBUG=True
 
-class ManyRequestTestCase(unittest.TestCase):
+class CacheTestCase(unittest.TestCase):
   def setUp(self):
     self.cleanup()
 
   def tearDown(self):
-    if self.upstream is not None:
-      self.upstream.terminate()
-    if self.redis_server is not None:
-      self.redis_server.terminate()
+    for p in (self.upstream, self.grpc_server, self.redis_server):
+      if p is not None:
+        p.terminate()
     if self.envoy is not None:
       self.envoy.send_signal(signal.SIGINT)
       self.envoy.wait()
@@ -33,6 +42,7 @@ class ManyRequestTestCase(unittest.TestCase):
 
   def cleanup(self):
     self.upstream = None
+    self.grpc_server = None
     self.redis_server = None
     self.envoy = None
 
@@ -51,6 +61,15 @@ class ManyRequestTestCase(unittest.TestCase):
         break
     else:
       self.fail('"upstream.py" was not found')
+
+  def __start_grpc_server(self):
+    for grpc_server_path in ("./server.py", "./e2e/server.py"):
+      if os.path.isfile(grpc_server_path):
+        self.grpc_server = subprocess.Popen([grpc_server_path])
+        time.sleep(1)
+        break
+    else:
+      self.fail('"server.py" was not found')
 
   def __start_redis_server(self):
     self.redis_server = subprocess.Popen(["docker", "run", "--rm", "-p", "6379:6379", "redis"])
@@ -73,10 +92,30 @@ class ManyRequestTestCase(unittest.TestCase):
     # The upstream call counter should stay 1.
     self.assertEqual(u'1', response.text)
 
+  def test_grpc_server(self):
+    # Set up gRPC server.
+    self.__start_grpc_server()
+
+    # Connect a gRPC client.
+    channel = grpc.insecure_channel('127.0.0.1:50051')
+    stub = cache_pb2_grpc.CacheServiceStub(channel)
+
+    # Send a `SET` request.
+    set_request = cache_pb2.CacheSetRequest(key="mykey", value="Hello")
+    stub.Set(set_request)
+
+    # Send a `GET` request.
+    get_request = cache_pb2.CacheGetRequest(key="mykey")
+
+    # Validate that the correct value was returned.
+    result = stub.Get(get_request)
+    self.assertEqual("Hello", result.value)
+
   def test_make_requests(self):
     # Set up environment.
     self.__create_config()
     self.__start_upstream()
+    self.__start_grpc_server()
     self.__start_redis_server()
     self.__start_envoy()
 
