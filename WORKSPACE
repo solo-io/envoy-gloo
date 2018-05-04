@@ -1,4 +1,4 @@
-workspace(name="nats_streaming_filter")
+workspace(name="cache_filter")
 
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
