@@ -1,6 +1,7 @@
 import grpc
 import httplib
 import logging
+import multiprocessing
 import os
 import requests
 import signal
@@ -88,9 +89,7 @@ class CacheTestCase(unittest.TestCase):
   def __make_request(self, expected_status):
     response = requests.get('http://localhost:10000/get')
     self.assertEqual(expected_status, response.status_code)
-
-    # The upstream call counter should stay 1.
-    self.assertEqual(u'1', response.text)
+    return response.text
 
   def test_grpc_server(self):
     # Set up gRPC server.
@@ -119,9 +118,22 @@ class CacheTestCase(unittest.TestCase):
     self.__start_redis_server()
     self.__start_envoy()
 
-    # Make multiple requests to test that the upstream call counter stays 1.
-    for _ in xrange(100):
-      self.__make_request(httplib.OK)
+    # Make multiple requests and aggregate the response text values.
+    response_text_set = set()
+    for _ in xrange(1000):
+      response_text = self.__make_request(httplib.OK)
+      response_text_set.add(response_text)
+
+    # TODO(talnordan): Should this test support a non-default Envoy configuration of the number of
+    # worker threads?
+    num_worker_threads = multiprocessing.cpu_count()
+
+    # The upstream counter is expected to be incremented once by each worker thread.
+    expected_sorted_responses = range(1, num_worker_threads + 1)
+
+    # Validate the aggregated response text values.
+    sorted_responses = sorted(map(int, response_text_set))
+    self.assertEqual(expected_sorted_responses, sorted_responses)
 
 if __name__ == "__main__":
   global DEBUG
