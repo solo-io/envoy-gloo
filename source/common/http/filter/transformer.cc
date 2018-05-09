@@ -23,22 +23,21 @@ const HeaderEntry *getHeader(const HeaderMap &header_map,
   return header_entry;
 }
 
-const HeaderEntry *getHeader(const HeaderMap &header_map, const std::string& key) {
+const HeaderEntry *getHeader(const HeaderMap &header_map,
+                             const std::string &key) {
   // use explicit consturctor so string is lowered
   auto lowerkey = LowerCaseString(key);
   return getHeader(header_map, lowerkey);
 }
 
-}
-
+} // namespace
 
 std::string ExtractorUtil::extract(
     const envoy::api::v2::filter::http::Extraction &extractor,
     const HeaderMap &header_map) {
-      // TODO: should we lowercase them in the config?
-  const std::string& headername = extractor.header();
-  const HeaderEntry *header_entry =
-      getHeader(header_map, headername);
+  // TODO: should we lowercase them in the config?
+  const std::string &headername = extractor.header();
+  const HeaderEntry *header_entry = getHeader(header_map, headername);
   if (!header_entry) {
     return "";
   }
