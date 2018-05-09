@@ -261,6 +261,25 @@ TEST_F(FunctionFilterTest, HappyPathPerFilter) {
   EXPECT_EQ(functionname_, filter_->functionCalled_);
 }
 
+TEST_F(FunctionFilterTest, ClusterNotFoundIsIgnored) {
+  initClusterMeta();
+  initRouteMeta();
+  auto clustername = filter_callbacks_.route_->route_entry_.cluster_name_;
+  EXPECT_CALL(factory_context_.cluster_manager_, get(clustername))
+      .WillRepeatedly(Return(nullptr));
+
+  TestHeaderMapImpl headers{{":method", "GET"},
+                            {":authority", "www.solo.io"},
+                            {":path", "/getsomething"}};
+  filter_->decodeHeaders(headers, true);
+
+  EXPECT_EQ(nullptr, filter_->meta_accessor_);
+
+  EXPECT_FALSE(filter_->decodeHeadersCalled_);
+  EXPECT_FALSE(filter_->decodeDataCalled_);
+  EXPECT_FALSE(filter_->decodeTrailersCalled_);
+}
+
 TEST_F(FunctionFilterTest, HaveRouteMeta) {
   initClusterMeta();
   initRouteMeta();

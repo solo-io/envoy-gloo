@@ -361,6 +361,10 @@ void FunctionRetrieverMetadataAccessor::fetchClusterInfoIfOurs() {
   Upstream::ClusterInfoConstSharedPtr cluster_info =
       FilterUtility::resolveClusterInfo(decoder_callbacks_, cm_);
 
+  if (!cluster_info) {
+    return;
+  }
+
   const auto &metadata = cluster_info->metadata();
   const auto filter_it = metadata.filter_metadata().find(childname_);
   if (filter_it != metadata.filter_metadata().end()) {
