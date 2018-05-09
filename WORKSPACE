@@ -2,7 +2,7 @@ workspace(name="transformation_filter")
 # use skylark for native git
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "d41d06eb614fd49f19422d9eed9235c320af9229"  # April 10, 2018 (gRPC/JSON transcoder: enable preserving route after headers modified)
+ENVOY_SHA = "d8d089a6088591e681c43aabdbc671b4f8e59d0d"  # Apr 24, 2018 (http: Adding flexible remove function to HeaderMap
 
 http_archive(
     name = "envoy",
@@ -10,7 +10,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "2bc9569aec056df65bb4f67f0c47be968cac6256"  # Apr 3, 2018 (Fix compilation of `SoloMetadata` (#8))
+ENVOY_COMMON_SHA = "0e5f2ea3f5926370d4c8fd2e5051bb6b9c281d6f"  # May 9, 2018 (fix segfault)
 
 http_archive(
     name = "solo_envoy_common",

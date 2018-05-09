@@ -13,7 +13,7 @@ using namespace std::placeholders;
 namespace Envoy {
 namespace Http {
 // TODO: move to common
-
+namespace {
 const HeaderEntry *getHeader(const HeaderMap &header_map,
                              const LowerCaseString &key) {
   const HeaderEntry *header_entry = header_map.get(key);
@@ -23,17 +23,22 @@ const HeaderEntry *getHeader(const HeaderMap &header_map,
   return header_entry;
 }
 
-const HeaderEntry *getHeader(const HeaderMap &header_map, std::string &&key) {
-  auto lowerkey = LowerCaseString(std::move(key), true);
+const HeaderEntry *getHeader(const HeaderMap &header_map, const std::string& key) {
+  // use explicit consturctor so string is lowered
+  auto lowerkey = LowerCaseString(key);
   return getHeader(header_map, lowerkey);
 }
+
+}
+
 
 std::string ExtractorUtil::extract(
     const envoy::api::v2::filter::http::Extraction &extractor,
     const HeaderMap &header_map) {
-  std::string headername = extractor.header();
+      // TODO: should we lowercase them in the config?
+  const std::string& headername = extractor.header();
   const HeaderEntry *header_entry =
-      getHeader(header_map, std::move(headername));
+      getHeader(header_map, headername);
   if (!header_entry) {
     return "";
   }
@@ -184,7 +189,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
 
   for (auto it = headers.begin(); it != headers.end(); it++) {
     std::string name = it->first;
-    auto lkname = LowerCaseString(std::move(name), true);
+    auto lkname = LowerCaseString(std::move(name));
     const envoy::api::v2::filter::http::InjaTemplate &text = it->second;
     std::string output = instance.render(text.text());
     // remove existing header
