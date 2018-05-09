@@ -10,7 +10,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "0e5f2ea3f5926370d4c8fd2e5051bb6b9c281d6f"  # May 9, 2018 (fix segfault)
+ENVOY_COMMON_SHA = "fb0d6f036658eae2b41dbb5f6375f9dc2e5ea6d5"  # May 9, 2018 (fix segfault)
 
 http_archive(
     name = "solo_envoy_common",
