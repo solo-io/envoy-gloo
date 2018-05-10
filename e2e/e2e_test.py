@@ -91,6 +91,17 @@ class CacheTestCase(unittest.TestCase):
     self.assertEqual(expected_status, response.status_code)
     return response.text
 
+  def __get_expected_sorted_responses(self, is_only_in_memory):
+    if is_only_in_memory:
+      # TODO(talnordan): Should this test support a non-default Envoy configuration of the number
+      # of worker threads?
+      num_worker_threads = multiprocessing.cpu_count()
+
+      # The upstream counter is expected to be incremented once by each worker thread.
+      return range(1, num_worker_threads + 1)
+
+    return [1]
+
   def test_grpc_server(self):
     # Set up gRPC server.
     self.__start_grpc_server()
@@ -124,14 +135,8 @@ class CacheTestCase(unittest.TestCase):
       response_text = self.__make_request(httplib.OK)
       response_text_set.add(response_text)
 
-    # TODO(talnordan): Should this test support a non-default Envoy configuration of the number of
-    # worker threads?
-    num_worker_threads = multiprocessing.cpu_count()
-
-    # The upstream counter is expected to be incremented once by each worker thread.
-    expected_sorted_responses = range(1, num_worker_threads + 1)
-
     # Validate the aggregated response text values.
+    expected_sorted_responses = self.__get_expected_sorted_responses(False)
     sorted_responses = sorted(map(int, response_text_set))
     self.assertEqual(expected_sorted_responses, sorted_responses)
 
