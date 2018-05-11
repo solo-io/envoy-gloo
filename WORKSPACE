@@ -3,7 +3,7 @@ workspace(name="cache_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "9d6b432218d8eb010bde9b7f720319378691b94a"  # April 16, 2018 (router: vhost/route/w.cluster local filter configuration)
+ENVOY_SHA = "d8d089a6088591e681c43aabdbc671b4f8e59d0d" # Apr 24, 2018 (http: Adding flexible remove function to HeaderMap)
 
 http_archive(
     name = "envoy",
@@ -11,7 +11,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "ef1a5da85d62ba90a28bb76a54912692b8850094"  # Apr 19, 2018 (Introduce `class BufferUtility`)
+ENVOY_COMMON_SHA = "144036339daf5b4d75ce8b6509a946d209536ad3"  # May 9, 2018 (Fix format)
 
 git_repository(
     name = "solo_envoy_common",
