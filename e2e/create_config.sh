@@ -37,6 +37,8 @@ static_resources:
           - name: io.solo.cache
             config:
               in_memory: on
+              google_grpc_target_uri: "127.0.0.1:50051"
+              grpc_timeout: 1s
               redis_cluster: redis
               redis_stat_prefix: stat
               redis_op_timeout: 5s
