@@ -35,6 +35,11 @@ static_resources:
                   cluster: cluster_0
           http_filters:
           - name: io.solo.cache
+            config:
+              in_memory: on
+              redis_cluster: redis
+              redis_stat_prefix: stat
+              redis_op_timeout: 5s
           - name: envoy.router
   clusters:
   - connect_timeout: 5.000s

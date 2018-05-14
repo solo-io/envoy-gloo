@@ -1,10 +1,21 @@
 syntax = "proto3";
 
-package envoy.api.v2.filter.http;
+package envoy.config.filter.http.cache.v2;
+
+import "google/protobuf/duration.proto";
 
 // [#protodoc-title: Cache]
 
 // [#proto-status: experimental]
+message Cache {
+    bool in_memory = 1;
+    string google_grpc_target_uri = 2;
+    google.protobuf.Duration grpc_timeout = 3;
+    string redis_cluster = 4;
+    string redis_stat_prefix = 5;
+    google.protobuf.Duration redis_op_timeout = 6;
+}
+
 message CacheFilterRouteConfig {
     bool is_cacheable = 1;
 }

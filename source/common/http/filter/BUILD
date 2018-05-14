@@ -9,6 +9,22 @@ load(
 envoy_package()
 
 envoy_cc_library(
+    name = "cache_filter_config",
+    srcs = [
+        "cache_filter_config.cc",
+    ],
+    hdrs = [
+        "cache_filter_config.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "//:cache_filter_proto_cc",
+        "//source/common/config:cache_well_known_names_lib",
+        "@envoy//include/envoy/upstream:cluster_manager_interface",
+    ],
+)
+
+envoy_cc_library(
     name = "cache_filter_lib",
     srcs = [
         "cache_filter.cc",
