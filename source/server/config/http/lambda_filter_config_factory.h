@@ -1,39 +1,29 @@
 #pragma once
 
-#include <string>
+#include "common/config/lambda_well_known_names.h"
 
-#include "envoy/server/filter_config.h"
-
-#include "lambda_filter.pb.h"
+#include "extensions/filters/http/common/factory_base.h"
+#include "lambda_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-class LambdaFilterConfigFactory : public NamedHttpFilterConfigFactory {
+using Extensions::HttpFilters::Common::FactoryBase;
+
+/**
+ * Config registration for the AWS Lambda filter.
+ */
+class LambdaFilterConfigFactory
+    : public FactoryBase<envoy::api::v2::filter::http::Lambda> {
 public:
-  HttpFilterFactoryCb createFilterFactory(const Json::Object &config,
-                                          const std::string &stat_prefix,
-                                          FactoryContext &context) override;
-
-  HttpFilterFactoryCb
-  createFilterFactoryFromProto(const Protobuf::Message &config,
-                               const std::string &stat_prefix,
-                               FactoryContext &context) override;
-
-  ProtobufTypes::MessagePtr createEmptyConfigProto() override;
-
-  std::string name() override;
-  // no v1 support
-  //  static const envoy::api::v2::filter::http::Lambda
-  //  translateLambdaFilter(const Json::Object &json_config);
+  LambdaFilterConfigFactory()
+      : FactoryBase(Config::LambdaHttpFilterNames::get().LAMBDA) {}
 
 private:
-  HttpFilterFactoryCb
-  createFilter(const envoy::api::v2::filter::http::Lambda &proto_config,
-               FactoryContext &context);
-
-  static const std::string LAMBDA_HTTP_FILTER_SCHEMA;
+  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
+      const envoy::api::v2::filter::http::Lambda &proto_config,
+      const std::string &stats_prefix, FactoryContext &context) override;
 };
 
 } // namespace Configuration
