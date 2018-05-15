@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 using testing::AtLeast;
+using testing::HasSubstr;
 using testing::Invoke;
 using testing::Return;
 using testing::ReturnPointee;
@@ -273,6 +274,32 @@ TEST(Transformer, transformBodyNotSet) {
 
   EXPECT_EQ(originalBody, res);
   EXPECT_EQ("456", headers.get_("x-header"));
+}
+
+TEST(Transformer, transformWithHyphens) {
+  TestHeaderMapImpl headers{
+      {":method", "GET"},
+      {":path", "/accounts/764b0f0f-7319-4b29-bbd0-887a39705a70"}};
+  Buffer::OwnedImpl body("{}");
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
+  extractor.set_subgroup(1);
+
+  envoy::api::v2::filter::http::TransformationTemplate transformation;
+
+  (*transformation.mutable_extractors())["id"] = extractor;
+
+  transformation.set_advanced_templates(false);
+  transformation.mutable_merge_extractors_to_body();
+
+  Transformer transformer(transformation);
+  transformer.transform(headers, body);
+
+  std::string res = TestUtility::bufferToString(body);
+
+  EXPECT_THAT(res, HasSubstr("764b0f0f-7319-4b29-bbd0-887a39705a70"));
 }
 
 } // namespace Http
