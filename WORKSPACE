@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "d8d089a6088591e681c43aabdbc671b4f8e59d0d"  # Apr 24, 2018 (http: Adding flexible remove function to HeaderMap
+ENVOY_SHA = "01fef5ba2d09c3b501ee89b645998a47e70cd44d"  # May 11, 2018 (http filters: less filter factory boilerplate)
 
 http_archive(
     name = "envoy",

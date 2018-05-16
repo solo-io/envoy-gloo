@@ -5,7 +5,6 @@
 #include "common/config/solo_well_known_names.h"
 #include "common/http/filter_utility.h"
 #include "common/http/solo_filter_utility.h"
-#include "common/protobuf/utility.h"
 
 #include "extensions/filters/http/common/empty_http_filter_config.h"
 #include "functional_base.pb.validate.h"
@@ -378,14 +377,11 @@ void FunctionRetrieverMetadataAccessor::fetchClusterInfoIfOurs() {
 class FunctionBaseFilterFactory
     : public Extensions::HttpFilters::Common::EmptyHttpFilterConfig {
 public:
-  // Server::Configuration::NamedHttpFilterConfigFactory
-  std::string name() override {
-    return Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER;
-  }
+  FunctionBaseFilterFactory()
+      : EmptyHttpFilterConfig(
+            Config::SoloCommonFilterNames::get().FUNCTIONAL_ROUTER) {}
 
-  // Server::Configuration::EmptyHttpFilterConfig
-  Server::Configuration::HttpFilterFactoryCb
-  createFilter(const std::string &, FactoryContext &) override {
+  FilterFactoryCb createFilter(const std::string &, FactoryContext &) override {
     return [](Http::FilterChainFactoryCallbacks &) -> void {};
   }
 
@@ -395,7 +391,8 @@ public:
   }
 
   Router::RouteSpecificFilterConfigConstSharedPtr
-  createRouteSpecificFilterConfig(const Protobuf::Message &source) override {
+  createRouteSpecificFilterConfig(const Protobuf::Message &source,
+                                  FactoryContext &) override {
     const envoy::api::v2::filter::http::FunctionalFilterRouteConfig &cfg =
         MessageUtil::downcastAndValidate<
             const envoy::api::v2::filter::http::FunctionalFilterRouteConfig &>(
