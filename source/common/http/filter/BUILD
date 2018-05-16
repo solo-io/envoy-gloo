@@ -37,8 +37,21 @@ envoy_cc_library(
         "//:cache_filter_proto_cc",
         "//include/envoy/cache:cache_interface",
         "//source/common/config:cache_well_known_names_lib",
+        "//source/common/http/filter:route_specific_cache_filter_config",
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//source/common/http:headers_lib",
         "@envoy//source/common/http:utility_lib",
+        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "route_specific_cache_filter_config",
+    srcs = ["route_specific_cache_filter_config.cc"],
+    hdrs = ["route_specific_cache_filter_config.h"],
+    repository = "@envoy",
+    deps = [
+        "//:cache_filter_proto_cc",
+        "@envoy//include/envoy/router:router_interface",
     ],
 )

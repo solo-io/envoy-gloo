@@ -33,6 +33,9 @@ static_resources:
                   prefix: /get
                 route:
                   cluster: cluster_0
+                per_filter_config:
+                  io.solo.cache:
+                    is_cacheable: true
           http_filters:
           - name: io.solo.cache
             config:
