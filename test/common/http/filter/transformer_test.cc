@@ -279,7 +279,7 @@ TEST(Transformer, transformBodyNotSet) {
 TEST(Transformer, transformWithHyphens) {
   TestHeaderMapImpl headers{
       {":method", "GET"},
-      {":path", "/accounts/764b0f0f-7319-4b29-bbd0-887a39705a70"}};
+      {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
   Buffer::OwnedImpl body("{}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -299,7 +299,7 @@ TEST(Transformer, transformWithHyphens) {
 
   std::string res = TestUtility::bufferToString(body);
 
-  EXPECT_THAT(res, HasSubstr("764b0f0f-7319-4b29-bbd0-887a39705a70"));
+  EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
 } // namespace Http
