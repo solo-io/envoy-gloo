@@ -74,8 +74,10 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//:transformation_filter_proto_cc",
+        "@envoy//include/envoy/buffer:buffer_interface",
+        "@envoy//include/envoy/http:header_map_interface",
+        "@envoy//source/common/common:macros",
         "@envoy//source/common/protobuf",
-        "@envoy//source/exe:envoy_common_lib",
         "@inja//:inja-lib",
         "@json//:json-lib",
     ],
