@@ -51,6 +51,13 @@ Http::FilterFactoryCb
       };
 }
 
+Router::RouteSpecificFilterConfigConstSharedPtr
+TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(
+    const envoy::api::v2::filter::http::RouteTransformations &proto_config,
+    FactoryContext &) {
+  return std::make_shared<Http::RouteTransformationFilterConfig>(proto_config);
+}
+
 /**
  * Static registration for this sample filter. @see RegisterFactory.
  */
