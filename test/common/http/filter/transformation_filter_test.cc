@@ -44,18 +44,18 @@ public:
     ON_CALL(routerentry, metadata()).WillByDefault(ReturnRef(route_metadata_));
   }
 
-  void turnOnPerRoute(std::string body) {
+  void initPerRouteFilterConfig() {
 
-    envoy::api::v2::filter::http::RouteTransformations route_config;
-    route_config.mutable_request_transformation()
-        ->mutable_transformation_template()
-        ->mutable_body()
-        ->set_text(body);
-    route_config_.reset(new RouteTransformationFilterConfig(route_config));
+    route_config_wrapper_.reset(
+        new RouteTransformationFilterConfig(route_config_));
     ON_CALL(*filter_callbacks_.route_,
             perFilterConfig(
                 Config::TransformationFilterNames::get().TRANSFORMATION))
-        .WillByDefault(Return(route_config_.get()));
+        .WillByDefault(Return(route_config_wrapper_.get()));
+    ON_CALL(*encoder_filter_callbacks_.route_,
+            perFilterConfig(
+                Config::TransformationFilterNames::get().TRANSFORMATION))
+        .WillByDefault(Return(route_config_wrapper_.get()));
   }
 
   void initFilter() {
@@ -63,6 +63,7 @@ public:
         new TransformationFilterConfig(config_));
     filter_ = std::make_unique<TransformationFilter>(configptr);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
+    filter_->setEncoderFilterCallbacks(encoder_filter_callbacks_);
   }
 
   void initFilterWithBodyTemplate(std::string body) {
@@ -108,9 +109,11 @@ public:
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::core::Metadata route_metadata_;
-  RouteTransformationFilterConfigConstSharedPtr route_config_;
+  envoy::api::v2::filter::http::RouteTransformations route_config_;
+  RouteTransformationFilterConfigConstSharedPtr route_config_wrapper_;
 };
 
 TEST_F(TransformationFilterTest, EmptyConfig) {
@@ -127,10 +130,31 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeadersPerRoute) {
-  turnOnPerRoute("solo");
+
+  route_config_.mutable_request_transformation()
+      ->mutable_transformation_template()
+      ->mutable_body()
+      ->set_text("solo");
+
+  initPerRouteFilterConfig();
 
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(FilterHeadersStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, TransformsResponseOnHeadersPerRoute) {
+
+  route_config_.mutable_response_transformation()
+      ->mutable_transformation_template()
+      ->mutable_body()
+      ->set_text("solo");
+
+  initPerRouteFilterConfig();
+
+  filter_->decodeHeaders(headers_, true);
+  EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(1);
+  auto res = filter_->encodeHeaders(headers_, true);
   EXPECT_EQ(FilterHeadersStatus::Continue, res);
 }
 
