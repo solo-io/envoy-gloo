@@ -15,7 +15,8 @@ namespace Configuration {
 using Extensions::HttpFilters::Common::FactoryBase;
 
 class TransformationFilterConfigFactory
-    : public FactoryBase<envoy::api::v2::filter::http::Transformations> {
+    : public FactoryBase<envoy::api::v2::filter::http::Transformations,
+                         envoy::api::v2::filter::http::RouteTransformations> {
 public:
     TransformationFilterConfigFactory();
 
@@ -24,6 +25,10 @@ private:
       const envoy::api::v2::filter::http::Transformations &proto_config,
       const std::string &stats_prefix, FactoryContext &context) override;
 
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfigTyped(
+      const envoy::api::v2::filter::http::RouteTransformations &proto_config,
+      FactoryContext &context) override;
 };
 
 } // namespace Configuration

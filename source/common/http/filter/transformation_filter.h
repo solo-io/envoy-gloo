@@ -57,12 +57,19 @@ protected:
     TransformationNotFound,
   };
 
+  enum class Direction {
+    Request,
+    Response,
+  };
+
+  static const std::string& directionToKey(Direction d);
+
   virtual void checkRequestActive();
   virtual void checkResponseActive();
 
   virtual const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             const std::string &key) PURE;
+                             Direction direction) PURE;
 
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
@@ -85,7 +92,7 @@ private:
 
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRoute(const Router::RouteConstSharedPtr &route,
-                        const std::string &key);
+                        Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -133,7 +140,7 @@ public:
 protected:
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             const std::string &key) override;
+                             TransformationFilterBase::Direction direction) override;
 };
 
 class FunctionalTransformationFilter : public TransformationFilterBase,
@@ -148,7 +155,7 @@ protected:
   virtual void checkRequestActive() override;
   const envoy::api::v2::filter::http::Transformation *
   getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             const std::string &key) override;
+                             TransformationFilterBase::Direction direction) override;
 
 private:
   absl::optional<const std::string *> current_function_{};

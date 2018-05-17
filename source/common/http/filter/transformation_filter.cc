@@ -7,6 +7,7 @@
 #include "common/http/filter/transformer.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
+#include "common/common/empty_string.h"
 
 namespace Envoy {
 namespace Http {
@@ -136,10 +137,21 @@ FilterTrailersStatus TransformationFilterBase::encodeTrailers(HeaderMap &) {
   return FilterTrailersStatus::Continue;
 }
 
+const std::string& TransformationFilterBase::directionToKey(TransformationFilterBase::Direction d) {
+    switch (d) {
+    case TransformationFilterBase::Direction::Request:
+      return Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION;
+    case TransformationFilterBase::Direction::Response:
+      return Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION;
+    }
+    
+    RELEASE_ASSERT("unknown direction");
+    return EMPTY_STRING;
+}
+
 void TransformationFilterBase::checkRequestActive() {
   request_transformation_ = getTransformFromRoute(
-      decoder_callbacks_->route(),
-      Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION);
+      decoder_callbacks_->route(), TransformationFilterBase::Direction::Request);
 }
 
 void FunctionalTransformationFilter::checkRequestActive() {
@@ -153,15 +165,32 @@ void FunctionalTransformationFilter::checkRequestActive() {
 
 void TransformationFilterBase::checkResponseActive() {
   response_transformation_ = getTransformFromRoute(
-      encoder_callbacks_->route(),
-      Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION);
+      encoder_callbacks_->route(), TransformationFilterBase::Direction::Response);
 }
 
 const envoy::api::v2::filter::http::Transformation *
 TransformationFilterBase::getTransformFromRoute(
-    const Router::RouteConstSharedPtr &route, const std::string &key) {
+    const Router::RouteConstSharedPtr &route, TransformationFilterBase::Direction direction) {
 
   if (!route) {
+    return nullptr;
+  }
+
+  const auto *config = SoloFilterUtility::resolvePerFilterConfig<
+      RouteTransformationFilterConfig>(
+      Config::TransformationFilterNames::get().TRANSFORMATION, route);
+
+  if (config != nullptr) {
+    switch (direction) {
+    case TransformationFilterBase::Direction::Request:
+      return &config->getRequestTranformation();
+    case TransformationFilterBase::Direction::Response:
+      return &config->getResponseTranformation();
+    }
+  }
+
+  if (config_ == nullptr) {
+    // this can happen in per route config mode.
     return nullptr;
   }
 
@@ -170,15 +199,15 @@ TransformationFilterBase::getTransformFromRoute(
     return nullptr;
   }
 
-  return getTransformFromRouteEntry(routeEntry, key);
+  return getTransformFromRouteEntry(routeEntry, direction);
 }
 
 const envoy::api::v2::filter::http::Transformation *
 TransformationFilter::getTransformFromRouteEntry(
-    const Router::RouteEntry *routeEntry, const std::string &key) {
+    const Router::RouteEntry *routeEntry, TransformationFilterBase::Direction direction) {
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
-      Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
+      Config::TransformationMetadataFilters::get().TRANSFORMATION, directionToKey(direction));
 
   // if we are not in functional mode, we expect a string:
   if (value.kind_case() != ProtobufWkt::Value::kStringValue) {
@@ -194,11 +223,11 @@ TransformationFilter::getTransformFromRouteEntry(
 
 const envoy::api::v2::filter::http::Transformation *
 FunctionalTransformationFilter::getTransformFromRouteEntry(
-    const Router::RouteEntry *routeEntry, const std::string &key) {
+    const Router::RouteEntry *routeEntry, TransformationFilterBase::Direction direction) {
 
   const ProtobufWkt::Value &value = Config::Metadata::metadataValue(
       routeEntry->metadata(),
-      Config::TransformationMetadataFilters::get().TRANSFORMATION, key);
+      Config::TransformationMetadataFilters::get().TRANSFORMATION, directionToKey(direction));
 
   if (!current_function_.has_value()) {
     return nullptr;

@@ -4,10 +4,11 @@ package envoy.api.v2.filter.http;
 
 option go_package = "transformation";
 
-// [#protodoc-title: Lambda]
-// Lambda :ref:`configuration overview <config_http_filters_lambda>`.
 message Transformations {
     map<string, Transformation> transformations = 1;
+    // route_specific_config and transformations should be in a oneof,
+    // but map can't be in a oneof...
+    bool route_specific_config = 2;
 }
 
 // [#proto-status: experimental]
@@ -18,6 +19,11 @@ message Transformation {
         TransformationTemplate transformation_template = 1;
         HeaderBodyTransform header_body_transform = 2;
     }
+}
+
+message RouteTransformations {
+    Transformation request_transformation = 1;
+    Transformation response_transformation = 2;
 }
 
 message Extraction {
