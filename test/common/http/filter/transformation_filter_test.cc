@@ -44,6 +44,20 @@ public:
     ON_CALL(routerentry, metadata()).WillByDefault(ReturnRef(route_metadata_));
   }
 
+  void turnOnPerRoute(std::string body) {
+
+    envoy::api::v2::filter::http::RouteTransformations route_config;
+    route_config.mutable_request_transformation()
+        ->mutable_transformation_template()
+        ->mutable_body()
+        ->set_text(body);
+    route_config_.reset(new RouteTransformationFilterConfig(route_config));
+    ON_CALL(*filter_callbacks_.route_,
+            perFilterConfig(
+                Config::TransformationFilterNames::get().TRANSFORMATION))
+        .WillByDefault(Return(route_config_.get()));
+  }
+
   void initFilter() {
     TransformationFilterConfigConstSharedPtr configptr(
         new TransformationFilterConfig(config_));
@@ -96,6 +110,7 @@ public:
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::core::Metadata route_metadata_;
+  RouteTransformationFilterConfigConstSharedPtr route_config_;
 };
 
 TEST_F(TransformationFilterTest, EmptyConfig) {
@@ -105,6 +120,14 @@ TEST_F(TransformationFilterTest, EmptyConfig) {
 
 TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   initFilterWithBodyTemplate("solo");
+
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(FilterHeadersStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, TransformsOnHeadersPerRoute) {
+  turnOnPerRoute("solo");
 
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
