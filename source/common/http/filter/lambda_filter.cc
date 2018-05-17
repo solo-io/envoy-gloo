@@ -24,10 +24,8 @@ const std::string LambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
 const LowerCaseString LambdaFilter::LOG_TYPE("x-amz-log-type");
 const std::string LambdaFilter::LOG_NONE("None");
 
-// TODO(yuval-k) can the config be removed?
-LambdaFilter::LambdaFilter(LambdaFilterConfigSharedPtr config,
-                           FunctionRetrieverSharedPtr retreiver)
-    : config_(config), function_retriever_(retreiver) {}
+LambdaFilter::LambdaFilter(FunctionRetrieverSharedPtr retreiver)
+    : function_retriever_(retreiver) {}
 
 LambdaFilter::~LambdaFilter() {}
 

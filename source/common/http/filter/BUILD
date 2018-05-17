@@ -23,19 +23,6 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "lambda_filter_config",
-    hdrs = [
-        "lambda_filter_config.h",
-    ],
-    repository = "@envoy",
-    deps = [
-        "//:lambda_filter_proto_cc",
-        "//source/common/config:lambda_well_known_names_lib",
-        "@envoy//source/exe:envoy_common_lib",
-    ],
-)
-
-envoy_cc_library(
     name = "function_retriever_lib",
     srcs = [
         "function.cc",
@@ -67,7 +54,6 @@ envoy_cc_library(
     deps = [
         "//source/common/http/filter:aws_authenticator_lib",
         "//source/common/http/filter:function_retriever_lib",
-        "//source/common/http/filter:lambda_filter_config",
         "@envoy//source/exe:envoy_common_lib",
         "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",

@@ -46,13 +46,6 @@ public:
   virtual ~NothingMetadataAccessor() {}
 };
 
-TEST(LambdaFilterConfigTest, EmptyConfig) {
-  envoy::api::v2::filter::http::Lambda config;
-
-  // shouldnt throw.
-  LambdaFilterConfig cfg(config);
-}
-
 class LambdaFilterTest : public testing::Test {
 public:
   LambdaFilterTest() {}
@@ -60,16 +53,13 @@ public:
 protected:
   void SetUp() override {
     function_retriever_ = std::make_shared<NiceMock<MockFunctionRetriever>>();
-    envoy::api::v2::filter::http::Lambda config;
-    config_ = std::make_shared<LambdaFilterConfig>(config);
-    filter_ = std::make_unique<LambdaFilter>(config_, function_retriever_);
+    filter_ = std::make_unique<LambdaFilter>(function_retriever_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
-  LambdaFilterConfigSharedPtr config_;
   std::unique_ptr<LambdaFilter> filter_;
   std::shared_ptr<NiceMock<MockFunctionRetriever>> function_retriever_;
 };

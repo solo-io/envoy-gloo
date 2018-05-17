@@ -10,9 +10,6 @@
 #include "common/http/filter/aws_authenticator.h"
 #include "common/http/filter/function.h"
 #include "common/http/filter/function_retriever.h"
-#include "common/http/filter/lambda_filter_config.h"
-
-#include "lambda_filter.pb.h"
 
 namespace Envoy {
 namespace Http {
@@ -23,8 +20,7 @@ namespace Http {
  */
 class LambdaFilter : public StreamDecoderFilter, public FunctionalFilter {
 public:
-  LambdaFilter(LambdaFilterConfigSharedPtr config,
-               FunctionRetrieverSharedPtr retreiver);
+  LambdaFilter(FunctionRetrieverSharedPtr retreiver);
   ~LambdaFilter();
 
   // Http::StreamFilterBase
@@ -47,7 +43,6 @@ private:
   static const LowerCaseString LOG_TYPE;
   static const std::string LOG_NONE;
 
-  const LambdaFilterConfigSharedPtr config_;
   FunctionRetrieverSharedPtr function_retriever_;
 
   absl::optional<Function> current_function_;

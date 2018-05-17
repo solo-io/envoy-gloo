@@ -2,28 +2,25 @@
 
 #include "common/config/lambda_well_known_names.h"
 
-#include "extensions/filters/http/common/factory_base.h"
-#include "lambda_filter.pb.validate.h"
+#include "extensions/filters/http/common/empty_http_filter_config.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-using Extensions::HttpFilters::Common::FactoryBase;
+using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 
 /**
  * Config registration for the AWS Lambda filter.
  */
-class LambdaFilterConfigFactory
-    : public FactoryBase<envoy::api::v2::filter::http::Lambda> {
+class LambdaFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   LambdaFilterConfigFactory()
-      : FactoryBase(Config::LambdaHttpFilterNames::get().LAMBDA) {}
+      : EmptyHttpFilterConfig(Config::LambdaHttpFilterNames::get().LAMBDA) {}
 
 private:
-  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const envoy::api::v2::filter::http::Lambda &proto_config,
-      const std::string &stats_prefix, FactoryContext &context) override;
+  Http::FilterFactoryCb createFilter(const std::string &stat_prefix,
+                                     FactoryContext &context) override;
 };
 
 } // namespace Configuration

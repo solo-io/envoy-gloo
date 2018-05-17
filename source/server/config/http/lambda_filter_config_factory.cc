@@ -3,7 +3,6 @@
 #include "envoy/registry/registry.h"
 
 #include "common/http/filter/lambda_filter.h"
-#include "common/http/filter/lambda_filter_config.h"
 #include "common/http/filter/metadata_function_retriever.h"
 #include "common/http/functional_stream_decoder_base.h"
 
@@ -14,20 +13,16 @@ namespace Configuration {
 typedef Http::FunctionalFilterMixin<Http::LambdaFilter> MixedLambdaFilter;
 
 Http::FilterFactoryCb
-LambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
-    const envoy::api::v2::filter::http::Lambda &proto_config,
-    const std::string &, FactoryContext &context) {
-
-  Http::LambdaFilterConfigSharedPtr config =
-      std::make_shared<Http::LambdaFilterConfig>(proto_config);
+LambdaFilterConfigFactory::createFilter(const std::string &,
+                                        FactoryContext &context) {
 
   Http::FunctionRetrieverSharedPtr functionRetriever =
       std::make_shared<Http::MetadataFunctionRetriever>();
 
-  return [&context, config, functionRetriever](
+  return [&context, functionRetriever](
              Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new MixedLambdaFilter(
-        context, Config::LambdaMetadataFilters::get().LAMBDA, config,
+        context, Config::LambdaMetadataFilters::get().LAMBDA,
         functionRetriever);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});

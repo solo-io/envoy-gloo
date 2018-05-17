@@ -12,11 +12,6 @@ envoy_package()
 
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
-api_proto_library(
-    name = "lambda_filter_proto",
-    srcs = ["lambda_filter.proto"],
-)
-
 envoy_cc_library(
     name = "filter_lib",
     repository = "@envoy",
