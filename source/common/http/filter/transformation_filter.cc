@@ -151,9 +151,9 @@ const std::string &TransformationFilterBase::directionToKey(
 }
 
 void TransformationFilterBase::checkRequestActive() {
+  route_ = decoder_callbacks_->route();
   request_transformation_ =
-      getTransformFromRoute(decoder_callbacks_->route(),
-                            TransformationFilterBase::Direction::Request);
+      getTransformFromRoute(TransformationFilterBase::Direction::Request);
 }
 
 void FunctionalTransformationFilter::checkRequestActive() {
@@ -166,23 +166,22 @@ void FunctionalTransformationFilter::checkRequestActive() {
 }
 
 void TransformationFilterBase::checkResponseActive() {
+  route_ = encoder_callbacks_->route();
   response_transformation_ =
-      getTransformFromRoute(encoder_callbacks_->route(),
-                            TransformationFilterBase::Direction::Response);
+      getTransformFromRoute(TransformationFilterBase::Direction::Response);
 }
 
 const envoy::api::v2::filter::http::Transformation *
 TransformationFilterBase::getTransformFromRoute(
-    const Router::RouteConstSharedPtr &route,
     TransformationFilterBase::Direction direction) {
 
-  if (!route) {
+  if (!route_) {
     return nullptr;
   }
 
   const auto *config = SoloFilterUtility::resolvePerFilterConfig<
       RouteTransformationFilterConfig>(
-      Config::TransformationFilterNames::get().TRANSFORMATION, route);
+      Config::TransformationFilterNames::get().TRANSFORMATION, route_);
 
   if (config != nullptr) {
     switch (direction) {
@@ -198,7 +197,7 @@ TransformationFilterBase::getTransformFromRoute(
     return nullptr;
   }
 
-  const Router::RouteEntry *routeEntry = route->routeEntry();
+  const Router::RouteEntry *routeEntry = route_->routeEntry();
   if (!routeEntry) {
     return nullptr;
   }

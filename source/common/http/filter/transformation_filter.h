@@ -91,8 +91,7 @@ private:
   }
 
   const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRoute(const Router::RouteConstSharedPtr &route,
-                        Direction direction);
+  getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -117,6 +116,7 @@ private:
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
   StreamEncoderFilterCallbacks *encoder_callbacks_{};
   bool stream_destroyed_{};
+  Router::RouteConstSharedPtr route_;
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
   HeaderMap *request_headers_{nullptr};
