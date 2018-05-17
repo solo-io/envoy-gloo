@@ -25,9 +25,9 @@ TransformationFilterConfigFactory::TransformationFilterConfigFactory()
     : FactoryBase(Config::TransformationFilterNames::get().TRANSFORMATION) {}
 
 Http::FilterFactoryCb
-    TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
-          const envoy::api::v2::filter::http::Transformations &proto_config,
-          const std::string &, FactoryContext &context) {
+TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
+    const envoy::api::v2::filter::http::Transformations &proto_config,
+    const std::string &, FactoryContext &context) {
 
   Http::TransformationFilterConfigConstSharedPtr config =
       std::make_shared<Http::TransformationFilterConfig>(proto_config);

@@ -1,11 +1,11 @@
 #include "common/config/metadata.h"
 #include "common/config/transformation_well_known_names.h"
 
-#include "transformation_filter.pb.h"
-
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
+
+#include "transformation_filter.pb.h"
 
 namespace Envoy {
 
@@ -33,27 +33,29 @@ public:
         [this](envoy::config::filter::network::http_connection_manager::v2::
                    HttpConnectionManager &hcm) {
 
-          auto& perFilterConfig = (*hcm.mutable_route_config()
-                               ->mutable_virtual_hosts(0)
-                               ->mutable_routes(0)
-                               ->mutable_per_filter_config())[Config::TransformationFilterNames::get().TRANSFORMATION];
+          auto &perFilterConfig = (*hcm.mutable_route_config()
+                                        ->mutable_virtual_hosts(0)
+                                        ->mutable_routes(0)
+                                        ->mutable_per_filter_config())
+              [Config::TransformationFilterNames::get().TRANSFORMATION];
 
-            envoy::api::v2::filter::http::RouteTransformations proto_config;
+          envoy::api::v2::filter::http::RouteTransformations proto_config;
 
-            auto& availableTransform = *proto_config.mutable_request_transformation();
-            auto& transform = *availableTransform.mutable_transformation_template();
-            transform.set_advanced_templates(true);
-            auto& ext1 = (*transform.mutable_extractors())["ext1"];
-            ext1.set_header(":path");
-            ext1.set_header(":path");
-            ext1.set_regex("/users/(\\d+)");
-            ext1.set_subgroup(1);
-            auto& header1 = (*transform.mutable_headers())["x-solo"];
-            header1.set_text("solo.io");
-            transform.mutable_body()->set_text("abc {{extraction(\"ext1\")}}");
-            
-            
-            MessageUtil::jsonConvert(proto_config, perFilterConfig);
+          auto &availableTransform =
+              *proto_config.mutable_request_transformation();
+          auto &transform =
+              *availableTransform.mutable_transformation_template();
+          transform.set_advanced_templates(true);
+          auto &ext1 = (*transform.mutable_extractors())["ext1"];
+          ext1.set_header(":path");
+          ext1.set_header(":path");
+          ext1.set_regex("/users/(\\d+)");
+          ext1.set_subgroup(1);
+          auto &header1 = (*transform.mutable_headers())["x-solo"];
+          header1.set_text("solo.io");
+          transform.mutable_body()->set_text("abc {{extraction(\"ext1\")}}");
+
+          MessageUtil::jsonConvert(proto_config, perFilterConfig);
 
         });
 
@@ -63,7 +65,8 @@ public:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
-  void processRequest(IntegrationStreamDecoderPtr& response, std::string body = "") {
+  void processRequest(IntegrationStreamDecoderPtr &response,
+                      std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
         Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
@@ -84,7 +87,8 @@ INSTANTIATE_TEST_CASE_P(
     IpVersions, TransformationFilterPerRouteIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
-TEST_P(TransformationFilterPerRouteIntegrationTest, TransformHeaderOnlyRequest) {
+TEST_P(TransformationFilterPerRouteIntegrationTest,
+       TransformHeaderOnlyRequest) {
   initialize();
   Http::TestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
@@ -100,6 +104,5 @@ TEST_P(TransformationFilterPerRouteIntegrationTest, TransformHeaderOnlyRequest) 
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("abc 234", body);
 }
-
 
 } // namespace Envoy

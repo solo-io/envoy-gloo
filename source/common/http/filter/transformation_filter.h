@@ -62,7 +62,7 @@ protected:
     Response,
   };
 
-  static const std::string& directionToKey(Direction d);
+  static const std::string &directionToKey(Direction d);
 
   virtual void checkRequestActive();
   virtual void checkResponseActive();
@@ -139,8 +139,9 @@ public:
 
 protected:
   const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             TransformationFilterBase::Direction direction) override;
+  getTransformFromRouteEntry(
+      const Router::RouteEntry *routeEntry,
+      TransformationFilterBase::Direction direction) override;
 };
 
 class FunctionalTransformationFilter : public TransformationFilterBase,
@@ -154,8 +155,9 @@ public:
 protected:
   virtual void checkRequestActive() override;
   const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             TransformationFilterBase::Direction direction) override;
+  getTransformFromRouteEntry(
+      const Router::RouteEntry *routeEntry,
+      TransformationFilterBase::Direction direction) override;
 
 private:
   absl::optional<const std::string *> current_function_{};

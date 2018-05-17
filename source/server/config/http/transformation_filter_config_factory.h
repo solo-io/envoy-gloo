@@ -18,7 +18,7 @@ class TransformationFilterConfigFactory
     : public FactoryBase<envoy::api::v2::filter::http::Transformations,
                          envoy::api::v2::filter::http::RouteTransformations> {
 public:
-    TransformationFilterConfigFactory();
+  TransformationFilterConfigFactory();
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(

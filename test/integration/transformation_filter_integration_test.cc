@@ -133,7 +133,8 @@ public:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
-  void processRequest(IntegrationStreamDecoderPtr& response, std::string body = "") {
+  void processRequest(IntegrationStreamDecoderPtr &response,
+                      std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
         Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
@@ -190,8 +191,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto encoder_decoder =
-      codec_client_->startRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
 
   auto downstream_request = &encoder_decoder.first;
   auto response = std::move(encoder_decoder.second);
@@ -211,8 +211,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto encoder_decoder =
-      codec_client_->startRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
 
   auto downstream_request = &encoder_decoder.first;
   auto response = std::move(encoder_decoder.second);
@@ -233,8 +232,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto encoder_decoder =
-      codec_client_->startRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
 
   auto downstream_request = &encoder_decoder.first;
   auto response = std::move(encoder_decoder.second);
@@ -254,8 +252,7 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   Http::TestHeaderMapImpl request_headers{{":method", "POST"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/empty-body-test"}};
-  auto encoder_decoder =
-      codec_client_->startRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
 
   auto downstream_request = &encoder_decoder.first;
   auto response = std::move(encoder_decoder.second);
@@ -292,7 +289,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   Http::TestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/12347"}};
-   auto encoder_decoder = codec_client_->startRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
 
   auto downstream_request = &encoder_decoder.first;
   auto response = std::move(encoder_decoder.second);
