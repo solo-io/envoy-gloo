@@ -4,31 +4,26 @@
 
 #include "envoy/server/filter_config.h"
 
-#include "transformation_filter.pb.h"
+#include "extensions/filters/http/common/factory_base.h"
+
+#include "transformation_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-class TransformationFilterConfigFactory : public NamedHttpFilterConfigFactory {
+using Extensions::HttpFilters::Common::FactoryBase;
+
+class TransformationFilterConfigFactory
+    : public FactoryBase<envoy::api::v2::filter::http::Transformations> {
 public:
-  HttpFilterFactoryCb createFilterFactory(const Json::Object &config,
-                                          const std::string &stat_prefix,
-                                          FactoryContext &context) override;
-
-  HttpFilterFactoryCb
-  createFilterFactoryFromProto(const Protobuf::Message &config,
-                               const std::string &stat_prefix,
-                               FactoryContext &context) override;
-
-  ProtobufTypes::MessagePtr createEmptyConfigProto() override;
-
-  std::string name() override;
+    TransformationFilterConfigFactory();
 
 private:
-  HttpFilterFactoryCb createFilter(
+  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
       const envoy::api::v2::filter::http::Transformations &proto_config,
-      FactoryContext &context);
+      const std::string &stats_prefix, FactoryContext &context) override;
+
 };
 
 } // namespace Configuration

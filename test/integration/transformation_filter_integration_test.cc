@@ -133,7 +133,7 @@ public:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
-  void processRequest(std::string body = "") {
+  void processRequest(IntegrationStreamDecoderPtr& response, std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
         Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
@@ -143,7 +143,7 @@ public:
       upstream_request_->encodeData(data, true);
     }
 
-    response_->waitForEndStream();
+    response->waitForEndStream();
   }
 
   std::string filter_string_{DEFAULT_TRANSFORMATION_FILTER};
@@ -160,8 +160,8 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
-  codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
-  processRequest();
+  auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
+  processRequest(response);
 
   EXPECT_STREQ("solo.io", upstream_request_->headers()
                               .get(Http::LowerCaseString("x-solo"))
@@ -178,8 +178,8 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
-  codec_client_->makeHeaderOnlyRequest(request_headers, *response_);
-  processRequest();
+  auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
+  processRequest(response);
 
   EXPECT_STREQ("/solo/234",
                upstream_request_->headers().Path()->value().c_str());
@@ -190,12 +190,16 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto downstream_request =
-      &codec_client_->startRequest(request_headers, *response_);
+  auto encoder_decoder =
+      codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
 
-  processRequest();
+  processRequest(response);
 
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("efg", body);
@@ -207,16 +211,19 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto downstream_request =
-      &codec_client_->startRequest(request_headers, *response_);
+  auto encoder_decoder =
+      codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
 
-  processRequest();
+  processRequest(response);
 
   std::string body = TestUtility::bufferToString(upstream_request_->body());
   EXPECT_EQ("efg", body);
-  std::string rbody = response_->body();
+  std::string rbody = response->body();
   EXPECT_NE(std::string::npos, rbody.find("bad request"));
 }
 
@@ -226,14 +233,17 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto downstream_request =
-      &codec_client_->startRequest(request_headers, *response_);
+  auto encoder_decoder =
+      codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
   // TODO add another test that the upstream body was not changed
-  processRequest("{\"abc\":\"soloio\"}");
+  processRequest(response, "{\"abc\":\"soloio\"}");
 
-  std::string rbody = response_->body();
+  std::string rbody = response->body();
   EXPECT_EQ("soloio", rbody);
 }
 
@@ -244,15 +254,19 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   Http::TestHeaderMapImpl request_headers{{":method", "POST"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/empty-body-test"}};
-  auto downstream_request =
-      &codec_client_->startRequest(request_headers, *response_);
+  auto encoder_decoder =
+      codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
   Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
   codec_client_->sendData(*downstream_request, data, true);
 
-  processRequest("{\"abc\":\"soloio\"}");
+  processRequest(response, "{\"abc\":\"soloio\"}");
 
-  std::string rbody = response_->body();
-  const auto &rheaders = response_->headers();
+  std::string rbody = response->body();
+  const auto &rheaders = response->headers();
   EXPECT_EQ("", rbody);
   EXPECT_EQ(nullptr, rheaders.TransferEncoding());
   EXPECT_EQ(nullptr, rheaders.ContentType());
@@ -278,12 +292,15 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   Http::TestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/12347"}};
-  auto downstream_request =
-      &codec_client_->startRequest(request_headers, *response_);
+   auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
   Buffer::OwnedImpl data(origBody);
   codec_client_->sendData(*downstream_request, data, true);
 
-  processRequest();
+  processRequest(response);
 
   EXPECT_STREQ("12347", upstream_request_->headers()
                             .get(Http::LowerCaseString("x-solo"))

@@ -21,58 +21,28 @@ namespace Configuration {
 typedef Http::FunctionalFilterMixin<Http::FunctionalTransformationFilter>
     MixedTransformationFilter;
 
-HttpFilterFactoryCb TransformationFilterConfigFactory::createFilterFactory(
-    const Json::Object &, const std::string &, FactoryContext &) {
-  NOT_IMPLEMENTED;
-}
+TransformationFilterConfigFactory::TransformationFilterConfigFactory()
+    : FactoryBase(Config::TransformationFilterNames::get().TRANSFORMATION) {}
 
-HttpFilterFactoryCb
-TransformationFilterConfigFactory::createFilterFactoryFromProto(
-    const Protobuf::Message &config, const std::string &stat_prefix,
-    FactoryContext &context) {
-  UNREFERENCED_PARAMETER(stat_prefix);
-
-  /**
-   * TODO:
-   * The corresponding `.pb.validate.h` for the message is required by
-   * Envoy::MessageUtil.
-   * @see https://github.com/envoyproxy/envoy/pull/2194
-   *
-   * #include "transformation_filter.pb.validate.h"
-   *
-   * return createFilter(
-   *    Envoy::MessageUtil::downcastAndValidate<const
-   * envoy::api::v2::filter::http::Transformations&>(proto_config), context);
-   * */
-
-  return createFilter(
-      dynamic_cast<const envoy::api::v2::filter::http::Transformations &>(
-          config),
-      context);
-}
-
-ProtobufTypes::MessagePtr
-TransformationFilterConfigFactory::createEmptyConfigProto() {
-  return ProtobufTypes::MessagePtr{
-      new envoy::api::v2::filter::http::Transformations()};
-}
-
-std::string TransformationFilterConfigFactory::name() {
-  return Config::TransformationFilterNames::get().TRANSFORMATION;
-}
-
-HttpFilterFactoryCb TransformationFilterConfigFactory::createFilter(
-    const envoy::api::v2::filter::http::Transformations &proto_config,
-    FactoryContext &context) {
+Http::FilterFactoryCb
+    TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
+          const envoy::api::v2::filter::http::Transformations &proto_config,
+          const std::string &, FactoryContext &context) {
 
   Http::TransformationFilterConfigConstSharedPtr config =
       std::make_shared<Http::TransformationFilterConfig>(proto_config);
 
   return
       [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-        if (!config->empty()) {
+        if (config->route_specific_config()) {
+          // no need for functional filter if the config will be per
+          // route_specific_config
+          auto filter = new Http::TransformationFilter(nullptr);
+          callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
+        } else if (!config->empty()) {
           auto filter = new Http::TransformationFilter(config);
           callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
+
           auto func_filter = new MixedTransformationFilter(
               context, Config::TransformationFilterNames::get().TRANSFORMATION,
               config);
