@@ -35,8 +35,8 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
   return
       [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
         if (config->use_routes_for_config()) {
-          // no need for functional filter if the config will be per
-          // use_routes_for_config
+        // TODO: once use_routes_for_config is implemented in gloo, the functional version of this  
+        // filter should be removed.
           auto filter = new Http::TransformationFilter(nullptr);
           callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
         } else if (!config->empty()) {
