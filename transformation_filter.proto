@@ -6,9 +6,9 @@ option go_package = "transformation";
 
 message Transformations {
     map<string, Transformation> transformations = 1;
-    // route_specific_config and transformations should be in a oneof,
-    // but map can't be in a oneof...
-    bool route_specific_config = 2;
+    // if use_routes_for_config is set transformations will be ignored. the plan is to eventually
+    // deprecate it. Ideally they should be in a oneof, but a map can't be in a oneof...
+    bool use_routes_for_config = 2;
 }
 
 // [#proto-status: experimental]

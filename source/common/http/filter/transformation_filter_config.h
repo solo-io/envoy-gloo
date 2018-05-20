@@ -17,8 +17,8 @@ public:
   TransformationFilterConfig(ProtoConfig proto_config);
 
   bool empty() const { return proto_config_.transformations().empty(); }
-  bool route_specific_config() const {
-    return proto_config_.route_specific_config();
+  bool use_routes_for_config() const {
+    return proto_config_.use_routes_for_config();
   }
 
   const envoy::api::v2::filter::http::Transformation *

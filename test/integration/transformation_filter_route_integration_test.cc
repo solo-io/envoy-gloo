@@ -13,7 +13,7 @@ const std::string TRANSFORMATION_FILTER =
     R"EOF(
 name: io.solo.transformation
 config:
-  route_specific_config: true
+  use_routes_for_config: true
 )EOF";
 
 class TransformationFilterPerRouteIntegrationTest

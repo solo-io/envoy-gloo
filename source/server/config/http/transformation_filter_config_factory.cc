@@ -34,9 +34,9 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
   return
       [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-        if (config->route_specific_config()) {
+        if (config->use_routes_for_config()) {
           // no need for functional filter if the config will be per
-          // route_specific_config
+          // use_routes_for_config
           auto filter = new Http::TransformationFilter(nullptr);
           callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
         } else if (!config->empty()) {
