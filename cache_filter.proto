@@ -9,7 +9,10 @@ import "google/protobuf/wrappers.proto";
 
 // [#proto-status: experimental]
 message Cache {
+    // The max content length of in-memory cached data for each worker thread.
+    // The content length is calculated as the sum of lengths of both keys and values.
     google.protobuf.UInt32Value in_memory_max_content_length = 1;
+
     string google_grpc_target_uri = 2;
     google.protobuf.Duration grpc_timeout = 3;
     string redis_cluster = 4;
