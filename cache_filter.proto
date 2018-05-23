@@ -3,12 +3,13 @@ syntax = "proto3";
 package envoy.config.filter.http.cache.v2;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
 
 // [#protodoc-title: Cache]
 
 // [#proto-status: experimental]
 message Cache {
-    bool in_memory = 1;
+    google.protobuf.UInt32Value in_memory_max_content_length = 1;
     string google_grpc_target_uri = 2;
     google.protobuf.Duration grpc_timeout = 3;
     string redis_cluster = 4;
