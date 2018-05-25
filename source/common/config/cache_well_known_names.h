@@ -32,16 +32,5 @@ public:
 
 typedef ConstSingleton<CacheMetadataFilterValues> CacheMetadataFilters;
 
-/**
- * Keys for CacheMetadataFilterValues::CACHE metadata.
- */
-class CacheMetadataKeyValues {
-public:
-  // TODO(talnordan)
-  const std::string IS_CACHEABLE = "is_cacheable";
-};
-
-typedef ConstSingleton<CacheMetadataKeyValues> CacheMetadataKeys;
-
 } // namespace Config
 } // namespace Envoy
