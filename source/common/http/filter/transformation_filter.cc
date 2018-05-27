@@ -144,10 +144,9 @@ const std::string &TransformationFilterBase::directionToKey(
     return Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION;
   case TransformationFilterBase::Direction::Response:
     return Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION;
+  default:
+    NOT_REACHED;
   }
-
-  RELEASE_ASSERT("unknown direction");
-  return EMPTY_STRING;
 }
 
 void TransformationFilterBase::checkRequestActive() {
@@ -189,6 +188,8 @@ TransformationFilterBase::getTransformFromRoute(
       return &config->getRequestTranformation();
     case TransformationFilterBase::Direction::Response:
       return &config->getResponseTranformation();
+    default:
+      NOT_REACHED;
     }
   }
 
