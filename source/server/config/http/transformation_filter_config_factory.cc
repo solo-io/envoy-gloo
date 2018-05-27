@@ -6,7 +6,6 @@
 
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
-#include "common/config/transformation_well_known_names.h"
 #include "common/http/filter/transformation_filter.h"
 #include "common/http/filter/transformation_filter_config.h"
 #include "common/http/functional_stream_decoder_base.h"
@@ -20,9 +19,6 @@ namespace Configuration {
 
 typedef Http::FunctionalFilterMixin<Http::FunctionalTransformationFilter>
     MixedTransformationFilter;
-
-TransformationFilterConfigFactory::TransformationFilterConfigFactory()
-    : FactoryBase(Config::TransformationFilterNames::get().TRANSFORMATION) {}
 
 Http::FilterFactoryCb
 TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(

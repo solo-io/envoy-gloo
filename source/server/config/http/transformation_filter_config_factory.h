@@ -4,6 +4,8 @@
 
 #include "envoy/server/filter_config.h"
 
+#include "common/config/transformation_well_known_names.h"
+
 #include "extensions/filters/http/common/factory_base.h"
 
 #include "transformation_filter.pb.validate.h"
@@ -18,7 +20,8 @@ class TransformationFilterConfigFactory
     : public FactoryBase<envoy::api::v2::filter::http::Transformations,
                          envoy::api::v2::filter::http::RouteTransformations> {
 public:
-  TransformationFilterConfigFactory();
+  TransformationFilterConfigFactory()
+      : FactoryBase(Config::TransformationFilterNames::get().TRANSFORMATION) {}
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
