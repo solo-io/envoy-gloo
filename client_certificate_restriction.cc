@@ -32,7 +32,18 @@ void ClientCertificateRestrictionFilter::onEvent(
 
   ASSERT(read_callbacks_->connection().ssl());
 
-  // TODO(talnordan): Examine the client certificate.
+  // TODO(talnordan): This is a dummy implementation that simply validates that
+  // a peer certificate exists and has a subject. A future implementation should
+  // validate the subject against a whitelist retrieved from config.
+  // TODO(talnordan): Remove tracing.
+  std::string subject{
+      read_callbacks_->connection().ssl()->subjectPeerCertificate()};
+  ENVOY_CONN_LOG(trace, "client_certificate_restriction: subject is {}",
+                 read_callbacks_->connection(), subject);
+  if (subject.empty()) {
+    read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
+    return;
+  }
 
   read_callbacks_->continueReading();
 }
