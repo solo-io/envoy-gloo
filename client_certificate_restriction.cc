@@ -8,12 +8,12 @@
 namespace Envoy {
 namespace Filter {
 
-Network::FilterStatus ClientCertificateRestriction::onData(Buffer::Instance &,
-                                                           bool) {
+Network::FilterStatus
+ClientCertificateRestrictionFilter::onData(Buffer::Instance &, bool) {
   return Network::FilterStatus::Continue;
 }
 
-Network::FilterStatus ClientCertificateRestriction::onNewConnection() {
+Network::FilterStatus ClientCertificateRestrictionFilter::onNewConnection() {
   // TODO(talnordan)
   ENVOY_CONN_LOG(trace, "client_certificate_restriction: new connection",
                  read_callbacks_->connection());

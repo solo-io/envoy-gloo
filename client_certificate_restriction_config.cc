@@ -21,7 +21,7 @@ public:
                                FactoryContext &) override {
     return [](Network::FilterManager &filter_manager) -> void {
       filter_manager.addReadFilter(Network::ReadFilterSharedPtr{
-          new Filter::ClientCertificateRestriction()});
+          new Filter::ClientCertificateRestrictionFilter()});
     };
   }
 

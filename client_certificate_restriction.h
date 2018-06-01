@@ -10,8 +10,9 @@ namespace Filter {
 /**
  * Implementation of a client certificate restriction filter.
  */
-class ClientCertificateRestriction : public Network::ReadFilter,
-                                     Logger::Loggable<Logger::Id::filter> {
+class ClientCertificateRestrictionFilter
+    : public Network::ReadFilter,
+      Logger::Loggable<Logger::Id::filter> {
 public:
   // Network::ReadFilter
   Network::FilterStatus onData(Buffer::Instance &data,
