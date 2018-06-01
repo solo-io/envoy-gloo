@@ -1,4 +1,4 @@
-#include "client_certificate_restriction.h"
+#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
 
 #include "envoy/buffer/buffer.h"
 #include "envoy/network/connection.h"

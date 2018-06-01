@@ -3,7 +3,7 @@
 #include "envoy/registry/registry.h"
 #include "envoy/server/filter_config.h"
 
-#include "client_certificate_restriction.h"
+#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
 
 namespace Envoy {
 namespace Server {
