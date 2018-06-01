@@ -1,5 +1,6 @@
 #pragma once
 
+#include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
 
 #include "common/common/logger.h"
@@ -8,10 +9,11 @@ namespace Envoy {
 namespace Filter {
 
 /**
- * Implementation of a client certificate restriction filter.
+ * A client SSL certificate restriction filter instance. One per connection.
  */
 class ClientCertificateRestrictionFilter
     : public Network::ReadFilter,
+      public Network::ConnectionCallbacks,
       Logger::Loggable<Logger::Id::filter> {
 public:
   // Network::ReadFilter
@@ -21,7 +23,13 @@ public:
   void initializeReadFilterCallbacks(
       Network::ReadFilterCallbacks &callbacks) override {
     read_callbacks_ = &callbacks;
+    read_callbacks_->connection().addConnectionCallbacks(*this);
   }
+
+  // Network::ConnectionCallbacks
+  void onEvent(Network::ConnectionEvent event) override;
+  void onAboveWriteBufferHighWatermark() override {}
+  void onBelowWriteBufferLowWatermark() override {}
 
 private:
   Network::ReadFilterCallbacks *read_callbacks_{};
