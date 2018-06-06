@@ -19,6 +19,7 @@ static_resources:
       socket_address: { address: 127.0.0.1, port_value: 10000 }
     filter_chains:
     - filters:
+      - name: io.solo.client_certificate_restriction
       - name: envoy.http_connection_manager
         config:
           stat_prefix: http
@@ -43,6 +44,9 @@ static_resources:
             private_key:
               filename: /tmp/pki/root/keys/www.acme.com.key
           tls_params: {}
+          validation_context:
+            trusted_ca:
+              filename: /tmp/pki/root/certs/root.crt
   clusters:
   - connect_timeout: 5.000s
     hosts:

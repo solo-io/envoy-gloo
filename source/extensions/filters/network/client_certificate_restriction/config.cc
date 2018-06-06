@@ -29,7 +29,9 @@ public:
     return ProtobufTypes::MessagePtr{new Envoy::ProtobufWkt::Empty()};
   }
 
-  std::string name() override { return "client_certificate_restriction"; }
+  std::string name() override {
+    return "io.solo.client_certificate_restriction";
+  }
 
   Network::FilterFactoryCb createFilterFactory(const Json::Object &,
                                                FactoryContext &) override {

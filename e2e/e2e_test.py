@@ -59,21 +59,22 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.envoy = subprocess.Popen(prefix + [envoy, "-c", "./envoy.yaml"]+suffix, preexec_fn=envoy_preexec_fn)
     time.sleep(5)
 
-  def __make_request(self, expected_status):
-    # TODO(talnordan): Test client certificate validation.
-    response = requests.get('https://localhost:10000/get', verify=False)
-    print response
-    self.assertEqual(expected_status, response.status_code)
-    return response.text
-
   def test_make_requests(self):
     # Set up environment.
     self.__create_config()
     self.__start_upstream()
     self.__start_envoy()
 
-    # Make a request.
-    response_text = self.__make_request(httplib.OK)
+    # Make a valid request.
+    response = requests.get(
+      'https://localhost:10000/get',
+      verify=False,
+      cert=('/tmp/pki/root/certs/bob@acme.com.crt', '/tmp/pki/root/keys/bob@acme.com.key'))
+    self.assertEqual(httplib.OK, response.status_code)
+
+    # Make an invalid request.
+    with self.assertRaises(requests.exceptions.ConnectionError):
+      requests.get('https://localhost:10000/get', verify=False)
 
 if __name__ == "__main__":
   global DEBUG

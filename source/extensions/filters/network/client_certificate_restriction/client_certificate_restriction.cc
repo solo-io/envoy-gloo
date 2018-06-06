@@ -14,14 +14,15 @@ ClientCertificateRestrictionFilter::onData(Buffer::Instance &, bool) {
 }
 
 Network::FilterStatus ClientCertificateRestrictionFilter::onNewConnection() {
-  ENVOY_CONN_LOG(trace, "client_certificate_restriction: new connection",
-                 read_callbacks_->connection());
+  bool ssl{read_callbacks_->connection().ssl()};
+  ENVOY_CONN_LOG(trace,
+                 "client_certificate_restriction: new connection. ssl={}",
+                 read_callbacks_->connection(), ssl);
   // If this is not an SSL connection, do no further checking. High layers
   // should redirect, etc. if SSL is required. Otherwise we need to wait for
   // handshake to be complete before proceeding.
-  return (read_callbacks_->connection().ssl())
-             ? Network::FilterStatus::StopIteration
-             : Network::FilterStatus::Continue;
+  return (ssl) ? Network::FilterStatus::StopIteration
+               : Network::FilterStatus::Continue;
 }
 
 void ClientCertificateRestrictionFilter::onEvent(
