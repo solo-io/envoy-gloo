@@ -21,6 +21,7 @@ envoy_cc_library(
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
+        "@envoy//source/common/ssl:ssl_socket_lib",
     ],
 )
 

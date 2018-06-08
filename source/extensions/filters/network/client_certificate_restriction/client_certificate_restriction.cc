@@ -4,6 +4,7 @@
 #include "envoy/network/connection.h"
 
 #include "common/common/assert.h"
+#include "common/ssl/ssl_socket.h"
 
 namespace Envoy {
 namespace Filter {
@@ -34,19 +35,64 @@ void ClientCertificateRestrictionFilter::onEvent(
   ASSERT(read_callbacks_->connection().ssl());
 
   // TODO(talnordan): This is a dummy implementation that simply validates that
-  // a peer certificate exists and has a subject. A future implementation should
-  // validate the subject against a whitelist retrieved from config.
-  // TODO(talnordan): Remove tracing.
-  std::string subject{
-      read_callbacks_->connection().ssl()->subjectPeerCertificate()};
-  ENVOY_CONN_LOG(trace, "client_certificate_restriction: subject is {}",
-                 read_callbacks_->connection(), subject);
-  if (subject.empty()) {
+  // a peer certificate exists and has a serial number. A future implementation
+  // should extract the URI SAN as well, and validate them against the Authorize
+  // API.
+  // TODO(talnordan): `connection().ssl()->uriSanPeerCertificate()`
+  // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
+  std::string serial_number{getSerialNumber()};
+  if (serial_number.empty()) {
     read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
     return;
   }
 
+  // TODO(talnordan): Remove tracing.
+  ENVOY_CONN_LOG(error, "client_certificate_restriction: serial number is {}",
+                 read_callbacks_->connection(), serial_number);
   read_callbacks_->continueReading();
+}
+
+std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
+  // TODO(talnordan): This is a PoC implementation that assumes the subtype of
+  // the `Ssl::Connection` pointer.
+  Ssl::Connection *ssl{read_callbacks_->connection().ssl()};
+  Ssl::SslSocket *ssl_socket = dynamic_cast<Ssl::SslSocket *>(ssl);
+  if (ssl_socket == nullptr) {
+    ENVOY_CONN_LOG(
+        error, "client_certificate_restriction: unknown SSL connection type",
+        read_callbacks_->connection());
+    return "";
+  }
+
+  // TODO(talnordan): Avoid relying on the `rawSslForTest()` function.
+  SSL *raw_ssl{ssl_socket->rawSslForTest()};
+  bssl::UniquePtr<X509> cert(SSL_get_peer_certificate(raw_ssl));
+  if (!cert) {
+    ENVOY_CONN_LOG(
+        error,
+        "client_certificate_restriction: failed to retrieve peer certificate",
+        read_callbacks_->connection());
+    return "";
+  }
+
+  return getSerialNumber(cert.get());
+}
+
+std::string
+ClientCertificateRestrictionFilter::getSerialNumber(const X509 *cert) {
+  ASSERT(cert);
+  ASN1_INTEGER *serial_number = X509_get_serialNumber(const_cast<X509 *>(cert));
+  BIGNUM num_bn;
+  BN_init(&num_bn);
+  ASN1_INTEGER_to_BN(serial_number, &num_bn);
+  char *char_serial_number = BN_bn2hex(&num_bn);
+  BN_free(&num_bn);
+  if (char_serial_number != nullptr) {
+    std::string serial_number(char_serial_number);
+    OPENSSL_free(char_serial_number);
+    return serial_number;
+  }
+  return "";
 }
 
 } // namespace Filter

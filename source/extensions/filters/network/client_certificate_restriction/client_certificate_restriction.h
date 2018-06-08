@@ -1,5 +1,7 @@
 #pragma once
 
+#include <openssl/x509v3.h>
+
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
 
@@ -32,6 +34,12 @@ public:
   void onBelowWriteBufferLowWatermark() override {}
 
 private:
+  inline std::string getSerialNumber() const;
+
+  // TODO(talnirdan): This code is duplicated from
+  // Ssl::ContextImpl::getSerialNumber().
+  static inline std::string getSerialNumber(const X509 *cert);
+
   Network::ReadFilterCallbacks *read_callbacks_{};
 };
 
