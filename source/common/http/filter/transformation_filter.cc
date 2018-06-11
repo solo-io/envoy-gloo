@@ -20,7 +20,6 @@ TransformationFilterBase::~TransformationFilterBase() {}
 
 void TransformationFilterBase::onDestroy() {
   resetInternalState();
-  stream_destroyed_ = true;
 }
 
 bool FunctionalTransformationFilter::retrieveFunction(
@@ -367,8 +366,7 @@ void TransformationFilterBase::transformBodyHeaderTransformer(
 
 void TransformationFilterBase::requestError() {
   ASSERT(is_error());
-  Utility::sendLocalReply(*decoder_callbacks_, stream_destroyed_, error_code_,
-                          error_messgae_);
+  decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr);
 }
 
 void TransformationFilterBase::responseError() {

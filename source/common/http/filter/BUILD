@@ -24,7 +24,7 @@ envoy_cc_library(
     deps = [
         "//:transformation_filter_proto_cc",
         "//source/common/config:transformation_well_known_names_lib",
-        "@envoy//source/exe:envoy_common_lib",
+        "@envoy//include/envoy/router:router_interface",
     ],
 )
 
@@ -41,7 +41,9 @@ envoy_cc_library(
         "//source/common/http/filter:body_header_transformer_lib",
         "//source/common/http/filter:transformation_filter_config",
         "//source/common/http/filter:transformer_lib",
-        "@envoy//source/exe:envoy_common_lib",
+        "@envoy//source/common/common:enum_to_int",
+        "@envoy//source/common/config:metadata_lib",
+        "@envoy//source/common/http:utility_lib",
         "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
@@ -57,8 +59,8 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//source/common/http:header_map_lib",
-        "@envoy//source/exe:envoy_common_lib",
         "@json//:json-lib",
     ],
 )

@@ -115,7 +115,6 @@ private:
 
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
   StreamEncoderFilterCallbacks *encoder_callbacks_{};
-  bool stream_destroyed_{};
   Router::RouteConstSharedPtr route_;
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};

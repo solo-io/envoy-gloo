@@ -10,8 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
 envoy_cc_library(
     name = "transformation_filter_config_lib",
     srcs = ["transformation_filter_config_factory.cc"],
@@ -19,7 +17,8 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/common/http/filter:transformation_filter_lib",
-        "@envoy//source/exe:envoy_common_lib",
+        "@envoy//source/common/config:json_utility_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
         "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
     ],
 )
