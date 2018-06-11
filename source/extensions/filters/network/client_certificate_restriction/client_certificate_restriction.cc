@@ -32,18 +32,18 @@ void ClientCertificateRestrictionFilter::onEvent(
     return;
   }
 
-  ASSERT(read_callbacks_->connection().ssl());
+  auto &&connection{read_callbacks_->connection()};
+  ASSERT(connection.ssl());
 
   // TODO(talnordan): This is a dummy implementation that simply extracts the
   // URI SAN and the serial number, and validates that the latter exists and is
   // non-empty. A future implementation should validate both against the
   // Authorize API.
   // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
-  std::string uri_san{
-      read_callbacks_->connection().ssl()->uriSanPeerCertificate()};
+  std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
   std::string serial_number{getSerialNumber()};
   if (serial_number.empty()) {
-    read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
+    connection.close(Network::ConnectionCloseType::NoFlush);
     return;
   }
 
@@ -51,19 +51,20 @@ void ClientCertificateRestrictionFilter::onEvent(
   ENVOY_CONN_LOG(
       error,
       "client_certificate_restriction: URI SAN is {}, serial number is {}",
-      read_callbacks_->connection(), uri_san, serial_number);
+      connection, uri_san, serial_number);
   read_callbacks_->continueReading();
 }
 
 std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
   // TODO(talnordan): This is a PoC implementation that assumes the subtype of
   // the `Ssl::Connection` pointer.
-  Ssl::Connection *ssl{read_callbacks_->connection().ssl()};
+  auto &&connection{read_callbacks_->connection()};
+  Ssl::Connection *ssl{connection.ssl()};
   Ssl::SslSocket *ssl_socket = dynamic_cast<Ssl::SslSocket *>(ssl);
   if (ssl_socket == nullptr) {
     ENVOY_CONN_LOG(
         error, "client_certificate_restriction: unknown SSL connection type",
-        read_callbacks_->connection());
+        connection);
     return "";
   }
 
@@ -74,7 +75,7 @@ std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
     ENVOY_CONN_LOG(
         error,
         "client_certificate_restriction: failed to retrieve peer certificate",
-        read_callbacks_->connection());
+        connection);
     return "";
   }
 
