@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package agent.connect.authorize.v1;
+
+import "google/protobuf/duration.proto";
+
+// [#protodoc-title: Authorize]
+
+// [#proto-status: experimental]
+message Authorize {
+    string Target = 1;
+    string ClientCertURI = 2;
+    string ClientCertSerial = 3;
+}

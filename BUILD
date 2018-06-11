@@ -12,6 +12,11 @@ envoy_package()
 
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
+api_proto_library(
+    name = "authorize_proto",
+    srcs = ["authorize.proto"],
+)
+
 envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
