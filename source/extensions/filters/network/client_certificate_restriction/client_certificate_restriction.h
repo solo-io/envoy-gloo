@@ -43,6 +43,10 @@ private:
   // Ssl::ContextImpl::getSerialNumber().
   static inline std::string getSerialNumber(const X509 *cert);
 
+  static inline std::string getPayload(const std::string &target,
+                                       const std::string &client_cert_uri,
+                                       const std::string &client_cert_serial);
+
   Upstream::ClusterManager &cm_;
   Network::ReadFilterCallbacks *read_callbacks_{};
 };

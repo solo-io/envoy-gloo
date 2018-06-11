@@ -18,6 +18,7 @@ envoy_cc_library(
     hdrs = ["client_certificate_restriction.h"],
     repository = "@envoy",
     deps = [
+        "//:authorize_proto_cc",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",

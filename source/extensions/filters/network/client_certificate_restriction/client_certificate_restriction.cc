@@ -6,6 +6,8 @@
 #include "common/common/assert.h"
 #include "common/ssl/ssl_socket.h"
 
+#include "authorize.pb.h"
+
 namespace Envoy {
 namespace Filter {
 
@@ -58,6 +60,15 @@ void ClientCertificateRestrictionFilter::onEvent(
       error,
       "client_certificate_restriction: URI SAN is {}, serial number is {}",
       connection, uri_san, serial_number);
+
+  // TODO(talnordan): Avoid the use of a constant target name.
+  std::string payload{getPayload("db", uri_san, serial_number)};
+
+  // TODO(talnordan): Remove tracing.
+  // TODO(talnordan): Send `payload` using the REST API.
+  ENVOY_CONN_LOG(error, "client_certificate_restriction: payload is {}",
+                 connection, payload);
+
   read_callbacks_->continueReading();
 }
 
@@ -103,6 +114,17 @@ ClientCertificateRestrictionFilter::getSerialNumber(const X509 *cert) {
     return serial_number;
   }
   return "";
+}
+
+std::string ClientCertificateRestrictionFilter::getPayload(
+    const std::string &target, const std::string &client_cert_uri,
+    const std::string &client_cert_serial) {
+  agent::connect::authorize::v1::Authorize proto_payload{};
+  proto_payload.set_target(target);
+  proto_payload.set_clientcerturi(client_cert_uri);
+  proto_payload.set_clientcertserial(client_cert_serial);
+
+  return MessageUtil::getJsonStringFromMessage(proto_payload);
 }
 
 } // namespace Filter
