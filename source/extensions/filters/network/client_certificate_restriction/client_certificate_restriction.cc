@@ -34,12 +34,13 @@ void ClientCertificateRestrictionFilter::onEvent(
 
   ASSERT(read_callbacks_->connection().ssl());
 
-  // TODO(talnordan): This is a dummy implementation that simply validates that
-  // a peer certificate exists and has a serial number. A future implementation
-  // should extract the URI SAN as well, and validate them against the Authorize
-  // API.
-  // TODO(talnordan): `connection().ssl()->uriSanPeerCertificate()`
+  // TODO(talnordan): This is a dummy implementation that simply extracts the
+  // URI SAN and the serial number, and validates that the latter exists and is
+  // non-empty. A future implementation should validate both against the
+  // Authorize API.
   // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
+  std::string uri_san{
+      read_callbacks_->connection().ssl()->uriSanPeerCertificate()};
   std::string serial_number{getSerialNumber()};
   if (serial_number.empty()) {
     read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
@@ -47,8 +48,10 @@ void ClientCertificateRestrictionFilter::onEvent(
   }
 
   // TODO(talnordan): Remove tracing.
-  ENVOY_CONN_LOG(error, "client_certificate_restriction: serial number is {}",
-                 read_callbacks_->connection(), serial_number);
+  ENVOY_CONN_LOG(
+      error,
+      "client_certificate_restriction: URI SAN is {}, serial number is {}",
+      read_callbacks_->connection(), uri_san, serial_number);
   read_callbacks_->continueReading();
 }
 
