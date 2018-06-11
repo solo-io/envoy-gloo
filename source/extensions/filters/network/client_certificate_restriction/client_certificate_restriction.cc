@@ -9,6 +9,12 @@
 namespace Envoy {
 namespace Filter {
 
+ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
+    Upstream::ClusterManager &cm)
+    : cm_(cm) {
+  UNREFERENCED_PARAMETER(cm_);
+}
+
 Network::FilterStatus
 ClientCertificateRestrictionFilter::onData(Buffer::Instance &, bool) {
   return Network::FilterStatus::Continue;

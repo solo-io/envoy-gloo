@@ -18,10 +18,11 @@ class ClientCertificateRestrictionConfigFactory
 public:
   Network::FilterFactoryCb
   createFilterFactoryFromProto(const Protobuf::Message &,
-                               FactoryContext &) override {
-    return [](Network::FilterManager &filter_manager) -> void {
+                               FactoryContext &context) override {
+    return [&context](Network::FilterManager &filter_manager) -> void {
       filter_manager.addReadFilter(Network::ReadFilterSharedPtr{
-          new Filter::ClientCertificateRestrictionFilter()});
+          new Filter::ClientCertificateRestrictionFilter(
+              context.clusterManager())});
     };
   }
 

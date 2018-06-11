@@ -4,6 +4,7 @@
 
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
+#include "envoy/upstream/cluster_manager.h"
 
 #include "common/common/logger.h"
 
@@ -18,6 +19,8 @@ class ClientCertificateRestrictionFilter
       public Network::ConnectionCallbacks,
       Logger::Loggable<Logger::Id::filter> {
 public:
+  ClientCertificateRestrictionFilter(Upstream::ClusterManager &cm);
+
   // Network::ReadFilter
   Network::FilterStatus onData(Buffer::Instance &data,
                                bool end_stream) override;
@@ -40,6 +43,7 @@ private:
   // Ssl::ContextImpl::getSerialNumber().
   static inline std::string getSerialNumber(const X509 *cert);
 
+  Upstream::ClusterManager &cm_;
   Network::ReadFilterCallbacks *read_callbacks_{};
 };
 
