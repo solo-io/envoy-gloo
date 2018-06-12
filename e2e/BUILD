@@ -21,5 +21,8 @@ py_test(
     data = [
         "//:envoy",
         "//e2e:create_config.sh",
+        "//e2e:redis.crt",
+        "//e2e:redis.key",
+        "//e2e:root.crt",
     ],
 )

@@ -46,7 +46,7 @@ static_resources:
           tls_params: {}
           validation_context:
             trusted_ca:
-              filename: /tmp/pki/root/certs/root.crt
+              filename: ./e2e/root.crt
   clusters:
   - connect_timeout: 5.000s
     hosts:

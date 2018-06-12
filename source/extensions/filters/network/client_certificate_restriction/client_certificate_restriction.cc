@@ -62,7 +62,7 @@ void ClientCertificateRestrictionFilter::onEvent(
       connection, uri_san, serial_number);
 
   // TODO(talnordan): Avoid the use of a constant target name.
-  std::string payload{getPayload("db", uri_san, serial_number)};
+  std::string payload{getPayload("redis", uri_san, serial_number)};
 
   // TODO(talnordan): Remove tracing.
   // TODO(talnordan): Send `payload` using the REST API.
