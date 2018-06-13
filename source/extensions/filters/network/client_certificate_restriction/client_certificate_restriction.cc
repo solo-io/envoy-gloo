@@ -14,6 +14,9 @@ namespace Filter {
 ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
     Upstream::ClusterManager &cm)
     : cm_(cm) {
+  // TODO(talnordan): This is only intented for preventing a clang compilation
+  // error. Remove this in a future commit which makes use of the `cm_` private
+  // member.
   UNREFERENCED_PARAMETER(cm_);
 }
 
