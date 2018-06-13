@@ -6,23 +6,23 @@
 #include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
 
 namespace Envoy {
-namespace Server {
-namespace Configuration {
+namespace Extensions {
+namespace NetworkFilters {
+namespace ClientCertificateRestriction {
 
 /**
  * Config registration for the client certificate restriction filter. @see
  * NamedNetworkFilterConfigFactory.
  */
 class ClientCertificateRestrictionConfigFactory
-    : public NamedNetworkFilterConfigFactory {
+    : public Server::Configuration::NamedNetworkFilterConfigFactory {
 public:
-  Network::FilterFactoryCb
-  createFilterFactoryFromProto(const Protobuf::Message &,
-                               FactoryContext &context) override {
+  Network::FilterFactoryCb createFilterFactoryFromProto(
+      const Protobuf::Message &,
+      Server::Configuration::FactoryContext &context) override {
     return [&context](Network::FilterManager &filter_manager) -> void {
       filter_manager.addReadFilter(Network::ReadFilterSharedPtr{
-          new Filter::ClientCertificateRestrictionFilter(
-              context.clusterManager())});
+          new ClientCertificateRestrictionFilter(context.clusterManager())});
     };
   }
 
@@ -34,8 +34,9 @@ public:
     return "io.solo.client_certificate_restriction";
   }
 
-  Network::FilterFactoryCb createFilterFactory(const Json::Object &,
-                                               FactoryContext &) override {
+  Network::FilterFactoryCb
+  createFilterFactory(const Json::Object &,
+                      Server::Configuration::FactoryContext &) override {
     NOT_IMPLEMENTED;
   }
 };
@@ -44,10 +45,12 @@ public:
  * Static registration for the client certificate restriction filter. @see
  * RegisterFactory.
  */
-static Registry::RegisterFactory<ClientCertificateRestrictionConfigFactory,
-                                 NamedNetworkFilterConfigFactory>
+static Registry::RegisterFactory<
+    ClientCertificateRestrictionConfigFactory,
+    Server::Configuration::NamedNetworkFilterConfigFactory>
     registered_;
 
-} // namespace Configuration
-} // namespace Server
+} // namespace ClientCertificateRestriction
+} // namespace NetworkFilters
+} // namespace Extensions
 } // namespace Envoy

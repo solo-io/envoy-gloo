@@ -9,7 +9,9 @@
 #include "authorize.pb.h"
 
 namespace Envoy {
-namespace Filter {
+namespace Extensions {
+namespace NetworkFilters {
+namespace ClientCertificateRestriction {
 
 ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
     Upstream::ClusterManager &cm)
@@ -131,5 +133,7 @@ std::string ClientCertificateRestrictionFilter::getPayload(
   return MessageUtil::getJsonStringFromMessage(proto_payload);
 }
 
-} // namespace Filter
+} // namespace ClientCertificateRestriction
+} // namespace NetworkFilters
+} // namespace Extensions
 } // namespace Envoy

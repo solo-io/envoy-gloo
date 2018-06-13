@@ -9,7 +9,9 @@
 #include "common/common/logger.h"
 
 namespace Envoy {
-namespace Filter {
+namespace Extensions {
+namespace NetworkFilters {
+namespace ClientCertificateRestriction {
 
 /**
  * A client SSL certificate restriction filter instance. One per connection.
@@ -51,5 +53,7 @@ private:
   Network::ReadFilterCallbacks *read_callbacks_{};
 };
 
-} // namespace Filter
+} // namespace ClientCertificateRestriction
+} // namespace NetworkFilters
+} // namespace Extensions
 } // namespace Envoy
