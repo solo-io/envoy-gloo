@@ -51,6 +51,7 @@ void ClientCertificateRestrictionFilter::onEvent(
   // non-empty. A future implementation should validate both against the
   // Authorize API.
   // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
+  // TODO(talnordan): First call `connection.ssl()->peerCertificatePresented()`.
   std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
   std::string serial_number{getSerialNumber()};
   if (serial_number.empty()) {
