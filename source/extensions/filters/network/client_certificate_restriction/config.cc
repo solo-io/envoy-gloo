@@ -1,7 +1,6 @@
-#include <string>
+#include "extensions/filters/network/client_certificate_restriction/config.h"
 
 #include "envoy/registry/registry.h"
-#include "envoy/server/filter_config.h"
 
 #include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
 
@@ -10,36 +9,22 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
 
-/**
- * Config registration for the client certificate restriction filter. @see
- * NamedNetworkFilterConfigFactory.
- */
-class ClientCertificateRestrictionConfigFactory
-    : public Server::Configuration::NamedNetworkFilterConfigFactory {
-public:
-  Network::FilterFactoryCb createFilterFactoryFromProto(
-      const Protobuf::Message &,
-      Server::Configuration::FactoryContext &context) override {
-    return [&context](Network::FilterManager &filter_manager) -> void {
-      filter_manager.addReadFilter(Network::ReadFilterSharedPtr{
-          new ClientCertificateRestrictionFilter(context.clusterManager())});
-    };
-  }
+Network::FilterFactoryCb
+ClientCertificateRestrictionConfigFactory::createFilterFactoryFromProtoTyped(
+    const envoy::config::filter::network::client_certificate_restriction::v2::
+        ClientCertificateRestriction &proto_config,
+    Server::Configuration::FactoryContext &context) {
+  ASSERT(!proto_config.target().empty());
 
-  ProtobufTypes::MessagePtr createEmptyConfigProto() override {
-    return ProtobufTypes::MessagePtr{new Envoy::ProtobufWkt::Empty()};
-  }
-
-  std::string name() override {
-    return "io.solo.client_certificate_restriction";
-  }
-
-  Network::FilterFactoryCb
-  createFilterFactory(const Json::Object &,
-                      Server::Configuration::FactoryContext &) override {
-    NOT_IMPLEMENTED;
-  }
-};
+  ClientCertificateRestrictionConfigSharedPtr filter_config(
+      new ClientCertificateRestrictionConfig(proto_config));
+  return [&context,
+          filter_config](Network::FilterManager &filter_manager) -> void {
+    filter_manager.addReadFilter(
+        std::make_shared<ClientCertificateRestrictionFilter>(
+            filter_config, context.clusterManager()));
+  };
+}
 
 /**
  * Static registration for the client certificate restriction filter. @see

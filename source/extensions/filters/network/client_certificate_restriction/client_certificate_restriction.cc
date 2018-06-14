@@ -13,12 +13,19 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
 
+ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
+    const envoy::config::filter::network::client_certificate_restriction::v2::
+        ClientCertificateRestriction &config)
+    : target_(config.target()) {}
+
 ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
+    ClientCertificateRestrictionConfigSharedPtr config,
     Upstream::ClusterManager &cm)
-    : cm_(cm) {
+    : config_(config), cm_(cm) {
   // TODO(talnordan): This is only intented for preventing a clang compilation
-  // error. Remove this in a future commit which makes use of the `cm_` private
-  // member.
+  // error. Remove this in a future commit which makes use of the private
+  // members.
+  UNREFERENCED_PARAMETER(config_);
   UNREFERENCED_PARAMETER(cm_);
 }
 

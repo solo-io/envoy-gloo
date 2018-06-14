@@ -19,7 +19,9 @@ static_resources:
       socket_address: { address: 127.0.0.1, port_value: 10000 }
     filter_chains:
     - filters:
-      - name: io.solo.client_certificate_restriction
+      - name: io.solo.filters.network.client_certificate_restriction
+        config:
+          target: "redis"
       - name: envoy.http_connection_manager
         config:
           stat_prefix: http

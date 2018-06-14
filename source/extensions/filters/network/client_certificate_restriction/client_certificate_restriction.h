@@ -8,10 +8,30 @@
 
 #include "common/common/logger.h"
 
+#include "api/envoy/config/filter/network/client_certificate_restriction/v2/client_certificate_restriction.pb.validate.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
+
+/**
+ * Global configuration for client certificate restriction.
+ */
+class ClientCertificateRestrictionConfig {
+public:
+  ClientCertificateRestrictionConfig(
+      const envoy::config::filter::network::client_certificate_restriction::v2::
+          ClientCertificateRestriction &config);
+
+  const std::string &target() { return target_; }
+
+private:
+  std::string target_;
+};
+
+typedef std::shared_ptr<ClientCertificateRestrictionConfig>
+    ClientCertificateRestrictionConfigSharedPtr;
 
 /**
  * A client SSL certificate restriction filter instance. One per connection.
@@ -21,7 +41,9 @@ class ClientCertificateRestrictionFilter
       public Network::ConnectionCallbacks,
       Logger::Loggable<Logger::Id::filter> {
 public:
-  ClientCertificateRestrictionFilter(Upstream::ClusterManager &cm);
+  ClientCertificateRestrictionFilter(
+      ClientCertificateRestrictionConfigSharedPtr config,
+      Upstream::ClusterManager &cm);
 
   // Network::ReadFilter
   Network::FilterStatus onData(Buffer::Instance &data,
@@ -49,6 +71,7 @@ private:
                                        const std::string &client_cert_uri,
                                        const std::string &client_cert_serial);
 
+  ClientCertificateRestrictionConfigSharedPtr config_;
   Upstream::ClusterManager &cm_;
   Network::ReadFilterCallbacks *read_callbacks_{};
 };

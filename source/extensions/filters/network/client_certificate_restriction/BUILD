@@ -19,6 +19,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//:authorize_proto_cc",
+        "//api/envoy/config/filter/network/client_certificate_restriction/v2:client_certificate_restriction_proto_cc",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
@@ -30,11 +31,14 @@ envoy_cc_library(
 envoy_cc_library(
     name = "config",
     srcs = ["config.cc"],
+    hdrs = ["config.h"],
     repository = "@envoy",
     deps = [
         ":client_certificate_restriction",
+        "//source/extensions/filters/network:client_certificate_restriction_well_known_names",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:filter_config_interface",
+        "@envoy//source/extensions/filters/network/common:factory_base_lib",
     ],
 )
