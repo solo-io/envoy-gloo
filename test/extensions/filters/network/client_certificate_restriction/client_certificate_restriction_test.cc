@@ -7,7 +7,7 @@ namespace Envoy {
 namespace Filter {
 
 TEST(ClientCertificateRestrictionTest, Proto) {
-  agent::connect::authorize::v1::Authorize proto_payload{};
+  agent::connect::authorize::v1::AuthorizePayload proto_payload{};
   proto_payload.set_target("db");
   proto_payload.set_clientcerturi("spiffe://"
                                   "dc1-7e567ac2-551d-463f-8497-f78972856fc1."

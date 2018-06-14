@@ -130,7 +130,7 @@ ClientCertificateRestrictionFilter::getSerialNumber(const X509 *cert) {
 std::string ClientCertificateRestrictionFilter::getPayload(
     const std::string &target, const std::string &client_cert_uri,
     const std::string &client_cert_serial) {
-  agent::connect::authorize::v1::Authorize proto_payload{};
+  agent::connect::authorize::v1::AuthorizePayload proto_payload{};
   proto_payload.set_target(target);
   proto_payload.set_clientcerturi(client_cert_uri);
   proto_payload.set_clientcertserial(client_cert_serial);

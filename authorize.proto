@@ -7,7 +7,7 @@ import "google/protobuf/duration.proto";
 // [#protodoc-title: Authorize]
 
 // [#proto-status: experimental]
-message Authorize {
+message AuthorizePayload {
     string Target = 1;
     string ClientCertURI = 2;
     string ClientCertSerial = 3;
