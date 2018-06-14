@@ -23,9 +23,8 @@ ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
     Upstream::ClusterManager &cm)
     : config_(config), cm_(cm) {
   // TODO(talnordan): This is only intented for preventing a clang compilation
-  // error. Remove this in a future commit which makes use of the private
-  // members.
-  UNREFERENCED_PARAMETER(config_);
+  // error. Remove this in a future commit which makes use of the `cm_` private
+  // member.
   UNREFERENCED_PARAMETER(cm_);
 }
 
@@ -74,8 +73,7 @@ void ClientCertificateRestrictionFilter::onEvent(
       "client_certificate_restriction: URI SAN is {}, serial number is {}",
       connection, uri_san, serial_number);
 
-  // TODO(talnordan): Avoid the use of a constant target name.
-  std::string payload{getPayload("redis", uri_san, serial_number)};
+  std::string payload{getPayload(config_->target(), uri_san, serial_number)};
 
   // TODO(talnordan): Remove tracing.
   // TODO(talnordan): Send `payload` using the REST API.
