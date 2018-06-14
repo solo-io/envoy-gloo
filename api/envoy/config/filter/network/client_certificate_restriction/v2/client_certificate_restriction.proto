@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package envoy.config.filter.network.client_certificate_restriction.v2;
+
+import "validate/validate.proto";
+
+// [#protodoc-title: Client certificate restriction]
+// Client certificate restriction
+
+message ClientCertificateRestriction {
+  // The name of the service that is being requested.
+  string target = 1 [(validate.rules).string.min_bytes = 1];
+}
