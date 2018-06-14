@@ -12,3 +12,9 @@ message AuthorizePayload {
     string ClientCertURI = 2;
     string ClientCertSerial = 3;
 }
+
+// [#proto-status: experimental]
+message AuthorizeResponse {
+    bool Authorized = 1;
+    string Reason = 2;
+}

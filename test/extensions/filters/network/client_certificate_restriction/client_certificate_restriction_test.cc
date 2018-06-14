@@ -6,7 +6,7 @@
 namespace Envoy {
 namespace Filter {
 
-TEST(ClientCertificateRestrictionTest, Proto) {
+TEST(ClientCertificateRestrictionTest, AuthorizePayloadProto) {
   agent::connect::authorize::v1::AuthorizePayload proto_payload{};
   proto_payload.set_target("db");
   proto_payload.set_clientcerturi("spiffe://"
@@ -22,6 +22,23 @@ TEST(ClientCertificateRestrictionTest, Proto) {
  "Target": "db",
  "ClientCertURI": "spiffe://dc1-7e567ac2-551d-463f-8497-f78972856fc1.consul/ns/default/dc/dc1/svc/web",
  "ClientCertSerial": "04:00:00:00:00:01:15:4b:5a:c3:94"
+}
+)EOF";
+  EXPECT_EQ(expected_json_string, actual_json_string);
+}
+
+TEST(ClientCertificateRestrictionTest, AuthorizeResponseProto) {
+  agent::connect::authorize::v1::AuthorizeResponse proto_response{};
+  proto_response.set_authorized(true);
+  proto_response.set_reason("Matched intention: web => db (allow)");
+
+  std::string actual_json_string{
+      MessageUtil::getJsonStringFromMessage(proto_response, true)};
+
+  std::string expected_json_string =
+      R"EOF({
+ "Authorized": true,
+ "Reason": "Matched intention: web =\u003e db (allow)"
 }
 )EOF";
   EXPECT_EQ(expected_json_string, actual_json_string);
