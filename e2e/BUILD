@@ -20,7 +20,7 @@ py_test(
     ],
     data = [
         "//:envoy",
-        "//e2e:etc/consul.d/redis.json",
         "//e2e:consul",
+        "//e2e:etc/consul.d/redis.json",
     ],
 )
