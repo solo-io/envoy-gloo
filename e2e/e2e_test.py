@@ -76,7 +76,7 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.cleanup()
 
   def tearDown(self):
-    for p in (self.consul, self.upstream):
+    for p in (self.authorize_endpoint, self.consul, self.upstream):
       if p is not None:
         p.terminate()
     if self.envoy is not None:
@@ -86,6 +86,7 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.cleanup()
 
   def cleanup(self):
+    self.authorize_endpoint = None
     self.consul = None
     self.upstream = None
     self.envoy = None
@@ -105,6 +106,14 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     if not os.path.isfile(consul_path):
       self.fail('"consul" was not found')
     self.consul = subprocess.Popen([consul_path, "agent", "-dev", "-config-dir=./e2e/etc/consul.d"])
+
+  def __start_authorize_endpoint(self):
+    for authorize_endpoint_path in ("./authorize_endpoint.py", "./e2e/authorize_endpoint.py"):
+      if os.path.isfile(authorize_endpoint_path):
+        self.authorize_endpoint = subprocess.Popen([authorize_endpoint_path])
+        break
+    else:
+      self.fail('"authorize_endpoint.py" was not found')
 
   def __start_upstream(self):
     for upstream_path in ("./upstream.py", "./e2e/upstream.py"):
@@ -143,6 +152,34 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     crt_file = self.__write_temp_file(parsed_json["CertPEM"])
     key_file = self.__write_temp_file(parsed_json["PrivateKeyPEM"])
     yield crt_file, key_file
+
+  def __is_authorized(self, payload_obj):
+    payload = json.dumps(payload_obj)
+    response = requests.post('http://localhost:4223/agent/connect/authorize', data=payload)
+    self.assertEqual(httplib.OK, response.status_code)
+    parsed_response = json.loads(response.text)
+    return parsed_response["Authorized"]
+
+  def test_authorize_endpoint(self):
+    # Set up Authorize endpoint.
+    self.__start_authorize_endpoint()
+    time.sleep(1)
+
+    # Make an authorized request.
+    payload = {
+ "Target": "db",
+ "ClientCertURI": "spiffe://dc1-7e567ac2-551d-463f-8497-f78972856fc1.consul/ns/default/dc/dc1/svc/web",
+ "ClientCertSerial": "04:00:00:00:00:01:15:4b:5a:c3:94"
+}
+    self.assertTrue(self.__is_authorized(payload))
+
+    # Make an unauthorized request.
+    payload = {
+ "Target": "redis",
+ "ClientCertURI": "spiffe://dc1-7e567ac2-551d-463f-8497-f78972856fc1.consul/ns/default/dc/dc1/svc/db",
+ "ClientCertSerial": "04:00:00:00:00:01:15:4b:5a:c3:94"
+}
+    self.assertFalse(self.__is_authorized(payload))
 
   def test_make_requests(self):
     # Set up Consul.
