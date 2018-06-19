@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package envoy.config.filter.network.client_certificate_restriction.v2;
 
+import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
 // [#protodoc-title: Client certificate restriction]
@@ -10,4 +11,8 @@ import "validate/validate.proto";
 message ClientCertificateRestriction {
   // The name of the service that is being requested.
   string target = 1 [(validate.rules).string.min_bytes = 1];
+
+  string authorize_hostname = 2;
+  string authorize_cluster_name = 3;
+  google.protobuf.Duration request_timeout = 4;
 }
