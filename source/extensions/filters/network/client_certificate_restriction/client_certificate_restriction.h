@@ -25,9 +25,15 @@ public:
           ClientCertificateRestriction &config);
 
   const std::string &target() { return target_; }
+  const std::string &authorizeHostname() { return authorize_hostname_; }
+  const std::string &authorizeClusterName() { return authorize_cluster_name_; }
+  const std::chrono::milliseconds &requestTimeout() { return request_timeout_; }
 
 private:
-  std::string target_;
+  const std::string target_;
+  const std::string authorize_hostname_;
+  const std::string authorize_cluster_name_;
+  const std::chrono::milliseconds request_timeout_;
 };
 
 typedef std::shared_ptr<ClientCertificateRestrictionConfig>

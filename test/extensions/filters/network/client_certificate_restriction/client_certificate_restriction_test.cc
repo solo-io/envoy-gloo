@@ -1,10 +1,30 @@
 #include "common/protobuf/utility.h"
 
 #include "authorize.pb.h"
+#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
 #include "gtest/gtest.h"
 
 namespace Envoy {
 namespace Filter {
+
+using Extensions::NetworkFilters::ClientCertificateRestriction::
+    ClientCertificateRestrictionConfig;
+
+TEST(ClientCertificateRestrictionConfigTest, Constructor) {
+  envoy::config::filter::network::client_certificate_restriction::v2::
+      ClientCertificateRestriction proto_config;
+
+  proto_config.set_target("target");
+  proto_config.set_authorize_hostname("example.com");
+  proto_config.set_authorize_cluster_name("authorize");
+  proto_config.mutable_request_timeout()->set_seconds(6);
+
+  ClientCertificateRestrictionConfig config(proto_config);
+  EXPECT_EQ("target", config.target());
+  EXPECT_EQ("example.com", config.authorizeHostname());
+  EXPECT_EQ("authorize", config.authorizeClusterName());
+  EXPECT_EQ(std::chrono::milliseconds(6000), config.requestTimeout());
+}
 
 TEST(ClientCertificateRestrictionTest, AuthorizePayloadProto) {
   agent::connect::authorize::v1::AuthorizePayload proto_payload{};

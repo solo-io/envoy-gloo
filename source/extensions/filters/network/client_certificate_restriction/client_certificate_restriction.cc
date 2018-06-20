@@ -16,7 +16,11 @@ namespace ClientCertificateRestriction {
 ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
     const envoy::config::filter::network::client_certificate_restriction::v2::
         ClientCertificateRestriction &config)
-    : target_(config.target()) {}
+    : target_(config.target()),
+      authorize_hostname_(config.authorize_hostname()),
+      authorize_cluster_name_(config.authorize_cluster_name()),
+      request_timeout_(
+          PROTOBUF_GET_MS_OR_DEFAULT(config, request_timeout, 1000)) {}
 
 ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
     ClientCertificateRestrictionConfigSharedPtr config,
