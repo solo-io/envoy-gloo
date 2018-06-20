@@ -26,7 +26,10 @@ static_resources:
     - filters:
       - name: io.solo.filters.network.client_certificate_restriction
         config:
-          target: "redis"
+          target: redis
+          authorize_hostname: example.com
+          authorize_cluster_name: authorize
+          request_timeout: 2s
       - name: envoy.http_connection_manager
         config:
           stat_prefix: http
