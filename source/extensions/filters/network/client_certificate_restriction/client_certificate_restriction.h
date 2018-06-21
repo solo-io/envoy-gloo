@@ -6,6 +6,7 @@
 #include "envoy/network/filter.h"
 #include "envoy/upstream/cluster_manager.h"
 
+#include "common/buffer/buffer_utility.h"
 #include "common/common/logger.h"
 
 #include "api/envoy/config/filter/network/client_certificate_restriction/v2/client_certificate_restriction.pb.validate.h"
@@ -45,6 +46,7 @@ typedef std::shared_ptr<ClientCertificateRestrictionConfig>
 class ClientCertificateRestrictionFilter
     : public Network::ReadFilter,
       public Network::ConnectionCallbacks,
+      public Http::AsyncClient::Callbacks,
       Logger::Loggable<Logger::Id::filter> {
 public:
   ClientCertificateRestrictionFilter(
@@ -66,7 +68,20 @@ public:
   void onAboveWriteBufferHighWatermark() override {}
   void onBelowWriteBufferLowWatermark() override {}
 
+  // Http::AsyncClient::Callbacks
+  void onSuccess(Http::MessagePtr &&) override;
+  void onFailure(Http::AsyncClient::FailureReason) override;
+
 private:
+  // TODO(talnordan): This is duplicated from `ExtAuthz::Filter`.
+  // State of this filter's communication with the external authorization
+  // service. The filter has either not started calling the external service, in
+  // the middle of calling it or has completed.
+  enum class Status { NotStarted, Calling, Complete };
+
+  inline void closeConnection();
+
+  // TODO(talnordan): Consider moving this function to `Ssl::Connection`.
   inline std::string getSerialNumber() const;
 
   // TODO(talnirdan): This code is duplicated from
@@ -77,9 +92,18 @@ private:
                                        const std::string &client_cert_uri,
                                        const std::string &client_cert_serial);
 
+  static inline Http::MessagePtr getRequest(const std::string &host,
+                                            const std::string &payload);
+
+  std::string getBodyString(Http::MessagePtr &&m);
+
   ClientCertificateRestrictionConfigSharedPtr config_;
   Upstream::ClusterManager &cm_;
   Network::ReadFilterCallbacks *read_callbacks_{};
+  Status status_{Status::NotStarted};
+  bool has_been_authorized_{};
+
+  static const std::string AUTHORIZE_PATH;
 };
 
 } // namespace ClientCertificateRestriction

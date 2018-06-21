@@ -4,6 +4,7 @@
 #include "envoy/network/connection.h"
 
 #include "common/common/assert.h"
+#include "common/http/message_impl.h"
 #include "common/ssl/ssl_socket.h"
 
 #include "authorize.pb.h"
@@ -12,6 +13,9 @@ namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
+
+const std::string ClientCertificateRestrictionFilter::AUTHORIZE_PATH =
+    "/v1/agent/connect/authorize";
 
 ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
     const envoy::config::filter::network::client_certificate_restriction::v2::
@@ -25,28 +29,16 @@ ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
 ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
     ClientCertificateRestrictionConfigSharedPtr config,
     Upstream::ClusterManager &cm)
-    : config_(config), cm_(cm) {
-  // TODO(talnordan): This is only intented for preventing a clang compilation
-  // error. Remove this in a future commit which makes use of the `cm_` private
-  // member.
-  UNREFERENCED_PARAMETER(cm_);
-}
+    : config_(config), cm_(cm) {}
 
 Network::FilterStatus
 ClientCertificateRestrictionFilter::onData(Buffer::Instance &, bool) {
-  return Network::FilterStatus::Continue;
+  return has_been_authorized_ ? Network::FilterStatus::Continue
+                              : Network::FilterStatus::StopIteration;
 }
 
 Network::FilterStatus ClientCertificateRestrictionFilter::onNewConnection() {
-  bool ssl{read_callbacks_->connection().ssl()};
-  ENVOY_CONN_LOG(trace,
-                 "client_certificate_restriction: new connection. ssl={}",
-                 read_callbacks_->connection(), ssl);
-  // If this is not an SSL connection, do no further checking. High layers
-  // should redirect, etc. if SSL is required. Otherwise we need to wait for
-  // handshake to be complete before proceeding.
-  return (ssl) ? Network::FilterStatus::StopIteration
-               : Network::FilterStatus::Continue;
+  return Network::FilterStatus::StopIteration;
 }
 
 void ClientCertificateRestrictionFilter::onEvent(
@@ -56,35 +48,77 @@ void ClientCertificateRestrictionFilter::onEvent(
   }
 
   auto &&connection{read_callbacks_->connection()};
-  ASSERT(connection.ssl());
+  if (!connection.ssl()) {
+    closeConnection();
+    return;
+  }
 
-  // TODO(talnordan): This is a dummy implementation that simply extracts the
-  // URI SAN and the serial number, and validates that the latter exists and is
-  // non-empty. A future implementation should validate both against the
-  // Authorize API.
   // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
   // TODO(talnordan): First call `connection.ssl()->peerCertificatePresented()`.
   std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
   std::string serial_number{getSerialNumber()};
-  if (serial_number.empty()) {
-    connection.close(Network::ConnectionCloseType::NoFlush);
+  if (uri_san.empty() || serial_number.empty()) {
+    ENVOY_CONN_LOG(trace,
+                   "client_certificate_restriction: Authorize REST not called",
+                   connection);
+    closeConnection();
     return;
   }
 
   // TODO(talnordan): Remove tracing.
-  ENVOY_CONN_LOG(
-      error,
-      "client_certificate_restriction: URI SAN is {}, serial number is {}",
-      connection, uri_san, serial_number);
-
   std::string payload{getPayload(config_->target(), uri_san, serial_number)};
-
-  // TODO(talnordan): Remove tracing.
-  // TODO(talnordan): Send `payload` using the REST API.
   ENVOY_CONN_LOG(error, "client_certificate_restriction: payload is {}",
                  connection, payload);
 
-  read_callbacks_->continueReading();
+  auto &&authorize_host{config_->authorizeHostname()};
+  Http::MessagePtr request{getRequest(authorize_host, payload)};
+  auto &&request_timeout{config_->requestTimeout()};
+
+  auto &&authorize_cluster_name{config_->authorizeClusterName()};
+  auto &&http_async_client{
+      cm_.httpAsyncClientForCluster(authorize_cluster_name)};
+
+  // TODO(talnordan): Own the return value for cancellation support.
+  http_async_client.send(std::move(request), *this, request_timeout);
+  status_ = Status::Calling;
+}
+
+void ClientCertificateRestrictionFilter::onSuccess(Http::MessagePtr &&m) {
+  auto &&connection{read_callbacks_->connection()};
+  std::string json{getBodyString(std::move(m))};
+  ENVOY_CONN_LOG(trace,
+                 "client_certificate_restriction: Authorize REST call "
+                 "succeeded, status={}, body={}",
+                 connection, m->headers().Status()->value().c_str(), json);
+  status_ = Status::Complete;
+  agent::connect::authorize::v1::AuthorizeResponse authorize_response;
+  const auto status =
+      Protobuf::util::JsonStringToMessage(json, &authorize_response);
+  if (status.ok() && authorize_response.authorized()) {
+    ENVOY_CONN_LOG(trace, "client_certificate_restriction: authorized",
+                   connection);
+    has_been_authorized_ = true;
+    read_callbacks_->continueReading();
+  } else {
+    ENVOY_CONN_LOG(error, "client_certificate_restriction: unauthorized",
+                   connection);
+    closeConnection();
+  }
+}
+
+void ClientCertificateRestrictionFilter::onFailure(
+    Http::AsyncClient::FailureReason) {
+  // TODO(talnordan): Log reason.
+  auto &&connection{read_callbacks_->connection()};
+  ENVOY_CONN_LOG(error,
+                 "client_certificate_restriction: Authorize REST call failed",
+                 connection);
+  status_ = Status::Complete;
+  closeConnection();
+}
+
+void ClientCertificateRestrictionFilter::closeConnection() {
+  read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
 }
 
 std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
@@ -140,6 +174,27 @@ std::string ClientCertificateRestrictionFilter::getPayload(
   proto_payload.set_clientcertserial(client_cert_serial);
 
   return MessageUtil::getJsonStringFromMessage(proto_payload);
+}
+
+Http::MessagePtr
+ClientCertificateRestrictionFilter::getRequest(const std::string &host,
+                                               const std::string &payload) {
+  Http::MessagePtr request(new Http::RequestMessageImpl());
+  request->headers().insertContentType().value().setReference(
+      Http::Headers::get().ContentTypeValues.Json);
+  request->headers().insertPath().value().setReference(AUTHORIZE_PATH);
+  request->headers().insertHost().value().setReference(host);
+  request->headers().insertMethod().value().setReference(
+      Http::Headers::get().MethodValues.Post);
+  request->headers().insertContentLength().value(payload.length());
+  request->body().reset(new Buffer::OwnedImpl(payload));
+  return request;
+}
+
+std::string
+ClientCertificateRestrictionFilter::getBodyString(Http::MessagePtr &&m) {
+  Buffer::InstancePtr &body = m->body();
+  return Buffer::BufferUtility::bufferToString(*body);
 }
 
 } // namespace ClientCertificateRestriction

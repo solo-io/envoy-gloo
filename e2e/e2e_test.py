@@ -26,7 +26,7 @@ static_resources:
     - filters:
       - name: io.solo.filters.network.client_certificate_restriction
         config:
-          target: redis
+          target: db
           authorize_hostname: example.com
           authorize_cluster_name: authorize
           request_timeout: 2s
@@ -64,6 +64,13 @@ static_resources:
         address: 127.0.0.1
         port_value: 4222
     name: cluster_0
+    type: STRICT_DNS
+  - connect_timeout: 5.000s
+    hosts:
+    - socket_address:
+        address: 127.0.0.1
+        port_value: 8501
+    name: authorize
     type: STRICT_DNS
 """
 
@@ -151,14 +158,14 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
 
   @contextlib.contextmanager
   def __get_crt_file_and_key_file(self):
-    parsed_json = self.__get_parsed_json('http://127.0.0.1:8500/v1/agent/connect/ca/leaf/redis')
+    parsed_json = self.__get_parsed_json('http://127.0.0.1:8500/v1/agent/connect/ca/leaf/web')
     crt_file = self.__write_temp_file(parsed_json["CertPEM"])
     key_file = self.__write_temp_file(parsed_json["PrivateKeyPEM"])
     yield crt_file, key_file
 
   def __is_authorized(self, payload_obj):
     payload = json.dumps(payload_obj)
-    response = requests.post('http://localhost:4223/agent/connect/authorize', data=payload)
+    response = requests.post('http://localhost:8501/v1/agent/connect/authorize', data=payload)
     self.assertEqual(httplib.OK, response.status_code)
     parsed_response = json.loads(response.text)
     return parsed_response["Authorized"]
@@ -189,6 +196,12 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.__start_consul()
     time.sleep(1)
 
+    # TODO(talnordan): Make invalid requests while the the Authorize endpoint is still down.
+
+    # Set up the Authorize endpoint.
+    self.__start_authorize_endpoint()
+    time.sleep(1)
+
     # Set up Envoy.
     with self.__get_root_crt_file() as root_crt_file:
       with self.__create_config(root_crt_file.name) as yaml_file:
@@ -198,17 +211,22 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.__start_upstream()
     time.sleep(1)
 
-    # Make a valid request.
-    with self.__get_crt_file_and_key_file() as (crt_file, key_file):
-      response = requests.get(
-        'https://localhost:10000/get',
-        verify=False,
-        cert=(crt_file.name, key_file.name))
-      self.assertEqual(httplib.OK, response.status_code)
+    # Make valid requests using an authorized client certificate.
+    for _ in xrange(100):
+      with self.__get_crt_file_and_key_file() as (crt_file, key_file):
+        response = requests.get(
+          'https://localhost:10000/get',
+          verify=False,
+          cert=(crt_file.name, key_file.name))
+        self.assertEqual(httplib.OK, response.status_code)
 
-    # Make an invalid request.
-    with self.assertRaises(requests.exceptions.ConnectionError):
-      requests.get('https://localhost:10000/get', verify=False)
+    # TODO(talnordan): Make invalid requests using an unauthorized client certificate.
+
+    # Make invalid requests without a client certificate.
+    for _ in xrange(100):
+      with self.assertRaises(requests.exceptions.ConnectionError):
+        requests.get('https://localhost:10000/get', verify=False)
+
 
 if __name__ == "__main__":
   global DEBUG

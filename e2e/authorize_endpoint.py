@@ -25,7 +25,7 @@ class _Handler(BaseHTTPServer.BaseHTTPRequestHandler):
     }
 
   def do_POST(self):
-    assert (self.path == '/agent/connect/authorize')
+    assert (self.path == '/v1/agent/connect/authorize')
 
     self.send_response(200)
     self.send_header('Content-type','application/json')
@@ -39,7 +39,7 @@ class _Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 def _start_endpoint():
   host_name = ""
-  port_number = 4223
+  port_number = 8501
   httpd = BaseHTTPServer.HTTPServer((host_name, port_number), _Handler)
   httpd.serve_forever()
 

@@ -24,7 +24,9 @@ envoy_cc_library(
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
+        "@envoy//source/common/http:message_lib",
         "@envoy//source/common/ssl:ssl_socket_lib",
+        "@solo_envoy_common//source/common/buffer:buffer_utility_lib",
     ],
 )
 
