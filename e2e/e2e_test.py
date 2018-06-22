@@ -170,6 +170,9 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     parsed_response = json.loads(response.text)
     return parsed_response["Authorized"]
 
+  def __make_get_request(self, cert):
+    return requests.get('https://localhost:10000/get', verify=False, cert=cert)
+
   def test_authorize_endpoint(self):
     # Set up Authorize endpoint.
     self.__start_authorize_endpoint()
@@ -196,12 +199,6 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.__start_consul()
     time.sleep(1)
 
-    # TODO(talnordan): Make invalid requests while the the Authorize endpoint is still down.
-
-    # Set up the Authorize endpoint.
-    self.__start_authorize_endpoint()
-    time.sleep(1)
-
     # Set up Envoy.
     with self.__get_root_crt_file() as root_crt_file:
       with self.__create_config(root_crt_file.name) as yaml_file:
@@ -211,13 +208,20 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.__start_upstream()
     time.sleep(1)
 
+    # Assert that requests fail if the Authorize endpoint is still down.
+    for _ in xrange(100):
+      with self.__get_crt_file_and_key_file() as (crt_file, key_file):
+        with self.assertRaises(requests.exceptions.ConnectionError):
+          self.__make_get_request(cert=(crt_file.name, key_file.name))
+
+    # Set up the Authorize endpoint.
+    self.__start_authorize_endpoint()
+    time.sleep(1)
+
     # Make valid requests using an authorized client certificate.
     for _ in xrange(100):
       with self.__get_crt_file_and_key_file() as (crt_file, key_file):
-        response = requests.get(
-          'https://localhost:10000/get',
-          verify=False,
-          cert=(crt_file.name, key_file.name))
+        response = self.__make_get_request(cert=(crt_file.name, key_file.name))
         self.assertEqual(httplib.OK, response.status_code)
 
     # TODO(talnordan): Make invalid requests using an unauthorized client certificate.
@@ -225,7 +229,7 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     # Make invalid requests without a client certificate.
     for _ in xrange(100):
       with self.assertRaises(requests.exceptions.ConnectionError):
-        requests.get('https://localhost:10000/get', verify=False)
+        self.__make_get_request(cert=None)
 
 
 if __name__ == "__main__":
