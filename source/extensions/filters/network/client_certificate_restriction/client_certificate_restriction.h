@@ -103,6 +103,10 @@ private:
   Status status_{Status::NotStarted};
   bool has_been_authorized_{};
 
+  // The current in-flight request to the Authorize endpoint if any, otherwise
+  // `nullptr`.
+  Http::AsyncClient::Request *in_flight_request_{};
+
   static const std::string AUTHORIZE_PATH;
 };
 

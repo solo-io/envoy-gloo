@@ -43,9 +43,22 @@ Network::FilterStatus ClientCertificateRestrictionFilter::onNewConnection() {
 
 void ClientCertificateRestrictionFilter::onEvent(
     Network::ConnectionEvent event) {
+  // TODO(talnordan): Refactor into switch-case.
   if (event != Network::ConnectionEvent::Connected) {
+    ASSERT(event == Network::ConnectionEvent::RemoteClose ||
+           event == Network::ConnectionEvent::LocalClose);
+    // TODO(talnordan): Can the use of `status_` be replaced with just comparing
+    // `in_flight_request_` to `nullptr`?
+    if (status_ == Status::Calling) {
+      ASSERT(in_flight_request_ != nullptr);
+      in_flight_request_->cancel();
+      in_flight_request_ = nullptr;
+    }
+
     return;
   }
+
+  ASSERT(status_ == Status::NotStarted);
 
   auto &&connection{read_callbacks_->connection()};
   if (!connection.ssl()) {
@@ -78,12 +91,24 @@ void ClientCertificateRestrictionFilter::onEvent(
   auto &&http_async_client{
       cm_.httpAsyncClientForCluster(authorize_cluster_name)};
 
-  // TODO(talnordan): Own the return value for cancellation support.
-  http_async_client.send(std::move(request), *this, request_timeout);
-  status_ = Status::Calling;
+  in_flight_request_ =
+      http_async_client.send(std::move(request), *this, request_timeout);
+  if (in_flight_request_ == nullptr) {
+    // No request could be started. In this case `onFailure()` has already been
+    // called inline. Therefore, the connection has already been closed.
+    ENVOY_LOG(debug, "client_certificate_restriction: can't create request for "
+                     "Authorize endpoint");
+    return;
+  }
+
+  if (status_ == Status::NotStarted) {
+    status_ = Status::Calling;
+  }
 }
 
 void ClientCertificateRestrictionFilter::onSuccess(Http::MessagePtr &&m) {
+  in_flight_request_ = nullptr;
+
   auto &&connection{read_callbacks_->connection()};
   std::string json{getBodyString(std::move(m))};
   ENVOY_CONN_LOG(trace,
@@ -108,6 +133,8 @@ void ClientCertificateRestrictionFilter::onSuccess(Http::MessagePtr &&m) {
 
 void ClientCertificateRestrictionFilter::onFailure(
     Http::AsyncClient::FailureReason) {
+  in_flight_request_ = nullptr;
+
   // TODO(talnordan): Log reason.
   auto &&connection{read_callbacks_->connection()};
   ENVOY_CONN_LOG(error,
