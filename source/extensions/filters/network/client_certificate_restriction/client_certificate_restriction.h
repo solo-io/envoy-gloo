@@ -81,6 +81,12 @@ private:
 
   inline void closeConnection();
 
+  // TODO(talnordan): Open an issue suggesting to make the Authorize enpoint
+  // accept serial numbers that are not colon-hex encoded. Such an enhancement
+  // to the Authorize endpoint would prevent the filter from having to perform
+  // this string manipulation.
+  static inline std::string toColonHex(const std::string &s);
+
   // TODO(talnordan): Consider moving this function to `Ssl::Connection`.
   inline std::string getSerialNumber() const;
 

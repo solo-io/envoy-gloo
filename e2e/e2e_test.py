@@ -208,6 +208,13 @@ class ClientCertificateRestrictionTestCase(unittest.TestCase):
     self.__start_upstream()
     time.sleep(1)
 
+    # Fetch many service certificates.
+    # The purpose of this step is to increase the serial numbers of certificates fetched later. By
+    # doing so, this test allows coverage of the colon-hex encoding string manipulation performed by
+    # the filter for serial numbers longer than a single byte.
+    for i in xrange(260):
+      self.__get_parsed_json('http://127.0.0.1:8500/v1/agent/connect/ca/leaf/service{}'.format(i))
+
     # Assert that requests fail if the Authorize endpoint is still down.
     for _ in xrange(100):
       with self.__get_crt_file_and_key_file() as (crt_file, key_file):

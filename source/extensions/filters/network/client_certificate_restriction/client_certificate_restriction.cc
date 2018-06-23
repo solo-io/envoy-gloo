@@ -66,10 +66,9 @@ void ClientCertificateRestrictionFilter::onEvent(
     return;
   }
 
-  // TODO(talnordan): Convert the serial number to colon-hex-encoded formatting.
   // TODO(talnordan): First call `connection.ssl()->peerCertificatePresented()`.
   std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
-  std::string serial_number{getSerialNumber()};
+  std::string serial_number{toColonHex(getSerialNumber())};
   if (uri_san.empty() || serial_number.empty()) {
     ENVOY_CONN_LOG(trace,
                    "client_certificate_restriction: Authorize REST not called",
@@ -146,6 +145,31 @@ void ClientCertificateRestrictionFilter::onFailure(
 
 void ClientCertificateRestrictionFilter::closeConnection() {
   read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
+}
+
+std::string
+ClientCertificateRestrictionFilter::toColonHex(const std::string &s) {
+  if (s.empty()) {
+    return s;
+  }
+
+  // The length of the input string must be even.
+  auto &&length = s.length();
+  if (length % 2 != 0) {
+    return "";
+  }
+
+  std::string colon_hex_string;
+  colon_hex_string += s[0];
+  colon_hex_string += s[1];
+
+  for (size_t i = 2; i < length; i += 2) {
+    colon_hex_string += ':';
+    colon_hex_string += s[i];
+    colon_hex_string += s[i + 1];
+  }
+
+  return colon_hex_string;
 }
 
 std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
