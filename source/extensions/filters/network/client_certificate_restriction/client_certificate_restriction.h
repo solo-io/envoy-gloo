@@ -19,11 +19,10 @@ namespace ClientCertificateRestriction {
 /**
  * Global configuration for client certificate restriction.
  */
-class ClientCertificateRestrictionConfig {
+class Config {
 public:
-  ClientCertificateRestrictionConfig(
-      const envoy::config::filter::network::client_certificate_restriction::v2::
-          ClientCertificateRestriction &config);
+  Config(const envoy::config::filter::network::client_certificate_restriction::
+             v2::ClientCertificateRestriction &config);
 
   const std::string &target() { return target_; }
   const std::string &authorizeHostname() { return authorize_hostname_; }
@@ -37,21 +36,17 @@ private:
   const std::chrono::milliseconds request_timeout_;
 };
 
-typedef std::shared_ptr<ClientCertificateRestrictionConfig>
-    ClientCertificateRestrictionConfigSharedPtr;
+typedef std::shared_ptr<Config> ConfigSharedPtr;
 
 /**
  * A client SSL certificate restriction filter instance. One per connection.
  */
-class ClientCertificateRestrictionFilter
-    : public Network::ReadFilter,
-      public Network::ConnectionCallbacks,
-      public Http::AsyncClient::Callbacks,
-      Logger::Loggable<Logger::Id::filter> {
+class Filter : public Network::ReadFilter,
+               public Network::ConnectionCallbacks,
+               public Http::AsyncClient::Callbacks,
+               Logger::Loggable<Logger::Id::filter> {
 public:
-  ClientCertificateRestrictionFilter(
-      ClientCertificateRestrictionConfigSharedPtr config,
-      Upstream::ClusterManager &cm);
+  Filter(ConfigSharedPtr config, Upstream::ClusterManager &cm);
 
   // Network::ReadFilter
   Network::FilterStatus onData(Buffer::Instance &data,
@@ -103,7 +98,7 @@ private:
 
   std::string getBodyString(Http::MessagePtr &&m);
 
-  ClientCertificateRestrictionConfigSharedPtr config_;
+  ConfigSharedPtr config_;
   Upstream::ClusterManager &cm_;
   Network::ReadFilterCallbacks *read_callbacks_{};
   Status status_{Status::NotStarted};

@@ -13,12 +13,12 @@ namespace ClientCertificateRestriction {
  * Config registration for the client certificate restriction filter. @see
  * NamedNetworkFilterConfigFactory.
  */
-class ClientCertificateRestrictionConfigFactory
+class ConfigFactory
     : public Common::FactoryBase<
           envoy::config::filter::network::client_certificate_restriction::v2::
               ClientCertificateRestriction> {
 public:
-  ClientCertificateRestrictionConfigFactory()
+  ConfigFactory()
       : FactoryBase(ClientCertificateRestrictionNetworkFilterNames::get()
                         .CLIENT_CERTIFICATE_RESTRICTION) {}
 

@@ -9,20 +9,17 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
 
-Network::FilterFactoryCb
-ClientCertificateRestrictionConfigFactory::createFilterFactoryFromProtoTyped(
+Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
     const envoy::config::filter::network::client_certificate_restriction::v2::
         ClientCertificateRestriction &proto_config,
     Server::Configuration::FactoryContext &context) {
   ASSERT(!proto_config.target().empty());
 
-  ClientCertificateRestrictionConfigSharedPtr filter_config(
-      new ClientCertificateRestrictionConfig(proto_config));
+  ConfigSharedPtr filter_config(new Config(proto_config));
   return [&context,
           filter_config](Network::FilterManager &filter_manager) -> void {
     filter_manager.addReadFilter(
-        std::make_shared<ClientCertificateRestrictionFilter>(
-            filter_config, context.clusterManager()));
+        std::make_shared<Filter>(filter_config, context.clusterManager()));
   };
 }
 
@@ -31,8 +28,7 @@ ClientCertificateRestrictionConfigFactory::createFilterFactoryFromProtoTyped(
  * RegisterFactory.
  */
 static Registry::RegisterFactory<
-    ClientCertificateRestrictionConfigFactory,
-    Server::Configuration::NamedNetworkFilterConfigFactory>
+    ConfigFactory, Server::Configuration::NamedNetworkFilterConfigFactory>
     registered_;
 
 } // namespace ClientCertificateRestriction

@@ -14,10 +14,9 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClientCertificateRestriction {
 
-const std::string ClientCertificateRestrictionFilter::AUTHORIZE_PATH =
-    "/v1/agent/connect/authorize";
+const std::string Filter::AUTHORIZE_PATH = "/v1/agent/connect/authorize";
 
-ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
+Config::Config(
     const envoy::config::filter::network::client_certificate_restriction::v2::
         ClientCertificateRestriction &config)
     : target_(config.target()),
@@ -26,23 +25,19 @@ ClientCertificateRestrictionConfig::ClientCertificateRestrictionConfig(
       request_timeout_(
           PROTOBUF_GET_MS_OR_DEFAULT(config, request_timeout, 1000)) {}
 
-ClientCertificateRestrictionFilter::ClientCertificateRestrictionFilter(
-    ClientCertificateRestrictionConfigSharedPtr config,
-    Upstream::ClusterManager &cm)
+Filter::Filter(ConfigSharedPtr config, Upstream::ClusterManager &cm)
     : config_(config), cm_(cm) {}
 
-Network::FilterStatus
-ClientCertificateRestrictionFilter::onData(Buffer::Instance &, bool) {
+Network::FilterStatus Filter::onData(Buffer::Instance &, bool) {
   return has_been_authorized_ ? Network::FilterStatus::Continue
                               : Network::FilterStatus::StopIteration;
 }
 
-Network::FilterStatus ClientCertificateRestrictionFilter::onNewConnection() {
+Network::FilterStatus Filter::onNewConnection() {
   return Network::FilterStatus::StopIteration;
 }
 
-void ClientCertificateRestrictionFilter::onEvent(
-    Network::ConnectionEvent event) {
+void Filter::onEvent(Network::ConnectionEvent event) {
   // TODO(talnordan): Refactor into switch-case.
   if (event != Network::ConnectionEvent::Connected) {
     ASSERT(event == Network::ConnectionEvent::RemoteClose ||
@@ -105,7 +100,7 @@ void ClientCertificateRestrictionFilter::onEvent(
   }
 }
 
-void ClientCertificateRestrictionFilter::onSuccess(Http::MessagePtr &&m) {
+void Filter::onSuccess(Http::MessagePtr &&m) {
   in_flight_request_ = nullptr;
 
   auto &&connection{read_callbacks_->connection()};
@@ -130,8 +125,7 @@ void ClientCertificateRestrictionFilter::onSuccess(Http::MessagePtr &&m) {
   }
 }
 
-void ClientCertificateRestrictionFilter::onFailure(
-    Http::AsyncClient::FailureReason) {
+void Filter::onFailure(Http::AsyncClient::FailureReason) {
   in_flight_request_ = nullptr;
 
   // TODO(talnordan): Log reason.
@@ -143,12 +137,11 @@ void ClientCertificateRestrictionFilter::onFailure(
   closeConnection();
 }
 
-void ClientCertificateRestrictionFilter::closeConnection() {
+void Filter::closeConnection() {
   read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
 }
 
-std::string
-ClientCertificateRestrictionFilter::toColonHex(const std::string &s) {
+std::string Filter::toColonHex(const std::string &s) {
   if (s.empty()) {
     return s;
   }
@@ -172,7 +165,7 @@ ClientCertificateRestrictionFilter::toColonHex(const std::string &s) {
   return colon_hex_string;
 }
 
-std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
+std::string Filter::getSerialNumber() const {
   // TODO(talnordan): This is a PoC implementation that assumes the subtype of
   // the `Ssl::Connection` pointer.
   auto &&connection{read_callbacks_->connection()};
@@ -199,8 +192,7 @@ std::string ClientCertificateRestrictionFilter::getSerialNumber() const {
   return getSerialNumber(cert.get());
 }
 
-std::string
-ClientCertificateRestrictionFilter::getSerialNumber(const X509 *cert) {
+std::string Filter::getSerialNumber(const X509 *cert) {
   ASSERT(cert);
   ASN1_INTEGER *serial_number = X509_get_serialNumber(const_cast<X509 *>(cert));
   BIGNUM num_bn;
@@ -216,9 +208,9 @@ ClientCertificateRestrictionFilter::getSerialNumber(const X509 *cert) {
   return "";
 }
 
-std::string ClientCertificateRestrictionFilter::getPayload(
-    const std::string &target, const std::string &client_cert_uri,
-    const std::string &client_cert_serial) {
+std::string Filter::getPayload(const std::string &target,
+                               const std::string &client_cert_uri,
+                               const std::string &client_cert_serial) {
   agent::connect::authorize::v1::AuthorizePayload proto_payload{};
   proto_payload.set_target(target);
   proto_payload.set_clientcerturi(client_cert_uri);
@@ -227,9 +219,8 @@ std::string ClientCertificateRestrictionFilter::getPayload(
   return MessageUtil::getJsonStringFromMessage(proto_payload);
 }
 
-Http::MessagePtr
-ClientCertificateRestrictionFilter::getRequest(const std::string &host,
-                                               const std::string &payload) {
+Http::MessagePtr Filter::getRequest(const std::string &host,
+                                    const std::string &payload) {
   Http::MessagePtr request(new Http::RequestMessageImpl());
   request->headers().insertContentType().value().setReference(
       Http::Headers::get().ContentTypeValues.Json);
@@ -242,8 +233,7 @@ ClientCertificateRestrictionFilter::getRequest(const std::string &host,
   return request;
 }
 
-std::string
-ClientCertificateRestrictionFilter::getBodyString(Http::MessagePtr &&m) {
+std::string Filter::getBodyString(Http::MessagePtr &&m) {
   Buffer::InstancePtr &body = m->body();
   return Buffer::BufferUtility::bufferToString(*body);
 }

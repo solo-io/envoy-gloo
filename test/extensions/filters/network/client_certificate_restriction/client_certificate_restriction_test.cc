@@ -5,10 +5,9 @@
 #include "gtest/gtest.h"
 
 namespace Envoy {
-namespace Filter {
-
-using Extensions::NetworkFilters::ClientCertificateRestriction::
-    ClientCertificateRestrictionConfig;
+namespace Extensions {
+namespace NetworkFilters {
+namespace ClientCertificateRestriction {
 
 TEST(ClientCertificateRestrictionConfigTest, Constructor) {
   envoy::config::filter::network::client_certificate_restriction::v2::
@@ -19,7 +18,7 @@ TEST(ClientCertificateRestrictionConfigTest, Constructor) {
   proto_config.set_authorize_cluster_name("authorize");
   proto_config.mutable_request_timeout()->set_seconds(6);
 
-  ClientCertificateRestrictionConfig config(proto_config);
+  Config config(proto_config);
   EXPECT_EQ("target", config.target());
   EXPECT_EQ("example.com", config.authorizeHostname());
   EXPECT_EQ("authorize", config.authorizeClusterName());
@@ -64,5 +63,7 @@ TEST(ClientCertificateRestrictionTest, AuthorizeResponseProto) {
   EXPECT_EQ(expected_json_string, actual_json_string);
 }
 
-} // namespace Filter
+} // namespace ClientCertificateRestriction
+} // namespace NetworkFilters
+} // namespace Extensions
 } // namespace Envoy
