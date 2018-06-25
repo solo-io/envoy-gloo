@@ -21,7 +21,7 @@ envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
     deps = [
-        "//source/extensions/filters/network/client_certificate_restriction:config",
+        "//source/extensions/filters/network/consul_connect:config",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )

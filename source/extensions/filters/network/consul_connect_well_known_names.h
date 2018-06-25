@@ -12,15 +12,14 @@ namespace NetworkFilters {
 /**
  * Well-known network filter names.
  */
-class ClientCertificateRestrictionNetworkFilterNameValues {
+class ConsulConnectNetworkFilterNameValues {
 public:
-  // Client certificate restriction filter
-  const std::string CLIENT_CERTIFICATE_RESTRICTION =
-      "io.solo.filters.network.client_certificate_restriction";
+  // Consul Connect filter
+  const std::string CONSUL_CONNECT = "io.solo.filters.network.consul_connect";
 };
 
-typedef ConstSingleton<ClientCertificateRestrictionNetworkFilterNameValues>
-    ClientCertificateRestrictionNetworkFilterNames;
+typedef ConstSingleton<ConsulConnectNetworkFilterNameValues>
+    ConsulConnectNetworkFilterNames;
 
 } // namespace NetworkFilters
 } // namespace Extensions

@@ -1,1 +1,1 @@
-# envoy-client-certificate-restriction
+# envoy-consul-connect

@@ -1,35 +1,33 @@
 #pragma once
 
-#include "api/envoy/config/filter/network/client_certificate_restriction/v2/client_certificate_restriction.pb.validate.h"
-#include "extensions/filters/network/client_certificate_restriction_well_known_names.h"
+#include "api/envoy/config/filter/network/consul_connect/v2/consul_connect.pb.validate.h"
 #include "extensions/filters/network/common/factory_base.h"
+#include "extensions/filters/network/consul_connect_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
-namespace ClientCertificateRestriction {
+namespace ConsulConnect {
 
 /**
- * Config registration for the client certificate restriction filter. @see
+ * Config registration for the Consul Connect filter. @see
  * NamedNetworkFilterConfigFactory.
  */
 class ConfigFactory
     : public Common::FactoryBase<
-          envoy::config::filter::network::client_certificate_restriction::v2::
-              ClientCertificateRestriction> {
+          envoy::config::filter::network::consul_connect::v2::ConsulConnect> {
 public:
   ConfigFactory()
-      : FactoryBase(ClientCertificateRestrictionNetworkFilterNames::get()
-                        .CLIENT_CERTIFICATE_RESTRICTION) {}
+      : FactoryBase(ConsulConnectNetworkFilterNames::get().CONSUL_CONNECT) {}
 
 private:
   Network::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const envoy::config::filter::network::client_certificate_restriction::v2::
-          ClientCertificateRestriction &proto_config,
+      const envoy::config::filter::network::consul_connect::v2::ConsulConnect
+          &proto_config,
       Server::Configuration::FactoryContext &context) override;
 };
 
-} // namespace ClientCertificateRestriction
+} // namespace ConsulConnect
 } // namespace NetworkFilters
 } // namespace Extensions
 } // namespace Envoy

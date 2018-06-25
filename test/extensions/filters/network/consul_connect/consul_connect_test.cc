@@ -1,17 +1,17 @@
 #include "common/protobuf/utility.h"
 
 #include "authorize.pb.h"
-#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
+#include "extensions/filters/network/consul_connect/consul_connect.h"
 #include "gtest/gtest.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
-namespace ClientCertificateRestriction {
+namespace ConsulConnect {
 
-TEST(ClientCertificateRestrictionConfigTest, Constructor) {
-  envoy::config::filter::network::client_certificate_restriction::v2::
-      ClientCertificateRestriction proto_config;
+TEST(ConsulConnectConfigTest, Constructor) {
+  envoy::config::filter::network::consul_connect::v2::ConsulConnect
+      proto_config;
 
   proto_config.set_target("target");
   proto_config.set_authorize_hostname("example.com");
@@ -25,7 +25,7 @@ TEST(ClientCertificateRestrictionConfigTest, Constructor) {
   EXPECT_EQ(std::chrono::milliseconds(6000), config.requestTimeout());
 }
 
-TEST(ClientCertificateRestrictionTest, AuthorizePayloadProto) {
+TEST(ConsulConnectTest, AuthorizePayloadProto) {
   agent::connect::authorize::v1::AuthorizePayload proto_payload{};
   proto_payload.set_target("db");
   proto_payload.set_clientcerturi("spiffe://"
@@ -46,7 +46,7 @@ TEST(ClientCertificateRestrictionTest, AuthorizePayloadProto) {
   EXPECT_EQ(expected_json_string, actual_json_string);
 }
 
-TEST(ClientCertificateRestrictionTest, AuthorizeResponseProto) {
+TEST(ConsulConnectTest, AuthorizeResponseProto) {
   agent::connect::authorize::v1::AuthorizeResponse proto_response{};
   proto_response.set_authorized(true);
   proto_response.set_reason("Matched intention: web => db (allow)");
@@ -63,7 +63,7 @@ TEST(ClientCertificateRestrictionTest, AuthorizeResponseProto) {
   EXPECT_EQ(expected_json_string, actual_json_string);
 }
 
-} // namespace ClientCertificateRestriction
+} // namespace ConsulConnect
 } // namespace NetworkFilters
 } // namespace Extensions
 } // namespace Envoy

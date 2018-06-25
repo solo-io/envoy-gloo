@@ -1,4 +1,4 @@
-workspace(name="client_certificate_restriction_filter")
+workspace(name="consul_connect_filter")
 
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')

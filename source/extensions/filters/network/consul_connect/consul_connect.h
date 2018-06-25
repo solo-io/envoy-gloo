@@ -9,20 +9,20 @@
 #include "common/buffer/buffer_utility.h"
 #include "common/common/logger.h"
 
-#include "api/envoy/config/filter/network/client_certificate_restriction/v2/client_certificate_restriction.pb.validate.h"
+#include "api/envoy/config/filter/network/consul_connect/v2/consul_connect.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
-namespace ClientCertificateRestriction {
+namespace ConsulConnect {
 
 /**
- * Global configuration for client certificate restriction.
+ * Global configuration for Consul Connect.
  */
 class Config {
 public:
-  Config(const envoy::config::filter::network::client_certificate_restriction::
-             v2::ClientCertificateRestriction &config);
+  Config(const envoy::config::filter::network::consul_connect::v2::ConsulConnect
+             &config);
 
   const std::string &target() { return target_; }
   const std::string &authorizeHostname() { return authorize_hostname_; }
@@ -39,7 +39,7 @@ private:
 typedef std::shared_ptr<Config> ConfigSharedPtr;
 
 /**
- * A client SSL certificate restriction filter instance. One per connection.
+ * A Consul Connect filter instance. One per connection.
  */
 class Filter : public Network::ReadFilter,
                public Network::ConnectionCallbacks,
@@ -111,7 +111,7 @@ private:
   static const std::string AUTHORIZE_PATH;
 };
 
-} // namespace ClientCertificateRestriction
+} // namespace ConsulConnect
 } // namespace NetworkFilters
 } // namespace Extensions
 } // namespace Envoy

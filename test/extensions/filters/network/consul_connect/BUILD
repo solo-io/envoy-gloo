@@ -11,13 +11,13 @@ load(
 envoy_package()
 
 envoy_cc_test(
-    name = "client_certificate_restriction_test",
+    name = "consul_connect_test",
     srcs = [
-        "client_certificate_restriction_test.cc",
+        "consul_connect_test.cc",
     ],
     repository = "@envoy",
     deps = [
         "//:authorize_proto_cc",
-        "//source/extensions/filters/network/client_certificate_restriction",
+        "//source/extensions/filters/network/consul_connect",
     ],
 )

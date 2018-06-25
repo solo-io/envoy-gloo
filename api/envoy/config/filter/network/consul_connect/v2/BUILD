@@ -12,6 +12,6 @@ envoy_package()
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 api_proto_library(
-    name = "client_certificate_restriction_proto",
-    srcs = ["client_certificate_restriction.proto"],
+    name = "consul_connect_proto",
+    srcs = ["consul_connect.proto"],
 )

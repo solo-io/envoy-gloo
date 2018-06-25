@@ -1,17 +1,17 @@
-#include "extensions/filters/network/client_certificate_restriction/config.h"
+#include "extensions/filters/network/consul_connect/config.h"
 
 #include "envoy/registry/registry.h"
 
-#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
+#include "extensions/filters/network/consul_connect/consul_connect.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
-namespace ClientCertificateRestriction {
+namespace ConsulConnect {
 
 Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
-    const envoy::config::filter::network::client_certificate_restriction::v2::
-        ClientCertificateRestriction &proto_config,
+    const envoy::config::filter::network::consul_connect::v2::ConsulConnect
+        &proto_config,
     Server::Configuration::FactoryContext &context) {
   ASSERT(!proto_config.target().empty());
 
@@ -24,14 +24,14 @@ Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
 }
 
 /**
- * Static registration for the client certificate restriction filter. @see
+ * Static registration for the Consul Connect filter. @see
  * RegisterFactory.
  */
 static Registry::RegisterFactory<
     ConfigFactory, Server::Configuration::NamedNetworkFilterConfigFactory>
     registered_;
 
-} // namespace ClientCertificateRestriction
+} // namespace ConsulConnect
 } // namespace NetworkFilters
 } // namespace Extensions
 } // namespace Envoy

@@ -1,19 +1,18 @@
 syntax = "proto3";
 
-package envoy.config.filter.network.client_certificate_restriction.v2;
+package envoy.config.filter.network.consul_connect.v2;
 
 import "google/protobuf/duration.proto";
 
 import "validate/validate.proto";
 import "gogoproto/gogo.proto";
 
-// [#protodoc-title: Client certificate restriction]
-// Client certificate restriction
+// [#protodoc-title: Consul Connect]
+// Consul Connect
 
-// ClientCertificateRestriction contains the configuration necessary to
-// perform Client Certificate-based authorization via a REST API
-// such as Consul Connect
-message ClientCertificateRestriction {
+// ConsulConnect contains the configuration necessary to perform client certificate-based
+// authorization using a REST call to the Authorize endpoint of Consul Connect.
+message ConsulConnect {
   // The name of the service who owns this proxy
   // Target must be delivered by the filter as part of the authorize request payload
   string target = 1 [(validate.rules).string.min_bytes = 1];

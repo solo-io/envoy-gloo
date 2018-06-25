@@ -13,13 +13,13 @@ envoy_package()
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 envoy_cc_library(
-    name = "client_certificate_restriction",
-    srcs = ["client_certificate_restriction.cc"],
-    hdrs = ["client_certificate_restriction.h"],
+    name = "consul_connect",
+    srcs = ["consul_connect.cc"],
+    hdrs = ["consul_connect.h"],
     repository = "@envoy",
     deps = [
         "//:authorize_proto_cc",
-        "//api/envoy/config/filter/network/client_certificate_restriction/v2:client_certificate_restriction_proto_cc",
+        "//api/envoy/config/filter/network/consul_connect/v2:consul_connect_proto_cc",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
@@ -36,8 +36,8 @@ envoy_cc_library(
     hdrs = ["config.h"],
     repository = "@envoy",
     deps = [
-        ":client_certificate_restriction",
-        "//source/extensions/filters/network:client_certificate_restriction_well_known_names",
+        ":consul_connect",
+        "//source/extensions/filters/network:consul_connect_well_known_names",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:filter_config_interface",

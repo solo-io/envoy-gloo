@@ -24,7 +24,7 @@ static_resources:
       socket_address: { address: 127.0.0.1, port_value: 10000 }
     filter_chains:
     - filters:
-      - name: io.solo.filters.network.client_certificate_restriction
+      - name: io.solo.filters.network.consul_connect
         config:
           target: db
           authorize_hostname: example.com
@@ -81,7 +81,7 @@ def envoy_preexec_fn():
   libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
   libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
 
-class ClientCertificateRestrictionTestCase(unittest.TestCase):
+class ConsulConnectTestCase(unittest.TestCase):
   def setUp(self):
     self.cleanup()
 

@@ -1,4 +1,4 @@
-#include "extensions/filters/network/client_certificate_restriction/client_certificate_restriction.h"
+#include "extensions/filters/network/consul_connect/consul_connect.h"
 
 #include "envoy/buffer/buffer.h"
 #include "envoy/network/connection.h"
@@ -12,13 +12,13 @@
 namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
-namespace ClientCertificateRestriction {
+namespace ConsulConnect {
 
 const std::string Filter::AUTHORIZE_PATH = "/v1/agent/connect/authorize";
 
 Config::Config(
-    const envoy::config::filter::network::client_certificate_restriction::v2::
-        ClientCertificateRestriction &config)
+    const envoy::config::filter::network::consul_connect::v2::ConsulConnect
+        &config)
     : target_(config.target()),
       authorize_hostname_(config.authorize_hostname()),
       authorize_cluster_name_(config.authorize_cluster_name()),
@@ -65,8 +65,7 @@ void Filter::onEvent(Network::ConnectionEvent event) {
   std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
   std::string serial_number{toColonHex(getSerialNumber())};
   if (uri_san.empty() || serial_number.empty()) {
-    ENVOY_CONN_LOG(trace,
-                   "client_certificate_restriction: Authorize REST not called",
+    ENVOY_CONN_LOG(trace, "consul_connect: Authorize REST not called",
                    connection);
     closeConnection();
     return;
@@ -74,8 +73,7 @@ void Filter::onEvent(Network::ConnectionEvent event) {
 
   // TODO(talnordan): Remove tracing.
   std::string payload{getPayload(config_->target(), uri_san, serial_number)};
-  ENVOY_CONN_LOG(error, "client_certificate_restriction: payload is {}",
-                 connection, payload);
+  ENVOY_CONN_LOG(error, "consul_connect: payload is {}", connection, payload);
 
   auto &&authorize_host{config_->authorizeHostname()};
   Http::MessagePtr request{getRequest(authorize_host, payload)};
@@ -90,7 +88,7 @@ void Filter::onEvent(Network::ConnectionEvent event) {
   if (in_flight_request_ == nullptr) {
     // No request could be started. In this case `onFailure()` has already been
     // called inline. Therefore, the connection has already been closed.
-    ENVOY_LOG(debug, "client_certificate_restriction: can't create request for "
+    ENVOY_LOG(debug, "consul_connect: can't create request for "
                      "Authorize endpoint");
     return;
   }
@@ -106,7 +104,7 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
   auto &&connection{read_callbacks_->connection()};
   std::string json{getBodyString(std::move(m))};
   ENVOY_CONN_LOG(trace,
-                 "client_certificate_restriction: Authorize REST call "
+                 "consul_connect: Authorize REST call "
                  "succeeded, status={}, body={}",
                  connection, m->headers().Status()->value().c_str(), json);
   status_ = Status::Complete;
@@ -114,13 +112,11 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
   const auto status =
       Protobuf::util::JsonStringToMessage(json, &authorize_response);
   if (status.ok() && authorize_response.authorized()) {
-    ENVOY_CONN_LOG(trace, "client_certificate_restriction: authorized",
-                   connection);
+    ENVOY_CONN_LOG(trace, "consul_connect: authorized", connection);
     has_been_authorized_ = true;
     read_callbacks_->continueReading();
   } else {
-    ENVOY_CONN_LOG(error, "client_certificate_restriction: unauthorized",
-                   connection);
+    ENVOY_CONN_LOG(error, "consul_connect: unauthorized", connection);
     closeConnection();
   }
 }
@@ -130,8 +126,7 @@ void Filter::onFailure(Http::AsyncClient::FailureReason) {
 
   // TODO(talnordan): Log reason.
   auto &&connection{read_callbacks_->connection()};
-  ENVOY_CONN_LOG(error,
-                 "client_certificate_restriction: Authorize REST call failed",
+  ENVOY_CONN_LOG(error, "consul_connect: Authorize REST call failed",
                  connection);
   status_ = Status::Complete;
   closeConnection();
@@ -172,9 +167,8 @@ std::string Filter::getSerialNumber() const {
   Ssl::Connection *ssl{connection.ssl()};
   Ssl::SslSocket *ssl_socket = dynamic_cast<Ssl::SslSocket *>(ssl);
   if (ssl_socket == nullptr) {
-    ENVOY_CONN_LOG(
-        error, "client_certificate_restriction: unknown SSL connection type",
-        connection);
+    ENVOY_CONN_LOG(error, "consul_connect: unknown SSL connection type",
+                   connection);
     return "";
   }
 
@@ -182,10 +176,8 @@ std::string Filter::getSerialNumber() const {
   SSL *raw_ssl{ssl_socket->rawSslForTest()};
   bssl::UniquePtr<X509> cert(SSL_get_peer_certificate(raw_ssl));
   if (!cert) {
-    ENVOY_CONN_LOG(
-        error,
-        "client_certificate_restriction: failed to retrieve peer certificate",
-        connection);
+    ENVOY_CONN_LOG(error, "consul_connect: failed to retrieve peer certificate",
+                   connection);
     return "";
   }
 
@@ -238,7 +230,7 @@ std::string Filter::getBodyString(Http::MessagePtr &&m) {
   return Buffer::BufferUtility::bufferToString(*body);
 }
 
-} // namespace ClientCertificateRestriction
+} // namespace ConsulConnect
 } // namespace NetworkFilters
 } // namespace Extensions
 } // namespace Envoy
