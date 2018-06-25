@@ -7,6 +7,7 @@
 #include "common/http/solo_filter_utility.h"
 
 #include "extensions/filters/http/common/empty_http_filter_config.h"
+
 #include "functional_base.pb.validate.h"
 
 namespace Envoy {

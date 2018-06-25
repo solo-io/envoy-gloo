@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "01fef5ba2d09c3b501ee89b645998a47e70cd44d"  # May 11, 2018 (http filters: less filter factory boilerplate)
+ENVOY_SHA = "2b216ca50c7cd04e8736cb44b39fbdedc00c86b3"  # Jun 14, 2018 (Correct AddrFaily to AddrFamily. (#3636))
 
 http_archive(
     name = "envoy",
