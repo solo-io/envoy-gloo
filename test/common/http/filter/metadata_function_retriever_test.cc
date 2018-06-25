@@ -33,8 +33,8 @@ const std::string empty_json = R"EOF(
     }
     )EOF";
 
-Protobuf::Struct getMetadata(const std::string &json) {
-  Protobuf::Struct metadata;
+ProtobufWkt::Struct getMetadata(const std::string &json) {
+  ProtobufWkt::Struct metadata;
   MessageUtil::loadFromJson(json, metadata);
 
   return metadata;
@@ -78,9 +78,9 @@ public:
 };
 
 absl::optional<Function>
-getFunctionFromMetadata(const Protobuf::Struct &func_metadata,
-                        const Protobuf::Struct &cluster_metadata,
-                        const Protobuf::Struct *route_metadata = nullptr) {
+getFunctionFromMetadata(const ProtobufWkt::Struct &func_metadata,
+                        const ProtobufWkt::Struct &cluster_metadata,
+                        const ProtobufWkt::Struct *route_metadata = nullptr) {
   TesterMetadataAccessor testaccessor;
   testaccessor.function_spec_ = &func_metadata;
   testaccessor.cluster_metadata_ = &cluster_metadata;
@@ -95,9 +95,9 @@ getFunctionFromMetadata(const Protobuf::Struct &func_metadata,
 
 class MetadataFunctionRetrieverTest : public testing::Test {
 public:
-  Protobuf::Struct func_metadata_;
-  Protobuf::Struct cluster_metadata_;
-  Protobuf::Struct route_metadata_;
+  ProtobufWkt::Struct func_metadata_;
+  ProtobufWkt::Struct cluster_metadata_;
+  ProtobufWkt::Struct route_metadata_;
 
   std::unique_ptr<Function> configured_function_;
 
@@ -114,7 +114,7 @@ public:
     func_metadata_ = getMetadata(func_json);
     cluster_metadata_ = getMetadata(cluster_json);
 
-    Protobuf::Struct *route_metadata_ptr = nullptr;
+    ProtobufWkt::Struct *route_metadata_ptr = nullptr;
     if (!route_json.empty()) {
       route_metadata_ = getMetadata(route_json);
       route_metadata_ptr = &route_metadata_;
