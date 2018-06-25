@@ -18,9 +18,7 @@ TransformationFilterBase::TransformationFilterBase(
 
 TransformationFilterBase::~TransformationFilterBase() {}
 
-void TransformationFilterBase::onDestroy() {
-  resetInternalState();
-}
+void TransformationFilterBase::onDestroy() { resetInternalState(); }
 
 bool FunctionalTransformationFilter::retrieveFunction(
     const MetadataAccessor &meta_accessor) {
