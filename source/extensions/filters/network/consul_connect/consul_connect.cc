@@ -34,7 +34,8 @@ Network::FilterStatus Filter::onData(Buffer::Instance &, bool) {
 }
 
 Network::FilterStatus Filter::onNewConnection() {
-  return Network::FilterStatus::StopIteration;
+  // TODO(talnordan): Should `StopIteration` be returned in certain scenarios?
+  return Network::FilterStatus::Continue;
 }
 
 void Filter::onEvent(Network::ConnectionEvent event) {
