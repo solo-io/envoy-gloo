@@ -4,7 +4,9 @@
 #include "envoy/network/connection.h"
 
 #include "common/common/assert.h"
+#include "common/common/enum_to_int.h"
 #include "common/http/message_impl.h"
+#include "common/http/utility.h"
 #include "common/ssl/ssl_socket.h"
 
 #include "authorize.pb.h"
@@ -103,12 +105,21 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
   in_flight_request_ = nullptr;
 
   auto &&connection{read_callbacks_->connection()};
+  status_ = Status::Complete;
+  if (Http::Utility::getResponseStatus(m->headers()) !=
+      enumToInt(Http::Code::OK)) {
+    ENVOY_CONN_LOG(error,
+                   "consul_connect: Authorize REST call "
+                   "responded with unexpected status {}",
+                   connection, m->headers().Status()->value().c_str());
+    closeConnection();
+    return;
+  }
   std::string json{getBodyString(std::move(m))};
   ENVOY_CONN_LOG(trace,
                  "consul_connect: Authorize REST call "
                  "succeeded, status={}, body={}",
                  connection, m->headers().Status()->value().c_str(), json);
-  status_ = Status::Complete;
   agent::connect::authorize::v1::AuthorizeResponse authorize_response;
   const auto status =
       Protobuf::util::JsonStringToMessage(json, &authorize_response);
