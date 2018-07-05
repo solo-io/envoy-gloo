@@ -76,10 +76,10 @@ private:
 
   inline void closeConnection();
 
-  // TODO(talnordan): Open an issue suggesting to make the Authorize enpoint
-  // accept serial numbers that are not colon-hex encoded. Such an enhancement
-  // to the Authorize endpoint would prevent the filter from having to perform
-  // this string manipulation.
+  // TODO(talnordan): This string manipulation might become unnecessary once
+  // hashicorp/consul issue #4327 is resolved, potentially making the Authorize
+  // endpoint accept serial numbers that are not colon-hex encoded.
+  // See: https://github.com/hashicorp/consul/issues/4327
   static inline std::string toColonHex(const std::string &s);
 
   // TODO(talnordan): Consider moving this function to `Ssl::Connection`.
