@@ -3,7 +3,7 @@ workspace(name="cache_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "01fef5ba2d09c3b501ee89b645998a47e70cd44d"  # May 11, 2018 (http filters: less filter factory boilerplate)
+ENVOY_SHA = "3b05bffcbaedaf6d112ba38ad58121ba5aa5af51"  # July 4, 2018 (Add requestedServerName() to Network::connection)
 
 http_archive(
     name = "envoy",

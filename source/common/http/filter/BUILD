@@ -40,7 +40,6 @@ envoy_cc_library(
         "//source/common/http/filter:route_specific_cache_filter_config",
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//source/common/http:headers_lib",
-        "@envoy//source/common/http:utility_lib",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
     ],
 )
