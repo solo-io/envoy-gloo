@@ -15,7 +15,7 @@ Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
   ASSERT(!proto_config.target().empty());
 
-  ConfigSharedPtr filter_config(new Config(proto_config));
+  ConfigSharedPtr filter_config(new Config(proto_config, context.scope()));
   return [&context,
           filter_config](Network::FilterManager &filter_manager) -> void {
     filter_manager.addReadFilter(

@@ -4,6 +4,7 @@
 
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
+#include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
 
 #include "common/buffer/buffer_utility.h"
@@ -17,23 +18,44 @@ namespace NetworkFilters {
 namespace ConsulConnect {
 
 /**
+ * All stats for the Consul Connect filter. @see stats_macros.h
+ */
+// clang-format off
+#define ALL_CONSUL_CONNECT_FILTER_STATS(COUNTER)                                                   \
+  COUNTER(allowed)                                                                                 \
+  COUNTER(denied)
+// clang-format on
+
+/**
+ * Wrapper struct for Consul Connect filter stats. @see stats_macros.h
+ */
+struct InstanceStats {
+  ALL_CONSUL_CONNECT_FILTER_STATS(GENERATE_COUNTER_STRUCT)
+};
+
+/**
  * Global configuration for Consul Connect.
  */
 class Config {
 public:
   Config(const envoy::config::filter::network::consul_connect::v2::ConsulConnect
-             &config);
+             &config,
+         Stats::Scope &scope);
 
   const std::string &target() { return target_; }
   const std::string &authorizeHostname() { return authorize_hostname_; }
   const std::string &authorizeClusterName() { return authorize_cluster_name_; }
   const std::chrono::milliseconds &requestTimeout() { return request_timeout_; }
+  InstanceStats &stats() { return stats_; }
 
 private:
+  static InstanceStats generateStats(Stats::Scope &scope);
+
   const std::string target_;
   const std::string authorize_hostname_;
   const std::string authorize_cluster_name_;
   const std::chrono::milliseconds request_timeout_;
+  InstanceStats stats_;
 };
 
 typedef std::shared_ptr<Config> ConfigSharedPtr;

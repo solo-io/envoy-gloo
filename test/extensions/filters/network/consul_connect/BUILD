@@ -19,5 +19,6 @@ envoy_cc_test(
     deps = [
         "//:authorize_proto_cc",
         "//source/extensions/filters/network/consul_connect",
+        "@envoy//test/mocks/server:server_mocks",
     ],
 )

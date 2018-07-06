@@ -20,12 +20,20 @@ const std::string Filter::AUTHORIZE_PATH = "/v1/agent/connect/authorize";
 
 Config::Config(
     const envoy::config::filter::network::consul_connect::v2::ConsulConnect
-        &config)
+        &config,
+    Stats::Scope &scope)
     : target_(config.target()),
       authorize_hostname_(config.authorize_hostname()),
       authorize_cluster_name_(config.authorize_cluster_name()),
       request_timeout_(
-          PROTOBUF_GET_MS_OR_DEFAULT(config, request_timeout, 1000)) {}
+          PROTOBUF_GET_MS_OR_DEFAULT(config, request_timeout, 1000)),
+      stats_(generateStats(scope)) {}
+
+InstanceStats Config::generateStats(Stats::Scope &scope) {
+  const std::string final_prefix{"consul_connect."};
+  return {ALL_CONSUL_CONNECT_FILTER_STATS(
+      POOL_COUNTER_PREFIX(scope, final_prefix))};
+}
 
 Filter::Filter(ConfigSharedPtr config, Upstream::ClusterManager &cm)
     : config_(config), cm_(cm) {}

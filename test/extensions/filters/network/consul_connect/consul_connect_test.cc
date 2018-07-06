@@ -1,8 +1,13 @@
 #include "common/protobuf/utility.h"
 
+#include "test/mocks/server/mocks.h"
+
 #include "authorize.pb.h"
 #include "extensions/filters/network/consul_connect/consul_connect.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+using testing::NiceMock;
 
 namespace Envoy {
 namespace Extensions {
@@ -18,11 +23,14 @@ TEST(ConsulConnectConfigTest, Constructor) {
   proto_config.set_authorize_cluster_name("authorize");
   proto_config.mutable_request_timeout()->set_seconds(6);
 
-  Config config(proto_config);
+  NiceMock<Server::Configuration::MockFactoryContext> context;
+  Config config(proto_config, context.scope());
   EXPECT_EQ("target", config.target());
   EXPECT_EQ("example.com", config.authorizeHostname());
   EXPECT_EQ("authorize", config.authorizeClusterName());
   EXPECT_EQ(std::chrono::milliseconds(6000), config.requestTimeout());
+  EXPECT_EQ(0U, config.stats().allowed_.value());
+  EXPECT_EQ(0U, config.stats().denied_.value());
 }
 
 TEST(ConsulConnectTest, AuthorizePayloadProto) {
