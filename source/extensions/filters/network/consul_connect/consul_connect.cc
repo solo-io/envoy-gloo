@@ -7,7 +7,6 @@
 #include "common/common/enum_to_int.h"
 #include "common/http/message_impl.h"
 #include "common/http/utility.h"
-#include "common/ssl/ssl_socket.h"
 
 #include "authorize.pb.h"
 
@@ -73,8 +72,9 @@ void Filter::onEvent(Network::ConnectionEvent event) {
   }
 
   // TODO(talnordan): First call `connection.ssl()->peerCertificatePresented()`.
-  std::string uri_san{connection.ssl()->uriSanPeerCertificate()};
-  std::string serial_number{toColonHex(getSerialNumber())};
+  auto &&ssl = connection.ssl();
+  std::string uri_san{ssl->uriSanPeerCertificate()};
+  std::string serial_number{ssl->serialNumberPeerCertificate()};
   if (uri_san.empty() || serial_number.empty()) {
     ENVOY_CONN_LOG(trace, "consul_connect: Authorize REST not called",
                    connection);
@@ -83,7 +83,9 @@ void Filter::onEvent(Network::ConnectionEvent event) {
   }
 
   // TODO(talnordan): Remove tracing.
-  std::string payload{getPayload(config_->target(), uri_san, serial_number)};
+  std::string colon_hex_serial_number{toColonHex(serial_number)};
+  std::string payload{
+      getPayload(config_->target(), uri_san, colon_hex_serial_number)};
   ENVOY_CONN_LOG(error, "consul_connect: payload is {}", connection, payload);
 
   auto &&authorize_host{config_->authorizeHostname()};
@@ -180,46 +182,6 @@ std::string Filter::toColonHex(const std::string &s) {
   }
 
   return colon_hex_string;
-}
-
-std::string Filter::getSerialNumber() const {
-  // TODO(talnordan): This is a PoC implementation that assumes the subtype of
-  // the `Ssl::Connection` pointer.
-  auto &&connection{read_callbacks_->connection()};
-  Ssl::Connection *ssl{connection.ssl()};
-  Ssl::SslSocket *ssl_socket = dynamic_cast<Ssl::SslSocket *>(ssl);
-  if (ssl_socket == nullptr) {
-    ENVOY_CONN_LOG(error, "consul_connect: unknown SSL connection type",
-                   connection);
-    return "";
-  }
-
-  // TODO(talnordan): Avoid relying on the `rawSslForTest()` function.
-  SSL *raw_ssl{ssl_socket->rawSslForTest()};
-  bssl::UniquePtr<X509> cert(SSL_get_peer_certificate(raw_ssl));
-  if (!cert) {
-    ENVOY_CONN_LOG(error, "consul_connect: failed to retrieve peer certificate",
-                   connection);
-    return "";
-  }
-
-  return getSerialNumber(cert.get());
-}
-
-std::string Filter::getSerialNumber(const X509 *cert) {
-  ASSERT(cert);
-  ASN1_INTEGER *serial_number = X509_get_serialNumber(const_cast<X509 *>(cert));
-  BIGNUM num_bn;
-  BN_init(&num_bn);
-  ASN1_INTEGER_to_BN(serial_number, &num_bn);
-  char *char_serial_number = BN_bn2hex(&num_bn);
-  BN_free(&num_bn);
-  if (char_serial_number != nullptr) {
-    std::string serial_number(char_serial_number);
-    OPENSSL_free(char_serial_number);
-    return serial_number;
-  }
-  return "";
 }
 
 std::string Filter::getPayload(const std::string &target,

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <openssl/x509v3.h>
-
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
 #include "envoy/stats/stats_macros.h"
@@ -103,13 +101,6 @@ private:
   // endpoint accept serial numbers that are not colon-hex encoded.
   // See: https://github.com/hashicorp/consul/issues/4327
   static inline std::string toColonHex(const std::string &s);
-
-  // TODO(talnordan): Consider moving this function to `Ssl::Connection`.
-  inline std::string getSerialNumber() const;
-
-  // TODO(talnirdan): This code is duplicated from
-  // Ssl::ContextImpl::getSerialNumber().
-  static inline std::string getSerialNumber(const X509 *cert);
 
   static inline std::string getPayload(const std::string &target,
                                        const std::string &client_cert_uri,

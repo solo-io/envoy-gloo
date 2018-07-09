@@ -27,7 +27,6 @@ envoy_cc_library(
         "@envoy//source/common/common:logger_lib",
         "@envoy//source/common/http:message_lib",
         "@envoy//source/common/http:utility_lib",
-        "@envoy//source/common/ssl:ssl_socket_lib",
         "@solo_envoy_common//source/common/buffer:buffer_utility_lib",
     ],
 )
