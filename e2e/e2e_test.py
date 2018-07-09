@@ -173,6 +173,14 @@ class ConsulConnectTestCase(unittest.TestCase):
   def __make_get_request(self, cert):
     return requests.get('https://localhost:10000/get', verify=False, cert=cert)
 
+  def __get_allowed_and_denied_stats(self):
+    response = requests.get('http://localhost:19000/stats?format=json')
+    self.assertEqual(httplib.OK, response.status_code)
+    stats = response.text
+    parsed_stats = json.loads(stats)['stats']
+    stats_dict = {s['name']:s['value'] for s in parsed_stats if 'name' in s}
+    return (stats_dict['consul_connect.allowed'], stats_dict['consul_connect.denied'])
+
   def test_authorize_endpoint(self):
     # Set up Authorize endpoint.
     self.__start_authorize_endpoint()
@@ -215,11 +223,15 @@ class ConsulConnectTestCase(unittest.TestCase):
     for i in xrange(260):
       self.__get_parsed_json('http://127.0.0.1:8500/v1/agent/connect/ca/leaf/service{}'.format(i))
 
+    self.assertEqual((0, 0), self.__get_allowed_and_denied_stats())
+
     # Assert that requests fail if the Authorize endpoint is still down.
     for _ in xrange(100):
       with self.__get_crt_file_and_key_file() as (crt_file, key_file):
         with self.assertRaises(requests.exceptions.ConnectionError):
           self.__make_get_request(cert=(crt_file.name, key_file.name))
+
+    self.assertEqual((0, 100), self.__get_allowed_and_denied_stats())
 
     # Set up the Authorize endpoint.
     self.__start_authorize_endpoint()
@@ -231,6 +243,8 @@ class ConsulConnectTestCase(unittest.TestCase):
         response = self.__make_get_request(cert=(crt_file.name, key_file.name))
         self.assertEqual(httplib.OK, response.status_code)
 
+    self.assertEqual((100, 100), self.__get_allowed_and_denied_stats())
+
     # TODO(talnordan): Make invalid requests using an unauthorized client certificate.
 
     # Make invalid requests without a client certificate.
@@ -238,6 +252,7 @@ class ConsulConnectTestCase(unittest.TestCase):
       with self.assertRaises(requests.exceptions.ConnectionError):
         self.__make_get_request(cert=None)
 
+    self.assertEqual((100, 200), self.__get_allowed_and_denied_stats())
 
 if __name__ == "__main__":
   global DEBUG

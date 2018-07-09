@@ -134,6 +134,7 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
   if (status.ok() && authorize_response.authorized()) {
     ENVOY_CONN_LOG(trace, "consul_connect: authorized", connection);
     has_been_authorized_ = true;
+    config_->stats().allowed_.inc();
     read_callbacks_->continueReading();
   } else {
     ENVOY_CONN_LOG(error, "consul_connect: unauthorized", connection);
@@ -153,6 +154,7 @@ void Filter::onFailure(Http::AsyncClient::FailureReason) {
 }
 
 void Filter::closeConnection() {
+  config_->stats().denied_.inc();
   read_callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
 }
 
