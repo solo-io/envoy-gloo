@@ -3,7 +3,7 @@ workspace(name="consul_connect_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "c15019e79c832d9f0a09468affaadabc4be3e115"  # May 30, 2018 (access log service: cleanup and docs (#3494))
+ENVOY_SHA = "fd57604b71b2e97332c2bca94ec080df3ff47b41"  # July 9, 2018 (thrift: transport and protocol write code (#3789))
 
 http_archive(
     name = "envoy",
