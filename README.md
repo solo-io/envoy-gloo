@@ -45,6 +45,14 @@ The e2e test requires a Consul binary, which should be deployed in the following
 ./e2e/consul
 ```
 
+It also requires the [Requests](https://pypi.org/project/requests/) Python package.
+
+To install Requests:
+
+```
+$ pip install requests
+```
+
 In addition, a server-side cetificate and the private key associated with it should be generated and deployed in the following paths:
 ```
 /tmp/pki/root/certs/www.acme.com.crt
