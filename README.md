@@ -32,6 +32,20 @@ $ CXX=clang++-5.0 CC=clang-5.0 bazel test -c dbg --config=clang-tsan //test/inte
 
 ## E2E
 
+The e2e test requires the [gRPC Python package](https://grpc.io/docs/quickstart/python.html).
+
+To install the gRPC Python package:
+
+```
+$ python -m pip install grpcio
+```
+
+It also requires [installing Python's gRPC tools](https://grpc.io/docs/quickstart/python.html#install-grpc-tools), which can be done as follows:
+
+```
+$ python -m pip install grpcio-tools googleapis-common-protos
+```
+
 To run the e2e test:
 
 ```
