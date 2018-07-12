@@ -1,8 +1,9 @@
 #pragma once
 
-#include "api/envoy/config/filter/network/consul_connect/v2/consul_connect.pb.validate.h"
 #include "extensions/filters/network/common/factory_base.h"
 #include "extensions/filters/network/consul_connect_well_known_names.h"
+
+#include "api/envoy/config/filter/network/consul_connect/v2/consul_connect.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {

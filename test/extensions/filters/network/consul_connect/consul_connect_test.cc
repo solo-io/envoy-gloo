@@ -1,9 +1,10 @@
 #include "common/protobuf/utility.h"
 
+#include "extensions/filters/network/consul_connect/consul_connect.h"
+
 #include "test/mocks/server/mocks.h"
 
 #include "authorize.pb.h"
-#include "extensions/filters/network/consul_connect/consul_connect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

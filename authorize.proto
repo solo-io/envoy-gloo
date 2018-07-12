@@ -8,13 +8,13 @@ import "google/protobuf/duration.proto";
 
 // [#proto-status: experimental]
 message AuthorizePayload {
-    string Target = 1;
-    string ClientCertURI = 2;
-    string ClientCertSerial = 3;
+  string Target = 1;
+  string ClientCertURI = 2;
+  string ClientCertSerial = 3;
 }
 
 // [#proto-status: experimental]
 message AuthorizeResponse {
-    bool Authorized = 1;
-    string Reason = 2;
+  bool Authorized = 1;
+  string Reason = 2;
 }
