@@ -1,4 +1,6 @@
 import contextlib
+import ctypes
+import ctypes.util
 import httplib
 import json
 import logging
@@ -75,7 +77,6 @@ static_resources:
 """
 
 def envoy_preexec_fn():
-  import ctypes
   PR_SET_PDEATHSIG = 1  # See prtcl(2).
   os.setpgrp()
   libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
