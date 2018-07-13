@@ -19,7 +19,8 @@ FunctionRetrieverMetadataAccessor::~FunctionRetrieverMetadataAccessor() {}
 
 absl::optional<const std::string *>
 FunctionRetrieverMetadataAccessor::getFunctionName() const {
-  RELEASE_ASSERT(function_name_);
+  // TODO(talnordan): Provide `DETAILS`.
+  RELEASE_ASSERT(function_name_, "");
   return function_name_;
 }
 
@@ -33,7 +34,8 @@ FunctionRetrieverMetadataAccessor::getFunctionSpec() const {
 
 absl::optional<const ProtobufWkt::Struct *>
 FunctionRetrieverMetadataAccessor::getClusterMetadata() const {
-  RELEASE_ASSERT(child_spec_);
+  // TODO(talnordan): Provide `DETAILS`.
+  RELEASE_ASSERT(child_spec_, "");
   return child_spec_;
 }
 
