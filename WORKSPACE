@@ -3,7 +3,7 @@ workspace(name="cache_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "3b05bffcbaedaf6d112ba38ad58121ba5aa5af51"  # July 4, 2018 (Add requestedServerName() to Network::connection)
+ENVOY_SHA = "7caa887200d9b2f0df6eb7e5de1912307bf962d3"  # July 16, 2018 (fuzz: server config validation fuzz test. (#3770))
 
 http_archive(
     name = "envoy",
