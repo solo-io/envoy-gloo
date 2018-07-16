@@ -1,3 +1,5 @@
+import ctypes
+import ctypes.util
 import grpc
 import httplib
 import logging
@@ -19,7 +21,6 @@ import cache_pb2_grpc
 
 
 def envoy_preexec_fn():
-  import ctypes
   PR_SET_PDEATHSIG = 1  # See prtcl(2).
   os.setpgrp()
   libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
