@@ -43,7 +43,9 @@ std::string LambdaFilter::functionUrlPath() {
 
 FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
                                                 bool end_stream) {
-  RELEASE_ASSERT(current_function_.has_value());
+  // TODO(talnordan): Provide `DETAILS`.
+  RELEASE_ASSERT(current_function_.has_value(), "");
+
   const auto &current_function = current_function_.value();
 
   aws_authenticator_.init(current_function.access_key_,

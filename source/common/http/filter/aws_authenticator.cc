@@ -235,7 +235,10 @@ std::string AwsAuthenticator::signWithTime(
                        request_date_time, hashed_canonical_request);
 
   std::stringstream authorizationvalue;
-  RELEASE_ASSERT(access_key_);
+
+  // TODO(talnordan): Provide `DETAILS`.
+  RELEASE_ASSERT(access_key_, "");
+
   authorizationvalue << ALGORITHM << " Credential=" << (*access_key_) << "/"
                      << CredentialScope << ", SignedHeaders=" << signed_headers
                      << ", Signature=" << signature;
