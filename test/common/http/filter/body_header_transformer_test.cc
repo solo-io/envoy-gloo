@@ -31,7 +31,7 @@ TEST(BodyHeaderTransformer, transform) {
   BodyHeaderTransformer transformer;
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
   json actual = json::parse(res);
   auto expected = R"(
   {

@@ -3,7 +3,6 @@
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
-#include "test/test_common/utility.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -128,7 +127,7 @@ TEST(Transformer, transform) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ("123456789", res);
   EXPECT_EQ("ABC", headers.get_("x-header"));
@@ -159,7 +158,7 @@ TEST(Transformer, transformSimple) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ("123456789", res);
   EXPECT_EQ("ABC", headers.get_("x-header"));
@@ -190,7 +189,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ("123456789", res);
   EXPECT_EQ("ABC", headers.get_("x-header"));
@@ -216,7 +215,7 @@ TEST(Transformer, transformPassthrough) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ(emptyBody, res);
   EXPECT_EQ("default", headers.get_("x-header"));
@@ -246,7 +245,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ("{\"ext1\":\"123\"}", res);
 }
@@ -270,7 +269,7 @@ TEST(Transformer, transformBodyNotSet) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_EQ(originalBody, res);
   EXPECT_EQ("456", headers.get_("x-header"));
@@ -297,7 +296,7 @@ TEST(Transformer, transformWithHyphens) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-  std::string res = TestUtility::bufferToString(body);
+  std::string res = body.toString();
 
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }

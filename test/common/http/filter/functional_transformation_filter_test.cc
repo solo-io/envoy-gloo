@@ -6,7 +6,6 @@
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
-#include "test/test_common/utility.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -120,9 +119,8 @@ TEST_F(FunctionalTransformationFilterTest, HappyPathWithBody) {
 
   std::string upstream_body;
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
-      .WillOnce(Invoke([&](Buffer::Instance &b, bool) {
-        upstream_body = TestUtility::bufferToString(b);
-      }));
+      .WillOnce(Invoke(
+          [&](Buffer::Instance &b, bool) { upstream_body = b.toString(); }));
 
   Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
   auto res = filter_->decodeData(downstream_body, true);

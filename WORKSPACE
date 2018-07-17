@@ -2,14 +2,14 @@ workspace(name="transformation_filter")
 # use skylark for native git
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "2b216ca50c7cd04e8736cb44b39fbdedc00c86b3"  # Jun 14, 2018 (Correct AddrFaily to AddrFamily. (#3636))
+ENVOY_SHA = "27be177adbb9c4cd85ad21415407ecc2a84889ae"  # July 16, 2018 (lua filter: fix memory leak due to circular runtime reference (#3855))
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "92f11092c725026a81ea8634a2c4df27705d072d"  # May 16, 2018 (Upgrade Envoy)
+ENVOY_COMMON_SHA = "79194c3b1ce1d5c7e5bb84ada2cc757efef36180"  # July 15, 2018 (Upgrade Envoy)
 http_archive(
     name = "solo_envoy_common",
     strip_prefix = "envoy-common-" + ENVOY_COMMON_SHA,

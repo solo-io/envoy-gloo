@@ -168,7 +168,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                               .get(Http::LowerCaseString("x-solo"))
                               ->value()
                               .c_str());
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   EXPECT_EQ("abc 234", body);
 }
 
@@ -201,7 +201,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
 
   processRequest(response);
 
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   EXPECT_EQ("efg", body);
 }
 
@@ -220,7 +220,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
 
   processRequest(response);
 
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   EXPECT_EQ("efg", body);
   std::string rbody = response->body();
   EXPECT_NE(std::string::npos, rbody.find("bad request"));
@@ -272,7 +272,7 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   }
   // verify response
 
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   const auto &headers = upstream_request_->headers();
   EXPECT_EQ("", body);
   EXPECT_EQ(nullptr, headers.TransferEncoding());
@@ -303,7 +303,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
                             .get(Http::LowerCaseString("x-solo"))
                             ->value()
                             .c_str());
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   EXPECT_EQ(origBody, body);
 }
 

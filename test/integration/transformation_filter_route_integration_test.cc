@@ -101,7 +101,7 @@ TEST_P(TransformationFilterPerRouteIntegrationTest,
                               .get(Http::LowerCaseString("x-solo"))
                               ->value()
                               .c_str());
-  std::string body = TestUtility::bufferToString(upstream_request_->body());
+  std::string body = upstream_request_->body().toString();
   EXPECT_EQ("abc 234", body);
 }
 
