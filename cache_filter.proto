@@ -19,6 +19,8 @@ message Cache {
   string redis_cluster = 4;
   string redis_stat_prefix = 5;
   google.protobuf.Duration redis_op_timeout = 6;
+
+  // [#not-implemented-hide:]
   google.protobuf.UInt32Value max_response_content_length = 7;
 }
 
