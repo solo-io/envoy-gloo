@@ -142,7 +142,7 @@ const std::string &TransformationFilterBase::directionToKey(
   case TransformationFilterBase::Direction::Response:
     return Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION;
   default:
-    NOT_REACHED;
+    NOT_REACHED_GCOVR_EXCL_LINE;
   }
 }
 
@@ -186,7 +186,7 @@ TransformationFilterBase::getTransformFromRoute(
     case TransformationFilterBase::Direction::Response:
       return &config->getResponseTranformation();
     default:
-      NOT_REACHED;
+      NOT_REACHED_GCOVR_EXCL_LINE;
     }
   }
 

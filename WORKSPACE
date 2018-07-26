@@ -2,7 +2,7 @@ workspace(name="transformation_filter")
 # use skylark for native git
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "27be177adbb9c4cd85ad21415407ecc2a84889ae"  # July 16, 2018 (lua filter: fix memory leak due to circular runtime reference (#3855))
+ENVOY_SHA = "b32eabfc141760ec14622a4a2a2f0ab0a741cd6c"  # July 25, 2018 (upstream: implement Cluster's load_assignment field (#3864))
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
