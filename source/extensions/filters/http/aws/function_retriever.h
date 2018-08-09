@@ -7,7 +7,7 @@
 #include "envoy/router/router.h"
 #include "envoy/upstream/upstream.h"
 
-#include "common/http/filter/function.h"
+#include "extensions/filters/http/aws/function.h"
 
 #include "absl/types/optional.h"
 

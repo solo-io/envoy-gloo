@@ -18,7 +18,7 @@ envoy_cc_library(
     hdrs = ["lambda_filter_config_factory.h"],
     repository = "@envoy",
     deps = [
-        "//source/common/http/filter:lambda_filter_lib",
+        ":lambda_filter_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
         "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
     ],

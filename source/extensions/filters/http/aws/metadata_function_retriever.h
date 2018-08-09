@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "common/http/filter/function.h"
-#include "common/http/filter/function_retriever.h"
+#include "extensions/filters/http/aws/function.h"
+#include "extensions/filters/http/aws/function_retriever.h"
 
 namespace Envoy {
 namespace Http {

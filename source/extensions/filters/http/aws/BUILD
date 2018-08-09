@@ -60,10 +60,22 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//source/common/http/filter:aws_authenticator_lib",
-        "//source/common/http/filter:function_retriever_lib",
+        ":aws_authenticator_lib",
+        ":function_retriever_lib",
         "@envoy//source/common/http:filter_utility_lib",
         "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
         "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "lambda_filter_config_lib",
+    srcs = ["lambda_filter_config_factory.cc"],
+    hdrs = ["lambda_filter_config_factory.h"],
+    repository = "@envoy",
+    deps = [
+        ":lambda_filter_lib",
+        "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
+        "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
     ],
 )

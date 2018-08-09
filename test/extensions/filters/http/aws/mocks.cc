@@ -1,4 +1,4 @@
-#include "test/mocks/lambda/mocks.h"
+#include "test/extensions/filters/http/aws/mocks.h"
 
 #include "common/common/macros.h"
 

@@ -7,9 +7,9 @@
 #include "envoy/http/metadata_accessor.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/http/filter/aws_authenticator.h"
-#include "common/http/filter/function.h"
-#include "common/http/filter/function_retriever.h"
+#include "extensions/filters/http/aws/aws_authenticator.h"
+#include "extensions/filters/http/aws/function.h"
+#include "extensions/filters/http/aws/function_retriever.h"
 
 namespace Envoy {
 namespace Http {

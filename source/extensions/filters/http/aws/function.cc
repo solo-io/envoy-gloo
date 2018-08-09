@@ -1,4 +1,4 @@
-#include "common/http/filter/function.h"
+#include "extensions/filters/http/aws/function.h"
 
 namespace Envoy {
 namespace Http {
