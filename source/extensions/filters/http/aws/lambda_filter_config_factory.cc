@@ -2,9 +2,10 @@
 
 #include "envoy/registry/registry.h"
 
+#include "common/http/functional_stream_decoder_base.h"
+
 #include "extensions/filters/http/aws/lambda_filter.h"
 #include "extensions/filters/http/aws/metadata_function_retriever.h"
-#include "common/http/functional_stream_decoder_base.h"
 
 namespace Envoy {
 namespace Server {

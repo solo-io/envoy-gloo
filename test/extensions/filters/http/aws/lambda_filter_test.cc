@@ -1,9 +1,8 @@
 #include "extensions/filters/http/aws/lambda_filter.h"
-
 #include "extensions/filters/http/aws/lambda_filter_config_factory.h"
 
-#include "test/mocks/common.h"
 #include "test/extensions/filters/http/aws/mocks.h"
+#include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "test/test_common/utility.h"

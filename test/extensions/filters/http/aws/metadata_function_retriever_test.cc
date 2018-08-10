@@ -1,8 +1,9 @@
 #include <iostream>
 
 #include "common/config/lambda_well_known_names.h"
-#include "extensions/filters/http/aws/metadata_function_retriever.h"
 #include "common/protobuf/utility.h"
+
+#include "extensions/filters/http/aws/metadata_function_retriever.h"
 
 #include "test/test_common/utility.h"
 
