@@ -3,7 +3,7 @@ workspace(name="aws_lambda")
 # use skylark for native git
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "27be177adbb9c4cd85ad21415407ecc2a84889ae"  # July 16, 2018 (lua filter: fix memory leak due to circular runtime reference (#3855))
+ENVOY_SHA = "45b90082918b4aed4e3c53a2a5cf79ba1b206505"  # 2018-08-10
 
 http_archive(
     name = "envoy",
