@@ -3,7 +3,7 @@ workspace(name="consul_connect_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "fd57604b71b2e97332c2bca94ec080df3ff47b41"  # July 9, 2018 (thrift: transport and protocol write code (#3789))
+ENVOY_SHA = "45b90082918b4aed4e3c53a2a5cf79ba1b206505"  # 2018-08-10
 
 http_archive(
     name = "envoy",
@@ -11,7 +11,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "144036339daf5b4d75ce8b6509a946d209536ad3"  # May 9, 2018 (Fix format)
+ENVOY_COMMON_SHA = "79194c3b1ce1d5c7e5bb84ada2cc757efef36180"  # July 15, 2018 (Upgrade Envoy)
 
 git_repository(
     name = "solo_envoy_common",
