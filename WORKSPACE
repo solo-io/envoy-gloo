@@ -1,6 +1,6 @@
 workspace(name="solo_envoy_common")
 
-ENVOY_SHA = "7caa887200d9b2f0df6eb7e5de1912307bf962d3"  # July 16, 2018 (fuzz: server config validation fuzz test. (#3770))
+ENVOY_SHA = "45b90082918b4aed4e3c53a2a5cf79ba1b206505"  # 2018-08-10
 
 http_archive(
     name = "envoy",
