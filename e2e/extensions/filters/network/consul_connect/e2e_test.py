@@ -113,13 +113,19 @@ class ConsulConnectTestCase(unittest.TestCase):
     return self.__write_temp_file(raw_yaml, suffix='.yaml')
 
   def __start_consul(self):
-    consul_path = "./e2e/consul"
+    consul_path = "./e2e/extensions/filters/network/consul_connect/consul"
     if not os.path.isfile(consul_path):
       self.fail('"consul" was not found')
-    self.consul = subprocess.Popen([consul_path, "agent", "-dev", "-config-dir=./e2e/etc/consul.d"])
+    args = [
+      consul_path,
+      "agent",
+      "-dev",
+      "-config-dir=./e2e/extensions/filters/network/consul_connect/etc/consul.d"
+    ]
+    self.consul = subprocess.Popen(args)
 
   def __start_authorize_endpoint(self):
-    for authorize_endpoint_path in ("./authorize_endpoint.py", "./e2e/authorize_endpoint.py"):
+    for authorize_endpoint_path in ("./e2e/extensions/filters/network/consul_connect/authorize_endpoint.py", ):
       if os.path.isfile(authorize_endpoint_path):
         self.authorize_endpoint = subprocess.Popen([authorize_endpoint_path])
         break
@@ -127,7 +133,7 @@ class ConsulConnectTestCase(unittest.TestCase):
       self.fail('"authorize_endpoint.py" was not found')
 
   def __start_upstream(self):
-    for upstream_path in ("./upstream.py", "./e2e/upstream.py"):
+    for upstream_path in ("./e2e/extensions/filters/network/consul_connect/upstream.py", ):
       if os.path.isfile(upstream_path):
         self.upstream = subprocess.Popen([upstream_path])
         break

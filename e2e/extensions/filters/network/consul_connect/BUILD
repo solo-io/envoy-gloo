@@ -20,8 +20,8 @@ py_test(
         "upstream.py",
     ],
     data = [
+        "consul",
+        "etc/consul.d/redis.json",
         "//:envoy",
-        "//e2e:consul",
-        "//e2e:etc/consul.d/redis.json",
     ],
 )
