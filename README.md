@@ -42,7 +42,7 @@ $ CXX=clang++-5.0 CC=clang-5.0 bazel test -c dbg --config=clang-tsan //test/...
 The e2e test requires a Consul binary, which should be deployed in the following path:
 
 ```
-./e2e/consul
+./e2e/extensions/filters/network/consul_connect/consul
 ```
 
 It also requires the [Requests](https://pypi.org/project/requests/) Python package.
