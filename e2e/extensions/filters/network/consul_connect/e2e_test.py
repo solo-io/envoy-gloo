@@ -83,6 +83,8 @@ def envoy_preexec_fn():
   libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
 
 class ConsulConnectTestCase(unittest.TestCase):
+  ARTIFACT_ROOT_PATH = "./e2e/extensions/filters/network/consul_connect"
+
   def setUp(self):
     self.cleanup()
 
@@ -112,33 +114,25 @@ class ConsulConnectTestCase(unittest.TestCase):
     raw_yaml = raw_yaml_template % root_crt_filename
     return self.__write_temp_file(raw_yaml, suffix='.yaml')
 
+  def __join_artifact_path(self, path):
+    joined_path = os.path.join(ConsulConnectTestCase.ARTIFACT_ROOT_PATH, path)
+    if not os.path.exists(joined_path):
+      self.fail('"{}" was not found'.format(path))
+    return joined_path
+
   def __start_consul(self):
-    consul_path = "./e2e/extensions/filters/network/consul_connect/consul"
-    if not os.path.isfile(consul_path):
-      self.fail('"consul" was not found')
-    args = [
-      consul_path,
-      "agent",
-      "-dev",
-      "-config-dir=./e2e/extensions/filters/network/consul_connect/etc/consul.d"
-    ]
+    consul_path = self.__join_artifact_path("consul")
+    consul_d_path = self.__join_artifact_path("etc/consul.d")
+    args = [consul_path, "agent", "-dev", "-config-dir={}".format(consul_d_path)]
     self.consul = subprocess.Popen(args)
 
   def __start_authorize_endpoint(self):
-    for authorize_endpoint_path in ("./e2e/extensions/filters/network/consul_connect/authorize_endpoint.py", ):
-      if os.path.isfile(authorize_endpoint_path):
-        self.authorize_endpoint = subprocess.Popen([authorize_endpoint_path])
-        break
-    else:
-      self.fail('"authorize_endpoint.py" was not found')
+    authorize_endpoint_path = self.__join_artifact_path("authorize_endpoint.py")
+    self.authorize_endpoint = subprocess.Popen([authorize_endpoint_path])
 
   def __start_upstream(self):
-    for upstream_path in ("./e2e/extensions/filters/network/consul_connect/upstream.py", ):
-      if os.path.isfile(upstream_path):
-        self.upstream = subprocess.Popen([upstream_path])
-        break
-    else:
-      self.fail('"upstream.py" was not found')
+    upstream_path = self.__join_artifact_path("upstream.py")
+    self.upstream = subprocess.Popen([upstream_path])
 
   def __start_envoy(self, yaml_filename,  prefix = None, suffix = None):
     if prefix is None:
