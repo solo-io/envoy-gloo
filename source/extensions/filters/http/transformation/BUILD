@@ -23,7 +23,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//:transformation_filter_proto_cc",
-        "//source/common/config:transformation_well_known_names_lib",
+        "//source/extensions/filters/http:transformation_well_known_names_lib",
         "@envoy//include/envoy/router:router_interface",
     ],
 )

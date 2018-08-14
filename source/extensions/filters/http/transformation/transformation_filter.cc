@@ -3,12 +3,12 @@
 #include "common/common/empty_string.h"
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
-#include "common/config/transformation_well_known_names.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/transformation_well_known_names.h"
 
 namespace Envoy {
 namespace Http {

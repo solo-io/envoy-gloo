@@ -1,5 +1,6 @@
 #include "common/config/metadata.h"
-#include "common/config/transformation_well_known_names.h"
+
+#include "extensions/filters/http/transformation_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"

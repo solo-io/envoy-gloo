@@ -4,9 +4,8 @@
 
 #include "envoy/server/filter_config.h"
 
-#include "common/config/transformation_well_known_names.h"
-
 #include "extensions/filters/http/common/factory_base.h"
+#include "extensions/filters/http/transformation_well_known_names.h"
 
 #include "transformation_filter.pb.validate.h"
 
