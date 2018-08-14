@@ -1,4 +1,7 @@
-workspace(name="solo_envoy_common")
+workspace(name="envoy_gloo")
+
+# Use skylark for native Git.
+load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
 ENVOY_SHA = "45b90082918b4aed4e3c53a2a5cf79ba1b206505"  # 2018-08-10
 
@@ -6,6 +9,14 @@ http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
+)
+
+ENVOY_COMMON_SHA = "79194c3b1ce1d5c7e5bb84ada2cc757efef36180"  # July 15, 2018 (Upgrade Envoy)
+
+git_repository(
+    name = "solo_envoy_common",
+    remote = "git@github.com:solo-io/envoy-common",
+    commit = ENVOY_COMMON_SHA,
 )
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
