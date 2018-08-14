@@ -26,6 +26,7 @@ envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
     deps = [
+        "//source/extensions/filters/http/aws:lambda_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
