@@ -22,11 +22,17 @@ api_proto_library(
     srcs = ["functional_base.proto"],
 )
 
+api_proto_library(
+    name = "transformation_filter_proto",
+    srcs = ["transformation_filter.proto"],
+)
+
 envoy_cc_binary(
     name = "envoy",
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/aws:lambda_filter_config_lib",
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
