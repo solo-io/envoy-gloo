@@ -1,4 +1,4 @@
-#include "server/config/http/transformation_filter_config_factory.h"
+#include "extensions/filters/http/transformation/transformation_filter_config_factory.h"
 
 #include <string>
 
@@ -6,10 +6,11 @@
 
 #include "common/common/macros.h"
 #include "common/config/json_utility.h"
-#include "common/http/filter/transformation_filter.h"
-#include "common/http/filter/transformation_filter_config.h"
 #include "common/http/functional_stream_decoder_base.h"
 #include "common/protobuf/utility.h"
+
+#include "extensions/filters/http/transformation/transformation_filter.h"
+#include "extensions/filters/http/transformation/transformation_filter_config.h"
 
 #include "transformation_filter.pb.h"
 

@@ -22,7 +22,7 @@ envoy_cc_library(
     repository = "@envoy",
     visibility = ["//visibility:public"],
     deps = [
-        "//source/server/config/http:transformation_filter_config_lib",
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
     ],
 )
 

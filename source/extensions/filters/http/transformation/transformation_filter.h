@@ -4,7 +4,8 @@
 #include "envoy/server/filter_config.h"
 
 #include "common/buffer/buffer_impl.h"
-#include "common/http/filter/transformation_filter_config.h"
+
+#include "extensions/filters/http/transformation/transformation_filter_config.h"
 
 #include "transformation_filter.pb.h"
 

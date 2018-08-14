@@ -1,4 +1,4 @@
-#include "common/http/filter/body_header_transformer.h"
+#include "extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "common/http/headers.h"
 

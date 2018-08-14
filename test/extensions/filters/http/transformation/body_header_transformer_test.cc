@@ -1,5 +1,6 @@
 #include "common/buffer/buffer_impl.h"
-#include "common/http/filter/body_header_transformer.h"
+
+#include "extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "test/test_common/utility.h"
 

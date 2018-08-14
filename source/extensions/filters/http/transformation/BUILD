@@ -38,9 +38,9 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//source/common/http/filter:body_header_transformer_lib",
-        "//source/common/http/filter:transformation_filter_config",
-        "//source/common/http/filter:transformer_lib",
+        ":body_header_transformer_lib",
+        ":transformation_filter_config",
+        ":transformer_lib",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",
         "@envoy//source/common/http:utility_lib",
@@ -82,5 +82,18 @@ envoy_cc_library(
         "@envoy//source/common/protobuf",
         "@inja//:inja-lib",
         "@json//:json-lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "transformation_filter_config_lib",
+    srcs = ["transformation_filter_config_factory.cc"],
+    hdrs = ["transformation_filter_config_factory.h"],
+    repository = "@envoy",
+    deps = [
+        ":transformation_filter_lib",
+        "@envoy//source/common/config:json_utility_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
+        "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
     ],
 )

@@ -1,4 +1,4 @@
-#include "common/http/filter/transformer.h"
+#include "extensions/filters/http/transformation/transformer.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"

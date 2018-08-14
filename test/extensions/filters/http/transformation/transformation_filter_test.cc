@@ -1,7 +1,7 @@
 #include "common/config/transformation_well_known_names.h"
-#include "common/http/filter/transformation_filter.h"
 
-#include "server/config/http/transformation_filter_config_factory.h"
+#include "extensions/filters/http/transformation/transformation_filter.h"
+#include "extensions/filters/http/transformation/transformation_filter_config_factory.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
