@@ -8,7 +8,7 @@ namespace Envoy {
 namespace Config {
 
 // TODO(talnordan): TODO: Merge with
-// envoy/source/common/config/well_known_names.h.
+// envoy/source/extensions/filters/http/well_known_names.h.
 
 /**
  * Well-known http filter names.

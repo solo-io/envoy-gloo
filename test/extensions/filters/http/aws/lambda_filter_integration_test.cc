@@ -1,5 +1,6 @@
-#include "common/config/lambda_well_known_names.h"
 #include "common/config/metadata.h"
+
+#include "extensions/filters/http/lambda_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"

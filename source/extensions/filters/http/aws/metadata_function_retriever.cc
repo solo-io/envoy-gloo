@@ -1,8 +1,9 @@
 #include "extensions/filters/http/aws/metadata_function_retriever.h"
 
 #include "common/common/macros.h"
-#include "common/config/lambda_well_known_names.h"
 #include "common/config/solo_metadata.h"
+
+#include "extensions/filters/http/lambda_well_known_names.h"
 
 namespace Envoy {
 namespace Http {

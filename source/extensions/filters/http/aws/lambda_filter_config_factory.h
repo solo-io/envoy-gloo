@@ -1,8 +1,7 @@
 #pragma once
 
-#include "common/config/lambda_well_known_names.h"
-
 #include "extensions/filters/http/common/empty_http_filter_config.h"
+#include "extensions/filters/http/lambda_well_known_names.h"
 
 namespace Envoy {
 namespace Server {
