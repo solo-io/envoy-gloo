@@ -1,16 +1,15 @@
 import contextlib
-import ctypes
-import ctypes.util
 import httplib
 import json
 import logging
 import os
 import requests
-import signal
 import subprocess
 import tempfile
 import time
 import unittest
+
+from e2e.extensions.filters.common import filtertest
 
 
 raw_yaml_template = r"""admin:
@@ -76,30 +75,10 @@ static_resources:
     type: STRICT_DNS
 """
 
-def envoy_preexec_fn():
-  PR_SET_PDEATHSIG = 1  # See prtcl(2).
-  os.setpgrp()
-  libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-  libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
-
-class ConsulConnectTestCase(unittest.TestCase):
-  ARTIFACT_ROOT_PATH = "./e2e/extensions/filters/network/consul_connect"
-
-  def setUp(self):
-    self.cleanup()
-
-  def tearDown(self):
-    for p in self.processes.values():
-      p.terminate()
-    if self.envoy is not None:
-      self.envoy.send_signal(signal.SIGINT)
-      self.envoy.wait()
-
-    self.cleanup()
-
-  def cleanup(self):
-    self.processes = {}
-    self.envoy = None
+class ConsulConnectTestCase(filtertest.TestCase):
+  def __init__(self, *args, **kwargs):
+    artifact_root_path = "./e2e/extensions/filters/network/consul_connect"
+    super(ConsulConnectTestCase, self).__init__(artifact_root_path, *args, **kwargs)
 
   def __write_temp_file(self, str, suffix=''):
     write_file = tempfile.NamedTemporaryFile('w', suffix=suffix)
@@ -111,36 +90,19 @@ class ConsulConnectTestCase(unittest.TestCase):
     raw_yaml = raw_yaml_template % root_crt_filename
     return self.__write_temp_file(raw_yaml, suffix='.yaml')
 
-  def __join_artifact_path(self, path):
-    joined_path = os.path.join(ConsulConnectTestCase.ARTIFACT_ROOT_PATH, path)
-    if not os.path.exists(joined_path):
-      self.fail('"{}" was not found'.format(path))
-    return joined_path
-
   def __start_consul(self):
-    consul_path = self.__join_artifact_path("consul")
-    consul_d_path = self.__join_artifact_path("etc/consul.d")
+    consul_path = self._join_artifact_path("consul")
+    consul_d_path = self._join_artifact_path("etc/consul.d")
     args = [consul_path, "agent", "-dev", "-config-dir={}".format(consul_d_path)]
-    self.processes["consul"] = subprocess.Popen(args)
+    self._processes["consul"] = subprocess.Popen(args)
 
   def __start_authorize_endpoint(self):
-    authorize_endpoint_path = self.__join_artifact_path("authorize_endpoint.py")
-    self.processes["authorize_endpoint"] = subprocess.Popen([authorize_endpoint_path])
+    authorize_endpoint_path = self._join_artifact_path("authorize_endpoint.py")
+    self._processes["authorize_endpoint"] = subprocess.Popen([authorize_endpoint_path])
 
   def __start_upstream(self):
-    upstream_path = self.__join_artifact_path("upstream.py")
-    self.processes["upstream"] = subprocess.Popen([upstream_path])
-
-  def __start_envoy(self, yaml_filename,  prefix = None, suffix = None):
-    if prefix is None:
-      prefix = []
-    if suffix is None:
-      suffix = suffix = ["--log-level", "debug"] if DEBUG else []
-
-    envoy = os.environ.get("TEST_ENVOY_BIN","envoy")
-
-    self.envoy = subprocess.Popen(prefix + [envoy, "-c", yaml_filename]+suffix, preexec_fn=envoy_preexec_fn)
-    time.sleep(5)
+    upstream_path = self._join_artifact_path("upstream.py")
+    self._processes["upstream"] = subprocess.Popen([upstream_path])
 
   def __get_parsed_json(self, url):
     response = requests.get(url)
@@ -208,7 +170,7 @@ class ConsulConnectTestCase(unittest.TestCase):
     # Set up Envoy.
     with self.__get_root_crt_file() as root_crt_file:
       with self.__create_config(root_crt_file.name) as yaml_file:
-        self.__start_envoy(yaml_file.name)
+        self._start_envoy(yaml_file.name, DEBUG)
 
     # Set up upstream.
     self.__start_upstream()

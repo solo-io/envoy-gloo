@@ -24,4 +24,7 @@ py_test(
         "etc/consul.d/redis.json",
         "//:envoy",
     ],
+    deps = [
+        "//e2e/extensions/filters/common:filtertest_lib",
+    ],
 )
