@@ -89,9 +89,8 @@ class ConsulConnectTestCase(unittest.TestCase):
     self.cleanup()
 
   def tearDown(self):
-    for p in (self.authorize_endpoint, self.consul, self.upstream):
-      if p is not None:
-        p.terminate()
+    for p in self.processes.values():
+      p.terminate()
     if self.envoy is not None:
       self.envoy.send_signal(signal.SIGINT)
       self.envoy.wait()
@@ -99,9 +98,7 @@ class ConsulConnectTestCase(unittest.TestCase):
     self.cleanup()
 
   def cleanup(self):
-    self.authorize_endpoint = None
-    self.consul = None
-    self.upstream = None
+    self.processes = {}
     self.envoy = None
 
   def __write_temp_file(self, str, suffix=''):
@@ -124,15 +121,15 @@ class ConsulConnectTestCase(unittest.TestCase):
     consul_path = self.__join_artifact_path("consul")
     consul_d_path = self.__join_artifact_path("etc/consul.d")
     args = [consul_path, "agent", "-dev", "-config-dir={}".format(consul_d_path)]
-    self.consul = subprocess.Popen(args)
+    self.processes["consul"] = subprocess.Popen(args)
 
   def __start_authorize_endpoint(self):
     authorize_endpoint_path = self.__join_artifact_path("authorize_endpoint.py")
-    self.authorize_endpoint = subprocess.Popen([authorize_endpoint_path])
+    self.processes["authorize_endpoint"] = subprocess.Popen([authorize_endpoint_path])
 
   def __start_upstream(self):
     upstream_path = self.__join_artifact_path("upstream.py")
-    self.upstream = subprocess.Popen([upstream_path])
+    self.processes["upstream"] = subprocess.Popen([upstream_path])
 
   def __start_envoy(self, yaml_filename,  prefix = None, suffix = None):
     if prefix is None:
