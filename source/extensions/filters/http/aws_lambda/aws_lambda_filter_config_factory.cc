@@ -1,8 +1,8 @@
-#include "extensions/filters/http/aws/lambda_filter_config_factory.h"
+#include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
 
 #include "envoy/registry/registry.h"
 
-#include "extensions/filters/http/aws/lambda_filter.h"
+#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 #include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 namespace Envoy {

@@ -10,11 +10,11 @@ load(
 envoy_package()
 
 envoy_cc_test(
-    name = "lambda_filter_test",
-    srcs = ["lambda_filter_test.cc"],
+    name = "aws_lambda_filter_test",
+    srcs = ["aws_lambda_filter_test.cc"],
     repository = "@envoy",
     deps = [
-        "//source/extensions/filters/http/aws:lambda_filter_config_lib",
+        "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
@@ -27,7 +27,7 @@ envoy_cc_test(
     srcs = ["aws_authenticator_test.cc"],
     repository = "@envoy",
     deps = [
-        "//source/extensions/filters/http/aws:aws_authenticator_lib",
+        "//source/extensions/filters/http/aws_lambda:aws_authenticator_lib",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
@@ -36,11 +36,11 @@ envoy_cc_test(
 )
 
 envoy_cc_test(
-    name = "lambda_filter_integration_test",
-    srcs = ["lambda_filter_integration_test.cc"],
+    name = "aws_lambda_filter_integration_test",
+    srcs = ["aws_lambda_filter_integration_test.cc"],
     repository = "@envoy",
     deps = [
-        "//source/extensions/filters/http/aws:lambda_filter_config_lib",
+        "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
     ],

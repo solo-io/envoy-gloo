@@ -7,7 +7,7 @@
 #include "envoy/http/metadata_accessor.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "extensions/filters/http/aws/aws_authenticator.h"
+#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 namespace Envoy {

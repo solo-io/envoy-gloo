@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "extensions/filters/http/aws/function_retriever.h"
+#include "extensions/filters/http/aws_lambda/function_retriever.h"
 
 #include "gmock/gmock.h"
 

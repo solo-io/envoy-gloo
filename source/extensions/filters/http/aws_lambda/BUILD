@@ -31,12 +31,12 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "lambda_filter_lib",
+    name = "aws_lambda_filter_lib",
     srcs = [
-        "lambda_filter.cc",
+        "aws_lambda_filter.cc",
     ],
     hdrs = [
-        "lambda_filter.h",
+        "aws_lambda_filter.h",
     ],
     repository = "@envoy",
     deps = [
@@ -50,12 +50,12 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "lambda_filter_config_lib",
-    srcs = ["lambda_filter_config_factory.cc"],
-    hdrs = ["lambda_filter_config_factory.h"],
+    name = "aws_lambda_filter_config_lib",
+    srcs = ["aws_lambda_filter_config_factory.cc"],
+    hdrs = ["aws_lambda_filter_config_factory.h"],
     repository = "@envoy",
     deps = [
-        ":lambda_filter_lib",
+        ":aws_lambda_filter_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
         "@envoy//include/envoy/registry:registry",
     ],
