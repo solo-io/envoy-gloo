@@ -1,5 +1,4 @@
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
-#include "extensions/filters/http/aws_lambda_well_known_names.h"
 
 #include <algorithm>
 #include <list>
@@ -16,6 +15,8 @@
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
+#include "extensions/filters/http/aws_lambda_well_known_names.h"
+
 namespace Envoy {
 namespace Http {
 
@@ -25,7 +26,7 @@ const std::string AWSLambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
 const LowerCaseString AWSLambdaFilter::LOG_TYPE("x-amz-log-type");
 const std::string AWSLambdaFilter::LOG_NONE("None");
 
-AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager& cluster_manager)
+AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
     : cluster_manager_(cluster_manager) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
@@ -35,7 +36,7 @@ std::string AWSLambdaFilter::functionUrlPath() {
   std::stringstream val;
   val << "/2015-03-31/functions/" << (function_on_route_->name())
       << "/invocations";
-  const auto& qualifier = function_on_route_->qualifier();
+  const auto &qualifier = function_on_route_->qualifier();
   if (!qualifier.empty()) {
     val << "?Qualifier=" << qualifier;
   }
@@ -43,20 +44,25 @@ std::string AWSLambdaFilter::functionUrlPath() {
 }
 
 FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
-                                                bool end_stream) {
+                                                   bool end_stream) {
 
-  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<const LambdaProtocolExtensionConfig>(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_, cluster_manager_);
-  if (! protocol_options_) {
+  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<
+      const LambdaProtocolExtensionConfig>(
+      Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_,
+      cluster_manager_);
+  if (!protocol_options_) {
     return FilterHeadersStatus::Continue;
   }
 
   route_ = decoder_callbacks_->route();
   // great! this is an aws cluster. get the function information:
-  function_on_route_ = SoloFilterUtility::resolvePerFilterConfig<LambdaRouteConfig>(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, route_);
+  function_on_route_ =
+      SoloFilterUtility::resolvePerFilterConfig<LambdaRouteConfig>(
+          Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, route_);
 
   if (!function_on_route_) {
-        decoder_callbacks_->sendLocalReply(Code::NotFound, "no function present for AWS upstream",
-                                       nullptr);
+    decoder_callbacks_->sendLocalReply(
+        Code::NotFound, "no function present for AWS upstream", nullptr);
     return FilterHeadersStatus::StopIteration;
   }
 
@@ -79,8 +85,8 @@ FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
 }
 
 FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
-                                          bool end_stream) {
-  if (! function_on_route_) {
+                                             bool end_stream) {
+  if (!function_on_route_) {
     return FilterDataStatus::Continue;
   }
 
@@ -95,7 +101,7 @@ FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 }
 
 FilterTrailersStatus AWSLambdaFilter::decodeTrailers(HeaderMap &) {
-  if (! function_on_route_) {
+  if (!function_on_route_) {
     return FilterTrailersStatus::Continue;
   }
 

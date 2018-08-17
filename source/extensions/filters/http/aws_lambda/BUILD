@@ -1,7 +1,7 @@
 licenses(["notice"])  # Apache 2
 
 load(
-    "@envoy//bazel:envoy_build_system.bzl",
+    "//bazel:envoy_build_system.bzl",
     "envoy_cc_binary",
     "envoy_cc_library",
     "envoy_cc_test",
@@ -19,14 +19,14 @@ envoy_cc_library(
     external_deps = ["ssl"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/buffer:buffer_interface",
-        "@envoy//include/envoy/http:header_map_interface",
-        "@envoy//source/common/common:assert_lib",
-        "@envoy//source/common/common:empty_string",
-        "@envoy//source/common/common:hex_lib",
-        "@envoy//source/common/config:json_utility_lib",
-        "@envoy//source/common/http:headers_lib",
-        "@envoy//source/common/http:utility_lib",
+        "//include/envoy/buffer:buffer_interface",
+        "//include/envoy/http:header_map_interface",
+        "//source/common/common:assert_lib",
+        "//source/common/common:empty_string",
+        "//source/common/common:hex_lib",
+        "//source/common/config:json_utility_lib",
+        "//source/common/http:headers_lib",
+        "//source/common/http:utility_lib",
     ],
 )
 
@@ -41,11 +41,11 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        "//source/extensions/filters/http:aws_lambda_well_known_names_lib",
         "//api/envoy/config/filter/http/aws/v2:lambda_proto_cc",
-        "@envoy//source/common/http:filter_utility_lib",
         "//include/envoy/http:metadata_accessor_interface",
+        "//source/common/http:filter_utility_lib",
         "//source/common/http:solo_filter_utility_lib",
+        "//source/extensions/filters/http:aws_lambda_well_known_names_lib",
     ],
 )
 
@@ -56,7 +56,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_lambda_filter_lib",
-        "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
-        "@envoy//include/envoy/registry:registry",
+        "//include/envoy/registry",
+        "//source/extensions/filters/http/common:empty_http_filter_config_lib",
     ],
 )

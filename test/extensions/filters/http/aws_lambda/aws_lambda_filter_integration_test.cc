@@ -1,11 +1,12 @@
 #include "common/config/metadata.h"
 
 #include "extensions/filters/http/aws_lambda_well_known_names.h"
-#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
+
+#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 namespace Envoy {
 
@@ -29,8 +30,8 @@ public:
 
     config_helper_.addConfigModifier(
         [](envoy::config::bootstrap::v2::Bootstrap &bootstrap) {
-
-          envoy::config::filter::http::aws::v2::LambdaProtocolExtension protoextconfig;
+          envoy::config::filter::http::aws::v2::LambdaProtocolExtension
+              protoextconfig;
           protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
           protoextconfig.set_region("us-east-1");
           protoextconfig.set_access_key("access key");
@@ -40,19 +41,15 @@ public:
           auto &lambda_cluster =
               (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
-          
-          auto &cluster_struct = (*lambda_cluster.mutable_extension_protocol_options())
-              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
+          auto &cluster_struct =
+              (*lambda_cluster.mutable_extension_protocol_options())
+                  [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
           MessageUtil::jsonConvert(protoextconfig, cluster_struct);
-
         });
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
                HttpConnectionManager &hcm) {
-
-
-
           auto &perFilterConfig = (*hcm.mutable_route_config()
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
@@ -64,7 +61,6 @@ public:
           proto_config.set_qualifier("v1");
 
           MessageUtil::jsonConvert(proto_config, perFilterConfig);
-
         });
 
     HttpIntegrationTest::initialize();

@@ -11,6 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::_;
 using testing::AtLeast;
 using testing::Invoke;
 using testing::Return;
@@ -18,7 +19,6 @@ using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
 using testing::WithArg;
-using testing::_;
 
 namespace Envoy {
 namespace Http {
@@ -31,39 +31,39 @@ public:
 
 protected:
   void SetUp() override {
-    
-  routeconfig_.set_name("func");
-  routeconfig_.set_qualifier("v1");
-  routeconfig_.set_async(false);
 
-  setup_func();
+    routeconfig_.set_name("func");
+    routeconfig_.set_qualifier("v1");
+    routeconfig_.set_async(false);
 
-  envoy::config::filter::http::aws::v2::LambdaProtocolExtension protoextconfig;
-  protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
-  protoextconfig.set_region("us-east-1");
-  protoextconfig.set_access_key("access key");
-  protoextconfig.set_secret_key("secret key");
+    setup_func();
 
-  ON_CALL(*factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
-            extensionProtocolOptions(
-                Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
-        .WillByDefault(Return(std::make_shared<LambdaProtocolExtensionConfig>(protoextconfig)));
+    envoy::config::filter::http::aws::v2::LambdaProtocolExtension
+        protoextconfig;
+    protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
+    protoextconfig.set_region("us-east-1");
+    protoextconfig.set_access_key("access key");
+    protoextconfig.set_secret_key("secret key");
 
+    ON_CALL(
+        *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
+        extensionProtocolOptions(
+            Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+        .WillByDefault(Return(
+            std::make_shared<LambdaProtocolExtensionConfig>(protoextconfig)));
 
-    filter_ = std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
+    filter_ =
+        std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
   void setup_func() {
-  
+
     filter_route_config_.reset(new LambdaRouteConfig(routeconfig_));
 
     ON_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(
-                  Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
-          .WillByDefault(Return(filter_route_config_.get()));
-
-
+            perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+        .WillByDefault(Return(filter_route_config_.get()));
   }
 
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
@@ -72,8 +72,6 @@ protected:
   std::unique_ptr<AWSLambdaFilter> filter_;
   envoy::config::filter::http::aws::v2::LambdaPerRoute routeconfig_;
   std::unique_ptr<LambdaRouteConfig> filter_route_config_;
-
-
 };
 
 // see:
@@ -95,7 +93,7 @@ TEST_F(AWSLambdaFilterTest, SingsOnDataEndStream) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
- 
+
   EXPECT_EQ(FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   EXPECT_FALSE(headers.has("Authorization"));
@@ -111,7 +109,7 @@ TEST_F(AWSLambdaFilterTest, CorrectFuncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
- 
+
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
@@ -129,12 +127,10 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
 
- 
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
-  EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() +
-                "/invocations",
+  EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() + "/invocations",
             headers.get_(":path"));
 }
 
@@ -144,7 +140,7 @@ TEST_F(AWSLambdaFilterTest, AsyncCalled) {
                             {":path", "/getsomething"}};
   routeconfig_.set_async(true);
   setup_func();
- 
+
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
@@ -157,7 +153,7 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
 
   routeconfig_.set_async(false);
   setup_func();
- 
+
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
@@ -168,7 +164,6 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
 
- 
   EXPECT_EQ(FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   Buffer::OwnedImpl data("data");
@@ -185,17 +180,16 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-            perFilterConfig(
-                Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
-    .WillRepeatedly(Return(nullptr));
+  EXPECT_CALL(
+      filter_callbacks_.route_->route_entry_,
+      perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+      .WillRepeatedly(Return(nullptr));
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
   EXPECT_EQ(FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
-
 }
 
 } // namespace Http
