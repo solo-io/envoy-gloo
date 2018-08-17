@@ -101,11 +101,9 @@ FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 }
 
 FilterTrailersStatus AWSLambdaFilter::decodeTrailers(HeaderMap &) {
-  if (!function_on_route_) {
-    return FilterTrailersStatus::Continue;
+  if (function_on_route_ != nullptr) {
+    lambdafy();
   }
-
-  lambdafy();
 
   return FilterTrailersStatus::Continue;
 }
