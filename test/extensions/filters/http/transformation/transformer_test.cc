@@ -8,6 +8,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using testing::_;
 using testing::AtLeast;
 using testing::HasSubstr;
 using testing::Invoke;
@@ -16,7 +17,6 @@ using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
 using testing::WithArg;
-using testing::_;
 
 using json = nlohmann::json;
 

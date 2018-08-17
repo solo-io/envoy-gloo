@@ -33,7 +33,6 @@ public:
     config_helper_.addConfigModifier(
         [this](envoy::config::filter::network::http_connection_manager::v2::
                    HttpConnectionManager &hcm) {
-
           auto &perFilterConfig = (*hcm.mutable_route_config()
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
@@ -57,7 +56,6 @@ public:
           transform.mutable_body()->set_text("abc {{extraction(\"ext1\")}}");
 
           MessageUtil::jsonConvert(proto_config, perFilterConfig);
-
         });
 
     HttpIntegrationTest::initialize();

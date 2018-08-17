@@ -16,10 +16,10 @@ namespace Http {
  * Translation we can be used either as a functional filter, or a non functional
  * filter.
  */
-class TransformationFilterBase : public StreamFilter {
+class TransformationFilter : public StreamFilter {
 public:
-  TransformationFilterBase(TransformationFilterConfigConstSharedPtr config);
-  ~TransformationFilterBase();
+  TransformationFilter();
+  ~TransformationFilter();
 
   // Http::FunctionalFilterBase
   void onDestroy() override;
@@ -50,7 +50,7 @@ public:
     encoder_buffer_limit_ = callbacks.encoderBufferLimit();
   };
 
-protected:
+private:
   enum class Error {
     PayloadTooLarge,
     JsonParseError,
@@ -68,10 +68,6 @@ protected:
   virtual void checkRequestActive();
   virtual void checkResponseActive();
 
-  virtual const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRouteEntry(const Router::RouteEntry *routeEntry,
-                             Direction direction) PURE;
-
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
   void requestError();
@@ -79,9 +75,6 @@ protected:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  TransformationFilterConfigConstSharedPtr config_;
-
-private:
   static bool
   isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
     if (t.transformation_type_case() ==
@@ -102,15 +95,15 @@ private:
   void transformSomething(
       const envoy::api::v2::filter::http::Transformation **transformation,
       HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilterBase::*responeWithError)(),
-      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+      void (TransformationFilter::*responeWithError)(),
+      void (TransformationFilter::*addData)(Buffer::Instance &));
   void transformTemplate(
       const envoy::api::v2::filter::http::TransformationTemplate &,
       HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+      void (TransformationFilter::*addData)(Buffer::Instance &));
   void transformBodyHeaderTransformer(
       HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilterBase::*addData)(Buffer::Instance &));
+      void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
 
@@ -131,36 +124,6 @@ private:
   absl::optional<Error> error_;
   Code error_code_;
   std::string error_messgae_;
-};
-
-class TransformationFilter : public TransformationFilterBase {
-public:
-  using TransformationFilterBase::TransformationFilterBase;
-
-protected:
-  const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRouteEntry(
-      const Router::RouteEntry *routeEntry,
-      TransformationFilterBase::Direction direction) override;
-};
-
-class FunctionalTransformationFilter : public TransformationFilterBase,
-                                       public FunctionalFilter {
-public:
-  using TransformationFilterBase::TransformationFilterBase;
-
-  // Http::FunctionalFilter
-  bool retrieveFunction(const MetadataAccessor &meta_accessor) override;
-
-protected:
-  virtual void checkRequestActive() override;
-  const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRouteEntry(
-      const Router::RouteEntry *routeEntry,
-      TransformationFilterBase::Direction direction) override;
-
-private:
-  absl::optional<const std::string *> current_function_{};
 };
 
 } // namespace Http

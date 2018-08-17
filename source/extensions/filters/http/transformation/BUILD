@@ -14,9 +14,6 @@ load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 envoy_cc_library(
     name = "transformation_filter_config",
-    srcs = [
-        "transformation_filter_config.cc",
-    ],
     hdrs = [
         "transformation_filter_config.h",
     ],
@@ -93,7 +90,8 @@ envoy_cc_library(
     deps = [
         ":transformation_filter_lib",
         "@envoy//source/common/config:json_utility_lib",
+        "@envoy//include/envoy/registry:registry",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
-        "//source/common/http:functional_stream_decoder_base_lib",
+        "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
     ],
 )

@@ -4,6 +4,7 @@
 
 #include "envoy/server/filter_config.h"
 
+#include "extensions/filters/http/common/empty_http_filter_config.h"
 #include "extensions/filters/http/common/factory_base.h"
 #include "extensions/filters/http/transformation_well_known_names.h"
 
@@ -13,24 +14,20 @@ namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-using Extensions::HttpFilters::Common::FactoryBase;
+using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 
-class TransformationFilterConfigFactory
-    : public FactoryBase<envoy::api::v2::filter::http::Transformations,
-                         envoy::api::v2::filter::http::RouteTransformations> {
+class TransformationFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   TransformationFilterConfigFactory()
-      : FactoryBase(Config::TransformationFilterNames::get().TRANSFORMATION) {}
+      : EmptyHttpFilterConfig(
+            Config::TransformationFilterNames::get().TRANSFORMATION) {}
 
-private:
-  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const envoy::api::v2::filter::http::Transformations &proto_config,
-      const std::string &stats_prefix, FactoryContext &context) override;
-
+  ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
   Router::RouteSpecificFilterConfigConstSharedPtr
-  createRouteSpecificFilterConfigTyped(
-      const envoy::api::v2::filter::http::RouteTransformations &proto_config,
-      FactoryContext &context) override;
+  createRouteSpecificFilterConfig(const Protobuf::Message &,
+                                  FactoryContext &) override;
+  Http::FilterFactoryCb createFilter(const std::string &stat_prefix,
+                                     FactoryContext &context) override;
 };
 
 } // namespace Configuration
