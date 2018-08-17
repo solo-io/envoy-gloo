@@ -9,15 +9,15 @@
 
 #include "extensions/filters/http/aws_lambda/aws_authenticator.h"
 
-#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
+#include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
 namespace Http {
 
-class LambdaRouteConfig : public Router::RouteSpecificFilterConfig {
+class AWSLambdaRouteConfig : public Router::RouteSpecificFilterConfig {
 public:
-  LambdaRouteConfig(
-      const envoy::config::filter::http::aws::v2::LambdaPerRoute &protoconfig)
+  AWSLambdaRouteConfig(
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &protoconfig)
       : name_(protoconfig.name()), qualifier_(protoconfig.qualifier()),
         async_(protoconfig.async()) {}
 
@@ -31,10 +31,10 @@ private:
   bool async_;
 };
 
-class LambdaProtocolExtensionConfig : public Upstream::ProtocolOptionsConfig {
+class AWSLambdaProtocolExtensionConfig : public Upstream::ProtocolOptionsConfig {
 public:
-  LambdaProtocolExtensionConfig(
-      const envoy::config::filter::http::aws::v2::LambdaProtocolExtension
+  AWSLambdaProtocolExtensionConfig(
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
           &protoconfig)
       : host_(protoconfig.host()), region_(protoconfig.region()),
         access_key_(protoconfig.access_key()),
@@ -91,10 +91,10 @@ private:
   StreamDecoderFilterCallbacks *decoder_callbacks_{};
 
   Upstream::ClusterManager &cluster_manager_;
-  std::shared_ptr<const LambdaProtocolExtensionConfig> protocol_options_;
+  std::shared_ptr<const AWSLambdaProtocolExtensionConfig> protocol_options_;
 
   Router::RouteConstSharedPtr route_;
-  const LambdaRouteConfig *function_on_route_{};
+  const AWSLambdaRouteConfig *function_on_route_{};
 };
 
 } // namespace Http

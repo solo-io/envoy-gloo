@@ -38,7 +38,7 @@ protected:
 
     setup_func();
 
-    envoy::config::filter::http::aws::v2::LambdaProtocolExtension
+    envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
         protoextconfig;
     protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
     protoextconfig.set_region("us-east-1");
@@ -50,7 +50,7 @@ protected:
         extensionProtocolOptions(
             Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
         .WillByDefault(Return(
-            std::make_shared<LambdaProtocolExtensionConfig>(protoextconfig)));
+            std::make_shared<AWSLambdaProtocolExtensionConfig>(protoextconfig)));
 
     filter_ =
         std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
@@ -59,7 +59,7 @@ protected:
 
   void setup_func() {
 
-    filter_route_config_.reset(new LambdaRouteConfig(routeconfig_));
+    filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
 
     ON_CALL(filter_callbacks_.route_->route_entry_,
             perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
@@ -70,8 +70,8 @@ protected:
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
   std::unique_ptr<AWSLambdaFilter> filter_;
-  envoy::config::filter::http::aws::v2::LambdaPerRoute routeconfig_;
-  std::unique_ptr<LambdaRouteConfig> filter_route_config_;
+  envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute routeconfig_;
+  std::unique_ptr<AWSLambdaRouteConfig> filter_route_config_;
 };
 
 // see:

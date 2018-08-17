@@ -4,7 +4,7 @@
 
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 
-#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
+#include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
 namespace Server {
@@ -24,30 +24,30 @@ Upstream::ProtocolOptionsConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
     const Protobuf::Message &config) {
   const auto &proto_config = dynamic_cast<
-      const envoy::config::filter::http::aws::v2::LambdaProtocolExtension &>(
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension &>(
       config);
-  return std::make_shared<const Http::LambdaProtocolExtensionConfig>(
+  return std::make_shared<const Http::AWSLambdaProtocolExtensionConfig>(
       proto_config);
 }
 
 ProtobufTypes::MessagePtr
 AWSLambdaFilterConfigFactory::createEmptyProtocolOptionsProto() {
   return std::make_unique<
-      envoy::config::filter::http::aws::v2::LambdaProtocolExtension>();
+      envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension>();
 }
 
 ProtobufTypes::MessagePtr
 AWSLambdaFilterConfigFactory::createEmptyRouteConfigProto() {
   return std::make_unique<
-      envoy::config::filter::http::aws::v2::LambdaPerRoute>();
+      envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute>();
 }
 
 Router::RouteSpecificFilterConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfig(
     const Protobuf::Message &config, FactoryContext &) {
   const auto &proto_config = dynamic_cast<
-      const envoy::config::filter::http::aws::v2::LambdaPerRoute &>(config);
-  return std::make_shared<const Http::LambdaRouteConfig>(proto_config);
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &>(config);
+  return std::make_shared<const Http::AWSLambdaRouteConfig>(proto_config);
 }
 
 /**

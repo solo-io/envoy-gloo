@@ -41,7 +41,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        "//api/envoy/config/filter/http/aws/v2:lambda_proto_cc",
+        "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
         "//include/envoy/http:metadata_accessor_interface",
         "@envoy//source/common/http:filter_utility_lib",
         "//source/common/http:solo_filter_utility_lib",

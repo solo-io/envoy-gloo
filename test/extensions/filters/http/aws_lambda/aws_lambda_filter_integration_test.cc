@@ -6,7 +6,7 @@
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
-#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
+#include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
 
@@ -30,7 +30,7 @@ public:
 
     config_helper_.addConfigModifier(
         [](envoy::config::bootstrap::v2::Bootstrap &bootstrap) {
-          envoy::config::filter::http::aws::v2::LambdaProtocolExtension
+          envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
               protoextconfig;
           protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
           protoextconfig.set_region("us-east-1");
@@ -56,7 +56,7 @@ public:
                                         ->mutable_per_filter_config())
               [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
 
-          envoy::config::filter::http::aws::v2::LambdaPerRoute proto_config;
+          envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute proto_config;
           proto_config.set_name("FunctionName");
           proto_config.set_qualifier("v1");
 

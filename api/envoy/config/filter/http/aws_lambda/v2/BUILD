@@ -10,6 +10,6 @@ envoy_package()
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 api_proto_library(
-    name = "lambda_proto",
-    srcs = ["lambda.proto"],
+    name = "aws_lambda_proto",
+    srcs = ["aws_lambda.proto"],
 )

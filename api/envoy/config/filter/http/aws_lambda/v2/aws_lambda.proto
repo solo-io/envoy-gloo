@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package envoy.config.filter.http.aws.v2;
+package envoy.config.filter.http.aws_lambda.v2;
 
 import "validate/validate.proto";
 
@@ -9,7 +9,7 @@ import "validate/validate.proto";
 
 // AWS Lambda contains the configuration necessary to perform transform regular
 // http calls to AWS Lambda invocations.
-message LambdaPerRoute {
+message AWSLambdaPerRoute {
   // The name of the function
   string name = 1 [ (validate.rules).string.min_bytes = 1 ];
   // The qualifier of the function (defualts to $LATEST if not specified)
@@ -19,7 +19,7 @@ message LambdaPerRoute {
   bool async = 3;
 }
 
-message LambdaProtocolExtension {
+message AWSLambdaProtocolExtension {
   // The host header for AWS this cluster
   string host = 1 [ (validate.rules).string.min_bytes = 1 ];
   // The region for this cluster
