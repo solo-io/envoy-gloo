@@ -1,7 +1,7 @@
 #pragma once
 
 #include "extensions/filters/http/common/empty_http_filter_config.h"
-#include "extensions/filters/http/lambda_well_known_names.h"
+#include "extensions/filters/http/aws_lambda_well_known_names.h"
 #include "envoy/upstream/upstream.h"
 
 namespace Envoy {

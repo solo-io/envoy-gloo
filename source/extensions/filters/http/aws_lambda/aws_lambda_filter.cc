@@ -1,5 +1,5 @@
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
-#include "extensions/filters/http/lambda_well_known_names.h"
+#include "extensions/filters/http/aws_lambda_well_known_names.h"
 
 #include <algorithm>
 #include <list>

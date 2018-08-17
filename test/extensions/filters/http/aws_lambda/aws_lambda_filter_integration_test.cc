@@ -1,6 +1,6 @@
 #include "common/config/metadata.h"
 
-#include "extensions/filters/http/lambda_well_known_names.h"
+#include "extensions/filters/http/aws_lambda_well_known_names.h"
 #include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 #include "test/integration/http_integration.h"
