@@ -31,12 +31,11 @@ AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
-std::string AWSLambdaFilter::functionUrlPath() {
+std::string AWSLambdaFilter::functionUrlPath(const std::string& name, const std::string& qualifier) {
 
   std::stringstream val;
-  val << "/2015-03-31/functions/" << (function_on_route_->name())
+  val << "/2015-03-31/functions/" << name
       << "/invocations";
-  const auto &qualifier = function_on_route_->qualifier();
   if (!qualifier.empty()) {
     val << "?Qualifier=" << qualifier;
   }
@@ -74,7 +73,7 @@ FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
       Headers::get().MethodValues.Post);
 
   //  request_headers_->removeContentLength();
-  request_headers_->insertPath().value(functionUrlPath());
+  request_headers_->insertPath().value(functionUrlPath(function_on_route_->name(), function_on_route_->qualifier()));
 
   if (end_stream) {
     lambdafy();

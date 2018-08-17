@@ -82,7 +82,7 @@ private:
   static const std::string LOG_NONE;
 
   void lambdafy();
-  std::string functionUrlPath();
+  static std::string functionUrlPath(const std::string& name, const std::string& qualifier);
   void cleanup();
 
   HeaderMap *request_headers_{};
