@@ -44,20 +44,18 @@ static_resources:
                   prefix: /lambda
                 route:
                   cluster: aws-us-east-1-lambda
-                metadata:
-                  filter_metadata:
-                      io.solo.function_router:
-                        aws-us-east-1-lambda:                     
-                          function: uppercase-v1
+                per_filter_config:
+                  io.solo.lambda:
+                    name: uppercase
+                    qualifier: "1"
               - match:
                   prefix: /latestlambda
                 route:
                   cluster: aws-us-east-1-lambda
-                metadata:
-                  filter_metadata:
-                      io.solo.function_router:
-                        aws-us-east-1-lambda:
-                          function: uppercase-latest
+                per_filter_config:
+                  io.solo.lambda:
+                    name: uppercase
+                    qualifier: "1"
           http_filters:
           - name: io.solo.lambda
           - name: envoy.router
@@ -79,18 +77,10 @@ static_resources:
     type: LOGICAL_DNS
     dns_lookup_family: V4_ONLY
     tls_context: {}
-    metadata:
-      filter_metadata:
-        io.solo.function_router:
-          functions:
-            uppercase-v1:
-              name: uppercase
-              qualifier: "1"
-            uppercase-latest:
-              name: uppercase
-        io.solo.lambda:
-          host: lambda.us-east-1.amazonaws.com
-          region: us-east-1
-          access_key: $(grep aws_access_key_id   ~/.aws/credentials | head -1 | cut -d= -f2)
-          secret_key: $(grep aws_secret_access_key  ~/.aws/credentials | head -1 | cut -d= -f2)
+    extension_protocol_options:
+      io.solo.lambda:
+        host: lambda.us-east-1.amazonaws.com
+        region: us-east-1
+        access_key: $(grep aws_access_key_id   ~/.aws/credentials | head -1 | cut -d= -f2)
+        secret_key: $(grep aws_secret_access_key  ~/.aws/credentials | head -1 | cut -d= -f2)
 EOF
