@@ -57,6 +57,6 @@ envoy_cc_library(
     deps = [
         ":lambda_filter_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
-        "//source/common/http:functional_stream_decoder_base_lib",
+        "@envoy//include/envoy/registry:registry",
     ],
 )
