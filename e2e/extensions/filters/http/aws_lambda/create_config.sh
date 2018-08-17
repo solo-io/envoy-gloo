@@ -45,7 +45,7 @@ static_resources:
                 route:
                   cluster: aws-us-east-1-lambda
                 per_filter_config:
-                  io.solo.lambda:
+                  io.solo.aws_lambda:
                     name: uppercase
                     qualifier: "1"
               - match:
@@ -53,11 +53,11 @@ static_resources:
                 route:
                   cluster: aws-us-east-1-lambda
                 per_filter_config:
-                  io.solo.lambda:
+                  io.solo.aws_lambda:
                     name: uppercase
                     qualifier: "1"
           http_filters:
-          - name: io.solo.lambda
+          - name: io.solo.aws_lambda
           - name: envoy.router
   clusters:
   - connect_timeout: 5.000s
@@ -78,7 +78,7 @@ static_resources:
     dns_lookup_family: V4_ONLY
     tls_context: {}
     extension_protocol_options:
-      io.solo.lambda:
+      io.solo.aws_lambda:
         host: lambda.us-east-1.amazonaws.com
         region: us-east-1
         access_key: $(grep aws_access_key_id   ~/.aws/credentials | head -1 | cut -d= -f2)

@@ -57,11 +57,11 @@ private:
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class LambdaFilter : public StreamDecoderFilter {
+class AWSLambdaFilter : public StreamDecoderFilter {
 public:
 
-  LambdaFilter(Upstream::ClusterManager& cluster_manager);
-  ~LambdaFilter();
+  AWSLambdaFilter(Upstream::ClusterManager& cluster_manager);
+  ~AWSLambdaFilter();
 
   // Http::StreamFilterBase
   void onDestroy() override {}

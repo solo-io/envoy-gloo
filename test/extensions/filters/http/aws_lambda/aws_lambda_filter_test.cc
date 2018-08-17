@@ -23,11 +23,11 @@ using testing::_;
 namespace Envoy {
 namespace Http {
 
-using Server::Configuration::LambdaFilterConfigFactory;
+using Server::Configuration::AWSLambdaFilterConfigFactory;
 
-class LambdaFilterTest : public testing::Test {
+class AWSLambdaFilterTest : public testing::Test {
 public:
-  LambdaFilterTest() {}
+  AWSLambdaFilterTest() {}
 
 protected:
   void SetUp() override {
@@ -46,11 +46,11 @@ protected:
 
   ON_CALL(*factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
             extensionProtocolOptions(
-                Config::LambdaHttpFilterNames::get().LAMBDA))
+                Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
         .WillByDefault(Return(std::make_shared<LambdaProtocolExtensionConfig>(protoextconfig)));
 
 
-    filter_ = std::make_unique<LambdaFilter>(factory_context_.cluster_manager_);
+    filter_ = std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -60,7 +60,7 @@ protected:
 
     ON_CALL(filter_callbacks_.route_->route_entry_,
               perFilterConfig(
-                  Config::LambdaHttpFilterNames::get().LAMBDA))
+                  Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
           .WillByDefault(Return(filter_route_config_.get()));
 
 
@@ -69,7 +69,7 @@ protected:
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
-  std::unique_ptr<LambdaFilter> filter_;
+  std::unique_ptr<AWSLambdaFilter> filter_;
   envoy::config::filter::http::aws::v2::LambdaPerRoute routeconfig_;
   std::unique_ptr<LambdaRouteConfig> filter_route_config_;
 
@@ -78,7 +78,7 @@ protected:
 
 // see:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
+TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
@@ -90,7 +90,7 @@ TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
-TEST_F(LambdaFilterTest, SingsOnDataEndStream) {
+TEST_F(AWSLambdaFilterTest, SingsOnDataEndStream) {
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
@@ -107,7 +107,7 @@ TEST_F(LambdaFilterTest, SingsOnDataEndStream) {
 }
 
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
-TEST_F(LambdaFilterTest, CorrectFuncCalled) {
+TEST_F(AWSLambdaFilterTest, CorrectFuncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
@@ -121,7 +121,7 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
 }
 
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
-TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
+TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
   routeconfig_.clear_qualifier();
   setup_func();
 
@@ -138,7 +138,7 @@ TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
             headers.get_(":path"));
 }
 
-TEST_F(LambdaFilterTest, AsyncCalled) {
+TEST_F(AWSLambdaFilterTest, AsyncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
@@ -150,7 +150,7 @@ TEST_F(LambdaFilterTest, AsyncCalled) {
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
 }
 
-TEST_F(LambdaFilterTest, SyncCalled) {
+TEST_F(AWSLambdaFilterTest, SyncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
@@ -163,7 +163,7 @@ TEST_F(LambdaFilterTest, SyncCalled) {
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
-TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
+TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
@@ -183,11 +183,11 @@ TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
-TEST_F(LambdaFilterTest, InvalidFunction) {
+TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
   EXPECT_CALL(filter_callbacks_.route_->route_entry_,
             perFilterConfig(
-                Config::LambdaHttpFilterNames::get().LAMBDA))
+                Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
     .WillRepeatedly(Return(nullptr));
 
   TestHeaderMapImpl headers{{":method", "GET"},

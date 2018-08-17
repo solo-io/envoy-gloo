@@ -13,10 +13,10 @@ using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 /**
  * Config registration for the AWS Lambda filter.
  */
-class LambdaFilterConfigFactory : public EmptyHttpFilterConfig {
+class AWSLambdaFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
-  LambdaFilterConfigFactory()
-      : EmptyHttpFilterConfig(Config::LambdaHttpFilterNames::get().LAMBDA) {}
+  AWSLambdaFilterConfigFactory()
+      : EmptyHttpFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA) {}
   
  Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message& config)override;

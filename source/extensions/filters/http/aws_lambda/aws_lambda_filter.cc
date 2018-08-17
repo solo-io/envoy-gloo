@@ -19,18 +19,18 @@
 namespace Envoy {
 namespace Http {
 
-const LowerCaseString LambdaFilter::INVOCATION_TYPE("x-amz-invocation-type");
-const std::string LambdaFilter::INVOCATION_TYPE_EVENT("Event");
-const std::string LambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
-const LowerCaseString LambdaFilter::LOG_TYPE("x-amz-log-type");
-const std::string LambdaFilter::LOG_NONE("None");
+const LowerCaseString AWSLambdaFilter::INVOCATION_TYPE("x-amz-invocation-type");
+const std::string AWSLambdaFilter::INVOCATION_TYPE_EVENT("Event");
+const std::string AWSLambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
+const LowerCaseString AWSLambdaFilter::LOG_TYPE("x-amz-log-type");
+const std::string AWSLambdaFilter::LOG_NONE("None");
 
-LambdaFilter::LambdaFilter(Upstream::ClusterManager& cluster_manager)
+AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager& cluster_manager)
     : cluster_manager_(cluster_manager) {}
 
-LambdaFilter::~LambdaFilter() {}
+AWSLambdaFilter::~AWSLambdaFilter() {}
 
-std::string LambdaFilter::functionUrlPath() {
+std::string AWSLambdaFilter::functionUrlPath() {
 
   std::stringstream val;
   val << "/2015-03-31/functions/" << (function_on_route_->name())
@@ -42,17 +42,17 @@ std::string LambdaFilter::functionUrlPath() {
   return val.str();
 }
 
-FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
+FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
                                                 bool end_stream) {
 
-  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<const LambdaProtocolExtensionConfig>(Config::LambdaHttpFilterNames::get().LAMBDA, decoder_callbacks_, cluster_manager_);
+  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<const LambdaProtocolExtensionConfig>(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_, cluster_manager_);
   if (! protocol_options_) {
     return FilterHeadersStatus::Continue;
   }
 
   route_ = decoder_callbacks_->route();
   // great! this is an aws cluster. get the function information:
-  function_on_route_ = SoloFilterUtility::resolvePerFilterConfig<LambdaRouteConfig>(Config::LambdaHttpFilterNames::get().LAMBDA, route_);
+  function_on_route_ = SoloFilterUtility::resolvePerFilterConfig<LambdaRouteConfig>(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, route_);
 
   if (!function_on_route_) {
         decoder_callbacks_->sendLocalReply(Code::NotFound, "no function present for AWS upstream",
@@ -78,7 +78,7 @@ FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
   return FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus LambdaFilter::decodeData(Buffer::Instance &data,
+FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                           bool end_stream) {
   if (! function_on_route_) {
     return FilterDataStatus::Continue;
@@ -94,7 +94,7 @@ FilterDataStatus LambdaFilter::decodeData(Buffer::Instance &data,
   return FilterDataStatus::StopIterationAndBuffer;
 }
 
-FilterTrailersStatus LambdaFilter::decodeTrailers(HeaderMap &) {
+FilterTrailersStatus AWSLambdaFilter::decodeTrailers(HeaderMap &) {
   if (! function_on_route_) {
     return FilterTrailersStatus::Continue;
   }
@@ -104,7 +104,7 @@ FilterTrailersStatus LambdaFilter::decodeTrailers(HeaderMap &) {
   return FilterTrailersStatus::Continue;
 }
 
-void LambdaFilter::lambdafy() {
+void AWSLambdaFilter::lambdafy() {
   static std::list<LowerCaseString> headers;
 
   const std::string &invocation_type = function_on_route_->async()
@@ -128,7 +128,7 @@ void LambdaFilter::lambdafy() {
   cleanup();
 }
 
-void LambdaFilter::cleanup() {
+void AWSLambdaFilter::cleanup() {
   request_headers_ = nullptr;
   function_on_route_ = nullptr;
   protocol_options_.reset();

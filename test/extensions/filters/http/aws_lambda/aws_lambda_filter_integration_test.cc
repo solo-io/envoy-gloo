@@ -11,14 +11,14 @@ namespace Envoy {
 
 const std::string DEFAULT_LAMBDA_FILTER =
     R"EOF(
-name: io.solo.lambda
+name: io.solo.aws_lambda
 )EOF";
 
-class LambdaFilterIntegrationTest
+class AWSLambdaFilterIntegrationTest
     : public HttpIntegrationTest,
       public testing::TestWithParam<Network::Address::IpVersion> {
 public:
-  LambdaFilterIntegrationTest()
+  AWSLambdaFilterIntegrationTest()
       : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
 
   /**
@@ -42,7 +42,7 @@ public:
 
           
           auto &cluster_struct = (*lambda_cluster.mutable_extension_protocol_options())
-              [Config::LambdaHttpFilterNames::get().LAMBDA];
+              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
           MessageUtil::jsonConvert(protoextconfig, cluster_struct);
 
         });
@@ -57,7 +57,7 @@ public:
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
                                         ->mutable_per_filter_config())
-              [Config::LambdaHttpFilterNames::get().LAMBDA];
+              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
 
           envoy::config::filter::http::aws::v2::LambdaPerRoute proto_config;
           proto_config.set_name("FunctionName");
@@ -80,10 +80,10 @@ public:
 };
 
 INSTANTIATE_TEST_CASE_P(
-    IpVersions, LambdaFilterIntegrationTest,
+    IpVersions, AWSLambdaFilterIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
-TEST_P(LambdaFilterIntegrationTest, Test1) {
+TEST_P(AWSLambdaFilterIntegrationTest, Test1) {
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
