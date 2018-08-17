@@ -1,7 +1,7 @@
 #include "extensions/filters/http/aws/lambda_filter.h"
 #include "extensions/filters/http/aws/lambda_filter_config_factory.h"
+#include "extensions/filters/http/lambda_well_known_names.h"
 
-#include "test/extensions/filters/http/aws/mocks.h"
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
@@ -25,55 +25,64 @@ namespace Http {
 
 using Server::Configuration::LambdaFilterConfigFactory;
 
-// Nothing here as we mock the function retriever
-class NothingMetadataAccessor : public MetadataAccessor {
-public:
-  virtual absl::optional<const std::string *> getFunctionName() const {
-    return {};
-  }
-  virtual absl::optional<const ProtobufWkt::Struct *> getFunctionSpec() const {
-    return {};
-  }
-  virtual absl::optional<const ProtobufWkt::Struct *>
-  getClusterMetadata() const {
-    return {};
-  }
-  virtual absl::optional<const ProtobufWkt::Struct *> getRouteMetadata() const {
-    return {};
-  }
-
-  virtual ~NothingMetadataAccessor() {}
-};
-
 class LambdaFilterTest : public testing::Test {
 public:
   LambdaFilterTest() {}
 
 protected:
   void SetUp() override {
-    function_retriever_ = std::make_shared<NiceMock<MockFunctionRetriever>>();
-    filter_ = std::make_unique<LambdaFilter>(function_retriever_);
+    
+  routeconfig_.set_name("func");
+  routeconfig_.set_qualifier("v1");
+  routeconfig_.set_async(false);
+
+  setup_func();
+
+  envoy::config::filter::http::aws::v2::LambdaProtocolExtension protoextconfig;
+  protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
+  protoextconfig.set_region("us-east-1");
+  protoextconfig.set_access_key("access key");
+  protoextconfig.set_secret_key("secret key");
+
+  ON_CALL(*factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
+            extensionProtocolOptions(
+                Config::LambdaHttpFilterNames::get().LAMBDA))
+        .WillByDefault(Return(std::make_shared<LambdaProtocolExtensionConfig>(protoextconfig)));
+
+
+    filter_ = std::make_unique<LambdaFilter>(factory_context_.cluster_manager_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
+  }
+
+  void setup_func() {
+  
+    filter_route_config_.reset(new LambdaRouteConfig(routeconfig_));
+
+    ON_CALL(filter_callbacks_.route_->route_entry_,
+              perFilterConfig(
+                  Config::LambdaHttpFilterNames::get().LAMBDA))
+          .WillByDefault(Return(filter_route_config_.get()));
+
+
   }
 
   NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
   std::unique_ptr<LambdaFilter> filter_;
-  std::shared_ptr<NiceMock<MockFunctionRetriever>> function_retriever_;
+  envoy::config::filter::http::aws::v2::LambdaPerRoute routeconfig_;
+  std::unique_ptr<LambdaRouteConfig> filter_route_config_;
+
+
 };
 
 // see:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
 TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
-  // const FunctionalFilterBase& filter = static_cast<const
-  // FunctionalFilterBase&>(*filter_);
-  EXPECT_CALL(*function_retriever_, getFunction(_)).Times(1);
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
@@ -83,12 +92,10 @@ TEST_F(LambdaFilterTest, SingsOnHeadersEndStream) {
 
 TEST_F(LambdaFilterTest, SingsOnDataEndStream) {
 
-  EXPECT_CALL(*function_retriever_, getFunction(_)).Times(1);
-
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+ 
   EXPECT_EQ(FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   EXPECT_FALSE(headers.has("Authorization"));
@@ -104,51 +111,29 @@ TEST_F(LambdaFilterTest, CorrectFuncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+ 
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
-  EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
-                "/invocations?Qualifier=" + function_retriever_->qualifier_,
+  EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() +
+                "/invocations?Qualifier=" + routeconfig_.qualifier(),
             headers.get_(":path"));
 }
 
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
-TEST_F(LambdaFilterTest, FuncWithoutQualifierCalled) {
-
-  EXPECT_CALL(*function_retriever_, getFunction(_))
-      .WillRepeatedly(Return(Function{&function_retriever_->name_,
-                                      {},
-                                      function_retriever_->async_,
-                                      &function_retriever_->host_,
-                                      &function_retriever_->region_,
-                                      &function_retriever_->access_key_,
-                                      &function_retriever_->secret_key_}));
-
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
-
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
-  EXPECT_EQ(FilterHeadersStatus::Continue,
-            filter_->decodeHeaders(headers, true));
-
-  EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
-                "/invocations",
-            headers.get_(":path"));
-}
-
 TEST_F(LambdaFilterTest, FuncWithEmptyQualifierCalled) {
-  function_retriever_->qualifier_ = "";
+  routeconfig_.clear_qualifier();
+  setup_func();
+
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
 
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+ 
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
-  EXPECT_EQ("/2015-03-31/functions/" + function_retriever_->name_ +
+  EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() +
                 "/invocations",
             headers.get_(":path"));
 }
@@ -157,9 +142,9 @@ TEST_F(LambdaFilterTest, AsyncCalled) {
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
-
-  function_retriever_->async_ = true;
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+  routeconfig_.set_async(true);
+  setup_func();
+ 
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
@@ -170,20 +155,20 @@ TEST_F(LambdaFilterTest, SyncCalled) {
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
 
-  function_retriever_->async_ = false;
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+  routeconfig_.set_async(false);
+  setup_func();
+ 
   EXPECT_EQ(FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
 TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
-  EXPECT_CALL(*function_retriever_, getFunction(_)).Times(1);
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
 
-  ASSERT_EQ(true, filter_->retrieveFunction(NothingMetadataAccessor()));
+ 
   EXPECT_EQ(FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   Buffer::OwnedImpl data("data");
@@ -200,14 +185,17 @@ TEST_F(LambdaFilterTest, SignOnTrailedEndStream) {
 
 TEST_F(LambdaFilterTest, InvalidFunction) {
   // invalid function
-  EXPECT_CALL(*function_retriever_, getFunction(_))
-      .WillRepeatedly(Return(absl::optional<Function>()));
+  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
+            perFilterConfig(
+                Config::LambdaHttpFilterNames::get().LAMBDA))
+    .WillRepeatedly(Return(nullptr));
 
   TestHeaderMapImpl headers{{":method", "GET"},
                             {":authority", "www.solo.io"},
                             {":path", "/getsomething"}};
+  EXPECT_EQ(FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
 
-  EXPECT_EQ(false, filter_->retrieveFunction(NothingMetadataAccessor()));
 }
 
 } // namespace Http

@@ -1,4 +1,5 @@
 #include "extensions/filters/http/aws/lambda_filter.h"
+#include "extensions/filters/http/lambda_well_known_names.h"
 
 #include <algorithm>
 #include <list>
@@ -24,32 +25,43 @@ const std::string LambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
 const LowerCaseString LambdaFilter::LOG_TYPE("x-amz-log-type");
 const std::string LambdaFilter::LOG_NONE("None");
 
-LambdaFilter::LambdaFilter(FunctionRetrieverSharedPtr retreiver)
-    : function_retriever_(retreiver) {}
+LambdaFilter::LambdaFilter(Upstream::ClusterManager& cluster_manager)
+    : cluster_manager_(cluster_manager) {}
 
 LambdaFilter::~LambdaFilter() {}
 
 std::string LambdaFilter::functionUrlPath() {
 
-  const auto &current_function = current_function_.value();
   std::stringstream val;
-  val << "/2015-03-31/functions/" << (*current_function.name_)
+  val << "/2015-03-31/functions/" << (function_on_route_->name())
       << "/invocations";
-  if (current_function.qualifier_.has_value()) {
-    val << "?Qualifier=" << (*current_function.qualifier_.value());
+  const auto& qualifier = function_on_route_->qualifier();
+  if (!qualifier.empty()) {
+    val << "?Qualifier=" << qualifier;
   }
   return val.str();
 }
 
 FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
                                                 bool end_stream) {
-  // TODO(talnordan): Provide `DETAILS`.
-  RELEASE_ASSERT(current_function_.has_value(), "");
 
-  const auto &current_function = current_function_.value();
+  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<const LambdaProtocolExtensionConfig>(Config::LambdaHttpFilterNames::get().LAMBDA, decoder_callbacks_, cluster_manager_);
+  if (! protocol_options_) {
+    return FilterHeadersStatus::Continue;
+  }
 
-  aws_authenticator_.init(current_function.access_key_,
-                          current_function.secret_key_);
+  route_ = decoder_callbacks_->route();
+  // great! this is an aws cluster. get the function information:
+  function_on_route_ = SoloFilterUtility::resolvePerFilterConfig<LambdaRouteConfig>(Config::LambdaHttpFilterNames::get().LAMBDA, route_);
+
+  if (!function_on_route_) {
+        decoder_callbacks_->sendLocalReply(Code::NotFound, "no function present for AWS upstream",
+                                       nullptr);
+    return FilterHeadersStatus::StopIteration;
+  }
+
+  aws_authenticator_.init(&protocol_options_->access_key(),
+                          &protocol_options_->secret_key());
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
@@ -68,9 +80,10 @@ FilterHeadersStatus LambdaFilter::decodeHeaders(HeaderMap &headers,
 
 FilterDataStatus LambdaFilter::decodeData(Buffer::Instance &data,
                                           bool end_stream) {
-  if (!current_function_.has_value()) {
+  if (! function_on_route_) {
     return FilterDataStatus::Continue;
   }
+
   aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
@@ -82,24 +95,19 @@ FilterDataStatus LambdaFilter::decodeData(Buffer::Instance &data,
 }
 
 FilterTrailersStatus LambdaFilter::decodeTrailers(HeaderMap &) {
-  if (current_function_.has_value()) {
-    lambdafy();
+  if (! function_on_route_) {
+    return FilterTrailersStatus::Continue;
   }
 
-  return FilterTrailersStatus::Continue;
-}
+  lambdafy();
 
-bool LambdaFilter::retrieveFunction(const MetadataAccessor &meta_accessor) {
-  current_function_ = function_retriever_->getFunction(meta_accessor);
-  return current_function_.has_value();
+  return FilterTrailersStatus::Continue;
 }
 
 void LambdaFilter::lambdafy() {
   static std::list<LowerCaseString> headers;
 
-  const auto &current_function = current_function_.value();
-
-  const std::string &invocation_type = current_function.async_
+  const std::string &invocation_type = function_on_route_->async()
                                            ? INVOCATION_TYPE_EVENT
                                            : INVOCATION_TYPE_REQ_RESP;
   headers.push_back(INVOCATION_TYPE);
@@ -111,18 +119,19 @@ void LambdaFilter::lambdafy() {
   // TOOO(yuval-k) constify this and change the header list to
   // ref-or-inline like in header map
   headers.push_back(LowerCaseString("host"));
-  request_headers_->insertHost().value(*current_function.host_);
+  request_headers_->insertHost().value(protocol_options_->host());
 
   headers.push_back(LowerCaseString("content-type"));
 
   aws_authenticator_.sign(request_headers_, std::move(headers),
-                          *current_function.region_);
+                          protocol_options_->region());
   cleanup();
 }
 
 void LambdaFilter::cleanup() {
   request_headers_ = nullptr;
-  current_function_ = absl::optional<Function>();
+  function_on_route_ = nullptr;
+  protocol_options_.reset();
 }
 
 } // namespace Http

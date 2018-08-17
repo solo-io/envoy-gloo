@@ -73,6 +73,30 @@ public:
         resolvePerFilterBaseConfig(filter_name, route));
   }
 
+  template <class ConfigType>
+  static std::shared_ptr<const ConfigType>
+  resolveProtocolOptions(const std::string &filter_name,
+                         StreamFilterCallbacks *filter_callbacks,
+                         Upstream::ClusterManager& cluster_manager) {
+    static_assert(
+        std::is_base_of<Upstream::ProtocolOptionsConfig, ConfigType>::value,
+        "ConfigType must be a subclass of Upstream::ProtocolOptionsConfig");
+    const auto* cluster_name = resolveClusterName(filter_callbacks);
+    
+    if (!cluster_name) {
+      return nullptr;
+    }
+    
+    auto* cluster = cluster_manager.get(*cluster_name);
+
+    if (!cluster) {
+      return nullptr;
+    }
+
+    auto cluster_info = cluster->info();
+    return cluster_info->extensionProtocolOptionsTyped<ConfigType>(filter_name);
+}
+
 private:
   /**
    * The non template implementation of resolvePerFilterConfig. see

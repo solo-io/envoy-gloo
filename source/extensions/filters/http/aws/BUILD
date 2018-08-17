@@ -31,26 +31,6 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "function_retriever_lib",
-    srcs = [
-        "function.cc",
-        "metadata_function_retriever.cc",
-    ],
-    hdrs = [
-        "function.h",
-        "function_retriever.h",
-        "metadata_function_retriever.h",
-    ],
-    repository = "@envoy",
-    deps = [
-        "//source/extensions/filters/http:lambda_well_known_names_lib",
-        "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
-        "@solo_envoy_common//source/common/config:solo_metadata_lib",
-        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
-    ],
-)
-
-envoy_cc_library(
     name = "lambda_filter_lib",
     srcs = [
         "lambda_filter.cc",
@@ -61,10 +41,11 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        ":function_retriever_lib",
+        "//source/extensions/filters/http:lambda_well_known_names_lib",
+        "//api/envoy/config/filter/http/aws/v2:lambda_proto_cc",
         "@envoy//source/common/http:filter_utility_lib",
-        "@solo_envoy_common//include/envoy/http:metadata_accessor_interface",
-        "@solo_envoy_common//source/common/http:solo_filter_utility_lib",
+        "//include/envoy/http:metadata_accessor_interface",
+        "//source/common/http:solo_filter_utility_lib",
     ],
 )
 
@@ -76,6 +57,6 @@ envoy_cc_library(
     deps = [
         ":lambda_filter_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
-        "@solo_envoy_common//source/common/http:functional_stream_decoder_base_lib",
+        "//source/common/http:functional_stream_decoder_base_lib",
     ],
 )

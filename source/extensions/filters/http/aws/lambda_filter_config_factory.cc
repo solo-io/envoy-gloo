@@ -5,30 +5,44 @@
 #include "common/http/functional_stream_decoder_base.h"
 
 #include "extensions/filters/http/aws/lambda_filter.h"
-#include "extensions/filters/http/aws/metadata_function_retriever.h"
+#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 namespace Envoy {
 namespace Server {
 namespace Configuration {
 
-typedef Http::FunctionalFilterMixin<Http::LambdaFilter> MixedLambdaFilter;
-
 Http::FilterFactoryCb
 LambdaFilterConfigFactory::createFilter(const std::string &,
                                         FactoryContext &context) {
-
-  Http::FunctionRetrieverSharedPtr functionRetriever =
-      std::make_shared<Http::MetadataFunctionRetriever>();
-
-  return [&context, functionRetriever](
+  return [&context](
              Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new MixedLambdaFilter(
-        context, Config::LambdaMetadataFilters::get().LAMBDA,
-        functionRetriever);
+    auto filter = new Http::LambdaFilter(context.clusterManager());
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
 }
+
+ Upstream::ProtocolOptionsConfigConstSharedPtr LambdaFilterConfigFactory::createProtocolOptionsConfig(const Protobuf::Message& config) {
+  const auto& proto_config = dynamic_cast<const envoy::config::filter::http::aws::v2::LambdaProtocolExtension&>(config);
+  return std::make_shared<const Http::LambdaProtocolExtensionConfig>(proto_config);
+
+ }
+
+ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyProtocolOptionsProto()  {
+return std::make_unique<envoy::config::filter::http::aws::v2::LambdaProtocolExtension>();
+}
+
+ProtobufTypes::MessagePtr LambdaFilterConfigFactory::createEmptyRouteConfigProto()  {
+return std::make_unique<envoy::config::filter::http::aws::v2::LambdaPerRoute>();
+
+}
+
+Router::RouteSpecificFilterConfigConstSharedPtr LambdaFilterConfigFactory::createRouteSpecificFilterConfig(const Protobuf::Message& config, FactoryContext&)  {
+const auto& proto_config = dynamic_cast<const envoy::config::filter::http::aws::v2::LambdaPerRoute&>(config);
+  return std::make_shared<const Http::LambdaRouteConfig>(proto_config);
+
+}
+
 
 /**
  * Static registration for the AWS Lambda filter. @see RegisterFactory.

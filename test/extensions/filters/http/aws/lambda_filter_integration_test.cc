@@ -1,6 +1,7 @@
 #include "common/config/metadata.h"
 
 #include "extensions/filters/http/lambda_well_known_names.h"
+#include "api/envoy/config/filter/http/aws/v2/lambda.pb.validate.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -28,75 +29,41 @@ public:
 
     config_helper_.addConfigModifier(
         [](envoy::config::bootstrap::v2::Bootstrap &bootstrap) {
+
+          envoy::config::filter::http::aws::v2::LambdaProtocolExtension protoextconfig;
+          protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
+          protoextconfig.set_region("us-east-1");
+          protoextconfig.set_access_key("access key");
+          protoextconfig.set_secret_key("secret key");
+          ProtobufWkt::Struct functionstruct;
+
           auto &lambda_cluster =
               (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
-          auto *metadata = lambda_cluster.mutable_metadata();
+          
+          auto &cluster_struct = (*lambda_cluster.mutable_extension_protocol_options())
+              [Config::LambdaHttpFilterNames::get().LAMBDA];
+          MessageUtil::jsonConvert(protoextconfig, cluster_struct);
 
-          Config::Metadata::mutableMetadataValue(
-              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
-              Config::LambdaMetadataKeys::get().HOSTNAME)
-              .set_string_value("lambda.us-east-1.amazonaws.com");
-
-          Config::Metadata::mutableMetadataValue(
-              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
-              Config::LambdaMetadataKeys::get().REGION)
-              .set_string_value("us-east-1");
-
-          Config::Metadata::mutableMetadataValue(
-              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
-              Config::LambdaMetadataKeys::get().ACCESS_KEY)
-              .set_string_value("access key");
-
-          Config::Metadata::mutableMetadataValue(
-              *metadata, Config::LambdaMetadataFilters::get().LAMBDA,
-              Config::LambdaMetadataKeys::get().SECRET_KEY)
-              .set_string_value("secret dont tell");
-
-          /////
-          // TODO(yuval-k): use consts (filename mess)
-          std::string functionalfilter = "io.solo.function_router";
-          std::string functionsKey = "functions";
-
-          // add the function spec in the cluster config.
-          // TODO(yuval-k): extract this to help method (test utils?)
-          ProtobufWkt::Struct *functionstruct =
-              Config::Metadata::mutableMetadataValue(
-                  *metadata, functionalfilter, functionsKey)
-                  .mutable_struct_value();
-
-          ProtobufWkt::Value &functionstructspecvalue =
-              (*functionstruct->mutable_fields())["funcname"];
-          ProtobufWkt::Struct *functionsspecstruct =
-              functionstructspecvalue.mutable_struct_value();
-
-          (*functionsspecstruct
-                ->mutable_fields())[Config::LambdaMetadataKeys::get().FUNC_NAME]
-              .set_string_value("FunctionName");
-          (*functionsspecstruct->mutable_fields())
-              [Config::LambdaMetadataKeys::get().FUNC_QUALIFIER]
-                  .set_string_value("v1");
         });
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
                HttpConnectionManager &hcm) {
-          auto *metadata = hcm.mutable_route_config()
-                               ->mutable_virtual_hosts(0)
-                               ->mutable_routes(0)
-                               ->mutable_metadata();
-          std::string functionalfilter = "io.solo.function_router";
-          std::string functionKey = "function";
-          std::string clustername =
-              hcm.route_config().virtual_hosts(0).routes(0).route().cluster();
 
-          ProtobufWkt::Struct *clusterstruct =
-              Config::Metadata::mutableMetadataValue(
-                  *metadata, functionalfilter, clustername)
-                  .mutable_struct_value();
 
-          (*clusterstruct->mutable_fields())[functionKey].set_string_value(
-              "funcname");
+
+          auto &perFilterConfig = (*hcm.mutable_route_config()
+                                        ->mutable_virtual_hosts(0)
+                                        ->mutable_routes(0)
+                                        ->mutable_per_filter_config())
+              [Config::LambdaHttpFilterNames::get().LAMBDA];
+
+          envoy::config::filter::http::aws::v2::LambdaPerRoute proto_config;
+          proto_config.set_name("FunctionName");
+          proto_config.set_qualifier("v1");
+
+          MessageUtil::jsonConvert(proto_config, perFilterConfig);
 
         });
 
