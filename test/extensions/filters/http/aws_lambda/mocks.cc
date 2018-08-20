@@ -5,8 +5,8 @@
 namespace Envoy {
 namespace Http {
 
-using testing::Invoke;
 using testing::_;
+using testing::Invoke;
 
 MockFunctionRetriever::MockFunctionRetriever() {
   ON_CALL(*this, getFunction(_))

@@ -17,7 +17,8 @@ namespace Http {
 class AWSLambdaRouteConfig : public Router::RouteSpecificFilterConfig {
 public:
   AWSLambdaRouteConfig(
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &protoconfig)
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
+          &protoconfig)
       : name_(protoconfig.name()), qualifier_(protoconfig.qualifier()),
         async_(protoconfig.async()) {}
 
@@ -31,11 +32,12 @@ private:
   bool async_;
 };
 
-class AWSLambdaProtocolExtensionConfig : public Upstream::ProtocolOptionsConfig {
+class AWSLambdaProtocolExtensionConfig
+    : public Upstream::ProtocolOptionsConfig {
 public:
   AWSLambdaProtocolExtensionConfig(
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
-          &protoconfig)
+      const envoy::config::filter::http::aws_lambda::v2::
+          AWSLambdaProtocolExtension &protoconfig)
       : host_(protoconfig.host()), region_(protoconfig.region()),
         access_key_(protoconfig.access_key()),
         secret_key_(protoconfig.secret_key()) {}
@@ -82,7 +84,8 @@ private:
   static const std::string LOG_NONE;
 
   void lambdafy();
-  static std::string functionUrlPath(const std::string& name, const std::string& qualifier);
+  static std::string functionUrlPath(const std::string &name,
+                                     const std::string &qualifier);
   void cleanup();
 
   HeaderMap *request_headers_{};

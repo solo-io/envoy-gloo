@@ -28,24 +28,24 @@ public:
   void initialize() override {
     config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
 
-    config_helper_.addConfigModifier(
-        [](envoy::config::bootstrap::v2::Bootstrap &bootstrap) {
-          envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
-              protoextconfig;
-          protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
-          protoextconfig.set_region("us-east-1");
-          protoextconfig.set_access_key("access key");
-          protoextconfig.set_secret_key("secret key");
-          ProtobufWkt::Struct functionstruct;
+    config_helper_.addConfigModifier([](envoy::config::bootstrap::v2::Bootstrap
+                                            &bootstrap) {
+      envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
+          protoextconfig;
+      protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
+      protoextconfig.set_region("us-east-1");
+      protoextconfig.set_access_key("access key");
+      protoextconfig.set_secret_key("secret key");
+      ProtobufWkt::Struct functionstruct;
 
-          auto &lambda_cluster =
-              (*bootstrap.mutable_static_resources()->mutable_clusters(0));
+      auto &lambda_cluster =
+          (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
-          auto &cluster_struct =
-              (*lambda_cluster.mutable_extension_protocol_options())
-                  [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
-          MessageUtil::jsonConvert(protoextconfig, cluster_struct);
-        });
+      auto &cluster_struct =
+          (*lambda_cluster.mutable_extension_protocol_options())
+              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
+      MessageUtil::jsonConvert(protoextconfig, cluster_struct);
+    });
 
     config_helper_.addConfigModifier(
         [](envoy::config::filter::network::http_connection_manager::v2::
@@ -56,7 +56,8 @@ public:
                                         ->mutable_per_filter_config())
               [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
 
-          envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute proto_config;
+          envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
+              proto_config;
           proto_config.set_name("FunctionName");
           proto_config.set_qualifier("v1");
 

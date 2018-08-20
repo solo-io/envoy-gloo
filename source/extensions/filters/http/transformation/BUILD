@@ -38,11 +38,11 @@ envoy_cc_library(
         ":body_header_transformer_lib",
         ":transformation_filter_config",
         ":transformer_lib",
+        "//include/envoy/http:metadata_accessor_interface",
+        "//source/common/http:solo_filter_utility_lib",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",
         "@envoy//source/common/http:utility_lib",
-        "//include/envoy/http:metadata_accessor_interface",
-        "//source/common/http:solo_filter_utility_lib",
     ],
 )
 
@@ -89,9 +89,9 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":transformation_filter_lib",
+        "@envoy//include/envoy/registry",
         "@envoy//source/common/config:json_utility_lib",
-        "@envoy//include/envoy/registry:registry",
-        "@envoy//source/extensions/filters/http/common:factory_base_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )

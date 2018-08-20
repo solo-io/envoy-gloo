@@ -20,6 +20,7 @@ envoy_cc_library(
     deps = [
         "//:authorize_proto_cc",
         "//api/envoy/config/filter/network/consul_connect/v2:consul_connect_proto_cc",
+        "//source/common/buffer:buffer_utility_lib",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
@@ -27,7 +28,6 @@ envoy_cc_library(
         "@envoy//source/common/common:logger_lib",
         "@envoy//source/common/http:message_lib",
         "@envoy//source/common/http:utility_lib",
-        "//source/common/buffer:buffer_utility_lib",
     ],
 )
 

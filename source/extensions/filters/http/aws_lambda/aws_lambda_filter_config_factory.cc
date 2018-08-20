@@ -23,17 +23,17 @@ AWSLambdaFilterConfigFactory::createFilter(const std::string &,
 Upstream::ProtocolOptionsConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
     const Protobuf::Message &config) {
-  const auto &proto_config = dynamic_cast<
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension &>(
-      config);
+  const auto &proto_config =
+      dynamic_cast<const envoy::config::filter::http::aws_lambda::v2::
+                       AWSLambdaProtocolExtension &>(config);
   return std::make_shared<const Http::AWSLambdaProtocolExtensionConfig>(
       proto_config);
 }
 
 ProtobufTypes::MessagePtr
 AWSLambdaFilterConfigFactory::createEmptyProtocolOptionsProto() {
-  return std::make_unique<
-      envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension>();
+  return std::make_unique<envoy::config::filter::http::aws_lambda::v2::
+                              AWSLambdaProtocolExtension>();
 }
 
 ProtobufTypes::MessagePtr
@@ -46,7 +46,8 @@ Router::RouteSpecificFilterConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfig(
     const Protobuf::Message &config, FactoryContext &) {
   const auto &proto_config = dynamic_cast<
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &>(config);
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &>(
+      config);
   return std::make_shared<const Http::AWSLambdaRouteConfig>(proto_config);
 }
 

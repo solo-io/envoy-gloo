@@ -49,8 +49,9 @@ protected:
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
         extensionProtocolOptions(
             Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
-        .WillByDefault(Return(
-            std::make_shared<AWSLambdaProtocolExtensionConfig>(protoextconfig)));
+        .WillByDefault(
+            Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
+                protoextconfig)));
 
     filter_ =
         std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
