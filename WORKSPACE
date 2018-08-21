@@ -8,10 +8,10 @@ ENVOY_SHA = "a51d86aeb5a15f50472ee87a7b54c797be2c15fb"  # 2018-08-10
 http_archive(
     name = "envoy",
     strip_prefix = "envoy-" + ENVOY_SHA,
-    url = "https://github.com/yuval-k/envoy/archive/" + ENVOY_SHA + ".zip",
+    url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-JSON_SHA = "c8ea63a31bbcf652d61490b0ccd86771538f8c6b"
+JSON_SHA = "d2dd27dc3b8472dbaa7d66f83619b3ebcd9185fe" # v3.1.2
 
 new_http_archive(
     name = "json",
