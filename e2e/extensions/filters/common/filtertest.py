@@ -49,3 +49,4 @@ class TestCase(unittest.TestCase):
 
     self.__envoy = subprocess.Popen(prefix + [envoy, "-c", yaml_filename]+suffix, preexec_fn=envoy_preexec_fn)
     time.sleep(5)
+    self.assertIsNone(self.__envoy.poll())
