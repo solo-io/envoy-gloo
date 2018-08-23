@@ -76,12 +76,7 @@ public:
   }
 
 private:
-  static const LowerCaseString INVOCATION_TYPE;
-  static const std::string INVOCATION_TYPE_EVENT;
-  static const std::string INVOCATION_TYPE_REQ_RESP;
-
-  static const LowerCaseString LOG_TYPE;
-  static const std::string LOG_NONE;
+  static const HeaderList HeadersToSign;
 
   void lambdafy();
   static std::string functionUrlPath(const std::string &name,

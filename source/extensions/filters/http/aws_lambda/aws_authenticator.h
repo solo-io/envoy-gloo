@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <list>
+#include <set>
 #include <string>
 
 #include "envoy/buffer/buffer.h"
@@ -14,6 +14,11 @@
 namespace Envoy {
 namespace Http {
 
+typedef bool (*LowerCaseStringCompareFunc)(const LowerCaseString &,
+                                           const LowerCaseString &);
+
+typedef std::set<LowerCaseString, LowerCaseStringCompareFunc> HeaderList;
+
 class AwsAuthenticator {
 public:
   AwsAuthenticator();
@@ -24,26 +29,28 @@ public:
 
   void updatePayloadHash(const Buffer::Instance &data);
 
-  void sign(HeaderMap *request_headers,
-            std::list<LowerCaseString> &&headers_to_sign,
+  void sign(HeaderMap *request_headers, const HeaderList &headers_to_sign,
             const std::string &region);
+
+  /**
+   * This creates a a list of headers to sign to be used by sign.
+   */
+  static HeaderList
+  createHeaderToSign(std::initializer_list<LowerCaseString> headers);
 
 private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
-  static const std::string ALGORITHM;
-  static const std::string SERVICE;
-  static const std::string NEWLINE;
-
   std::string
-  signWithTime(HeaderMap *request_headers, std::list<LowerCaseString> &&headers,
+  signWithTime(HeaderMap *request_headers, const HeaderList &headers_to_sign,
                const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now);
 
   std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
 
-  std::pair<std::string, std::string> prepareHeaders();
+  std::pair<std::string, std::string>
+  prepareHeaders(const HeaderList &headers_to_sign);
 
   std::string getBodyHexSha();
   void fetchUrl();
@@ -121,7 +128,6 @@ private:
   size_t url_len_{};
 
   HeaderMap *request_headers_{};
-  std::list<LowerCaseString> sign_headers_;
 };
 
 } // namespace Http

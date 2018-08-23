@@ -14,17 +14,30 @@
 #include "common/http/headers.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
+#include "common/singleton/const_singleton.h"
 
 #include "extensions/filters/http/aws_lambda_well_known_names.h"
 
 namespace Envoy {
 namespace Http {
 
-const LowerCaseString AWSLambdaFilter::INVOCATION_TYPE("x-amz-invocation-type");
-const std::string AWSLambdaFilter::INVOCATION_TYPE_EVENT("Event");
-const std::string AWSLambdaFilter::INVOCATION_TYPE_REQ_RESP("RequestResponse");
-const LowerCaseString AWSLambdaFilter::LOG_TYPE("x-amz-log-type");
-const std::string AWSLambdaFilter::LOG_NONE("None");
+class AWSLambdaHeaderValues {
+public:
+  const LowerCaseString InvocationType{"x-amz-invocation-type"};
+  const std::string InvocationTypeEvent{"Event"};
+  const std::string InvocationTypeRequestResponse{"RequestResponse"};
+  const LowerCaseString LogType{"x-amz-log-type"};
+  const std::string LogNone{"None"};
+  const LowerCaseString HostHead{"x-amz-log-type"};
+};
+
+typedef ConstSingleton<AWSLambdaHeaderValues> AWSLambdaHeaderNames;
+
+const HeaderList AWSLambdaFilter::HeadersToSign =
+    AwsAuthenticator::createHeaderToSign(
+        {AWSLambdaHeaderNames::get().InvocationType,
+         AWSLambdaHeaderNames::get().LogType, Headers::get().HostLegacy,
+         Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
     : cluster_manager_(cluster_manager) {}
@@ -109,25 +122,18 @@ FilterTrailersStatus AWSLambdaFilter::decodeTrailers(HeaderMap &) {
 }
 
 void AWSLambdaFilter::lambdafy() {
-  static std::list<LowerCaseString> headers;
 
-  const std::string &invocation_type = function_on_route_->async()
-                                           ? INVOCATION_TYPE_EVENT
-                                           : INVOCATION_TYPE_REQ_RESP;
-  headers.push_back(INVOCATION_TYPE);
-  request_headers_->addReference(INVOCATION_TYPE, invocation_type);
-
-  headers.push_back(LOG_TYPE);
-  request_headers_->addReference(LOG_TYPE, LOG_NONE);
-
-  // TOOO(yuval-k) constify this and change the header list to
-  // ref-or-inline like in header map
-  headers.push_back(LowerCaseString("host"));
+  const std::string &invocation_type =
+      function_on_route_->async()
+          ? AWSLambdaHeaderNames::get().InvocationTypeEvent
+          : AWSLambdaHeaderNames::get().InvocationTypeRequestResponse;
+  request_headers_->addReference(AWSLambdaHeaderNames::get().InvocationType,
+                                 invocation_type);
+  request_headers_->addReference(AWSLambdaHeaderNames::get().LogType,
+                                 AWSLambdaHeaderNames::get().LogNone);
   request_headers_->insertHost().value(protocol_options_->host());
 
-  headers.push_back(LowerCaseString("content-type"));
-
-  aws_authenticator_.sign(request_headers_, std::move(headers),
+  aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
   cleanup();
 }

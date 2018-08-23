@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <list>
 #include <string>
-#include <vector>
 
 #include "envoy/http/header_map.h"
 
@@ -13,18 +12,24 @@
 #include "common/common/utility.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
+#include "common/singleton/const_singleton.h"
 
 namespace Envoy {
 namespace Http {
 
-const std::string AwsAuthenticator::ALGORITHM = "AWS4-HMAC-SHA256";
+class AwsAuthenticatorValues {
+public:
+  const std::string Algorithm{"AWS4-HMAC-SHA256"};
+  const std::string Service{"lambda"};
+  const std::string Newline{"\n"};
+  const LowerCaseString DateHeader{"x-amz-date"};
+};
 
-const std::string AwsAuthenticator::SERVICE = "lambda";
-const std::string AwsAuthenticator::NEWLINE = "\n";
+typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
 
 AwsAuthenticator::AwsAuthenticator() {
   // TODO(yuval-k) hardcoded for now
-  service_ = &SERVICE;
+  service_ = &AwsAuthenticatorConsts::get().Service;
   method_ = &Headers::get().MethodValues.Post;
 }
 
@@ -37,6 +42,15 @@ void AwsAuthenticator::init(const std::string *access_key,
 
 AwsAuthenticator::~AwsAuthenticator() {}
 
+HeaderList AwsAuthenticator::createHeaderToSign(
+    std::initializer_list<LowerCaseString> headers) {
+  // A C++ set is sorted. which is required by AWS signature algorithm.
+  HeaderList ret(AwsAuthenticator::lowercasecompare);
+  ret.insert(headers);
+  ret.insert(AwsAuthenticatorConsts::get().DateHeader);
+  return ret;
+}
+
 void AwsAuthenticator::updatePayloadHash(const Buffer::Instance &data) {
   body_sha_.update(data);
 }
@@ -48,19 +62,19 @@ bool AwsAuthenticator::lowercasecompare(const LowerCaseString &i,
 
 std::string AwsAuthenticator::addDate(
     std::chrono::time_point<std::chrono::system_clock> now) {
-  static LowerCaseString dateheader = LowerCaseString("x-amz-date");
-  sign_headers_.push_back(dateheader);
-
+  // TODO(yuval-k): This can be cached or optimized if needed
   std::string request_date_time = DateFormatter("%Y%m%dT%H%M%SZ").fromTime(now);
-  request_headers_->addReferenceKey(dateheader, request_date_time);
+  request_headers_->addReferenceKey(AwsAuthenticatorConsts::get().DateHeader,
+                                    request_date_time);
   return request_date_time;
 }
 
-std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
+std::pair<std::string, std::string>
+AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
   std::stringstream canonical_headers_stream;
   std::stringstream signed_headers_stream;
 
-  for (auto header = sign_headers_.begin(), end = sign_headers_.end();
+  for (auto header = headers_to_sign.begin(), end = headers_to_sign.end();
        header != end; header++) {
     const HeaderEntry *headerEntry = request_headers_->get(*header);
     if (headerEntry == nullptr) {
@@ -77,7 +91,7 @@ std::pair<std::string, std::string> AwsAuthenticator::prepareHeaders() {
       // TODO: add warning if null
     }
     canonical_headers_stream << '\n';
-    std::list<LowerCaseString>::const_iterator next = header;
+    HeaderList::const_iterator next = header;
     next++;
     if (next != end) {
       signed_headers_stream << ";";
@@ -184,16 +198,19 @@ std::string AwsAuthenticator::computeSignature(
   recusiveHmacHelper(sighmac, out, out_len, region);
   recusiveHmacHelper(sighmac, out, out_len, *service_);
   recusiveHmacHelper(sighmac, out, out_len, aws_request);
+
+  const auto &nl = AwsAuthenticatorConsts::get().Newline;
+
   recusiveHmacHelper<std::initializer_list<const std::string *>>(
       sighmac, out, out_len,
-      {&ALGORITHM, &NEWLINE, &request_date_time, &NEWLINE, &credential_scope,
-       &NEWLINE, &hashed_canonical_request});
+      {&AwsAuthenticatorConsts::get().Algorithm, &nl, &request_date_time, &nl,
+       &credential_scope, &nl, &hashed_canonical_request});
 
   return Hex::encode(out, out_len);
 }
 
 void AwsAuthenticator::sign(HeaderMap *request_headers,
-                            std::list<LowerCaseString> &&headers,
+                            const HeaderList &headers_to_sign,
                             const std::string &region) {
 
   // we can't use the date provider interface as this is not the date header,
@@ -201,22 +218,19 @@ void AwsAuthenticator::sign(HeaderMap *request_headers,
   // future.
   auto now = std::chrono::system_clock::now();
 
-  std::string sig =
-      signWithTime(request_headers, std::move(headers), region, now);
+  std::string sig = signWithTime(request_headers, headers_to_sign, region, now);
   request_headers->insertAuthorization().value(sig);
 }
 
 std::string AwsAuthenticator::signWithTime(
-    HeaderMap *request_headers, std::list<LowerCaseString> &&headers,
+    HeaderMap *request_headers, const HeaderList &headers_to_sign,
     const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
-  sign_headers_ = std::move(headers);
   request_headers_ = request_headers;
 
   std::string request_date_time = addDate(now);
-  sign_headers_.sort(lowercasecompare);
 
-  auto &&preparedHeaders = prepareHeaders();
+  auto &&preparedHeaders = prepareHeaders(headers_to_sign);
   std::string canonical_headers = std::move(preparedHeaders.first);
   std::string signed_headers = std::move(preparedHeaders.second);
 
@@ -239,7 +253,8 @@ std::string AwsAuthenticator::signWithTime(
   // TODO(talnordan): Provide `DETAILS`.
   RELEASE_ASSERT(access_key_, "");
 
-  authorizationvalue << ALGORITHM << " Credential=" << (*access_key_) << "/"
+  authorizationvalue << AwsAuthenticatorConsts::get().Algorithm
+                     << " Credential=" << (*access_key_) << "/"
                      << CredentialScope << ", SignedHeaders=" << signed_headers
                      << ", Signature=" << signature;
   return authorizationvalue.str();

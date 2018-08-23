@@ -50,7 +50,7 @@ public:
 
   std::string
   signWithTime(AwsAuthenticator &aws, HeaderMap *request_headers,
-               std::list<LowerCaseString> &&headers, const std::string &region,
+               const HeaderList &headers, const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now) {
     return aws.signWithTime(request_headers, std::move(headers), region, now);
   }
@@ -86,9 +86,9 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
   aws.init(&accesskey, &secretkey);
   updatePayloadHash(aws, "abc");
 
-  std::list<LowerCaseString> headers_to_sign;
-  headers_to_sign.push_back(LowerCaseString("path"));
-  aws.sign(&headers, std::move(headers_to_sign), "us-east-1");
+  HeaderList headers_to_sign =
+      AwsAuthenticator::createHeaderToSign({LowerCaseString("path")});
+  aws.sign(&headers, headers_to_sign, "us-east-1");
 
   EXPECT_EQ(query, get_query(aws));
   EXPECT_EQ(url, get_url(aws));
@@ -125,10 +125,10 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   std::string sig;
   {
-    std::list<LowerCaseString> headers_to_sign;
-    headers_to_sign.push_back(LowerCaseString("host"));
-    sig = signWithTime(aws, &headers, std::move(headers_to_sign), "us-east-1",
-                       awstime);
+
+    HeaderList headers_to_sign =
+        AwsAuthenticator::createHeaderToSign({LowerCaseString("host")});
+    sig = signWithTime(aws, &headers, headers_to_sign, "us-east-1", awstime);
   }
   std::string expected = "AWS4-HMAC-SHA256 "
                          "Credential=AKIDEXAMPLE/20150830/us-east-1/service/"
