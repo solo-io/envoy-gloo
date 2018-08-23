@@ -23,6 +23,16 @@ api_proto_library(
 )
 
 api_proto_library(
+    name = "nats_streaming_filter_proto",
+    srcs = ["nats_streaming_filter.proto"],
+)
+
+api_proto_library(
+    name = "protocol_proto",
+    srcs = ["protocol.proto"],
+)
+
+api_proto_library(
     name = "transformation_filter_proto",
     srcs = ["transformation_filter.proto"],
 )
@@ -32,6 +42,7 @@ envoy_cc_binary(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
+        "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",
         "@envoy//source/exe:envoy_main_entry_lib",
