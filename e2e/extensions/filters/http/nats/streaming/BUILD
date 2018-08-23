@@ -17,6 +17,9 @@ py_test(
     srcs = ["e2e_test.py"],
     data = [
         "//:envoy",
-        "//e2e:create_config.sh",
+        "//e2e/extensions/filters/http/nats/streaming:create_config.sh",
+    ],
+    deps = [
+        "//e2e/extensions/filters/common:filtertest_lib",
     ],
 )

@@ -1,84 +1,52 @@
-import ctypes
-import ctypes.util
 import grequests
 import httplib
 import logging
 import os
 import requests
-import signal
 import subprocess
 import tempfile
 import time
 import unittest
 
-def envoy_preexec_fn():
-  PR_SET_PDEATHSIG = 1  # See prtcl(2).
-  os.setpgrp()
-  libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-  libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+from e2e.extensions.filters.common import filtertest
 
 DEBUG=True
 
-class ManyRequestsTestCase(unittest.TestCase):
+class NatsStreamingTestCase(filtertest.TestCase):
+  def __init__(self, *args, **kwargs):
+    artifact_root_path = "./e2e/extensions/filters/http/nats/streaming"
+    super(NatsStreamingTestCase, self).__init__(artifact_root_path, *args, **kwargs)
+
   def setUp(self):
+    super(NatsStreamingTestCase, self).setUp()
+
     # A temporary file is used to avoid pipe buffering issues.
-    self.cleanup()
     self.stderr = tempfile.NamedTemporaryFile("rw+", delete=True)
 
   def tearDown(self):
-    for p in (self.sub_process, self.nats_server, self.nats_streaming_server):
-      if p is not None:
-        p.terminate()
-    if self.envoy is not None:
-      self.envoy.send_signal(signal.SIGINT)
-      self.envoy.wait()
+    super(NatsStreamingTestCase, self).tearDown()
 
     # The file is deleted as soon as it is closed.
     if self.stderr is not None:
       self.stderr.close()
-    self.cleanup()
-
-  def cleanup(self):
-    self.sub_process = None
-    self.nats_server = None
-    self.nats_streaming_server = None
-    self.envoy = None
     self.stderr = None
 
   def __create_config(self):
-    for create_config_path in ("./create_config.sh", "./e2e/create_config.sh"):
-      if os.path.isfile(create_config_path):
-        subprocess.check_call(create_config_path)
-        break
-    else:
-      self.fail('"create_config.sh" was not found')
+    create_config_path = self._join_artifact_path("create_config.sh")
+    subprocess.check_call(create_config_path)
 
   def __start_nats_server(self):
-    if DEBUG:   
-      self.nats_server = subprocess.Popen(["gnatsd", "-DV"])
-    else:
-      self.nats_server = subprocess.Popen("gnatsd")
+    args = ["gnatsd", "-DV"] if DEBUG else "gnatsd"
+    self._processes["nats_server"] = subprocess.Popen(args)
 
   def __start_nats_streaming_server(self):
+    args = ["nats-streaming-server", "-ns", "nats://localhost:4222"]
     if DEBUG:
-      self.nats_streaming_server = subprocess.Popen(
-      ["nats-streaming-server", "-ns", "nats://localhost:4222", "-SDV"])
-    else:
-      self.nats_streaming_server = subprocess.Popen(["nats-streaming-server", "-ns", "nats://localhost:4222"])
-
-  def __start_envoy(self, prefix = None, suffix = None):
-    if prefix is None:
-      prefix = []
-    if suffix is None:
-      suffix = suffix = ["--log-level", "debug"] if DEBUG else []
-
-    envoy = os.environ.get("TEST_ENVOY_BIN","envoy")
-
-    self.envoy = subprocess.Popen(prefix + [envoy, "-c", "./envoy.yaml"]+suffix, preexec_fn=envoy_preexec_fn)
-    time.sleep(5)
+      args.append("-SDV")
+    self._processes["nats_streaming_server"] = subprocess.Popen(args)
 
   def __sub(self):
-    self.sub_process = subprocess.Popen(
+    self._processes["sub_process"] = subprocess.Popen(
       ["stan-sub", "-id", "17", "subject1"],
       stderr=self.stderr)
     time.sleep(.1)
@@ -96,8 +64,8 @@ class ManyRequestsTestCase(unittest.TestCase):
 
   def __wait_for_response(self, data):
     time.sleep(0.1)
-    self.sub_process.terminate()
-    self.sub_process = None
+    self._processes["sub_process"].terminate()
+    del self._processes["sub_process"]
     self.stderr.seek(0, 0)
     stderr = self.stderr.read()
     expected = 'subject:"subject1" data:"%s"' % data
@@ -119,7 +87,7 @@ class ManyRequestsTestCase(unittest.TestCase):
     self.__create_config()
     self.__start_nats_server()
     self.__start_nats_streaming_server()
-    self.__start_envoy()
+    self._start_envoy("./envoy.yaml", DEBUG)
     self.__sub()
 
     # Make many requests and assert that they succeed.
@@ -127,8 +95,8 @@ class ManyRequestsTestCase(unittest.TestCase):
     self.__wait_for_response("solopayload 2 1023")
 
     # Terminate NATS Streaming to make future requests timeout.
-    self.nats_streaming_server.terminate()
-    self.nats_streaming_server = None
+    self._processes["nats_streaming_server"].terminate()
+    del self._processes["nats_streaming_server"]
 
     # Make many requests and assert that they timeout.
     self.__make_request_batches("solopayload %d %d", 2, 1024, 0.1, httplib.REQUEST_TIMEOUT)
@@ -146,7 +114,7 @@ class ManyRequestsTestCase(unittest.TestCase):
     self.__create_config()
     self.__start_nats_server()
     self.__start_nats_streaming_server()
-    self.__start_envoy(["perf", "record", "-g","--"], ["-l","error"])
+    self._start_envoy(["perf", "record", "-g","--"], ["-l","error"])
     self.__sub()
     
     # Make many requests and assert that they succeed.
