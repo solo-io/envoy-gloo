@@ -16,6 +16,6 @@ envoy_cc_test(
         "//source/common/grpc:async_client_lib",
         "@envoy//test/mocks/grpc:grpc_mocks",
         "@envoy//test/mocks/tracing:tracing_mocks",
-        "@envoy//test/proto:helloworld_proto",
+        "@envoy//test/proto:helloworld_proto_cc",
     ],
 )

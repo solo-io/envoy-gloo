@@ -3,7 +3,7 @@ workspace(name="cache_filter")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "7caa887200d9b2f0df6eb7e5de1912307bf962d3"  # July 16, 2018 (fuzz: server config validation fuzz test. (#3770))
+ENVOY_SHA = "6e589260e1e014905aaab2f6edbcd6489dba2371"  # 2018-09-06
 
 http_archive(
     name = "envoy",
@@ -11,7 +11,7 @@ http_archive(
     url = "https://github.com/envoyproxy/envoy/archive/" + ENVOY_SHA + ".zip",
 )
 
-ENVOY_COMMON_SHA = "144036339daf5b4d75ce8b6509a946d209536ad3"  # May 9, 2018 (Fix format)
+ENVOY_COMMON_SHA = "79194c3b1ce1d5c7e5bb84ada2cc757efef36180" # July 15, 2018 (Upgrade Envoy)
 
 git_repository(
     name = "solo_envoy_common",
