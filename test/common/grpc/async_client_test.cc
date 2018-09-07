@@ -8,9 +8,9 @@
 
 #include "gtest/gtest.h"
 
+using testing::_;
 using testing::Invoke;
 using testing::Ref;
-using testing::_;
 
 namespace Envoy {
 namespace Grpc {
