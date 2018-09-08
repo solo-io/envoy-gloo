@@ -164,9 +164,9 @@ TransformationFilter::getTransformFromRoute(
   if (config != nullptr) {
     switch (direction) {
     case TransformationFilter::Direction::Request:
-      return &config->getRequestTranformation();
+      return config->getRequestTranformation();
     case TransformationFilter::Direction::Response:
-      return &config->getResponseTranformation();
+      return config->getResponseTranformation();
     default:
       // TODO(yuval-k): should this be a warning log?
       NOT_REACHED_GCOVR_EXCL_LINE;
@@ -211,6 +211,8 @@ void TransformationFilter::transformSomething(
     break;
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
+    // no transformation is set, just re-add the body. this shouldnt happen.
+    (this->*addData)(body);
     break;
   }
 

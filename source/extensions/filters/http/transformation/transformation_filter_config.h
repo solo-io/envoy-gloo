@@ -18,13 +18,17 @@ public:
   RouteTransformationFilterConfig(ProtoConfig proto_config)
       : proto_config_(proto_config) {}
 
-  const envoy::api::v2::filter::http::Transformation &
+  const envoy::api::v2::filter::http::Transformation *
   getRequestTranformation() const {
-    return proto_config_.request_transformation();
+    return proto_config_.has_request_transformation()
+               ? &proto_config_.request_transformation()
+               : nullptr;
   }
-  const envoy::api::v2::filter::http::Transformation &
+  const envoy::api::v2::filter::http::Transformation *
   getResponseTranformation() const {
-    return proto_config_.response_transformation();
+    return proto_config_.has_response_transformation()
+               ? &proto_config_.response_transformation()
+               : nullptr;
   }
 
 private:
