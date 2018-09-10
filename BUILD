@@ -39,6 +39,7 @@ api_proto_library(
 
 envoy_cc_binary(
     name = "envoy",
+    stamped = True,
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
