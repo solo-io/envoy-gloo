@@ -15,7 +15,7 @@ def envoy_preexec_fn():
 class TestCase(unittest.TestCase):
   def __init__(self, artifact_root_path, *args, **kwargs):
     super(TestCase, self).__init__(*args, **kwargs)
-    self.__artifact_root_path = artifact_root_path
+    self._artifact_root_path = artifact_root_path
 
   def setUp(self):
     self.cleanup()
@@ -34,7 +34,7 @@ class TestCase(unittest.TestCase):
     self.__envoy = None
 
   def _join_artifact_path(self, path):
-    joined_path = os.path.join(self.__artifact_root_path, path)
+    joined_path = os.path.join(self._artifact_root_path, path)
     if not os.path.exists(joined_path):
       self.fail('"{}" was not found'.format(path))
     return joined_path
