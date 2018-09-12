@@ -39,8 +39,8 @@ api_proto_library(
 
 envoy_cc_binary(
     name = "envoy",
-    stamped = True,
     repository = "@envoy",
+    stamped = True,
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
