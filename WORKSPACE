@@ -56,4 +56,3 @@ load("@com_lyft_protoc_gen_validate//bazel:go_proto_library.bzl", "go_proto_repo
 go_proto_repositories(shared=0)
 go_rules_dependencies()
 go_register_toolchains()
-

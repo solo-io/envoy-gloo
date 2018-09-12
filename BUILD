@@ -18,6 +18,11 @@ api_proto_library(
 )
 
 api_proto_library(
+    name = "cache_filter_proto",
+    srcs = ["cache_filter.proto"],
+)
+
+api_proto_library(
     name = "functional_base_proto",
     srcs = ["functional_base.proto"],
 )
@@ -39,10 +44,11 @@ api_proto_library(
 
 envoy_cc_binary(
     name = "envoy",
-    stamped = True,
     repository = "@envoy",
+    stamped = True,
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
+        "//source/extensions/filters/http/cache:cache_filter_config_lib",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",

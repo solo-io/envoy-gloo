@@ -13,6 +13,12 @@ envoy_package()
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 envoy_cc_library(
+    name = "cache_well_known_names_lib",
+    hdrs = ["cache_well_known_names.h"],
+    repository = "@envoy",
+)
+
+envoy_cc_library(
     name = "solo_metadata_lib",
     srcs = ["solo_metadata.cc"],
     hdrs = ["solo_metadata.h"],

@@ -24,7 +24,7 @@ eu-readelf -n bazel-bin/envoy
 ```
 # Test
 ```
-bazel test -c dbg //test/...  --jobs=$[$(nproc --all)-2]
+bazel test -c dbg //test/... --jobs=$[$(nproc --all)-2]
 ```
 # Test and e2e
 ```
