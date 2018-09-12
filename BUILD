@@ -22,7 +22,7 @@ envoy_cc_library(
     repository = "@envoy",
     visibility = ["//visibility:public"],
     deps = [
-        "//source/server/config/http:cache_filter_config_lib",
+        "//source/extensions/filters/http/cache:cache_filter_config_lib",
         "@envoy//source/exe:envoy_common_lib",
     ],
 )
