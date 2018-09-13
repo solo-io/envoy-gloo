@@ -6,6 +6,8 @@ load(
     "envoy_package",
 )
 
+envoy_package()
+
 envoy_cc_test(
     name = "nuid_test",
     srcs = ["nuid_test.cc"],
