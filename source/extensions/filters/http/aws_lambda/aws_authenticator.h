@@ -96,9 +96,6 @@ private:
     void init(const uint8_t *bytes, size_t size);
     void update(const std::string &data);
     void update(std::initializer_list<const std::string *> strings);
-
-    void update(char c);
-    void update(const char *chars, size_t size);
     void update(const uint8_t *bytes, size_t size);
     void finalize(uint8_t *out, unsigned int *out_len);
 

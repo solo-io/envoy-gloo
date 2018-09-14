@@ -319,11 +319,6 @@ void AwsAuthenticator::HMACSha256::update(
   }
 }
 
-void AwsAuthenticator::HMACSha256::update(char c) { update(&c, 1); }
-
-void AwsAuthenticator::HMACSha256::update(const char *chars, size_t size) {
-  update(reinterpret_cast<const uint8_t *>(chars), size);
-}
 void AwsAuthenticator::HMACSha256::update(const uint8_t *bytes, size_t size) {
   HMAC_Update(&context_, bytes, size);
 }
