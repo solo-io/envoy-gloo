@@ -26,9 +26,22 @@ TEST_F(NatsMessageBuilderTest, PubMessage) {
   ASSERT_EQ(expected_message, actual_message);
 }
 
+TEST_F(NatsMessageBuilderTest, PubMessageWithReplyToAndPayload) {
+  Message expected_message{"PUB subject1 reply_to1 8\r\npayload1"};
+  auto actual_message =
+      MessageBuilder::createPubMessage("subject1", "reply_to1", "payload1");
+  ASSERT_EQ(expected_message, actual_message);
+}
+
 TEST_F(NatsMessageBuilderTest, SubMessage) {
   Message expected_message{"SUB subject1 6"};
   auto actual_message = MessageBuilder::createSubMessage("subject1", 6);
+  ASSERT_EQ(expected_message, actual_message);
+}
+
+TEST_F(NatsMessageBuilderTest, PongMessage) {
+  Message expected_message{"PONG"};
+  auto actual_message = MessageBuilder::createPongMessage();
   ASSERT_EQ(expected_message, actual_message);
 }
 
