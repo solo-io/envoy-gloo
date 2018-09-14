@@ -211,7 +211,7 @@ Http::MessagePtr Filter::getRequest(const std::string &host,
 
 std::string Filter::getBodyString(Http::MessagePtr &&m) {
   Buffer::InstancePtr &body = m->body();
-  return Buffer::BufferUtility::bufferToString(*body);
+  return body->toString();
 }
 
 } // namespace ConsulConnect
