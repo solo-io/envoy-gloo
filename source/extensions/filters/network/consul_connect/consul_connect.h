@@ -5,7 +5,6 @@
 #include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/buffer/buffer_utility.h"
 #include "common/common/logger.h"
 
 #include "api/envoy/config/filter/network/consul_connect/v2/consul_connect.pb.validate.h"
