@@ -18,13 +18,6 @@ public:
    * @return std::string the converted string.
    */
   static std::string drainBufferToString(Buffer::Instance &buffer);
-
-  /**
-   * Convert a buffer to a string.
-   * @param buffer supplies the buffer to convert.
-   * @return std::string the converted string.
-   */
-  static std::string bufferToString(const Buffer::Instance &buffer);
 };
 
 } // namespace Buffer
