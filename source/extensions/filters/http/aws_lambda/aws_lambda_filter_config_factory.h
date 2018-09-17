@@ -6,8 +6,9 @@
 #include "extensions/filters/http/common/empty_http_filter_config.h"
 
 namespace Envoy {
-namespace Server {
-namespace Configuration {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 
@@ -25,14 +26,17 @@ public:
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;
   ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
   Router::RouteSpecificFilterConfigConstSharedPtr
-  createRouteSpecificFilterConfig(const Protobuf::Message &,
-                                  FactoryContext &) override;
+  createRouteSpecificFilterConfig(
+      const Protobuf::Message &,
+      Server::Configuration::FactoryContext &) override;
 
 private:
-  Http::FilterFactoryCb createFilter(const std::string &stat_prefix,
-                                     FactoryContext &context) override;
+  Http::FilterFactoryCb
+  createFilter(const std::string &stat_prefix,
+               Server::Configuration::FactoryContext &context) override;
 };
 
-} // namespace Configuration
-} // namespace Server
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

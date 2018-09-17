@@ -21,7 +21,9 @@ using testing::SaveArg;
 using testing::WithArg;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 class AwsAuthenticatorTest : public testing::Test {
 
@@ -45,11 +47,11 @@ public:
 
   void set_guide_test_params(AwsAuthenticator &aws) {
     aws.service_ = &SERVICE;
-    aws.method_ = &Headers::get().MethodValues.Get;
+    aws.method_ = &Http::Headers::get().MethodValues.Get;
   }
 
   std::string
-  signWithTime(AwsAuthenticator &aws, HeaderMap *request_headers,
+  signWithTime(AwsAuthenticator &aws, Http::HeaderMap *request_headers,
                const HeaderList &headers, const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now) {
     return aws.signWithTime(request_headers, std::move(headers), region, now);
@@ -77,7 +79,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
-  TestHeaderMapImpl headers;
+  Http::TestHeaderMapImpl headers;
   headers.insertPath().value(url + "?" + query);
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("www.solo.io"));
@@ -87,7 +89,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
   updatePayloadHash(aws, "abc");
 
   HeaderList headers_to_sign =
-      AwsAuthenticator::createHeaderToSign({LowerCaseString("path")});
+      AwsAuthenticator::createHeaderToSign({Http::LowerCaseString("path")});
   aws.sign(&headers, headers_to_sign, "us-east-1");
 
   EXPECT_EQ(query, get_query(aws));
@@ -99,7 +101,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   std::string accesskey = "AKIDEXAMPLE";
 
   std::string url = "/?Param1=value1&Param2=value2";
-  TestHeaderMapImpl headers;
+  Http::TestHeaderMapImpl headers;
   headers.insertPath().value(url);
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("example.amazonaws.com"));
@@ -127,7 +129,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   {
 
     HeaderList headers_to_sign =
-        AwsAuthenticator::createHeaderToSign({LowerCaseString("host")});
+        AwsAuthenticator::createHeaderToSign({Http::LowerCaseString("host")});
     sig = signWithTime(aws, &headers, headers_to_sign, "us-east-1", awstime);
   }
   std::string expected = "AWS4-HMAC-SHA256 "
@@ -140,5 +142,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   EXPECT_EQ(expected, sig);
 }
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

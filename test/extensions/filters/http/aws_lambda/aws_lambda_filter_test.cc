@@ -21,9 +21,9 @@ using testing::SaveArg;
 using testing::WithArg;
 
 namespace Envoy {
-namespace Http {
-
-using Server::Configuration::AWSLambdaFilterConfigFactory;
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 class AWSLambdaFilterTest : public testing::Test {
 public:
@@ -67,7 +67,7 @@ protected:
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
-  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
   std::unique_ptr<AWSLambdaFilter> filter_;
@@ -79,10 +79,10 @@ protected:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
 TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
 
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
-  EXPECT_EQ(FilterHeadersStatus::Continue,
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
   // Check aws headers.
@@ -91,27 +91,27 @@ TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
 
 TEST_F(AWSLambdaFilterTest, SingsOnDataEndStream) {
 
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
 
-  EXPECT_EQ(FilterHeadersStatus::StopIteration,
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   EXPECT_FALSE(headers.has("Authorization"));
   Buffer::OwnedImpl data("data");
 
-  EXPECT_EQ(FilterDataStatus::Continue, filter_->decodeData(data, true));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
 
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
 TEST_F(AWSLambdaFilterTest, CorrectFuncCalled) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
 
-  EXPECT_EQ(FilterHeadersStatus::Continue,
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() +
@@ -124,11 +124,11 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
   routeconfig_.clear_qualifier();
   setup_func();
 
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
 
-  EXPECT_EQ(FilterHeadersStatus::Continue,
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
   EXPECT_EQ("/2015-03-31/functions/" + routeconfig_.name() + "/invocations",
@@ -136,45 +136,46 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
 }
 
 TEST_F(AWSLambdaFilterTest, AsyncCalled) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
   routeconfig_.set_async(true);
   setup_func();
 
-  EXPECT_EQ(FilterHeadersStatus::Continue,
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("Event", headers.get_("x-amz-invocation-type"));
 }
 
 TEST_F(AWSLambdaFilterTest, SyncCalled) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
 
   routeconfig_.set_async(false);
   setup_func();
 
-  EXPECT_EQ(FilterHeadersStatus::Continue,
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
 TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
 
-  EXPECT_EQ(FilterHeadersStatus::StopIteration,
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
   Buffer::OwnedImpl data("data");
 
-  EXPECT_EQ(FilterDataStatus::StopIterationAndBuffer,
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationAndBuffer,
             filter_->decodeData(data, false));
   EXPECT_FALSE(headers.has("Authorization"));
 
-  TestHeaderMapImpl trailers;
-  EXPECT_EQ(FilterTrailersStatus::Continue, filter_->decodeTrailers(trailers));
+  Http::TestHeaderMapImpl trailers;
+  EXPECT_EQ(Http::FilterTrailersStatus::Continue,
+            filter_->decodeTrailers(trailers));
 
   EXPECT_TRUE(headers.has("Authorization"));
 }
@@ -186,12 +187,14 @@ TEST_F(AWSLambdaFilterTest, InvalidFunction) {
       perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
       .WillRepeatedly(Return(nullptr));
 
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"}};
-  EXPECT_EQ(FilterHeadersStatus::StopIteration,
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
 }
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

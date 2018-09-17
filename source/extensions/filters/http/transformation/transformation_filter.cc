@@ -11,7 +11,9 @@
 #include "extensions/filters/http/transformation_well_known_names.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 TransformationFilter::TransformationFilter() {}
 
@@ -19,17 +21,18 @@ TransformationFilter::~TransformationFilter() {}
 
 void TransformationFilter::onDestroy() { resetInternalState(); }
 
-FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
-                                                        bool end_stream) {
+Http::FilterHeadersStatus
+TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
+                                    bool end_stream) {
 
   checkRequestActive();
 
   if (is_error()) {
-    return FilterHeadersStatus::StopIteration;
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   if (!requestActive()) {
-    return FilterHeadersStatus::Continue;
+    return Http::FilterHeadersStatus::Continue;
   }
 
   request_headers_ = &header_map;
@@ -37,17 +40,17 @@ FilterHeadersStatus TransformationFilter::decodeHeaders(HeaderMap &header_map,
   if (end_stream || isPassthrough(*request_transformation_)) {
     transformRequest();
 
-    return is_error() ? FilterHeadersStatus::StopIteration
-                      : FilterHeadersStatus::Continue;
+    return is_error() ? Http::FilterHeadersStatus::StopIteration
+                      : Http::FilterHeadersStatus::Continue;
   }
 
-  return FilterHeadersStatus::StopIteration;
+  return Http::FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
-                                                  bool end_stream) {
+Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
+                                                        bool end_stream) {
   if (!requestActive()) {
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
   request_body_.move(data);
@@ -55,51 +58,53 @@ FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
       (request_body_.length() > decoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
     requestError();
-    return FilterDataStatus::StopIterationNoBuffer;
+    return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
   if (end_stream) {
     transformRequest();
-    return is_error() ? FilterDataStatus::StopIterationNoBuffer
-                      : FilterDataStatus::Continue;
+    return is_error() ? Http::FilterDataStatus::StopIterationNoBuffer
+                      : Http::FilterDataStatus::Continue;
   }
 
-  return FilterDataStatus::StopIterationNoBuffer;
+  return Http::FilterDataStatus::StopIterationNoBuffer;
 }
 
-FilterTrailersStatus TransformationFilter::decodeTrailers(HeaderMap &) {
+Http::FilterTrailersStatus
+TransformationFilter::decodeTrailers(Http::HeaderMap &) {
   if (requestActive()) {
     transformRequest();
   }
-  return is_error() ? FilterTrailersStatus::StopIteration
-                    : FilterTrailersStatus::Continue;
+  return is_error() ? Http::FilterTrailersStatus::StopIteration
+                    : Http::FilterTrailersStatus::Continue;
 }
 
-FilterHeadersStatus TransformationFilter::encodeHeaders(HeaderMap &header_map,
-                                                        bool end_stream) {
+Http::FilterHeadersStatus
+TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
+                                    bool end_stream) {
 
   checkResponseActive();
 
   if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
     // responseActive() == false
-    return FilterHeadersStatus::Continue;
+    return Http::FilterHeadersStatus::Continue;
   }
 
   response_headers_ = &header_map;
 
   if (end_stream || isPassthrough(*response_transformation_)) {
     transformResponse();
-    return FilterHeadersStatus::Continue;
+    return Http::FilterHeadersStatus::Continue;
   }
 
-  return FilterHeadersStatus::StopIteration;
+  return Http::FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
-                                                  bool end_stream) {
+Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
+                                                        bool end_stream) {
   if (!responseActive()) {
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
   response_body_.move(data);
@@ -107,22 +112,23 @@ FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
     responseError();
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
   if (end_stream) {
     transformResponse();
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
-  return FilterDataStatus::StopIterationNoBuffer;
+  return Http::FilterDataStatus::StopIterationNoBuffer;
 }
 
-FilterTrailersStatus TransformationFilter::encodeTrailers(HeaderMap &) {
+Http::FilterTrailersStatus
+TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   if (responseActive()) {
     transformResponse();
   }
-  return FilterTrailersStatus::Continue;
+  return Http::FilterTrailersStatus::Continue;
 }
 
 const std::string &
@@ -157,7 +163,7 @@ TransformationFilter::getTransformFromRoute(
     return nullptr;
   }
 
-  const auto *config = SoloFilterUtility::resolvePerFilterConfig<
+  const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
       RouteTransformationFilterConfig>(
       Config::TransformationFilterNames::get().TRANSFORMATION, route_);
 
@@ -197,7 +203,7 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 
 void TransformationFilter::transformSomething(
     const envoy::api::v2::filter::http::Transformation **transformation,
-    HeaderMap &header_map, Buffer::Instance &body,
+    Http::HeaderMap &header_map, Buffer::Instance &body,
     void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
@@ -224,7 +230,7 @@ void TransformationFilter::transformSomething(
 
 void TransformationFilter::transformTemplate(
     const envoy::api::v2::filter::http::TransformationTemplate &transformation,
-    HeaderMap &header_map, Buffer::Instance &body,
+    Http::HeaderMap &header_map, Buffer::Instance &body,
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
   try {
     Transformer transformer(transformation);
@@ -245,7 +251,7 @@ void TransformationFilter::transformTemplate(
 }
 
 void TransformationFilter::transformBodyHeaderTransformer(
-    HeaderMap &header_map, Buffer::Instance &body,
+    Http::HeaderMap &header_map, Buffer::Instance &body,
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
   try {
     BodyHeaderTransformer transformer;
@@ -287,22 +293,22 @@ void TransformationFilter::error(Error error, std::string msg) {
   switch (error) {
   case Error::PayloadTooLarge: {
     error_messgae_ = "payload too large";
-    error_code_ = Code::PayloadTooLarge;
+    error_code_ = Http::Code::PayloadTooLarge;
     break;
   }
   case Error::JsonParseError: {
     error_messgae_ = "bad request";
-    error_code_ = Code::BadRequest;
+    error_code_ = Http::Code::BadRequest;
     break;
   }
   case Error::TemplateParseError: {
     error_messgae_ = "bad request";
-    error_code_ = Code::BadRequest;
+    error_code_ = Http::Code::BadRequest;
     break;
   }
   case Error::TransformationNotFound: {
     error_messgae_ = "transformation for function not found";
-    error_code_ = Code::NotFound;
+    error_code_ = Http::Code::NotFound;
     break;
   }
   }
@@ -317,5 +323,7 @@ void TransformationFilter::error(Error error, std::string msg) {
 
 bool TransformationFilter::is_error() { return error_.has_value(); }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

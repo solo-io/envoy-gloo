@@ -10,13 +10,15 @@
 #include "transformation_filter.pb.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 /**
  * Translation we can be used either as a functional filter, or a non functional
  * filter.
  */
-class TransformationFilter : public StreamFilter {
+class TransformationFilter : public Http::StreamFilter {
 public:
   TransformationFilter();
   ~TransformationFilter();
@@ -25,27 +27,29 @@ public:
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
-  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::HeaderMap &, bool) override;
+  Http::FilterDataStatus decodeData(Buffer::Instance &, bool) override;
+  Http::FilterTrailersStatus decodeTrailers(Http::HeaderMap &) override;
 
-  void
-  setDecoderFilterCallbacks(StreamDecoderFilterCallbacks &callbacks) override {
+  void setDecoderFilterCallbacks(
+      Http::StreamDecoderFilterCallbacks &callbacks) override {
     decoder_callbacks_ = &callbacks;
     decoder_buffer_limit_ = callbacks.decoderBufferLimit();
   };
 
   // Http::StreamEncoderFilter
-  FilterHeadersStatus encode100ContinueHeaders(HeaderMap &) override {
-    return FilterHeadersStatus::Continue;
+  Http::FilterHeadersStatus
+  encode100ContinueHeaders(Http::HeaderMap &) override {
+    return Http::FilterHeadersStatus::Continue;
   }
-  FilterHeadersStatus encodeHeaders(HeaderMap &headers,
+  Http::FilterHeadersStatus encodeHeaders(Http::HeaderMap &headers,
+                                          bool end_stream) override;
+  Http::FilterDataStatus encodeData(Buffer::Instance &data,
                                     bool end_stream) override;
-  FilterDataStatus encodeData(Buffer::Instance &data, bool end_stream) override;
-  FilterTrailersStatus encodeTrailers(HeaderMap &trailers) override;
+  Http::FilterTrailersStatus encodeTrailers(Http::HeaderMap &trailers) override;
 
-  void
-  setEncoderFilterCallbacks(StreamEncoderFilterCallbacks &callbacks) override {
+  void setEncoderFilterCallbacks(
+      Http::StreamEncoderFilterCallbacks &callbacks) override {
     encoder_callbacks_ = &callbacks;
     encoder_buffer_limit_ = callbacks.encoderBufferLimit();
   };
@@ -94,26 +98,26 @@ private:
   void addEncoderData(Buffer::Instance &data);
   void transformSomething(
       const envoy::api::v2::filter::http::Transformation **transformation,
-      HeaderMap &header_map, Buffer::Instance &body,
+      Http::HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilter::*responeWithError)(),
       void (TransformationFilter::*addData)(Buffer::Instance &));
   void transformTemplate(
       const envoy::api::v2::filter::http::TransformationTemplate &,
-      HeaderMap &header_map, Buffer::Instance &body,
+      Http::HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilter::*addData)(Buffer::Instance &));
   void transformBodyHeaderTransformer(
-      HeaderMap &header_map, Buffer::Instance &body,
+      Http::HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
 
-  StreamDecoderFilterCallbacks *decoder_callbacks_{};
-  StreamEncoderFilterCallbacks *encoder_callbacks_{};
+  Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
+  Http::StreamEncoderFilterCallbacks *encoder_callbacks_{};
   Router::RouteConstSharedPtr route_;
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
-  HeaderMap *request_headers_{nullptr};
-  HeaderMap *response_headers_{nullptr};
+  Http::HeaderMap *request_headers_{nullptr};
+  Http::HeaderMap *response_headers_{nullptr};
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
@@ -122,9 +126,11 @@ private:
   const envoy::api::v2::filter::http::Transformation *response_transformation_{
       nullptr};
   absl::optional<Error> error_;
-  Code error_code_;
+  Http::Code error_code_;
   std::string error_messgae_;
 };
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

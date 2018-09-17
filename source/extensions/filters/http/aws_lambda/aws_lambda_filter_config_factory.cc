@@ -7,14 +7,14 @@
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
-namespace Server {
-namespace Configuration {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
-Http::FilterFactoryCb
-AWSLambdaFilterConfigFactory::createFilter(const std::string &,
-                                           FactoryContext &context) {
+Http::FilterFactoryCb AWSLambdaFilterConfigFactory::createFilter(
+    const std::string &, Server::Configuration::FactoryContext &context) {
   return [&context](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::AWSLambdaFilter(context.clusterManager());
+    auto filter = new AWSLambdaFilter(context.clusterManager());
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
@@ -26,8 +26,7 @@ AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
   const auto &proto_config =
       dynamic_cast<const envoy::config::filter::http::aws_lambda::v2::
                        AWSLambdaProtocolExtension &>(config);
-  return std::make_shared<const Http::AWSLambdaProtocolExtensionConfig>(
-      proto_config);
+  return std::make_shared<const AWSLambdaProtocolExtensionConfig>(proto_config);
 }
 
 ProtobufTypes::MessagePtr
@@ -44,20 +43,22 @@ AWSLambdaFilterConfigFactory::createEmptyRouteConfigProto() {
 
 Router::RouteSpecificFilterConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfig(
-    const Protobuf::Message &config, FactoryContext &) {
+    const Protobuf::Message &config, Server::Configuration::FactoryContext &) {
   const auto &proto_config = dynamic_cast<
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &>(
       config);
-  return std::make_shared<const Http::AWSLambdaRouteConfig>(proto_config);
+  return std::make_shared<const AWSLambdaRouteConfig>(proto_config);
 }
 
 /**
  * Static registration for the AWS Lambda filter. @see RegisterFactory.
  */
-static Registry::RegisterFactory<AWSLambdaFilterConfigFactory,
-                                 NamedHttpFilterConfigFactory>
+static Registry::RegisterFactory<
+    AWSLambdaFilterConfigFactory,
+    Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
 
-} // namespace Configuration
-} // namespace Server
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

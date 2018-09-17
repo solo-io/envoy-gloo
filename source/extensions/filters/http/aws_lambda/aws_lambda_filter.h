@@ -12,7 +12,9 @@
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 class AWSLambdaRouteConfig : public Router::RouteSpecificFilterConfig {
 public:
@@ -58,7 +60,7 @@ private:
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class AWSLambdaFilter : public StreamDecoderFilter {
+class AWSLambdaFilter : public Http::StreamDecoderFilter {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager);
   ~AWSLambdaFilter();
@@ -67,11 +69,11 @@ public:
   void onDestroy() override {}
 
   // Http::StreamDecoderFilter
-  FilterHeadersStatus decodeHeaders(HeaderMap &, bool) override;
-  FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  FilterTrailersStatus decodeTrailers(HeaderMap &) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::HeaderMap &, bool) override;
+  Http::FilterDataStatus decodeData(Buffer::Instance &, bool) override;
+  Http::FilterTrailersStatus decodeTrailers(Http::HeaderMap &) override;
   void setDecoderFilterCallbacks(
-      StreamDecoderFilterCallbacks &decoder_callbacks) override {
+      Http::StreamDecoderFilterCallbacks &decoder_callbacks) override {
     decoder_callbacks_ = &decoder_callbacks;
   }
 
@@ -83,10 +85,10 @@ private:
                                      const std::string &qualifier);
   void cleanup();
 
-  HeaderMap *request_headers_{};
+  Http::HeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;
 
-  StreamDecoderFilterCallbacks *decoder_callbacks_{};
+  Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
 
   Upstream::ClusterManager &cluster_manager_;
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> protocol_options_;
@@ -95,5 +97,7 @@ private:
   const AWSLambdaRouteConfig *function_on_route_{};
 };
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

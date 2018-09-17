@@ -8,12 +8,16 @@
 #include "json.hpp"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 class BodyHeaderTransformer {
 public:
-  void transform(HeaderMap &map, Buffer::Instance &body);
+  void transform(Http::HeaderMap &map, Buffer::Instance &body);
 };
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

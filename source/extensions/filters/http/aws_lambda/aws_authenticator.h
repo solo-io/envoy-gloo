@@ -12,12 +12,14 @@
 #include "openssl/sha.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
-typedef bool (*LowerCaseStringCompareFunc)(const LowerCaseString &,
-                                           const LowerCaseString &);
+typedef bool (*LowerCaseStringCompareFunc)(const Http::LowerCaseString &,
+                                           const Http::LowerCaseString &);
 
-typedef std::set<LowerCaseString, LowerCaseStringCompareFunc> HeaderList;
+typedef std::set<Http::LowerCaseString, LowerCaseStringCompareFunc> HeaderList;
 
 class AwsAuthenticator {
 public:
@@ -29,22 +31,22 @@ public:
 
   void updatePayloadHash(const Buffer::Instance &data);
 
-  void sign(HeaderMap *request_headers, const HeaderList &headers_to_sign,
+  void sign(Http::HeaderMap *request_headers, const HeaderList &headers_to_sign,
             const std::string &region);
 
   /**
    * This creates a a list of headers to sign to be used by sign.
    */
   static HeaderList
-  createHeaderToSign(std::initializer_list<LowerCaseString> headers);
+  createHeaderToSign(std::initializer_list<Http::LowerCaseString> headers);
 
 private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
   std::string
-  signWithTime(HeaderMap *request_headers, const HeaderList &headers_to_sign,
-               const std::string &region,
+  signWithTime(Http::HeaderMap *request_headers,
+               const HeaderList &headers_to_sign, const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now);
 
   std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
@@ -69,8 +71,8 @@ private:
                                const std::string &request_date_time,
                                const std::string &hashed_canonical_request);
 
-  static bool lowercasecompare(const LowerCaseString &i,
-                               const LowerCaseString &j);
+  static bool lowercasecompare(const Http::LowerCaseString &i,
+                               const Http::LowerCaseString &j);
 
   class Sha256 {
   public:
@@ -124,8 +126,10 @@ private:
   const char *url_start_{};
   size_t url_len_{};
 
-  HeaderMap *request_headers_{};
+  Http::HeaderMap *request_headers_{};
 };
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

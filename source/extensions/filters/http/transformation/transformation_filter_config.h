@@ -7,7 +7,9 @@
 #include "transformation_filter.pb.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 class RouteTransformationFilterConfig
     : public Router::RouteSpecificFilterConfig {
@@ -38,5 +40,7 @@ private:
 typedef std::shared_ptr<const RouteTransformationFilterConfig>
     RouteTransformationFilterConfigConstSharedPtr;
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

@@ -11,10 +11,11 @@
 #include "transformation_filter.pb.validate.h"
 
 namespace Envoy {
-namespace Server {
-namespace Configuration {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
-using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
+using Common::EmptyHttpFilterConfig;
 
 class TransformationFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
@@ -24,12 +25,15 @@ public:
 
   ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
   Router::RouteSpecificFilterConfigConstSharedPtr
-  createRouteSpecificFilterConfig(const Protobuf::Message &,
-                                  FactoryContext &) override;
-  Http::FilterFactoryCb createFilter(const std::string &stat_prefix,
-                                     FactoryContext &context) override;
+  createRouteSpecificFilterConfig(
+      const Protobuf::Message &,
+      Server::Configuration::FactoryContext &) override;
+  Http::FilterFactoryCb
+  createFilter(const std::string &stat_prefix,
+               Server::Configuration::FactoryContext &context) override;
 };
 
-} // namespace Configuration
-} // namespace Server
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

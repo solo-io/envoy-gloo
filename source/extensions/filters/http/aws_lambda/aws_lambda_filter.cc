@@ -19,16 +19,18 @@
 #include "extensions/filters/http/aws_lambda_well_known_names.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 class AWSLambdaHeaderValues {
 public:
-  const LowerCaseString InvocationType{"x-amz-invocation-type"};
+  const Http::LowerCaseString InvocationType{"x-amz-invocation-type"};
   const std::string InvocationTypeEvent{"Event"};
   const std::string InvocationTypeRequestResponse{"RequestResponse"};
-  const LowerCaseString LogType{"x-amz-log-type"};
+  const Http::LowerCaseString LogType{"x-amz-log-type"};
   const std::string LogNone{"None"};
-  const LowerCaseString HostHead{"x-amz-log-type"};
+  const Http::LowerCaseString HostHead{"x-amz-log-type"};
 };
 
 typedef ConstSingleton<AWSLambdaHeaderValues> AWSLambdaHeaderNames;
@@ -36,8 +38,8 @@ typedef ConstSingleton<AWSLambdaHeaderValues> AWSLambdaHeaderNames;
 const HeaderList AWSLambdaFilter::HeadersToSign =
     AwsAuthenticator::createHeaderToSign(
         {AWSLambdaHeaderNames::get().InvocationType,
-         AWSLambdaHeaderNames::get().LogType, Headers::get().HostLegacy,
-         Headers::get().ContentType});
+         AWSLambdaHeaderNames::get().LogType, Http::Headers::get().HostLegacy,
+         Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
     : cluster_manager_(cluster_manager) {}
@@ -55,27 +57,27 @@ std::string AWSLambdaFilter::functionUrlPath(const std::string &name,
   return val.str();
 }
 
-FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
-                                                   bool end_stream) {
+Http::FilterHeadersStatus
+AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
-  protocol_options_ = SoloFilterUtility::resolveProtocolOptions<
+  protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
       Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_,
       cluster_manager_);
   if (!protocol_options_) {
-    return FilterHeadersStatus::Continue;
+    return Http::FilterHeadersStatus::Continue;
   }
 
   route_ = decoder_callbacks_->route();
   // great! this is an aws cluster. get the function information:
   function_on_route_ =
-      SoloFilterUtility::resolvePerFilterConfig<AWSLambdaRouteConfig>(
+      Http::SoloFilterUtility::resolvePerFilterConfig<AWSLambdaRouteConfig>(
           Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, route_);
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(
-        Code::NotFound, "no function present for AWS upstream", nullptr);
-    return FilterHeadersStatus::StopIteration;
+        Http::Code::NotFound, "no function present for AWS upstream", nullptr);
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   aws_authenticator_.init(&protocol_options_->access_key(),
@@ -83,7 +85,7 @@ FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
-      Headers::get().MethodValues.Post);
+      Http::Headers::get().MethodValues.Post);
 
   //  request_headers_->removeContentLength();
   request_headers_->insertPath().value(functionUrlPath(
@@ -91,34 +93,34 @@ FilterHeadersStatus AWSLambdaFilter::decodeHeaders(HeaderMap &headers,
 
   if (end_stream) {
     lambdafy();
-    return FilterHeadersStatus::Continue;
+    return Http::FilterHeadersStatus::Continue;
   }
 
-  return FilterHeadersStatus::StopIteration;
+  return Http::FilterHeadersStatus::StopIteration;
 }
 
-FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
-                                             bool end_stream) {
+Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
+                                                   bool end_stream) {
   if (!function_on_route_) {
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
   aws_authenticator_.updatePayloadHash(data);
 
   if (end_stream) {
     lambdafy();
-    return FilterDataStatus::Continue;
+    return Http::FilterDataStatus::Continue;
   }
 
-  return FilterDataStatus::StopIterationAndBuffer;
+  return Http::FilterDataStatus::StopIterationAndBuffer;
 }
 
-FilterTrailersStatus AWSLambdaFilter::decodeTrailers(HeaderMap &) {
+Http::FilterTrailersStatus AWSLambdaFilter::decodeTrailers(Http::HeaderMap &) {
   if (function_on_route_ != nullptr) {
     lambdafy();
   }
 
-  return FilterTrailersStatus::Continue;
+  return Http::FilterTrailersStatus::Continue;
 }
 
 void AWSLambdaFilter::lambdafy() {
@@ -144,5 +146,7 @@ void AWSLambdaFilter::cleanup() {
   protocol_options_.reset();
 }
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

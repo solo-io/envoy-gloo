@@ -21,12 +21,14 @@ using testing::WithArg;
 using json = nlohmann::json;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
-  TestHeaderMapImpl headers;
+  Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, {}, originalbody);
 
   auto res = t.render("{{field1}}");
@@ -39,7 +41,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   originalbody["field1"] = "value1";
   std::string path = "/getsomething";
 
-  TestHeaderMapImpl headers{
+  Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
 
   TransformerInstance t(headers, {}, originalbody);
@@ -53,10 +55,10 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
   json originalbody;
   originalbody["field1"] = "value1";
   std::string header = "blah blah";
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/getsomething"},
-                            {"x-custom-header", header}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"},
+                                  {"x-custom-header", header}};
   TransformerInstance t(headers, {}, originalbody);
 
   auto res = t.render("{{header(\"x-custom-header\")}}");
@@ -69,7 +71,7 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   std::map<std::string, std::string> extractions;
   std::string field = "res";
   extractions["f"] = field;
-  TestHeaderMapImpl headers;
+  Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
 
   auto res = t.render("{{extraction(\"f\")}}");
@@ -81,7 +83,7 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   json originalbody;
   std::map<std::string, std::string> extractions;
   extractions["foo"] = "bar";
-  TestHeaderMapImpl headers;
+  Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
 
   auto res = t.render("{{extraction(\"notsuchfield\")}}");
@@ -90,9 +92,9 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
 }
 
 TEST(ExtractorUtil, ExtractIdFromHeader) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
@@ -103,10 +105,10 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
 }
 
 TEST(Transformer, transform) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -134,10 +136,10 @@ TEST(Transformer, transform) {
 }
 
 TEST(Transformer, transformSimple) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -165,10 +167,10 @@ TEST(Transformer, transformSimple) {
 }
 
 TEST(Transformer, transformSimpleNestedStructs) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -196,10 +198,10 @@ TEST(Transformer, transformSimpleNestedStructs) {
 }
 
 TEST(Transformer, transformPassthrough) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   // in passthrough mode the filter gives us an empty body
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
@@ -222,10 +224,10 @@ TEST(Transformer, transformPassthrough) {
 }
 
 TEST(Transformer, transformMergeExtractorsToBody) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   // in passthrough mode the filter gives us an empty body
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
@@ -251,10 +253,10 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 }
 
 TEST(Transformer, transformBodyNotSet) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   std::string originalBody = "{\"a\":\"456\"}";
   Buffer::OwnedImpl body(originalBody);
 
@@ -276,7 +278,7 @@ TEST(Transformer, transformBodyNotSet) {
 }
 
 TEST(Transformer, transformWithHyphens) {
-  TestHeaderMapImpl headers{
+  Http::TestHeaderMapImpl headers{
       {":method", "GET"},
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
   Buffer::OwnedImpl body("{}");
@@ -301,5 +303,7 @@ TEST(Transformer, transformWithHyphens) {
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

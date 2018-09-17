@@ -20,13 +20,15 @@ using testing::WithArg;
 using json = nlohmann::json;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 TEST(BodyHeaderTransformer, transform) {
-  TestHeaderMapImpl headers{{":method", "GET"},
-                            {":authority", "www.solo.io"},
-                            {"x-test", "789"},
-                            {":path", "/users/123"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {"x-test", "789"},
+                                  {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
   BodyHeaderTransformer transformer;
@@ -49,5 +51,7 @@ TEST(BodyHeaderTransformer, transform) {
   EXPECT_EQ(expected, actual);
 }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy
