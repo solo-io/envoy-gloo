@@ -15,14 +15,16 @@
 #include "common/singleton/const_singleton.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace AwsLambda {
 
 class AwsAuthenticatorValues {
 public:
   const std::string Algorithm{"AWS4-HMAC-SHA256"};
   const std::string Service{"lambda"};
   const std::string Newline{"\n"};
-  const LowerCaseString DateHeader{"x-amz-date"};
+  const Http::LowerCaseString DateHeader{"x-amz-date"};
 };
 
 typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
@@ -30,7 +32,7 @@ typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
 AwsAuthenticator::AwsAuthenticator() {
   // TODO(yuval-k) hardcoded for now
   service_ = &AwsAuthenticatorConsts::get().Service;
-  method_ = &Headers::get().MethodValues.Post;
+  method_ = &Http::Headers::get().MethodValues.Post;
 }
 
 void AwsAuthenticator::init(const std::string *access_key,
@@ -43,7 +45,7 @@ void AwsAuthenticator::init(const std::string *access_key,
 AwsAuthenticator::~AwsAuthenticator() {}
 
 HeaderList AwsAuthenticator::createHeaderToSign(
-    std::initializer_list<LowerCaseString> headers) {
+    std::initializer_list<Http::LowerCaseString> headers) {
   // A C++ set is sorted. which is required by AWS signature algorithm.
   HeaderList ret(AwsAuthenticator::lowercasecompare);
   ret.insert(headers);
@@ -55,8 +57,8 @@ void AwsAuthenticator::updatePayloadHash(const Buffer::Instance &data) {
   body_sha_.update(data);
 }
 
-bool AwsAuthenticator::lowercasecompare(const LowerCaseString &i,
-                                        const LowerCaseString &j) {
+bool AwsAuthenticator::lowercasecompare(const Http::LowerCaseString &i,
+                                        const Http::LowerCaseString &j) {
   return (i.get() < j.get());
 }
 
@@ -76,7 +78,7 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
 
   for (auto header = headers_to_sign.begin(), end = headers_to_sign.end();
        header != end; header++) {
-    const HeaderEntry *headerEntry = request_headers_->get(*header);
+    const Http::HeaderEntry *headerEntry = request_headers_->get(*header);
     if (headerEntry == nullptr) {
       request_headers_->lookup(*header, &headerEntry);
     }
@@ -114,11 +116,11 @@ std::string AwsAuthenticator::getBodyHexSha() {
 }
 
 void AwsAuthenticator::fetchUrl() {
-
-  const HeaderString &canonical_url = request_headers_->Path()->value();
+  const Http::HeaderString &canonical_url = request_headers_->Path()->value();
   url_len_ = canonical_url.size();
   url_start_ = canonical_url.c_str();
-  const char *query_string_start = Utility::findQueryStringStart(canonical_url);
+  const char *query_string_start =
+      Http::Utility::findQueryStringStart(canonical_url);
   // bug in: findQueryStringStart - query_string_start will never be null as
   // implied in config_impl.cc, but rather it is the end iterator of the string.
   if (query_string_start != nullptr) {
@@ -209,7 +211,7 @@ std::string AwsAuthenticator::computeSignature(
   return Hex::encode(out, out_len);
 }
 
-void AwsAuthenticator::sign(HeaderMap *request_headers,
+void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
                             const HeaderList &headers_to_sign,
                             const std::string &region) {
 
@@ -223,7 +225,7 @@ void AwsAuthenticator::sign(HeaderMap *request_headers,
 }
 
 std::string AwsAuthenticator::signWithTime(
-    HeaderMap *request_headers, const HeaderList &headers_to_sign,
+    Http::HeaderMap *request_headers, const HeaderList &headers_to_sign,
     const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
   request_headers_ = request_headers;
@@ -328,5 +330,7 @@ void AwsAuthenticator::HMACSha256::finalize(uint8_t *out,
   HMAC_Final(&context_, out, out_len);
 }
 
-} // namespace Http
+} // namespace AwsLambda
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy
