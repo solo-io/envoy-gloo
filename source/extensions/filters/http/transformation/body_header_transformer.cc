@@ -6,9 +6,11 @@
 using json = nlohmann::json;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
-void BodyHeaderTransformer::transform(HeaderMap &header_map,
+void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
                                       Buffer::Instance &body) {
   json json_body;
   // copied from base64.cc
@@ -30,11 +32,12 @@ void BodyHeaderTransformer::transform(HeaderMap &header_map,
 
   json &headers = json_body["headers"];
   header_map.iterate(
-      [](const HeaderEntry &header, void *context) -> HeaderMap::Iterate {
+      [](const Http::HeaderEntry &header,
+         void *context) -> Http::HeaderMap::Iterate {
         json *headers_ptr = static_cast<json *>(context);
         json &headers = *headers_ptr;
         headers[header.key().c_str()] = header.value().c_str();
-        return HeaderMap::Iterate::Continue;
+        return Http::HeaderMap::Iterate::Continue;
       },
       &headers);
 
@@ -43,7 +46,7 @@ void BodyHeaderTransformer::transform(HeaderMap &header_map,
   // we know that the new content type is json:
   header_map.removeContentType();
   header_map.insertContentType().value().setReference(
-      Headers::get().ContentTypeValues.Json);
+      Http::Headers::get().ContentTypeValues.Json);
 
   // replace body
   body.drain(body.length());
@@ -51,5 +54,7 @@ void BodyHeaderTransformer::transform(HeaderMap &header_map,
   header_map.insertContentLength().value(body.length());
 }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

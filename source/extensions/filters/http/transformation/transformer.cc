@@ -11,22 +11,24 @@ using json = nlohmann::json;
 using namespace std::placeholders;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 // TODO: move to common
 namespace {
-const HeaderEntry *getHeader(const HeaderMap &header_map,
-                             const LowerCaseString &key) {
-  const HeaderEntry *header_entry = header_map.get(key);
+const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
+                                   const Http::LowerCaseString &key) {
+  const Http::HeaderEntry *header_entry = header_map.get(key);
   if (!header_entry) {
     header_map.lookup(key, &header_entry);
   }
   return header_entry;
 }
 
-const HeaderEntry *getHeader(const HeaderMap &header_map,
-                             const std::string &key) {
+const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
+                                   const std::string &key) {
   // use explicit consturctor so string is lowered
-  auto lowerkey = LowerCaseString(key);
+  auto lowerkey = Http::LowerCaseString(key);
   return getHeader(header_map, lowerkey);
 }
 
@@ -34,10 +36,10 @@ const HeaderEntry *getHeader(const HeaderMap &header_map,
 
 std::string ExtractorUtil::extract(
     const envoy::api::v2::filter::http::Extraction &extractor,
-    const HeaderMap &header_map) {
+    const Http::HeaderMap &header_map) {
   // TODO: should we lowercase them in the config?
   const std::string &headername = extractor.header();
-  const HeaderEntry *header_entry = getHeader(header_map, headername);
+  const Http::HeaderEntry *header_entry = getHeader(header_map, headername);
   if (!header_entry) {
     return "";
   }
@@ -62,7 +64,7 @@ std::string ExtractorUtil::extract(
 }
 
 TransformerInstance::TransformerInstance(
-    const HeaderMap &header_map,
+    const Http::HeaderMap &header_map,
     const std::map<std::string, std::string> &extractions, const json &context)
     : header_map_(header_map), extractions_(extractions), context_(context) {
   env_.add_callback(
@@ -75,7 +77,7 @@ TransformerInstance::TransformerInstance(
 
 json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
   std::string headername = env_.get_argument<std::string>(args, 0, data);
-  const HeaderEntry *header_entry =
+  const Http::HeaderEntry *header_entry =
       getHeader(header_map_, std::move(headername));
   if (!header_entry) {
     return "";
@@ -103,7 +105,8 @@ Transformer::Transformer(
 
 Transformer::~Transformer() {}
 
-void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
+void Transformer::transform(Http::HeaderMap &header_map,
+                            Buffer::Instance &body) {
   json json_body;
   // copied from base64.cc
   if (body.length() > 0) {
@@ -188,7 +191,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
 
   for (auto it = headers.begin(); it != headers.end(); it++) {
     std::string name = it->first;
-    auto lkname = LowerCaseString(std::move(name));
+    auto lkname = Http::LowerCaseString(std::move(name));
     const envoy::api::v2::filter::http::InjaTemplate &text = it->second;
     std::string output = instance.render(text.text());
     // remove existing header
@@ -197,5 +200,7 @@ void Transformer::transform(HeaderMap &header_map, Buffer::Instance &body) {
   }
 }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

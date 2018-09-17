@@ -12,15 +12,15 @@
 #include "extensions/filters/http/transformation/transformation_filter_config.h"
 
 namespace Envoy {
-namespace Server {
-namespace Configuration {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
-Http::FilterFactoryCb
-TransformationFilterConfigFactory::createFilter(const std::string &,
-                                                FactoryContext &) {
+Http::FilterFactoryCb TransformationFilterConfigFactory::createFilter(
+    const std::string &, Server::Configuration::FactoryContext &) {
 
   return [](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new Http::TransformationFilter();
+    auto filter = new TransformationFilter();
     callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
   };
 }
@@ -32,21 +32,22 @@ TransformationFilterConfigFactory::createEmptyRouteConfigProto() {
 
 Router::RouteSpecificFilterConfigConstSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfig(
-    const Protobuf::Message &config, FactoryContext &) {
+    const Protobuf::Message &config, Server::Configuration::FactoryContext &) {
   const auto &proto_config =
       dynamic_cast<const envoy::api::v2::filter::http::RouteTransformations &>(
           config);
-  return std::make_shared<const Http::RouteTransformationFilterConfig>(
-      proto_config);
+  return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
 }
 
 /**
  * Static registration for this sample filter. @see RegisterFactory.
  */
-static Registry::RegisterFactory<TransformationFilterConfigFactory,
-                                 Configuration::NamedHttpFilterConfigFactory>
+static Registry::RegisterFactory<
+    TransformationFilterConfigFactory,
+    Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
 
-} // namespace Configuration
-} // namespace Server
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

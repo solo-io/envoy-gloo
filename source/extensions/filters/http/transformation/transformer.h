@@ -13,18 +13,20 @@
 #include "transformation_filter.pb.h"
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 class ExtractorUtil {
 public:
   static std::string
   extract(const envoy::api::v2::filter::http::Extraction &extractor,
-          const HeaderMap &header_map);
+          const Http::HeaderMap &header_map);
 };
 
 class TransformerInstance {
 public:
-  TransformerInstance(const HeaderMap &header_map,
+  TransformerInstance(const Http::HeaderMap &header_map,
                       const std::map<std::string, std::string> &extractions,
                       const nlohmann::json &context);
   // header_value(name)
@@ -43,7 +45,7 @@ public:
 
 private:
   inja::Environment env_;
-  const HeaderMap &header_map_;
+  const Http::HeaderMap &header_map_;
   const std::map<std::string, std::string> &extractions_;
   const nlohmann::json &context_;
 };
@@ -54,7 +56,7 @@ public:
                   &transformation);
   ~Transformer();
 
-  void transform(HeaderMap &map, Buffer::Instance &body);
+  void transform(Http::HeaderMap &map, Buffer::Instance &body);
 
 private:
   /*
@@ -70,5 +72,7 @@ private:
   const envoy::api::v2::filter::http::TransformationTemplate &transformation_;
 };
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy

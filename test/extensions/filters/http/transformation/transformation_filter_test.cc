@@ -19,7 +19,9 @@ using testing::SaveArg;
 using testing::WithArg;
 
 namespace Envoy {
-namespace Http {
+namespace Extensions {
+namespace HttpFilters {
+namespace Transformation {
 
 class TransformationFilterTest : public testing::Test {
 public:
@@ -63,11 +65,11 @@ public:
     initFilter(); // Re-load config.
   }
 
-  TestHeaderMapImpl headers_{
+  Http::TestHeaderMapImpl headers_{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
-  NiceMock<MockStreamDecoderFilterCallbacks> filter_callbacks_;
-  NiceMock<MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::filter::http::RouteTransformations route_config_;
   RouteTransformationFilterConfigConstSharedPtr route_config_wrapper_;
@@ -76,7 +78,7 @@ public:
 TEST_F(TransformationFilterTest, EmptyConfig) {
   initFilter();
   auto res = filter_->decodeHeaders(headers_, false);
-  EXPECT_EQ(FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeaders) {
@@ -84,7 +86,7 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
 
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
 }
 
 TEST_F(TransformationFilterTest, TransformsResponseOnHeaders) {
@@ -99,7 +101,7 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeaders) {
   filter_->decodeHeaders(headers_, true);
   EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(1);
   auto res = filter_->encodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
 }
 
 TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
@@ -107,12 +109,12 @@ TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
 
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
+      .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
         status = headers.Status()->value().c_str();
       }));
 
   auto res = filter_->decodeHeaders(headers_, true);
-  EXPECT_EQ(FilterHeadersStatus::StopIteration, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
   EXPECT_EQ("400", status);
 }
 
@@ -120,17 +122,17 @@ TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
   initFilterWithBodyTemplate("solo");
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
-  ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
+  ASSERT_EQ(Http::FilterHeadersStatus::StopIteration, resheaders);
 
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](HeaderMap &headers, bool) {
+      .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
         status = headers.Status()->value().c_str();
       }));
 
   Buffer::OwnedImpl body("this is not json");
   auto res = filter_->decodeData(body, true);
-  EXPECT_EQ(FilterDataStatus::StopIterationNoBuffer, res);
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer, res);
   EXPECT_EQ("400", status);
 }
 
@@ -138,7 +140,7 @@ TEST_F(TransformationFilterTest, HappyPathWithBody) {
   initFilterWithBodyTemplate("{{a}}");
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
-  ASSERT_EQ(FilterHeadersStatus::StopIteration, resheaders);
+  ASSERT_EQ(Http::FilterHeadersStatus::StopIteration, resheaders);
 
   std::string upstream_body;
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
@@ -147,7 +149,7 @@ TEST_F(TransformationFilterTest, HappyPathWithBody) {
 
   Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
   auto res = filter_->decodeData(downstream_body, true);
-  EXPECT_EQ(FilterDataStatus::Continue, res);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, res);
   EXPECT_EQ("b", upstream_body);
 }
 
@@ -155,23 +157,25 @@ TEST_F(TransformationFilterTest, HappyPathWithBodyPassthrough) {
   initFilterWithBodyPassthrough();
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
-  EXPECT_EQ(FilterHeadersStatus::Continue, resheaders);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, resheaders);
 
   Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
   auto res = filter_->decodeData(downstream_body, true);
-  EXPECT_EQ(FilterDataStatus::Continue, res);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, res);
 }
 
 TEST_F(TransformationFilterTest, HappyPathWithHeadersBodyTemplate) {
   initFilterWithHeadersBody();
 
   auto resheaders = filter_->decodeHeaders(headers_, false);
-  EXPECT_EQ(FilterHeadersStatus::StopIteration, resheaders);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, resheaders);
 
   Buffer::OwnedImpl downstream_body("testbody");
   auto res = filter_->decodeData(downstream_body, true);
-  EXPECT_EQ(FilterDataStatus::Continue, res);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, res);
 }
 
-} // namespace Http
+} // namespace Transformation
+} // namespace HttpFilters
+} // namespace Extensions
 } // namespace Envoy
