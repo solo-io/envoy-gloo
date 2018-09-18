@@ -106,24 +106,11 @@ void NatsStreamingFilter::onTimeout() {
 }
 
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
-  const auto &&route = decoder_callbacks_->route();
-  if (!route) {
-    return;
-  }
-
-  const auto *entry = decoder_callbacks_->route()->routeEntry();
-  if (!decoder_callbacks_->route()->routeEntry()) {
-    return;
-  }
-
   const std::string &name =
       Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
-
-  const auto *route_local =
-      entry->perFilterConfigTyped<NatsStreamingRouteSpecificFilterConfig>(name)
-          ?: entry->virtualHost()
-                 .perFilterConfigTyped<NatsStreamingRouteSpecificFilterConfig>(
-                     name);
+  const Router::RouteConstSharedPtr &route = decoder_callbacks_->route();
+  const auto *route_local = Http::SoloFilterUtility::resolvePerFilterConfig<
+      const NatsStreamingRouteSpecificFilterConfig>(name, route);
 
   if (route_local != nullptr) {
     optional_route_specific_filter_config_ = route_local;
