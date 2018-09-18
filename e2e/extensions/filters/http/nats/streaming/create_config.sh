@@ -33,11 +33,11 @@ static_resources:
                   prefix: /post
                 route:
                   cluster: cluster_0
-                metadata:
-                  filter_metadata:
-                      io.solo.function_router:
-                        cluster_0:
-                          function: subject1
+                per_filter_config:
+                  io.solo.nats_streaming:
+                    subject: subject1
+                    discover_prefix: _STAN.discover
+                    cluster_id: test-cluster
           http_filters:
           - name: io.solo.nats_streaming
             config:
@@ -53,9 +53,4 @@ static_resources:
         port_value: 4222
     name: cluster_0
     type: STRICT_DNS
-    metadata:
-      filter_metadata:
-        io.solo.nats_streaming:
-          discover_prefix: _STAN.discover
-          cluster_id: test-cluster
 EOF

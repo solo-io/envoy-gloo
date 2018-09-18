@@ -6,18 +6,15 @@
 #include "common/nats/streaming/client_pool.h"
 #include "common/tcp/conn_pool_impl.h"
 
-#include "extensions/filters/http/nats/streaming/metadata_subject_retriever.h"
 #include "extensions/filters/http/nats/streaming/nats_streaming_filter.h"
 #include "extensions/filters/http/nats/streaming/nats_streaming_filter_config.h"
+#include "extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Nats {
 namespace Streaming {
-
-typedef Http::FunctionalFilterMixin<NatsStreamingFilter>
-    MixedNatsStreamingFilter;
 
 Http::FilterFactoryCb
 NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
@@ -29,9 +26,6 @@ NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
       std::make_shared<NatsStreamingFilterConfig>(
           NatsStreamingFilterConfig(proto_config, context.clusterManager()));
 
-  SubjectRetrieverSharedPtr subjectRetriever =
-      std::make_shared<MetadataSubjectRetriever>();
-
   Tcp::ConnPoolNats::ClientFactory<Envoy::Nats::Message> &client_factory =
       Tcp::ConnPoolNats::ClientFactoryImpl<Envoy::Nats::Message,
                                            Envoy::Nats::EncoderImpl,
@@ -42,22 +36,29 @@ NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
           config->cluster(), context.clusterManager(), client_factory,
           context.threadLocal(), context.random(), config->opTimeout());
 
-  return [&context, config, subjectRetriever, nats_streaming_client](
+  return [&context, config, nats_streaming_client](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new MixedNatsStreamingFilter(
-        context, Config::NatsStreamingMetadataFilters::get().NATS_STREAMING,
-        config, subjectRetriever, nats_streaming_client);
+    auto filter = new NatsStreamingFilter(config, nats_streaming_client);
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };
 }
 
+Router::RouteSpecificFilterConfigConstSharedPtr
+NatsStreamingFilterConfigFactory::createRouteSpecificFilterConfigTyped(
+    const envoy::config::filter::http::nats::streaming::v2::
+        NatsStreamingPerRoute &proto_config,
+    Server::Configuration::FactoryContext &) {
+  return std::make_shared<const NatsStreamingRouteSpecificFilterConfig>(
+      proto_config);
+}
+
 /**
- * Static registration for the Nats Streaming filter. @see RegisterFactory.
+ * Static registration for the NATS Streaming filter. @see RegisterFactory.
  */
-static Envoy::Registry::RegisterFactory<
+static Registry::RegisterFactory<
     NatsStreamingFilterConfigFactory,
-    Envoy::Server::Configuration::NamedHttpFilterConfigFactory>
+    Server::Configuration::NamedHttpFilterConfigFactory>
     register_;
 
 } // namespace Streaming

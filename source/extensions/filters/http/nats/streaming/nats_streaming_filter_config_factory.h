@@ -14,14 +14,14 @@ namespace HttpFilters {
 namespace Nats {
 namespace Streaming {
 
-using Extensions::HttpFilters::Common::FactoryBase;
-
 /**
  * Config registration for the NATS Streaming filter.
  */
 class NatsStreamingFilterConfigFactory
-    : public FactoryBase<
-          envoy::config::filter::http::nats::streaming::v2::NatsStreaming> {
+    : public Common::FactoryBase<
+          envoy::config::filter::http::nats::streaming::v2::NatsStreaming,
+          envoy::config::filter::http::nats::streaming::v2::
+              NatsStreamingPerRoute> {
 public:
   NatsStreamingFilterConfigFactory()
       : FactoryBase(
@@ -32,6 +32,12 @@ private:
       const envoy::config::filter::http::nats::streaming::v2::NatsStreaming
           &proto_config,
       const std::string &stats_prefix,
+      Server::Configuration::FactoryContext &context) override;
+
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfigTyped(
+      const envoy::config::filter::http::nats::streaming::v2::
+          NatsStreamingPerRoute &proto_config,
       Server::Configuration::FactoryContext &context) override;
 };
 

@@ -39,7 +39,6 @@ envoy_cc_test(
         "//test/extensions/filters/http/aws_lambda:aws_authenticator_test_lib",
         "//test/extensions/filters/http/aws_lambda:aws_lambda_filter_integration_test_lib",
         "//test/extensions/filters/http/aws_lambda:aws_lambda_filter_test_lib",
-        "//test/extensions/filters/http/nats/streaming:metadata_subject_retriever_test_lib",
         "//test/extensions/filters/http/nats/streaming:nats_streaming_filter_test_lib",
         "//test/extensions/filters/http/transformation:body_header_transformer_test_lib",
         "//test/extensions/filters/http/transformation:transformation_filter_integration_test_lib",

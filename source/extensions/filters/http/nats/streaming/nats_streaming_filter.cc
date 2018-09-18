@@ -8,12 +8,10 @@
 #include "envoy/http/header_map.h"
 #include "envoy/nats/streaming/client.h"
 
-#include "common/common/empty_string.h"
 #include "common/common/macros.h"
 #include "common/common/utility.h"
-#include "common/http/filter_utility.h"
+#include "common/config/nats_streaming_well_known_names.h"
 #include "common/http/solo_filter_utility.h"
-#include "common/http/utility.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -23,10 +21,8 @@ namespace Streaming {
 
 NatsStreamingFilter::NatsStreamingFilter(
     NatsStreamingFilterConfigSharedPtr config,
-    SubjectRetrieverSharedPtr retreiver,
     Envoy::Nats::Streaming::ClientPtr nats_streaming_client)
-    : config_(config), subject_retriever_(retreiver),
-      nats_streaming_client_(nats_streaming_client) {}
+    : config_(config), nats_streaming_client_(nats_streaming_client) {}
 
 NatsStreamingFilter::~NatsStreamingFilter() {}
 
@@ -42,7 +38,12 @@ Http::FilterHeadersStatus
 NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
                                    bool end_stream) {
   UNREFERENCED_PARAMETER(headers);
-  RELEASE_ASSERT(isActive(), "");
+
+  retrieveRouteSpecificFilterConfig();
+
+  if (!isActive()) {
+    return Http::FilterHeadersStatus::Continue;
+  }
 
   if (end_stream) {
     relayToNatsStreaming();
@@ -54,7 +55,10 @@ NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
 Http::FilterDataStatus
 NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
                                 bool end_stream) {
-  RELEASE_ASSERT(isActive(), "");
+  if (!isActive()) {
+    return Http::FilterDataStatus::Continue;
+  }
+
   body_.move(data);
 
   if ((decoder_buffer_limit_.has_value()) &&
@@ -81,16 +85,12 @@ NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 NatsStreamingFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
-  RELEASE_ASSERT(isActive(), "");
+  if (!isActive()) {
+    return Http::FilterTrailersStatus::Continue;
+  }
 
   relayToNatsStreaming();
   return Http::FilterTrailersStatus::StopIteration;
-}
-
-bool NatsStreamingFilter::retrieveFunction(
-    const Http::MetadataAccessor &meta_accessor) {
-  retrieveSubject(meta_accessor);
-  return isActive();
 }
 
 void NatsStreamingFilter::onResponse() { onCompletion(Http::Code::OK, ""); }
@@ -105,14 +105,35 @@ void NatsStreamingFilter::onTimeout() {
                RequestInfo::ResponseFlag::UpstreamRequestTimeout);
 }
 
-void NatsStreamingFilter::retrieveSubject(
-    const Http::MetadataAccessor &meta_accessor) {
-  optional_subject_ = subject_retriever_->getSubject(meta_accessor);
+void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
+  const auto &&route = decoder_callbacks_->route();
+  if (!route) {
+    return;
+  }
+
+  const auto *entry = decoder_callbacks_->route()->routeEntry();
+  if (!decoder_callbacks_->route()->routeEntry()) {
+    return;
+  }
+
+  const std::string &name =
+      Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
+
+  const auto *route_local =
+      entry->perFilterConfigTyped<NatsStreamingRouteSpecificFilterConfig>(name)
+          ?: entry->virtualHost()
+                 .perFilterConfigTyped<NatsStreamingRouteSpecificFilterConfig>(
+                     name);
+
+  if (route_local != nullptr) {
+    optional_route_specific_filter_config_ = route_local;
+  }
 }
 
 void NatsStreamingFilter::relayToNatsStreaming() {
-  RELEASE_ASSERT(optional_subject_.has_value(), "");
-  RELEASE_ASSERT(!optional_subject_.value().subject->empty(), "");
+  RELEASE_ASSERT(optional_route_specific_filter_config_.has_value(), "");
+  RELEASE_ASSERT(
+      !optional_route_specific_filter_config_.value()->subject().empty(), "");
 
   const std::string *cluster_name =
       Http::SoloFilterUtility::resolveClusterName(decoder_callbacks_);
@@ -122,10 +143,12 @@ void NatsStreamingFilter::relayToNatsStreaming() {
     return;
   }
 
-  auto &&subject_entry = optional_subject_.value();
-  const std::string &subject = *subject_entry.subject;
-  const std::string &cluster_id = *subject_entry.cluster_id;
-  const std::string &discover_prefix = *subject_entry.discover_prefix;
+  auto &&route_specific_filter_config =
+      optional_route_specific_filter_config_.value();
+  const std::string &subject = route_specific_filter_config->subject();
+  const std::string &cluster_id = route_specific_filter_config->clusterId();
+  const std::string &discover_prefix =
+      route_specific_filter_config->discoverPrefix();
 
   in_flight_request_ = nats_streaming_client_->makeRequest(
       subject, cluster_id, discover_prefix, body_, *this);

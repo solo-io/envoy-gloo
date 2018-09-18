@@ -15,3 +15,9 @@ message NatsStreaming {
   uint32 max_connections = 2;
   google.protobuf.Duration op_timeout = 3;
 }
+
+message NatsStreamingPerRoute {
+  string subject = 1 [ (validate.rules).string.min_bytes = 1 ];
+  string cluster_id = 2 [ (validate.rules).string.min_bytes = 1 ];
+  string discover_prefix = 3 [ (validate.rules).string.min_bytes = 1 ];
+}

@@ -25,25 +25,6 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "subject_retriever_lib",
-    srcs = [
-        "metadata_subject_retriever.cc",
-    ],
-    hdrs = [
-        "metadata_subject_retriever.h",
-        "subject_retriever.h",
-    ],
-    repository = "@envoy",
-    deps = [
-        "//source/common/config:nats_streaming_well_known_names_lib",
-        "//source/common/config:solo_metadata_lib",
-        "//source/common/http:functional_stream_decoder_base_lib",
-        "//source/common/http:solo_filter_utility_lib",
-        "@envoy//source/common/config:metadata_lib",
-    ],
-)
-
-envoy_cc_library(
     name = "nats_streaming_filter_lib",
     srcs = [
         "nats_streaming_filter.cc",
@@ -54,9 +35,8 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":nats_streaming_filter_config",
-        ":subject_retriever_lib",
+        ":nats_streaming_route_specific_filter_config",
         "//include/envoy/nats/streaming:client_interface",
-        "//source/common/http:functional_stream_decoder_base_lib",
         "//source/common/http:solo_filter_utility_lib",
     ],
 )
@@ -73,5 +53,17 @@ envoy_cc_library(
         "//source/common/nats/streaming:client_pool_lib",
         "//source/common/tcp:conn_pool_lib",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "nats_streaming_route_specific_filter_config",
+    srcs = ["nats_streaming_route_specific_filter_config.cc"],
+    hdrs = ["nats_streaming_route_specific_filter_config.h"],
+    repository = "@envoy",
+    deps = [
+        "//api/envoy/config/filter/http/nats/streaming/v2:nats_streaming_cc",
+        "@envoy//include/envoy/registry",
+        "@envoy//include/envoy/router:router_interface",
     ],
 )
