@@ -45,7 +45,6 @@ public:
   virtual void onTimeout() override;
 
 private:
-  // TODO(talnordan): Consider moving this logic into `common`.
   void retrieveRouteSpecificFilterConfig();
 
   inline bool isActive() {
