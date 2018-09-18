@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package envoy.api.v2.filter.http;
+package envoy.config.filter.http.nats.streaming.v2;
 
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";

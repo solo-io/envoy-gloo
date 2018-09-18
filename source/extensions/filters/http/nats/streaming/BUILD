@@ -19,7 +19,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//:nats_streaming_filter_proto_cc",
+        "//api/envoy/config/filter/http/nats/streaming/v2:nats_streaming_cc",
         "//source/common/config:nats_streaming_well_known_names_lib",
     ],
 )

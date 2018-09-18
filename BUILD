@@ -23,11 +23,6 @@ api_proto_library(
 )
 
 api_proto_library(
-    name = "nats_streaming_filter_proto",
-    srcs = ["nats_streaming_filter.proto"],
-)
-
-api_proto_library(
     name = "protocol_proto",
     srcs = ["protocol.proto"],
 )

@@ -9,7 +9,7 @@
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 
-#include "./nats_streaming_filter.pb.h"
+#include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -50,7 +50,8 @@ public:
 protected:
   void SetUp() override {
 
-    envoy::api::v2::filter::http::NatsStreaming proto_config;
+    envoy::config::filter::http::nats::streaming::v2::NatsStreaming
+        proto_config;
     proto_config.mutable_op_timeout()->set_nanos(17 * 1000000);
     proto_config.set_max_connections(1);
     proto_config.set_cluster("cluster");

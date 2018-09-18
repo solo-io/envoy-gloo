@@ -21,7 +21,8 @@ typedef Http::FunctionalFilterMixin<NatsStreamingFilter>
 
 Http::FilterFactoryCb
 NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
-    const envoy::api::v2::filter::http::NatsStreaming &proto_config,
+    const envoy::config::filter::http::nats::streaming::v2::NatsStreaming
+        &proto_config,
     const std::string &, Server::Configuration::FactoryContext &context) {
 
   NatsStreamingFilterConfigSharedPtr config =

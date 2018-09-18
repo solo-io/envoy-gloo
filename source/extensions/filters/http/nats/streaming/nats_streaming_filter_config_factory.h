@@ -6,7 +6,7 @@
 
 #include "extensions/filters/http/common/factory_base.h"
 
-#include "nats_streaming_filter.pb.validate.h"
+#include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -20,7 +20,8 @@ using Extensions::HttpFilters::Common::FactoryBase;
  * Config registration for the NATS Streaming filter.
  */
 class NatsStreamingFilterConfigFactory
-    : public FactoryBase<envoy::api::v2::filter::http::NatsStreaming> {
+    : public FactoryBase<
+          envoy::config::filter::http::nats::streaming::v2::NatsStreaming> {
 public:
   NatsStreamingFilterConfigFactory()
       : FactoryBase(
@@ -28,7 +29,8 @@ public:
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const envoy::api::v2::filter::http::NatsStreaming &proto_config,
+      const envoy::config::filter::http::nats::streaming::v2::NatsStreaming
+          &proto_config,
       const std::string &stats_prefix,
       Server::Configuration::FactoryContext &context) override;
 };

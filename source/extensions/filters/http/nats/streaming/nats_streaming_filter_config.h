@@ -7,7 +7,7 @@
 
 #include "common/protobuf/utility.h"
 
-#include "nats_streaming_filter.pb.h"
+#include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -17,7 +17,8 @@ namespace Streaming {
 
 class NatsStreamingFilterConfig {
 
-  using ProtoConfig = envoy::api::v2::filter::http::NatsStreaming;
+  using ProtoConfig =
+      envoy::config::filter::http::nats::streaming::v2::NatsStreaming;
 
 public:
   NatsStreamingFilterConfig(const ProtoConfig &proto_config,

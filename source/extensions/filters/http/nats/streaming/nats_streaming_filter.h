@@ -7,7 +7,7 @@
 #include "extensions/filters/http/nats/streaming/nats_streaming_filter_config.h"
 #include "extensions/filters/http/nats/streaming/subject_retriever.h"
 
-#include "nats_streaming_filter.pb.h"
+#include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
