@@ -118,9 +118,9 @@ void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
 }
 
 void NatsStreamingFilter::relayToNatsStreaming() {
-  RELEASE_ASSERT(optional_route_specific_filter_config_.has_value(), "");
-  RELEASE_ASSERT(
-      !optional_route_specific_filter_config_.value()->subject().empty(), "");
+  ASSERT(optional_route_specific_filter_config_.has_value(), "");
+  ASSERT(!optional_route_specific_filter_config_.value()->subject().empty(),
+         "");
 
   const std::string *cluster_name =
       Http::SoloFilterUtility::resolveClusterName(decoder_callbacks_);
