@@ -22,7 +22,6 @@ envoy_cc_test(
     deps = [
         "//test/common/buffer:buffer_utility_test_lib",
         "//test/common/config:solo_metadata_test_lib",
-        "//test/common/http:functional_stream_decoder_base_test_lib",
         "//test/common/http:route_enabled_filter_wrapper_test_lib",
         "//test/common/http:solo_filter_utility_test_lib",
         "//test/common/nats:codec_impl_test_lib",
