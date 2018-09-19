@@ -28,7 +28,6 @@ public:
 
 protected:
   void SetUp() override {
-
     envoy::config::filter::http::nats::streaming::v2::NatsStreaming
         proto_config;
     proto_config.mutable_op_timeout()->set_nanos(17 * 1000000);
@@ -41,9 +40,14 @@ protected:
         new NiceMock<Envoy::Nats::Streaming::MockClient>);
     filter_.reset(new NatsStreamingFilter(config_, nats_streaming_client_));
     filter_->setDecoderFilterCallbacks(callbacks_);
+  }
 
-    route_specific_filter_config_.reset(
-        new NatsStreamingRouteSpecificFilterConfig(perRouteProtoConfig()));
+  NatsStreamingRouteSpecificFilterConfig
+  routeSpecificFilterConfig(const std::string &subject,
+                            const std::string &clusterId,
+                            const std::string &discoverPrefix) {
+    return NatsStreamingRouteSpecificFilterConfig(
+        perRouteProtoConfig(subject, clusterId, discoverPrefix));
   }
 
   NiceMock<Envoy::Server::Configuration::MockFactoryContext> factory_context_;
@@ -52,17 +56,16 @@ protected:
       nats_streaming_client_;
   std::unique_ptr<NatsStreamingFilter> filter_;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks_;
-  std::unique_ptr<NatsStreamingRouteSpecificFilterConfig>
-      route_specific_filter_config_;
 
 private:
   envoy::config::filter::http::nats::streaming::v2::NatsStreamingPerRoute
-  perRouteProtoConfig() {
+  perRouteProtoConfig(const std::string &subject, const std::string &clusterId,
+                      const std::string &discoverPrefix) {
     envoy::config::filter::http::nats::streaming::v2::NatsStreamingPerRoute
         proto_config;
-    proto_config.set_subject("Subject1");
-    proto_config.set_cluster_id("cluster_id");
-    proto_config.set_discover_prefix("discover_prefix1");
+    proto_config.set_subject(subject);
+    proto_config.set_cluster_id(clusterId);
+    proto_config.set_discover_prefix(discoverPrefix);
     return proto_config;
   }
 };
@@ -134,10 +137,11 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
                           Ref(*filter_)))
       .Times(1);
 
-  ON_CALL(callbacks_.route_->route_entry_,
-          perFilterConfig(
-              Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING))
-      .WillByDefault(Return(route_specific_filter_config_.get()));
+  const auto &name = Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
+  const auto &&config =
+      routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
+  ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
+      .WillByDefault(Return(&config));
 
   Http::TestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
@@ -153,10 +157,11 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
                           Ref(*filter_)))
       .Times(1);
 
-  ON_CALL(callbacks_.route_->route_entry_,
-          perFilterConfig(
-              Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING))
-      .WillByDefault(Return(route_specific_filter_config_.get()));
+  const auto &name = Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
+  const auto &&config =
+      routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
+  ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
+      .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
@@ -188,10 +193,11 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
                           Ref(*filter_)))
       .Times(1);
 
-  ON_CALL(callbacks_.route_->route_entry_,
-          perFilterConfig(
-              Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING))
-      .WillByDefault(Return(route_specific_filter_config_.get()));
+  const auto &name = Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
+  const auto &&config =
+      routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
+  ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
+      .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
