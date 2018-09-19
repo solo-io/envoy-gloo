@@ -1,6 +1,5 @@
 #pragma once
 
-#include "envoy/http/metadata_accessor.h"
 #include "envoy/server/filter_config.h"
 
 #include "common/buffer/buffer_impl.h"

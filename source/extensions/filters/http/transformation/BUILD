@@ -38,7 +38,6 @@ envoy_cc_library(
         ":body_header_transformer_lib",
         ":transformation_filter_config",
         ":transformer_lib",
-        "//include/envoy/http:metadata_accessor_interface",
         "//source/common/http:solo_filter_utility_lib",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",
