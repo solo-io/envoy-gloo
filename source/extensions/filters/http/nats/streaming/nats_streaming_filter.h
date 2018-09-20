@@ -62,6 +62,7 @@ private:
 
   const NatsStreamingFilterConfigSharedPtr config_;
   Envoy::Nats::Streaming::ClientPtr nats_streaming_client_;
+  Router::RouteConstSharedPtr route_;
   absl::optional<const NatsStreamingRouteSpecificFilterConfig *>
       optional_route_specific_filter_config_;
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};

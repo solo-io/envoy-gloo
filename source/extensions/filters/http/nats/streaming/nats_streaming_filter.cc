@@ -108,9 +108,14 @@ void NatsStreamingFilter::onTimeout() {
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
   const std::string &name =
       Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
-  const Router::RouteConstSharedPtr &route = decoder_callbacks_->route();
+
+  // A `shared_ptr` to the result of `route()` is stored as a member in order
+  // to make sure that the pointer returned by `resolvePerFilterConfig()`
+  // remains valid for the current request.
+  route_ = decoder_callbacks_->route();
+
   const auto *route_local = Http::SoloFilterUtility::resolvePerFilterConfig<
-      const NatsStreamingRouteSpecificFilterConfig>(name, route);
+      const NatsStreamingRouteSpecificFilterConfig>(name, route_);
 
   if (route_local != nullptr) {
     optional_route_specific_filter_config_ = route_local;
