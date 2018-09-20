@@ -131,18 +131,6 @@ TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   return Http::FilterTrailersStatus::Continue;
 }
 
-const std::string &
-TransformationFilter::directionToKey(TransformationFilter::Direction d) {
-  switch (d) {
-  case TransformationFilter::Direction::Request:
-    return Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION;
-  case TransformationFilter::Direction::Response:
-    return Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION;
-  default:
-    NOT_REACHED_GCOVR_EXCL_LINE;
-  }
-}
-
 void TransformationFilter::checkRequestActive() {
   route_ = decoder_callbacks_->route();
   request_transformation_ =

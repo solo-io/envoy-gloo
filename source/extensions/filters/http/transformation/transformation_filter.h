@@ -66,8 +66,6 @@ private:
     Response,
   };
 
-  static const std::string &directionToKey(Direction d);
-
   virtual void checkRequestActive();
   virtual void checkResponseActive();
 
