@@ -1,0 +1,26 @@
+#pragma once
+
+#include <string>
+
+#include "common/singleton/const_singleton.h"
+
+namespace Envoy {
+namespace Extensions {
+namespace HttpFilters {
+
+// TODO(talnordan): Merge with
+// envoy/source/extensions/filters/http/well_known_names.h
+
+/**
+ * Well-known Solo.io HTTP filter names.
+ * NOTE: New filters should use the well-known name: io.solo.filters.http.name.
+ */
+class SoloHttpFilterNameValues {
+public:
+};
+
+typedef ConstSingleton<SoloHttpFilterNameValues> SoloHttpFilterNames;
+
+} // namespace HttpFilters
+} // namespace Extensions
+} // namespace Envoy

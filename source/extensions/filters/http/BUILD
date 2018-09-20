@@ -26,3 +26,12 @@ envoy_cc_library(
     hdrs = ["transformation_well_known_names.h"],
     repository = "@envoy",
 )
+
+envoy_cc_library(
+    name = "solo_well_known_names",
+    hdrs = ["solo_well_known_names.h"],
+    repository = "@envoy",
+    deps = [
+        "@envoy//source/common/singleton:const_singleton",
+    ],
+)
