@@ -2,9 +2,8 @@
 
 #include <string>
 
-#include "common/config/nats_streaming_well_known_names.h"
-
 #include "extensions/filters/http/common/factory_base.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 
@@ -24,8 +23,7 @@ class NatsStreamingFilterConfigFactory
               NatsStreamingPerRoute> {
 public:
   NatsStreamingFilterConfigFactory()
-      : FactoryBase(
-            Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING) {}
+      : FactoryBase(SoloHttpFilterNames::get().NATS_STREAMING) {}
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(

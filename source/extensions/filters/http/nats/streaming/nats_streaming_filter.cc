@@ -10,8 +10,9 @@
 
 #include "common/common/macros.h"
 #include "common/common/utility.h"
-#include "common/config/nats_streaming_well_known_names.h"
 #include "common/http/solo_filter_utility.h"
+
+#include "extensions/filters/http/solo_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -106,8 +107,7 @@ void NatsStreamingFilter::onTimeout() {
 }
 
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
-  const std::string &name =
-      Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING;
+  const std::string &name = SoloHttpFilterNames::get().NATS_STREAMING;
 
   // A `shared_ptr` to the result of `route()` is stored as a member in order
   // to make sure that the pointer returned by `resolvePerFilterConfig()`
