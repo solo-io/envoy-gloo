@@ -42,10 +42,9 @@ envoy_cc_library(
     deps = [
         ":aws_authenticator_lib",
         "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
-        "@envoy//source/common/http:filter_utility_lib",
         "//source/common/http:solo_filter_utility_lib",
-        # TODO(yuval-k): merge this lib to the common known names
-        "//source/extensions/filters/http:aws_lambda_well_known_names_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
+        "@envoy//source/common/http:filter_utility_lib",
     ],
 )
 

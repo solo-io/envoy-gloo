@@ -17,6 +17,9 @@ namespace HttpFilters {
  */
 class SoloHttpFilterNameValues {
 public:
+  // AWS Lambda filter
+  // TODO(talnordan): Consider "io.solo.filters.http.aws_lambda".
+  const std::string AWS_LAMBDA = "io.solo.aws_lambda";
 };
 
 typedef ConstSingleton<SoloHttpFilterNameValues> SoloHttpFilterNames;
