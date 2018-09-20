@@ -34,17 +34,5 @@ public:
 typedef ConstSingleton<TransformationMetadataFilterValues>
     TransformationMetadataFilters;
 
-/**
- * Keys for MetadataFilterConstants::TRANSFORMATION metadata.
- */
-class MetadataTransformationKeyValues {
-public:
-  const std::string REQUEST_TRANSFORMATION = "request-transformation";
-  const std::string RESPONSE_TRANSFORMATION = "response-transformation";
-};
-
-typedef ConstSingleton<MetadataTransformationKeyValues>
-    MetadataTransformationKeys;
-
 } // namespace Config
 } // namespace Envoy
