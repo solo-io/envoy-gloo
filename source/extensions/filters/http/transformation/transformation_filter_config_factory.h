@@ -6,7 +6,7 @@
 
 #include "extensions/filters/http/common/empty_http_filter_config.h"
 #include "extensions/filters/http/common/factory_base.h"
-#include "extensions/filters/http/transformation_well_known_names.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "transformation_filter.pb.validate.h"
 
@@ -20,8 +20,7 @@ using Common::EmptyHttpFilterConfig;
 class TransformationFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   TransformationFilterConfigFactory()
-      : EmptyHttpFilterConfig(
-            Config::TransformationFilterNames::get().TRANSFORMATION) {}
+      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION) {}
 
   ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
   Router::RouteSpecificFilterConfigConstSharedPtr

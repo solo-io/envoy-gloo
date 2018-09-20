@@ -6,9 +6,9 @@
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
+#include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/transformer.h"
-#include "extensions/filters/http/transformation_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -153,7 +153,7 @@ TransformationFilter::getTransformFromRoute(
 
   const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
       RouteTransformationFilterConfig>(
-      Config::TransformationFilterNames::get().TRANSFORMATION, route_);
+      SoloHttpFilterNames::get().TRANSFORMATION, route_);
 
   if (config != nullptr) {
     switch (direction) {

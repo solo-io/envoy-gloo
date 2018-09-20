@@ -20,7 +20,6 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//:transformation_filter_proto_cc",
-        "//source/extensions/filters/http:transformation_well_known_names_lib",
         "@envoy//include/envoy/router:router_interface",
     ],
 )
@@ -39,6 +38,7 @@ envoy_cc_library(
         ":transformation_filter_config",
         ":transformer_lib",
         "//source/common/http:solo_filter_utility_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",
         "@envoy//source/common/http:utility_lib",

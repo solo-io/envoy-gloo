@@ -1,6 +1,6 @@
 #include "common/config/metadata.h"
 
-#include "extensions/filters/http/transformation_well_known_names.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -37,7 +37,8 @@ public:
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
                                         ->mutable_per_filter_config())
-              [Config::TransformationFilterNames::get().TRANSFORMATION];
+              [Extensions::HttpFilters::SoloHttpFilterNames::get()
+                   .TRANSFORMATION];
 
           envoy::api::v2::filter::http::RouteTransformations proto_config;
 

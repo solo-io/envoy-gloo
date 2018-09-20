@@ -23,6 +23,9 @@ public:
   // NATS Streaming filter
   // TODO(talnordan): Consider "io.solo.filters.http.nats_streaming".
   const std::string NATS_STREAMING = "io.solo.nats_streaming";
+  // Transformation filter
+  // TODO(talnordan): Consider "io.solo.filters.http.transformation".
+  const std::string TRANSFORMATION = "io.solo.transformation";
 };
 
 typedef ConstSingleton<SoloHttpFilterNameValues> SoloHttpFilterNames;
