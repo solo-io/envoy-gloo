@@ -14,7 +14,8 @@ namespace AwsLambda {
 Http::FilterFactoryCb AWSLambdaFilterConfigFactory::createFilter(
     const std::string &, Server::Configuration::FactoryContext &context) {
   return [&context](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new AWSLambdaFilter(context.clusterManager());
+    auto filter = new AWSLambdaFilter(context.clusterManager(),
+                                      context.dispatcher().timeSystem());
     callbacks.addStreamDecoderFilter(
         Http::StreamDecoderFilterSharedPtr{filter});
   };

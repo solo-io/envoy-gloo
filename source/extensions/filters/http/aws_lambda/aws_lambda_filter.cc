@@ -41,8 +41,9 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          AWSLambdaHeaderNames::get().LogType, Http::Headers::get().HostLegacy,
          Http::Headers::get().ContentType});
 
-AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
-    : cluster_manager_(cluster_manager) {}
+AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
+                                 TimeSource &time_source)
+    : aws_authenticator_(time_source), cluster_manager_(cluster_manager) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 

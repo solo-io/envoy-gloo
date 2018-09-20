@@ -29,7 +29,8 @@ public:
 
 typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
 
-AwsAuthenticator::AwsAuthenticator() {
+AwsAuthenticator::AwsAuthenticator(TimeSource &time_source)
+    : time_source_(time_source) {
   // TODO(yuval-k) hardcoded for now
   service_ = &AwsAuthenticatorConsts::get().Service;
   method_ = &Http::Headers::get().MethodValues.Post;
@@ -218,7 +219,7 @@ void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
   // we can't use the date provider interface as this is not the date header,
   // plus the date format is different. use slow method now, optimize in the
   // future.
-  auto now = std::chrono::system_clock::now();
+  auto now = time_source_.systemTime();
 
   std::string sig = signWithTime(request_headers, headers_to_sign, region, now);
   request_headers->insertAuthorization().value(sig);

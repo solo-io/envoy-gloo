@@ -51,8 +51,9 @@ protected:
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
                 protoextconfig)));
 
-    filter_ =
-        std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
+    filter_ = std::make_unique<AWSLambdaFilter>(
+        factory_context_.cluster_manager_,
+        factory_context_.dispatcher().timeSystem());
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 

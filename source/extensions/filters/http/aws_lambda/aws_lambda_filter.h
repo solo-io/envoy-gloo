@@ -61,7 +61,8 @@ private:
  */
 class AWSLambdaFilter : public Http::StreamDecoderFilter {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager);
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
+                  TimeSource &time_source);
   ~AWSLambdaFilter();
 
   // Http::StreamFilterBase

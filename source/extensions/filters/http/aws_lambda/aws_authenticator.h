@@ -1,10 +1,9 @@
 #pragma once
-
-#include <chrono>
 #include <set>
 #include <string>
 
 #include "envoy/buffer/buffer.h"
+#include "envoy/common/time.h"
 #include "envoy/http/header_map.h"
 
 #include "openssl/digest.h"
@@ -23,7 +22,7 @@ typedef std::set<Http::LowerCaseString, LowerCaseStringCompareFunc> HeaderList;
 
 class AwsAuthenticator {
 public:
-  AwsAuthenticator();
+  AwsAuthenticator(TimeSource &time_source);
 
   ~AwsAuthenticator();
 
@@ -44,12 +43,11 @@ private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
-  std::string
-  signWithTime(Http::HeaderMap *request_headers,
-               const HeaderList &headers_to_sign, const std::string &region,
-               std::chrono::time_point<std::chrono::system_clock> now);
+  std::string signWithTime(Http::HeaderMap *request_headers,
+                           const HeaderList &headers_to_sign,
+                           const std::string &region, SystemTime now);
 
-  std::string addDate(std::chrono::time_point<std::chrono::system_clock> now);
+  std::string addDate(SystemTime now);
 
   std::pair<std::string, std::string>
   prepareHeaders(const HeaderList &headers_to_sign);
@@ -60,8 +58,7 @@ private:
                                           const std::string &canonical_Headers,
                                           const std::string &signed_headers,
                                           const std::string &hexpayload);
-  std::string
-  getCredntialScopeDate(std::chrono::time_point<std::chrono::system_clock> now);
+  std::string getCredntialScopeDate(SystemTime now);
   std::string getCredntialScope(const std::string &region,
                                 const std::string &datenow);
 
@@ -117,6 +114,7 @@ private:
 
   Sha256 body_sha_;
 
+  TimeSource &time_source_;
   const std::string *access_key_{};
   std::string first_key_;
   const std::string *service_{};
