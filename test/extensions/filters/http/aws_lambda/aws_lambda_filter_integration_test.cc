@@ -1,6 +1,6 @@
 #include "common/config/metadata.h"
 
-#include "extensions/filters/http/aws_lambda_well_known_names.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -43,7 +43,7 @@ public:
 
       auto &cluster_struct =
           (*lambda_cluster.mutable_extension_protocol_options())
-              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
+              [Extensions::HttpFilters::SoloHttpFilterNames::get().AWS_LAMBDA];
       MessageUtil::jsonConvert(protoextconfig, cluster_struct);
     });
 
@@ -54,7 +54,7 @@ public:
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
                                         ->mutable_per_filter_config())
-              [Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA];
+              [Extensions::HttpFilters::SoloHttpFilterNames::get().AWS_LAMBDA];
 
           envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
               proto_config;

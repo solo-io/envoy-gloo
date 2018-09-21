@@ -28,18 +28,3 @@ envoy_cc_library(
         "@envoy//source/common/protobuf",
     ],
 )
-
-envoy_cc_library(
-    name = "solo_well_known_names_lib",
-    hdrs = ["solo_well_known_names.h"],
-    repository = "@envoy",
-    deps = [
-        "@envoy//source/common/singleton:const_singleton",
-    ],
-)
-
-envoy_cc_library(
-    name = "nats_streaming_well_known_names_lib",
-    hdrs = ["nats_streaming_well_known_names.h"],
-    repository = "@envoy",
-)

@@ -1,6 +1,5 @@
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
-#include "extensions/filters/http/aws_lambda_well_known_names.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
@@ -47,14 +46,14 @@ protected:
 
     ON_CALL(
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
-        extensionProtocolOptions(
-            Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+        extensionProtocolOptions(SoloHttpFilterNames::get().AWS_LAMBDA))
         .WillByDefault(
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
                 protoextconfig)));
 
-    filter_ =
-        std::make_unique<AWSLambdaFilter>(factory_context_.cluster_manager_);
+    filter_ = std::make_unique<AWSLambdaFilter>(
+        factory_context_.cluster_manager_,
+        factory_context_.dispatcher().timeSystem());
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -63,7 +62,7 @@ protected:
     filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
 
     ON_CALL(filter_callbacks_.route_->route_entry_,
-            perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+            perFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA))
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
@@ -182,9 +181,8 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
-  EXPECT_CALL(
-      filter_callbacks_.route_->route_entry_,
-      perFilterConfig(Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA))
+  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
+              perFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA))
       .WillRepeatedly(Return(nullptr));
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},

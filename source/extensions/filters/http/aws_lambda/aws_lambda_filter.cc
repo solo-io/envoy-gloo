@@ -16,7 +16,7 @@
 #include "common/http/utility.h"
 #include "common/singleton/const_singleton.h"
 
-#include "extensions/filters/http/aws_lambda_well_known_names.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -41,8 +41,9 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          AWSLambdaHeaderNames::get().LogType, Http::Headers::get().HostLegacy,
          Http::Headers::get().ContentType});
 
-AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager)
-    : cluster_manager_(cluster_manager) {}
+AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
+                                 TimeSource &time_source)
+    : aws_authenticator_(time_source), cluster_manager_(cluster_manager) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
@@ -62,7 +63,7 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
-      Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_,
+      SoloHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_,
       cluster_manager_);
   if (!protocol_options_) {
     return Http::FilterHeadersStatus::Continue;
@@ -72,7 +73,7 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
   // great! this is an aws cluster. get the function information:
   function_on_route_ =
       Http::SoloFilterUtility::resolvePerFilterConfig<AWSLambdaRouteConfig>(
-          Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA, route_);
+          SoloHttpFilterNames::get().AWS_LAMBDA, route_);
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(

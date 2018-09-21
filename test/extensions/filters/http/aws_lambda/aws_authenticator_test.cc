@@ -62,9 +62,11 @@ public:
 const std::string AwsAuthenticatorTest::SERVICE = "service";
 
 TEST_F(AwsAuthenticatorTest, BodyHash) {
+  DangerousDeprecatedTestTime time;
+  AwsAuthenticator aws(time.timeSystem());
+
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
-  AwsAuthenticator aws;
   aws.init(&accesskey, &secretkey);
 
   updatePayloadHash(aws, "\"abc\"");
@@ -74,8 +76,12 @@ TEST_F(AwsAuthenticatorTest, BodyHash) {
 }
 
 TEST_F(AwsAuthenticatorTest, UrlQuery) {
+  DangerousDeprecatedTestTime time;
+  AwsAuthenticator aws(time.timeSystem());
+
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
+  aws.init(&accesskey, &secretkey);
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
@@ -84,8 +90,6 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("www.solo.io"));
 
-  AwsAuthenticator aws;
-  aws.init(&accesskey, &secretkey);
   updatePayloadHash(aws, "abc");
 
   HeaderList headers_to_sign =
@@ -97,17 +101,18 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 }
 // https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html
 TEST_F(AwsAuthenticatorTest, TestGuide) {
+  DangerousDeprecatedTestTime time;
+  AwsAuthenticator aws(time.timeSystem());
+
   std::string secretkey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
   std::string accesskey = "AKIDEXAMPLE";
+  aws.init(&accesskey, &secretkey);
 
   std::string url = "/?Param1=value1&Param2=value2";
   Http::TestHeaderMapImpl headers;
   headers.insertPath().value(url);
   headers.insertMethod().value(std::string("GET"));
   headers.insertHost().value(std::string("example.amazonaws.com"));
-
-  AwsAuthenticator aws;
-  aws.init(&accesskey, &secretkey);
 
   set_guide_test_params(aws);
 

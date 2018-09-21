@@ -13,6 +13,19 @@ objcopy --only-keep-debug bazel-bin/envoy bazel-bin/envoy.debug
 strip -g bazel-bin/envoy -o bazel-bin/envoy.striped
 ```
 
+## Upload debug symbols to s3
+
+Create bucket (only one time):
+```
+aws s3 mb s3://artifacts.solo.io
+```
+
+Copy:
+```
+BUILDID=$(readelf -n ./bazel-bin/envoy|grep "Build ID:" |cut -f2 -d:|tr -d ' ')
+aws s3 cp bazel-bin/envoy.debug s3://artifacts.solo.io/$BUILDID/envoy.debug
+```
+
 ## Check stamp
 Builds are stampped with the commit hash. to see the stamp:
 ```

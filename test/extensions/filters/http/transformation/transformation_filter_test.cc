@@ -1,5 +1,5 @@
+#include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformation_filter.h"
-#include "extensions/filters/http/transformation_well_known_names.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
@@ -30,12 +30,10 @@ public:
     route_config_wrapper_.reset(
         new RouteTransformationFilterConfig(route_config_));
     ON_CALL(*filter_callbacks_.route_,
-            perFilterConfig(
-                Config::TransformationFilterNames::get().TRANSFORMATION))
+            perFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION))
         .WillByDefault(Return(route_config_wrapper_.get()));
     ON_CALL(*encoder_filter_callbacks_.route_,
-            perFilterConfig(
-                Config::TransformationFilterNames::get().TRANSFORMATION))
+            perFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION))
         .WillByDefault(Return(route_config_wrapper_.get()));
 
     filter_ = std::make_unique<TransformationFilter>();

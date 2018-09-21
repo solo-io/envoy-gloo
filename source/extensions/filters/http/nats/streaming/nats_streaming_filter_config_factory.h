@@ -2,11 +2,10 @@
 
 #include <string>
 
-#include "common/config/nats_streaming_well_known_names.h"
-
 #include "extensions/filters/http/common/factory_base.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
-#include "nats_streaming_filter.pb.validate.h"
+#include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -14,22 +13,29 @@ namespace HttpFilters {
 namespace Nats {
 namespace Streaming {
 
-using Extensions::HttpFilters::Common::FactoryBase;
-
 /**
  * Config registration for the NATS Streaming filter.
  */
 class NatsStreamingFilterConfigFactory
-    : public FactoryBase<envoy::api::v2::filter::http::NatsStreaming> {
+    : public Common::FactoryBase<
+          envoy::config::filter::http::nats::streaming::v2::NatsStreaming,
+          envoy::config::filter::http::nats::streaming::v2::
+              NatsStreamingPerRoute> {
 public:
   NatsStreamingFilterConfigFactory()
-      : FactoryBase(
-            Config::NatsStreamingHttpFilterNames::get().NATS_STREAMING) {}
+      : FactoryBase(SoloHttpFilterNames::get().NATS_STREAMING) {}
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const envoy::api::v2::filter::http::NatsStreaming &proto_config,
+      const envoy::config::filter::http::nats::streaming::v2::NatsStreaming
+          &proto_config,
       const std::string &stats_prefix,
+      Server::Configuration::FactoryContext &context) override;
+
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfigTyped(
+      const envoy::config::filter::http::nats::streaming::v2::
+          NatsStreamingPerRoute &proto_config,
       Server::Configuration::FactoryContext &context) override;
 };
 

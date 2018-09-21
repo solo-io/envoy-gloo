@@ -4,7 +4,6 @@
 #include <string>
 
 #include "envoy/http/filter.h"
-#include "envoy/http/metadata_accessor.h"
 #include "envoy/upstream/cluster_manager.h"
 
 #include "extensions/filters/http/aws_lambda/aws_authenticator.h"
@@ -62,7 +61,8 @@ private:
  */
 class AWSLambdaFilter : public Http::StreamDecoderFilter {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager);
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
+                  TimeSource &time_source);
   ~AWSLambdaFilter();
 
   // Http::StreamFilterBase

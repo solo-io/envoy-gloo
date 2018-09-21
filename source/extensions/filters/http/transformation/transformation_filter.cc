@@ -6,9 +6,9 @@
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
+#include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/transformer.h"
-#include "extensions/filters/http/transformation_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -131,18 +131,6 @@ TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   return Http::FilterTrailersStatus::Continue;
 }
 
-const std::string &
-TransformationFilter::directionToKey(TransformationFilter::Direction d) {
-  switch (d) {
-  case TransformationFilter::Direction::Request:
-    return Config::MetadataTransformationKeys::get().REQUEST_TRANSFORMATION;
-  case TransformationFilter::Direction::Response:
-    return Config::MetadataTransformationKeys::get().RESPONSE_TRANSFORMATION;
-  default:
-    NOT_REACHED_GCOVR_EXCL_LINE;
-  }
-}
-
 void TransformationFilter::checkRequestActive() {
   route_ = decoder_callbacks_->route();
   request_transformation_ =
@@ -165,7 +153,7 @@ TransformationFilter::getTransformFromRoute(
 
   const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
       RouteTransformationFilterConfig>(
-      Config::TransformationFilterNames::get().TRANSFORMATION, route_);
+      SoloHttpFilterNames::get().TRANSFORMATION, route_);
 
   if (config != nullptr) {
     switch (direction) {

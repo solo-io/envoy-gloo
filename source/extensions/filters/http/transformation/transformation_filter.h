@@ -1,6 +1,5 @@
 #pragma once
 
-#include "envoy/http/metadata_accessor.h"
 #include "envoy/server/filter_config.h"
 
 #include "common/buffer/buffer_impl.h"
@@ -66,8 +65,6 @@ private:
     Request,
     Response,
   };
-
-  static const std::string &directionToKey(Direction d);
 
   virtual void checkRequestActive();
   virtual void checkResponseActive();

@@ -3,7 +3,7 @@ workspace(name="envoy_gloo")
 # Use skylark for native Git.
 load('@bazel_tools//tools/build_defs/repo:git.bzl', 'git_repository')
 
-ENVOY_SHA = "c4211b3195c885a1547070f02acdea0eb88e316a"  # 2018-09-06
+ENVOY_SHA = "94f5ed6972d1d47d1af1f7a347dac907282e5895"  # 2018-09-20
 
 http_archive(
     name = "envoy",

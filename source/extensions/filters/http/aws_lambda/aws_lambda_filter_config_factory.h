@@ -2,8 +2,8 @@
 
 #include "envoy/upstream/upstream.h"
 
-#include "extensions/filters/http/aws_lambda_well_known_names.h"
 #include "extensions/filters/http/common/empty_http_filter_config.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -18,8 +18,7 @@ using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 class AWSLambdaFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   AWSLambdaFilterConfigFactory()
-      : EmptyHttpFilterConfig(
-            Config::AWSLambdaHttpFilterNames::get().AWS_LAMBDA) {}
+      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA) {}
 
   Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message &config) override;
