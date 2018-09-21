@@ -1,8 +1,0 @@
-
-syntax = "proto3";
-
-package envoy.api.v2.filter.http;
-
-option go_package = "translator";
-
-message FunctionalFilterRouteConfig { string function_name = 1; }
