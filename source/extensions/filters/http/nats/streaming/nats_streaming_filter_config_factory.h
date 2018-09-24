@@ -23,7 +23,7 @@ class NatsStreamingFilterConfigFactory
               NatsStreamingPerRoute> {
 public:
   NatsStreamingFilterConfigFactory()
-      : FactoryBase(SoloHttpFilterNames::get().NATS_STREAMING) {}
+      : FactoryBase(SoloHttpFilterNames::get().NatsStreaming) {}
 
 private:
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(

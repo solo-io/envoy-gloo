@@ -22,7 +22,7 @@ public:
   const std::string AwsLambda = "io.solo.aws_lambda";
   // NATS Streaming filter
   // TODO(talnordan): Consider "io.solo.filters.http.nats_streaming".
-  const std::string NATS_STREAMING = "io.solo.nats_streaming";
+  const std::string NatsStreaming = "io.solo.nats_streaming";
   // Transformation filter
   // TODO(talnordan): Consider "io.solo.filters.http.transformation".
   const std::string TRANSFORMATION = "io.solo.transformation";

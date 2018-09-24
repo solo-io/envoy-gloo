@@ -137,7 +137,7 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
                           Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NATS_STREAMING;
+  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
   ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
@@ -157,7 +157,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
                           Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NATS_STREAMING;
+  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
   ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
@@ -193,7 +193,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
                           Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NATS_STREAMING;
+  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
   ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))

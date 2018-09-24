@@ -107,7 +107,7 @@ void NatsStreamingFilter::onTimeout() {
 }
 
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
-  const std::string &name = SoloHttpFilterNames::get().NATS_STREAMING;
+  const std::string &name = SoloHttpFilterNames::get().NatsStreaming;
 
   // A `shared_ptr` to the result of `route()` is stored as a member in order
   // to make sure that the pointer returned by `resolvePerFilterConfig()`
