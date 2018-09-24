@@ -19,7 +19,7 @@ class SoloHttpFilterNameValues {
 public:
   // AWS Lambda filter
   // TODO(talnordan): Consider "io.solo.filters.http.aws_lambda".
-  const std::string AWS_LAMBDA = "io.solo.aws_lambda";
+  const std::string AwsLambda = "io.solo.aws_lambda";
   // NATS Streaming filter
   // TODO(talnordan): Consider "io.solo.filters.http.nats_streaming".
   const std::string NATS_STREAMING = "io.solo.nats_streaming";

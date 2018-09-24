@@ -18,7 +18,7 @@ using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
 class AWSLambdaFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   AWSLambdaFilterConfigFactory()
-      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA) {}
+      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().AwsLambda) {}
 
   Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message &config) override;

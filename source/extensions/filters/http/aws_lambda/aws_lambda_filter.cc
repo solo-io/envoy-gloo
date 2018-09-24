@@ -63,7 +63,7 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
-      SoloHttpFilterNames::get().AWS_LAMBDA, decoder_callbacks_,
+      SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
       cluster_manager_);
   if (!protocol_options_) {
     return Http::FilterHeadersStatus::Continue;
@@ -73,7 +73,7 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
   // great! this is an aws cluster. get the function information:
   function_on_route_ =
       Http::SoloFilterUtility::resolvePerFilterConfig<AWSLambdaRouteConfig>(
-          SoloHttpFilterNames::get().AWS_LAMBDA, route_);
+          SoloHttpFilterNames::get().AwsLambda, route_);
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(
