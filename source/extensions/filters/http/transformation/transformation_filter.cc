@@ -153,7 +153,7 @@ TransformationFilter::getTransformFromRoute(
 
   const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
       RouteTransformationFilterConfig>(
-      SoloHttpFilterNames::get().TRANSFORMATION, route_);
+      SoloHttpFilterNames::get().Transformation, route_);
 
   if (config != nullptr) {
     switch (direction) {

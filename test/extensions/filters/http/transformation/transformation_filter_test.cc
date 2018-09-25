@@ -30,10 +30,10 @@ public:
     route_config_wrapper_.reset(
         new RouteTransformationFilterConfig(route_config_));
     ON_CALL(*filter_callbacks_.route_,
-            perFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION))
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
     ON_CALL(*encoder_filter_callbacks_.route_,
-            perFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION))
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
 
     filter_ = std::make_unique<TransformationFilter>();
