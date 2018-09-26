@@ -20,7 +20,7 @@ using Common::EmptyHttpFilterConfig;
 class TransformationFilterConfigFactory : public EmptyHttpFilterConfig {
 public:
   TransformationFilterConfigFactory()
-      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().TRANSFORMATION) {}
+      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().Transformation) {}
 
   ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
   Router::RouteSpecificFilterConfigConstSharedPtr

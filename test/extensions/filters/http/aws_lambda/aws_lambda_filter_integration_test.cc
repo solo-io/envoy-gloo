@@ -43,7 +43,7 @@ public:
 
       auto &cluster_struct =
           (*lambda_cluster.mutable_extension_protocol_options())
-              [Extensions::HttpFilters::SoloHttpFilterNames::get().AWS_LAMBDA];
+              [Extensions::HttpFilters::SoloHttpFilterNames::get().AwsLambda];
       MessageUtil::jsonConvert(protoextconfig, cluster_struct);
     });
 
@@ -54,7 +54,7 @@ public:
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
                                         ->mutable_per_filter_config())
-              [Extensions::HttpFilters::SoloHttpFilterNames::get().AWS_LAMBDA];
+              [Extensions::HttpFilters::SoloHttpFilterNames::get().AwsLambda];
 
           envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
               proto_config;

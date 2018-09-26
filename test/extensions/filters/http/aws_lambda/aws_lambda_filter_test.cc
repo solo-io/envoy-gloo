@@ -46,7 +46,7 @@ protected:
 
     ON_CALL(
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
-        extensionProtocolOptions(SoloHttpFilterNames::get().AWS_LAMBDA))
+        extensionProtocolOptions(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
                 protoextconfig)));
@@ -62,7 +62,7 @@ protected:
     filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
 
     ON_CALL(filter_callbacks_.route_->route_entry_,
-            perFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA))
+            perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
@@ -182,7 +182,7 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
   EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(SoloHttpFilterNames::get().AWS_LAMBDA))
+              perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillRepeatedly(Return(nullptr));
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},

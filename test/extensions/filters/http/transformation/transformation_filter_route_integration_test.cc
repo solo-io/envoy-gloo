@@ -38,7 +38,7 @@ public:
                                         ->mutable_routes(0)
                                         ->mutable_per_filter_config())
               [Extensions::HttpFilters::SoloHttpFilterNames::get()
-                   .TRANSFORMATION];
+                   .Transformation];
 
           envoy::api::v2::filter::http::RouteTransformations proto_config;
 

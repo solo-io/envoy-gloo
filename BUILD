@@ -23,11 +23,6 @@ api_proto_library(
 )
 
 api_proto_library(
-    name = "functional_base_proto",
-    srcs = ["functional_base.proto"],
-)
-
-api_proto_library(
     name = "protocol_proto",
     srcs = ["protocol.proto"],
 )
