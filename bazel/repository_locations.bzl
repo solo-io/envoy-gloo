@@ -11,5 +11,4 @@ REPOSITORY_LOCATIONS = dict(
         commit = "74ad4281edd4ceca658888602af74bf2050107f0",
         remote = "https://github.com/pantor/inja",
     ),
-
 )

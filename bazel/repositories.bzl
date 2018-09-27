@@ -64,7 +64,7 @@ def _repository_impl(name, **kwargs):
                 **kwargs
             )
 
-def solo_dependencies():
+def envoy_gloo_dependencies():
     _repository_impl("envoy")
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")

@@ -1,10 +1,8 @@
 workspace(name="envoy_gloo")
 
+load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
 
-load("//bazel:repositories.bzl", "solo_dependencies")
-
-solo_dependencies()
-
+envoy_gloo_dependencies()
 
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
 load("@envoy//bazel:cc_configure.bzl", "cc_configure")
