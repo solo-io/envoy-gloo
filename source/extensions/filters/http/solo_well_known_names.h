@@ -20,6 +20,9 @@ public:
   // AWS Lambda filter
   // TODO(talnordan): Consider "io.solo.filters.http.aws_lambda".
   const std::string AwsLambda = "io.solo.aws_lambda";
+  // Cache filter
+  // TODO(talnordan): Consider "io.solo.filters.http.cache".
+  const std::string CACHE = "io.solo.cache";
   // NATS Streaming filter
   // TODO(talnordan): Consider "io.solo.filters.http.nats_streaming".
   const std::string NatsStreaming = "io.solo.nats_streaming";
