@@ -6,13 +6,14 @@ with open(locations,"rb") as loc:
     content = loc.read()
 exec(content)
 
-commit = subprocess.check_output("git ls-remote https://github.com/envoyproxy/envoy HEAD | cut -f1", shell=True)
-commit = commit.strip()
+ls_remote_args = "git ls-remote https://github.com/envoyproxy/envoy HEAD"
+ls_remote_output = subprocess.check_output(ls_remote_args, shell=True)
+commit_hash = ls_remote_output.split()[0]
 
-currentcommit = REPOSITORY_LOCATIONS['envoy']['commit']
+current_commit_hash = REPOSITORY_LOCATIONS['envoy']['commit']
 
 # encode makes this work with python3 too.
-content = content.replace(currentcommit.encode("utf8"), commit)
+content = content.replace(current_commit_hash.encode("utf8"), commit_hash)
 
 with open(locations,"wb") as loc:
     loc.write(content)
