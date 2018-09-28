@@ -4,7 +4,6 @@ load(
     "git_repository",
     "new_git_repository",
 )
-
 load(":repository_locations.bzl", "REPOSITORY_LOCATIONS")
 
 # function copied from envoy: @envoy/bazel/repositories.bzl
