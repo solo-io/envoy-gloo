@@ -17,6 +17,7 @@ const std::string *
 SoloFilterUtility::resolveClusterName(StreamFilterCallbacks *filter_callbacks) {
   const Router::RouteEntry *route_entry = resolveRouteEntry(filter_callbacks);
   if (!route_entry) {
+    // TODO(talnordan): Consider making the return type `optional`.
     return nullptr;
   }
 
