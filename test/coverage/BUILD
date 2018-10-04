@@ -27,7 +27,6 @@ envoy_cc_test(
         "//test/common/cache/in_memory:fifo_map_test_lib",
         "//test/common/cache/redis:cache_impl_test_lib",
         "//test/common/cache/redis:utility_test_lib",
-        "//test/common/config:solo_metadata_test_lib",
         "//test/common/grpc:async_client_test_lib",
         "//test/common/http:solo_filter_utility_test_lib",
         "//test/common/nats:codec_impl_test_lib",
