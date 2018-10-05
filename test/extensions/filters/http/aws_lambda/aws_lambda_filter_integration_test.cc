@@ -20,7 +20,8 @@ class AWSLambdaFilterIntegrationTest
       public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   AWSLambdaFilterIntegrationTest()
-      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam(),
+                            realTime()) {}
 
   /**
    * Initializer for an individual integration test.

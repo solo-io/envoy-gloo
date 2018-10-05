@@ -103,7 +103,8 @@ class TransformationFilterIntegrationTest
       public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   TransformationFilterIntegrationTest()
-      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam(),
+                            realTime()) {}
 
   /**
    * Initializer for an individual integration test.
