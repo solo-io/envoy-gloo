@@ -305,11 +305,8 @@ TEST(Transformer, transformWithHyphens) {
 
 TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
   const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl
-   headers{
-      {":method", "GET"},
-      {":path", "/foo"},
-      {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
   Buffer::OwnedImpl body("{}");
 
   envoy::api::v2::filter::http::TransformationTemplate transformation;
@@ -318,7 +315,7 @@ TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
   (*transformation.mutable_headers())[content_type] = empty;
 
   Transformer transformer(transformation);
-  
+
   EXPECT_TRUE(headers.has(content_type));
   transformer.transform(headers, body);
   EXPECT_FALSE(headers.has(content_type));
