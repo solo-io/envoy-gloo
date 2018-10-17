@@ -303,7 +303,7 @@ TEST(Transformer, transformWithHyphens) {
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
-TEST(ExtractorUtil, RemoveingHeadersUsingEmptyTemplate) {
+TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
   Http::TestHeaderMapImpl
    headers{
       {":method", "GET"},
