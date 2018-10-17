@@ -6,6 +6,7 @@
 #include "extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
+#include "payload.pb.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -67,6 +68,7 @@ private:
       optional_route_specific_filter_config_;
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
   absl::optional<uint32_t> decoder_buffer_limit_{};
+  pb::Payload payload_;
   Buffer::OwnedImpl body_{};
   Envoy::Nats::Streaming::PublishRequestPtr in_flight_request_{};
 };

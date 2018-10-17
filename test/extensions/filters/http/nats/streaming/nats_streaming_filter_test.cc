@@ -72,7 +72,7 @@ private:
 
 TEST_F(NatsStreamingFilterTest, NoSubjectHeaderOnlyRequest) {
   // `nats_streaming_client_->makeRequest()` should not be called.
-  EXPECT_CALL(*nats_streaming_client_, makeRequest(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(*nats_streaming_client_, makeRequest_(_, _, _, _, _)).Times(0);
 
   Http::TestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
@@ -81,7 +81,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectHeaderOnlyRequest) {
 
 TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithData) {
   // `nats_streaming_client_->makeRequest()` should not be called.
-  EXPECT_CALL(*nats_streaming_client_, makeRequest(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(*nats_streaming_client_, makeRequest_(_, _, _, _, _)).Times(0);
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
@@ -104,7 +104,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithData) {
 
 TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithTrailers) {
   // `nats_streaming_client_->makeRequest()` should not be called.
-  EXPECT_CALL(*nats_streaming_client_, makeRequest(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(*nats_streaming_client_, makeRequest_(_, _, _, _, _)).Times(0);
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
@@ -133,8 +133,8 @@ TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithTrailers) {
 TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
   // `nats_streaming_client_->makeRequest()` should be called exactly once.
   EXPECT_CALL(*nats_streaming_client_,
-              makeRequest("Subject1", "cluster_id", "discover_prefix1", _,
-                          Ref(*filter_)))
+              makeRequest_("Subject1", "cluster_id", "discover_prefix1", _,
+                           Ref(*filter_)))
       .Times(1);
 
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
@@ -147,14 +147,14 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
 
-  EXPECT_EQ(0, nats_streaming_client_->last_payload_.length());
+  EXPECT_TRUE(nats_streaming_client_->last_payload_.empty());
 }
 
 TEST_F(NatsStreamingFilterTest, RequestWithData) {
   // `nats_streaming_client_->makeRequest()` should be called exactly once.
   EXPECT_CALL(*nats_streaming_client_,
-              makeRequest("Subject1", "cluster_id", "discover_prefix1", _,
-                          Ref(*filter_)))
+              makeRequest_("Subject1", "cluster_id", "discover_prefix1", _,
+                           Ref(*filter_)))
       .Times(1);
 
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
@@ -179,18 +179,50 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
   EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer,
             filter_->decodeData(data2, true));
 
-  const Buffer::OwnedImpl expectedPayload("hello world");
+  pb::Payload actual_payload;
+  EXPECT_TRUE(
+      actual_payload.ParseFromString(nats_streaming_client_->last_payload_));
+  EXPECT_TRUE(actual_payload.headers().empty());
+  EXPECT_EQ("hello world", actual_payload.body());
+}
 
-  // TODO(talnordan): Compare buffer content too.
-  EXPECT_EQ(expectedPayload.length(),
-            nats_streaming_client_->last_payload_.length());
+TEST_F(NatsStreamingFilterTest, RequestWithHeadersAndOneChunkOfData) {
+  // `nats_streaming_client_->makeRequest()` should be called exactly once.
+  EXPECT_CALL(*nats_streaming_client_,
+              makeRequest_("Subject1", "cluster_id", "discover_prefix1", _,
+                           Ref(*filter_)))
+      .Times(1);
+
+  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
+  const auto &&config =
+      routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
+  ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
+      .WillByDefault(Return(&config));
+
+  callbacks_.buffer_.reset(new Buffer::OwnedImpl);
+
+  Http::TestHeaderMapImpl headers{{"some-header", "a"}, {"other-header", "b"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, false));
+
+  Buffer::OwnedImpl data("hello world");
+  callbacks_.buffer_->add(data);
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer,
+            filter_->decodeData(data, true));
+
+  pb::Payload actual_payload;
+  EXPECT_TRUE(
+      actual_payload.ParseFromString(nats_streaming_client_->last_payload_));
+  EXPECT_EQ("a", actual_payload.headers().at("some-header"));
+  EXPECT_EQ("b", actual_payload.headers().at("other-header"));
+  EXPECT_EQ("hello world", actual_payload.body());
 }
 
 TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
   // `nats_streaming_client_->makeRequest()` should be called exactly once.
   EXPECT_CALL(*nats_streaming_client_,
-              makeRequest("Subject1", "cluster_id", "discover_prefix1", _,
-                          Ref(*filter_)))
+              makeRequest_("Subject1", "cluster_id", "discover_prefix1", _,
+                           Ref(*filter_)))
       .Times(1);
 
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
@@ -219,11 +251,11 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
   EXPECT_EQ(Envoy::Http::FilterTrailersStatus::StopIteration,
             filter_->decodeTrailers(trailers));
 
-  const Buffer::OwnedImpl expectedPayload("hello world");
-
-  // TODO(talnordan): Compare buffer content too.
-  EXPECT_EQ(expectedPayload.length(),
-            nats_streaming_client_->last_payload_.length());
+  pb::Payload actual_payload;
+  EXPECT_TRUE(
+      actual_payload.ParseFromString(nats_streaming_client_->last_payload_));
+  EXPECT_TRUE(actual_payload.headers().empty());
+  EXPECT_EQ("hello world", actual_payload.body());
 }
 
 } // namespace Streaming
