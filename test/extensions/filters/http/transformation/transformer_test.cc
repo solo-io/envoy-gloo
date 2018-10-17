@@ -304,22 +304,24 @@ TEST(Transformer, transformWithHyphens) {
 }
 
 TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
+  const std::string content_type = "content-type";
   Http::TestHeaderMapImpl
    headers{
       {":method", "GET"},
       {":path", "/foo"},
-      {"cotent-type", "x-test"}};
+      {content_type, "x-test"}};
   Buffer::OwnedImpl body("{}");
 
   envoy::api::v2::filter::http::TransformationTemplate transformation;
   envoy::api::v2::filter::http::InjaTemplate empty;
 
-  (*transformation.mutable_headers())["content-type"] = empty;
+  (*transformation.mutable_headers())[content_type] = empty;
 
   Transformer transformer(transformation);
+  
+  EXPECT_TRUE(headers.has(content_type));
   transformer.transform(headers, body);
-
-  EXPECT_FALSE(headers.has("content-type"));
+  EXPECT_FALSE(headers.has(content_type));
 }
 
 } // namespace Transformation
