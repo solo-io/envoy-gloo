@@ -196,7 +196,9 @@ void Transformer::transform(Http::HeaderMap &header_map,
     std::string output = instance.render(text.text());
     // remove existing header
     header_map.remove(lkname);
-    header_map.addCopy(lkname, output);
+    if (!output.empty()) {
+      header_map.addCopy(lkname, output);
+    }
   }
 }
 

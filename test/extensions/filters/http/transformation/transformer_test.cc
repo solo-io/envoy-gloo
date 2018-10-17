@@ -303,6 +303,26 @@ TEST(Transformer, transformWithHyphens) {
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
+TEST(ExtractorUtil, RemoveingHeadersUsingEmptyTemplate) {
+  Http::TestHeaderMapImpl
+   headers{
+      {":method", "GET"},
+      {":path", "/foo"},
+      {"cotent-type", "x-test"}};
+  Buffer::OwnedImpl body("{}");
+
+  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  envoy::api::v2::filter::http::InjaTemplate empty;
+
+  (*transformation.mutable_headers())["content-type"] = empty;
+
+  Transformer transformer(transformation);
+  transformer.transform(headers, body);
+
+
+  EXPECT_FALSE(headers.has("content-type"));
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
