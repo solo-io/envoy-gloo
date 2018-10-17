@@ -43,3 +43,8 @@ bazel test -c dbg //test/... --jobs=$[$(nproc --all)-2]
 ```
 bazel test -c dbg //test/... //e2e/... --jobs=$[$(nproc --all)-2]
 ```
+
+# Format fix
+```
+BUILDIFIER=$GOPATH/bin/buildifier CLANG_FORMAT=clang-format /path/to/envoy/tools/check_format.py fix --skip_envoy_build_rule_check
+```
