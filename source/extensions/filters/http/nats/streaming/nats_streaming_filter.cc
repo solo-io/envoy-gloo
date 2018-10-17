@@ -115,12 +115,12 @@ void NatsStreamingFilter::onResponse() { onCompletion(Http::Code::OK, ""); }
 
 void NatsStreamingFilter::onFailure() {
   onCompletion(Http::Code::InternalServerError, "nats streaming filter abort",
-               RequestInfo::ResponseFlag::NoHealthyUpstream);
+               StreamInfo::ResponseFlag::NoHealthyUpstream);
 }
 
 void NatsStreamingFilter::onTimeout() {
   onCompletion(Http::Code::RequestTimeout, "nats streaming filter timeout",
-               RequestInfo::ResponseFlag::UpstreamRequestTimeout);
+               StreamInfo::ResponseFlag::UpstreamRequestTimeout);
 }
 
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
@@ -175,8 +175,8 @@ void NatsStreamingFilter::onCompletion(Http::Code response_code,
 
 void NatsStreamingFilter::onCompletion(
     Http::Code response_code, const std::string &body_text,
-    RequestInfo::ResponseFlag response_flag) {
-  decoder_callbacks_->requestInfo().setResponseFlag(response_flag);
+    StreamInfo::ResponseFlag response_flag) {
+  decoder_callbacks_->streamInfo().setResponseFlag(response_flag);
   onCompletion(response_code, body_text);
 }
 

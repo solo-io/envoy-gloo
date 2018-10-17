@@ -10,7 +10,6 @@
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
-#include "common/http/filter_utility.h"
 #include "common/http/headers.h"
 #include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"

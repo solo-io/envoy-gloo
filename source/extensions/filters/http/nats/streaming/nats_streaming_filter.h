@@ -59,7 +59,7 @@ private:
 
   inline void onCompletion(Http::Code response_code,
                            const std::string &body_text,
-                           RequestInfo::ResponseFlag response_flag);
+                           StreamInfo::ResponseFlag response_flag);
 
   const NatsStreamingFilterConfigSharedPtr config_;
   Envoy::Nats::Streaming::ClientPtr nats_streaming_client_;
