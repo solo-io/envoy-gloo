@@ -319,7 +319,6 @@ TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
   Transformer transformer(transformation);
   transformer.transform(headers, body);
 
-
   EXPECT_FALSE(headers.has("content-type"));
 }
 
