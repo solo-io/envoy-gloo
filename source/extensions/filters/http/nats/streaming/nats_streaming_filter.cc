@@ -173,9 +173,9 @@ void NatsStreamingFilter::onCompletion(Http::Code response_code,
   decoder_callbacks_->sendLocalReply(response_code, body_text, nullptr);
 }
 
-void NatsStreamingFilter::onCompletion(
-    Http::Code response_code, const std::string &body_text,
-    StreamInfo::ResponseFlag response_flag) {
+void NatsStreamingFilter::onCompletion(Http::Code response_code,
+                                       const std::string &body_text,
+                                       StreamInfo::ResponseFlag response_flag) {
   decoder_callbacks_->streamInfo().setResponseFlag(response_flag);
   onCompletion(response_code, body_text);
 }
