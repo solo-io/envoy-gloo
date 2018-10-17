@@ -196,6 +196,7 @@ void Transformer::transform(Http::HeaderMap &header_map,
     std::string output = instance.render(text.text());
     // remove existing header
     header_map.remove(lkname);
+    // TODO(yuval-k): Do we need to support intentional empty headers?
     if (!output.empty()) {
       header_map.addCopy(lkname, output);
     }
