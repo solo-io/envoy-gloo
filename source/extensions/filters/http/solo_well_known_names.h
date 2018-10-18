@@ -23,6 +23,9 @@ public:
   // Cache filter
   // TODO(talnordan): Consider "io.solo.filters.http.cache".
   const std::string Cache = "io.solo.cache";
+  // JSON-gRPC transcoder filter
+  const std::string JsonGrpcTranscoder =
+      "io.solo.filters.http.json_grpc_transcoder";
   // NATS Streaming filter
   // TODO(talnordan): Consider "io.solo.filters.http.nats_streaming".
   const std::string NatsStreaming = "io.solo.nats_streaming";
