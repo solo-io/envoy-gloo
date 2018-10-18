@@ -55,7 +55,15 @@ static_resources:
                 per_filter_config:
                   io.solo.aws_lambda:
                     name: uppercase
-                    qualifier: "1"
+                    qualifier: "%24LATEST"
+              - match:
+                  prefix: /contact
+                route:
+                  cluster: aws-us-east-1-lambda
+                per_filter_config:
+                  io.solo.aws_lambda:
+                    name: contact-form
+                    qualifier: "3"
           http_filters:
           - name: io.solo.aws_lambda
           - name: envoy.router

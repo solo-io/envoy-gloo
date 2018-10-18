@@ -18,7 +18,10 @@ sleep 5
 
 # test no impact on non lambda stuff
 curl localhost:10000/echo --data '"abc"' --request POST -H"content-type: application/json"|grep abc
-# test lambda
+# Test AWS Lambda using POST method.
 curl localhost:10000/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
+
+# Test AWS Lambda using GET method.
+curl localhost:10000/contact |grep '<form method='
 
 echo PASS
