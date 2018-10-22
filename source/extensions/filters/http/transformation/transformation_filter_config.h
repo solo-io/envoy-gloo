@@ -4,7 +4,7 @@
 
 #include "envoy/router/router.h"
 
-#include "transformation_filter.pb.h"
+#include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {

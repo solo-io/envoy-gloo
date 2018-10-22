@@ -17,7 +17,7 @@ envoy_cc_test(
     ],
     repository = "@envoy",
     deps = [
-        "//:authorize_proto_cc",
+        "//api/envoy/config/filter/network/consul_connect/v2:authorize_proto_cc",
         "//source/extensions/filters/network/consul_connect",
         "@envoy//test/mocks/server:server_mocks",
     ],

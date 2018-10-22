@@ -4,7 +4,7 @@
 
 #include "test/mocks/server/mocks.h"
 
-#include "authorize.pb.h"
+#include "api/envoy/config/filter/network/consul_connect/v2/authorize.pb.validate.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

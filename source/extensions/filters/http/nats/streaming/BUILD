@@ -35,7 +35,7 @@ envoy_cc_library(
     deps = [
         ":nats_streaming_filter_config",
         ":nats_streaming_route_specific_filter_config",
-        "//:payload_proto_cc",
+        "//api/envoy/config/filter/http/nats/streaming/v2:payload_proto_cc",
         "//include/envoy/nats/streaming:client_interface",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",

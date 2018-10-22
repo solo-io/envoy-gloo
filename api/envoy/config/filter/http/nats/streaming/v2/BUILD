@@ -13,3 +13,8 @@ api_proto_library(
     name = "nats_streaming",
     srcs = ["nats_streaming.proto"],
 )
+
+api_proto_library(
+    name = "payload_proto",
+    srcs = ["payload.proto"],
+)

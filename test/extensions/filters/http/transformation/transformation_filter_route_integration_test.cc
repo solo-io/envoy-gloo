@@ -6,7 +6,7 @@
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
-#include "transformation_filter.pb.h"
+#include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
 namespace Envoy {
 

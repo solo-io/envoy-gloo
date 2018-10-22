@@ -13,28 +13,8 @@ envoy_package()
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 api_proto_library(
-    name = "authorize_proto",
-    srcs = ["authorize.proto"],
-)
-
-api_proto_library(
-    name = "cache_filter_proto",
-    srcs = ["cache_filter.proto"],
-)
-
-api_proto_library(
-    name = "payload_proto",
-    srcs = ["payload.proto"],
-)
-
-api_proto_library(
     name = "protocol_proto",
     srcs = ["protocol.proto"],
-)
-
-api_proto_library(
-    name = "transformation_filter_proto",
-    srcs = ["transformation_filter.proto"],
 )
 
 envoy_cc_binary(

@@ -8,7 +8,7 @@
 #include "common/http/message_impl.h"
 #include "common/http/utility.h"
 
-#include "authorize.pb.h"
+#include "api/envoy/config/filter/network/consul_connect/v2/authorize.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {

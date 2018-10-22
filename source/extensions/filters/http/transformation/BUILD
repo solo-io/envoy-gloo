@@ -19,7 +19,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//:transformation_filter_proto_cc",
+        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/router:router_interface",
     ],
 )
@@ -71,7 +71,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//:transformation_filter_proto_cc",
+        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//source/common/common:macros",

@@ -8,7 +8,7 @@
 #include "extensions/filters/http/common/factory_base.h"
 #include "extensions/filters/http/solo_well_known_names.h"
 
-#include "transformation_filter.pb.validate.h"
+#include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {

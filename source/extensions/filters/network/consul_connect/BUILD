@@ -18,7 +18,7 @@ envoy_cc_library(
     hdrs = ["consul_connect.h"],
     repository = "@envoy",
     deps = [
-        "//:authorize_proto_cc",
+        "//api/envoy/config/filter/network/consul_connect/v2:authorize_proto_cc",
         "//api/envoy/config/filter/network/consul_connect/v2:consul_connect_proto_cc",
         "@envoy//include/envoy/network:filter_interface",
         "@envoy//include/envoy/upstream:cluster_manager_interface",
