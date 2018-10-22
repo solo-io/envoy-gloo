@@ -36,7 +36,7 @@ NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
           config->cluster(), context.clusterManager(), client_factory,
           context.threadLocal(), context.random(), config->opTimeout());
 
-  return [&context, config, nats_streaming_client](
+  return [config, nats_streaming_client](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new NatsStreamingFilter(config, nats_streaming_client);
     callbacks.addStreamDecoderFilter(
