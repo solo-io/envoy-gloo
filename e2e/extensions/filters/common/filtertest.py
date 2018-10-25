@@ -48,7 +48,7 @@ class TestCase(unittest.TestCase):
     envoy = os.environ.get("TEST_ENVOY_BIN","envoy")
 
     self.__envoy = subprocess.Popen(prefix + [envoy, "-c", yaml_filename]+suffix, preexec_fn=envoy_preexec_fn)
-    time.sleep(5)
+    time.sleep(1)
     # We assume that envoy is either initialized or dead after 5 seconds, with that in mind, we 
     # asserting that it still running and an approximaiton that it is initialized.
     self.assertIsNone(self.__envoy.poll())
