@@ -24,6 +24,7 @@ envoy_cc_binary(
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "//source/extensions/filters/http/cache:cache_filter_config_lib",
+        "//source/extensions/filters/http/json_grpc_transcoder:config_factory",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",
