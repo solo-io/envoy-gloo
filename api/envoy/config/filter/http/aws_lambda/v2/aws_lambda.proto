@@ -19,7 +19,7 @@ message AWSLambdaPerRoute {
   // Invocation type - async or regular.
   bool async = 3;
 
-  // Optional default body if the body is empty. By default on default 
+  // Optional default body if the body is empty. By default on default
   // body is used if the body empty, and an empty body will be sent upstream.
   google.protobuf.StringValue empty_body_override = 4;
 }

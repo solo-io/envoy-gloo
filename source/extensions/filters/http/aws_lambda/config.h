@@ -46,8 +46,8 @@ public:
 
   const std::string &host() const { return host_; }
   const std::string &region() const { return region_; }
-  const std::string &access_key() const { return access_key_; }
-  const std::string &secret_key() const { return secret_key_; }
+  const std::string &accessKey() const { return access_key_; }
+  const std::string &secretKey() const { return secret_key_; }
 
 private:
   std::string host_;

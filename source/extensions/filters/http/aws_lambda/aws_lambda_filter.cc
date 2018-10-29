@@ -81,8 +81,8 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  aws_authenticator_.init(&protocol_options_->access_key(),
-                          &protocol_options_->secret_key());
+  aws_authenticator_.init(&protocol_options_->accessKey(),
+                          &protocol_options_->secretKey());
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
