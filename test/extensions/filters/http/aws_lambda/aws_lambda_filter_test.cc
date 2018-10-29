@@ -192,6 +192,82 @@ TEST_F(AWSLambdaFilterTest, InvalidFunction) {
             filter_->decodeHeaders(headers, true));
 }
 
+TEST_F(AWSLambdaFilterTest, EmptyBodyGetsOverriden) {
+  routeconfig_.mutable_empty_body_override()->set_value("{}");
+  setup_func();
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, _))
+      .Times(1)
+      .WillOnce(Invoke([](Buffer::Instance &data, bool) {
+        EXPECT_EQ(data.toString(), "{}");
+      }));
+
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+  EXPECT_EQ(headers.get_("content-type"), "application/json");
+  EXPECT_EQ(headers.get_("content-length"), "2");
+}
+
+TEST_F(AWSLambdaFilterTest, NonEmptyBodyDoesNotGetsOverriden) {
+  routeconfig_.mutable_empty_body_override()->set_value("{}");
+  setup_func();
+
+  Http::TestHeaderMapImpl headers{{":method", "POST"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  // Expect the no added data
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, _)).Times(0);
+
+  filter_->decodeHeaders(headers, false);
+
+  Buffer::OwnedImpl body("body");
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(body, true));
+}
+
+TEST_F(AWSLambdaFilterTest, EmptyDecodedDataBufferGetsOverriden) {
+  routeconfig_.mutable_empty_body_override()->set_value("{}");
+  setup_func();
+
+  Http::TestHeaderMapImpl headers{{":method", "POST"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  filter_->decodeHeaders(headers, false);
+
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, _))
+      .Times(1)
+      .WillOnce(Invoke([](Buffer::Instance &data, bool) {
+        EXPECT_EQ(data.toString(), "{}");
+      }));
+
+  Buffer::OwnedImpl body("");
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(body, true));
+}
+
+TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
+  routeconfig_.mutable_empty_body_override()->set_value("{}");
+  setup_func();
+
+  Http::TestHeaderMapImpl headers{{":method", "POST"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  filter_->decodeHeaders(headers, false);
+
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, _))
+      .Times(1)
+      .WillOnce(Invoke([](Buffer::Instance &data, bool) {
+        EXPECT_EQ(data.toString(), "{}");
+      }));
+
+  filter_->decodeTrailers(headers);
+}
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions

@@ -41,6 +41,25 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
+        ":config_lib",
+        "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
+        "//source/common/http:solo_filter_utility_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
+        "@envoy//source/common/http:utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "config_lib",
+    srcs = [
+        "config.cc",
+    ],
+    hdrs = [
+        "config.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":aws_authenticator_lib",
         "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",

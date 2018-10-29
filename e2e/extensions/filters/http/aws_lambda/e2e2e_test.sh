@@ -24,4 +24,7 @@ curl localhost:10000/lambda --data '"abc"' --request POST -H"content-type: appli
 # Test AWS Lambda using GET method.
 curl localhost:10000/contact |grep '<form method='
 
+# Test AWS Lambda using GET method with empty body that turns into non empty.
+curl localhost:10000/contact-empty-default |grep 'DEFAULT-BODY'
+
 echo PASS

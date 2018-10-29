@@ -7,6 +7,7 @@
 
 #include "envoy/http/header_map.h"
 
+#include "common/buffer/buffer_impl.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
@@ -87,7 +88,6 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
   request_headers_->insertMethod().value().setReference(
       Http::Headers::get().MethodValues.Post);
 
-  //  request_headers_->removeContentLength();
   request_headers_->insertPath().value(functionUrlPath(
       function_on_route_->name(), function_on_route_->qualifier()));
 
@@ -103,6 +103,10 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
+  }
+
+  if (data.length() != 0) {
+    has_body_ = true;
   }
 
   aws_authenticator_.updatePayloadHash(data);
@@ -125,6 +129,8 @@ Http::FilterTrailersStatus AWSLambdaFilter::decodeTrailers(Http::HeaderMap &) {
 
 void AWSLambdaFilter::lambdafy() {
 
+  handleDefaultBody();
+
   const std::string &invocation_type =
       function_on_route_->async()
           ? AWSLambdaHeaderNames::get().InvocationTypeEvent
@@ -138,6 +144,18 @@ void AWSLambdaFilter::lambdafy() {
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
   cleanup();
+}
+
+void AWSLambdaFilter::handleDefaultBody() {
+  if ((!has_body_) && function_on_route_->defaultBody()) {
+    Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
+
+    request_headers_->insertContentType().value().setReference(
+        Http::Headers::get().ContentTypeValues.Json);
+    request_headers_->insertContentLength().value(data.length());
+    aws_authenticator_.updatePayloadHash(data);
+    decoder_callbacks_->addDecodedData(data, false);
+  }
 }
 
 void AWSLambdaFilter::cleanup() {

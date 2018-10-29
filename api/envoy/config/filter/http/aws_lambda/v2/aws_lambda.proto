@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package envoy.config.filter.http.aws_lambda.v2;
 
+import "google/protobuf/wrappers.proto";
 import "validate/validate.proto";
 
 // [#protodoc-title: AWS Lambda]
@@ -17,6 +18,10 @@ message AWSLambdaPerRoute {
 
   // Invocation type - async or regular.
   bool async = 3;
+
+  // Optional default body if the body is empty. By default on default 
+  // body is used if the body empty, and an empty body will be sent upstream.
+  google.protobuf.StringValue empty_body_override = 4;
 }
 
 message AWSLambdaProtocolExtension {

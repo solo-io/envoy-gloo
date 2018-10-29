@@ -57,6 +57,15 @@ static_resources:
                     name: uppercase
                     qualifier: "%24LATEST"
               - match:
+                  prefix: /contact-empty-default
+                route:
+                  cluster: aws-us-east-1-lambda
+                per_filter_config:
+                  io.solo.aws_lambda:
+                    name: uppercase
+                    qualifier: "1"
+                    empty_body_override: "\"default-body\""
+              - match:
                   prefix: /contact
                 route:
                   cluster: aws-us-east-1-lambda
