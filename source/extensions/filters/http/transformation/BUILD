@@ -56,7 +56,6 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
-        "@envoy//source/common/common:stack_array",
         "@envoy//source/common/http:header_map_lib",
         "@json//:json-lib",
     ],
@@ -76,7 +75,6 @@ envoy_cc_library(
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//source/common/common:macros",
-        "@envoy//source/common/common:stack_array",
         "@envoy//source/common/protobuf",
         "@inja//:inja-lib",
         "@json//:json-lib",
