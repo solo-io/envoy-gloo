@@ -9,6 +9,7 @@
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
+#include "common/common/stack_array.h"
 #include "common/common/utility.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
@@ -192,24 +193,24 @@ std::string AwsAuthenticator::computeSignature(
 
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
-  uint8_t out[out_len];
+  STACK_ARRAY(out, uint8_t, out_len);
 
   sighmac.init(first_key_);
   sighmac.update(credentials_scope_date);
-  sighmac.finalize(out, &out_len);
+  sighmac.finalize(out.begin(), &out_len);
 
-  recusiveHmacHelper(sighmac, out, out_len, region);
-  recusiveHmacHelper(sighmac, out, out_len, *service_);
-  recusiveHmacHelper(sighmac, out, out_len, aws_request);
+  recusiveHmacHelper(sighmac, out.begin(), out_len, region);
+  recusiveHmacHelper(sighmac, out.begin(), out_len, *service_);
+  recusiveHmacHelper(sighmac, out.begin(), out_len, aws_request);
 
   const auto &nl = AwsAuthenticatorConsts::get().Newline;
 
   recusiveHmacHelper<std::initializer_list<const std::string *>>(
-      sighmac, out, out_len,
+      sighmac, out.begin(), out_len,
       {&AwsAuthenticatorConsts::get().Algorithm, &nl, &request_date_time, &nl,
        &credential_scope, &nl, &hashed_canonical_request});
 
-  return Hex::encode(out, out_len);
+  return Hex::encode(out.begin(), out_len);
 }
 
 void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
@@ -267,9 +268,9 @@ AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
 
 void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  Buffer::RawSlice slices[num_slices];
-  data.getRawSlices(slices, num_slices);
-  for (Buffer::RawSlice &slice : slices) {
+  STACK_ARRAY(slices, Buffer::RawSlice, num_slices);
+  data.getRawSlices(slices.begin(), num_slices);
+  for (const Buffer::RawSlice &slice : slices) {
     update(static_cast<const uint8_t *>(slice.mem_), slice.len_);
   }
 }

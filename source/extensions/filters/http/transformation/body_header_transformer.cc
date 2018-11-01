@@ -1,5 +1,6 @@
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 
+#include "common/common/stack_array.h"
 #include "common/http/headers.h"
 
 // For convenience
@@ -18,11 +19,12 @@ void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
     std::string bodystring;
     bodystring.reserve(body.length());
 
+    // TODO(talnordan): Reduce code duplication with `Transformer::transform()`.
     uint64_t num_slices = body.getRawSlices(nullptr, 0);
-    Buffer::RawSlice slices[num_slices];
-    body.getRawSlices(slices, num_slices);
+    STACK_ARRAY(slices, Buffer::RawSlice, num_slices);
+    body.getRawSlices(slices.begin(), num_slices);
 
-    for (Buffer::RawSlice &slice : slices) {
+    for (const Buffer::RawSlice &slice : slices) {
       const char *slice_mem = static_cast<const char *>(slice.mem_);
       bodystring.append(slice_mem, slice.len_);
     }
