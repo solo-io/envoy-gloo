@@ -14,8 +14,6 @@ void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
                                       Buffer::Instance &body) {
   json json_body;
   if (body.length() > 0) {
-    // parse the body as json
-    // TODO(talnordan): Should the body be parsed as JSON?
     json_body["body"] = body.toString();
   }
 
