@@ -1,0 +1,27 @@
+steps:
+- name: 'envoyproxy/envoy-build:f60886c04253d9a096503b949696cbdc8f82fa4d'
+  args: ['ci/do_ci.sh', 'test']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+  env:
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  timeout: 900s
+
+- name: 'envoyproxy/envoy-build:f60886c04253d9a096503b949696cbdc8f82fa4d'
+  args: ['ci/do_ci.sh', 'build']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+  env:
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  timeout: 900s
+
+options:
+  machineType: 'N1_HIGHCPU_32'
+timeout: 1800s
+
+artifacts:
+  objects:
+    location: 'gs://artifacts.solo.io/'
+    paths: ['ci/envoy.stripped', 'ci/envoy', 'ci/*-envoy.debuginfo']

@@ -1,5 +1,5 @@
 bazel-bin/envoy:
-	bazel build -c opt :envoy --jobs=$$[$(shell nproc --all)-2]
+	bazel build -c opt :envoy
 
 bazel-bin/envoy.debuginfo: bazel-bin/envoy
 	objcopy --only-keep-debug bazel-bin/envoy bazel-bin/envoy.debuginfo

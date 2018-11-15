@@ -34,14 +34,3 @@ envoy_cc_test(
         "@envoy//test/test_common:utility_lib",
     ],
 )
-
-envoy_cc_test(
-    name = "aws_lambda_filter_integration_test",
-    srcs = ["aws_lambda_filter_integration_test.cc"],
-    repository = "@envoy",
-    deps = [
-        "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
-        "@envoy//test/integration:http_integration_lib",
-        "@envoy//test/integration:integration_lib",
-    ],
-)

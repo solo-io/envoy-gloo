@@ -41,14 +41,3 @@ envoy_cc_test(
         "@envoy//test/test_common:utility_lib",
     ],
 )
-
-envoy_cc_test(
-    name = "transformation_filter_integration_test",
-    srcs = ["transformation_filter_integration_test.cc"],
-    repository = "@envoy",
-    deps = [
-        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
-        "@envoy//test/integration:http_integration_lib",
-        "@envoy//test/integration:integration_lib",
-    ],
-)
