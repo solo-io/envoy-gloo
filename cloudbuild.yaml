@@ -23,5 +23,5 @@ timeout: 1800s
 
 artifacts:
   objects:
-    location: 'gs://artifacts.solo.io/'
-    paths: ['ci/envoy.stripped', 'ci/envoy', 'ci/*-envoy.debuginfo']
+    location: 'gs://artifacts.solo.io/envoy/$COMMIT_SHA/'
+    paths: ['ci/envoy.stripped', 'ci/envoy', 'ci/envoy.debuginfo']

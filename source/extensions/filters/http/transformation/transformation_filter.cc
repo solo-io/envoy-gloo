@@ -258,7 +258,8 @@ void TransformationFilter::transformBodyHeaderTransformer(
 
 void TransformationFilter::requestError() {
   ASSERT(is_error());
-  decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr);
+  decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr,
+                                     absl::nullopt);
 }
 
 void TransformationFilter::responseError() {

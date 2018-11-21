@@ -84,7 +84,7 @@ NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
 
     decoder_callbacks_->sendLocalReply(Http::Code::PayloadTooLarge,
                                        "nats streaming paylaod too large",
-                                       nullptr);
+                                       nullptr, absl::nullopt);
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
@@ -170,7 +170,8 @@ void NatsStreamingFilter::onCompletion(Http::Code response_code,
                                        const std::string &body_text) {
   in_flight_request_ = nullptr;
 
-  decoder_callbacks_->sendLocalReply(response_code, body_text, nullptr);
+  decoder_callbacks_->sendLocalReply(response_code, body_text, nullptr,
+                                     absl::nullopt);
 }
 
 void NatsStreamingFilter::onCompletion(Http::Code response_code,

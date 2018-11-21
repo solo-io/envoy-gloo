@@ -96,8 +96,9 @@ void Filter::onEvent(Network::ConnectionEvent event) {
   auto &&http_async_client{
       cm_.httpAsyncClientForCluster(authorize_cluster_name)};
 
-  in_flight_request_ =
-      http_async_client.send(std::move(request), *this, request_timeout);
+  in_flight_request_ = http_async_client.send(
+      std::move(request), *this,
+      Http::AsyncClient::RequestOptions().setTimeout(request_timeout));
   if (in_flight_request_ == nullptr) {
     // No request could be started. In this case `onFailure()` has already been
     // called inline. Therefore, the connection has already been closed.

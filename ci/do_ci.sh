@@ -109,8 +109,7 @@ case "$1" in
     strip -g bazel-bin/envoy -o bazel-bin/envoy.stripped
 
     # copy binaries to the ci folder so they will be available in other containers.
-    cp bazel-bin/envoy.debuginfo "${ENVOY_CIDIR}"/$(readelf -n ./bazel-bin/envoy|grep "Build ID:" |cut -f2 -d:|tr -d ' ')-envoy.debuginfo
-    cp bazel-bin/envoy bazel-bin/envoy.stripped "${ENVOY_CIDIR}"
+    cp bazel-bin/envoy.debuginfo bazel-bin/envoy bazel-bin/envoy.stripped "${ENVOY_CIDIR}"
 
     ;;
 *)

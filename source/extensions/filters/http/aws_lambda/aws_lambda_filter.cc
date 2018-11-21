@@ -76,8 +76,9 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
           SoloHttpFilterNames::get().AwsLambda, route_);
 
   if (!function_on_route_) {
-    decoder_callbacks_->sendLocalReply(
-        Http::Code::NotFound, "no function present for AWS upstream", nullptr);
+    decoder_callbacks_->sendLocalReply(Http::Code::NotFound,
+                                       "no function present for AWS upstream",
+                                       nullptr, absl::nullopt);
     return Http::FilterHeadersStatus::StopIteration;
   }
 
