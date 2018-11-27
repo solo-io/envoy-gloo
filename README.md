@@ -48,3 +48,9 @@ bazel test -c dbg //test/... //e2e/... --jobs=$[$(nproc --all)-2]
 ```
 BUILDIFIER=$GOPATH/bin/buildifier CLANG_FORMAT=clang-format /path/to/envoy/tools/check_format.py fix --skip_envoy_build_rule_check
 ```
+
+# Submit a build
+```
+gcloud builds submit --config=cloudbuild.yaml \
+   --substitutions=COMMIT_SHA=$(git rev-parse HEAD)-WIP .
+```

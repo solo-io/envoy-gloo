@@ -37,7 +37,7 @@ public:
     std::unique_ptr<ClientImpl> client(new ClientImpl(
         host, std::move(encoder), decoder_factory, callbacks, config));
     client->connection_ =
-        host->createConnection(dispatcher, nullptr).connection_;
+        host->createConnection(dispatcher, nullptr, nullptr).connection_;
     client->connection_->addConnectionCallbacks(*client);
     client->connection_->addReadFilter(
         Network::ReadFilterSharedPtr{new UpstreamReadFilter(*client)});
