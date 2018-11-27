@@ -35,6 +35,14 @@ eu-readelf -n bazel-bin/envoy
     Build ID: 45c2b7a08b480aae64cf8bb1360aea9bc0cd0576
 ...
 ```
+
+## Bazel dependencies, tips
+- Dependencies
+  - ninja
+- Troubleshooting
+  - remove build artifacts: `bazel clean --expunge`
+  - update bazel
+
 # Test
 ```
 bazel test -c dbg //test/... --jobs=$[$(nproc --all)-2]
