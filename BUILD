@@ -17,15 +17,23 @@ api_proto_library(
     srcs = ["protocol.proto"],
 )
 
-envoy_cc_binary(
-    name = "envoy",
+envoy_cc_library(
+    name = "envoy_gloo_all_filters_lib",
     repository = "@envoy",
-    stamped = True,
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "//source/extensions/filters/network/consul_connect:config",
+    ],
+)
+
+envoy_cc_binary(
+    name = "envoy",
+    repository = "@envoy",
+    stamped = True,
+    deps = [
+        ":envoy_gloo_all_filters_lib",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )
