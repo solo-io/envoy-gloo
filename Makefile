@@ -1,8 +1,8 @@
 VERSION := $(shell readelf -n bazel-bin/envoy.stripped|grep "Build ID:" |cut -f2 -d:|tr -d ' ')
-RELEASE := "true"
-ifeq ($(TAGGED_VERSION),)
+RELEASE := "false"
+ifneq ($(TAGGED_VERSION),)
         VERSION := $(shell echo $(TAGGED_VERSION) | cut -c 2-)
-        RELEASE := "false"
+        RELEASE := "true"
 endif
 
 bazel-bin/envoy:
@@ -23,8 +23,10 @@ build-docker: bazel-bin/envoy.stripped
 	cp bazel-bin/envoy.stripped ci/
 	cd ci && docker build -t soloio/envoy-gloo:$(VERSION)
 
-.PHONY: docker-push
-docker-push: build-docker
+.PHONY: docker-release
+docker-release:
 ifeq ($(RELEASE),"true")
-	cd ci && docker push soloio/envoy-gloo:$(VERSION)
+	cd ci
+	docker build -t soloio/envoy-gloo:$(VERSION)
+	docker push soloio/envoy-gloo:$(VERSION)
 endif
