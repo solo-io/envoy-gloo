@@ -9,6 +9,6 @@ endif
 docker-release:
 ifeq ($(RELEASE),"true")
 	cd ci
-	docker build -t soloio/envoy-gloo:$(VERSION)
+	docker build -t soloio/envoy-gloo:$(VERSION) .
 	docker push soloio/envoy-gloo:$(VERSION)
 endif
