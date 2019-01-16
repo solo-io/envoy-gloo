@@ -19,7 +19,7 @@ steps:
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
-  args: ['-c', 'docker login --username soloiobot --password $$DOCKER_HUB_PASSWORD && make docker-push']
+  args: ['-c', 'docker login --username soloiobot --password $$DOCKER_HUB_PASSWORD && make docker-release']
   env: 
   - 'TAGGED_VERSION=$TAG_NAME'
   secretEnv: ['DOCKER_HUB_PASSWORD']
