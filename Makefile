@@ -11,7 +11,19 @@ bazel-bin/envoy.stripped: bazel-bin/envoy
 upload-debug: bazel-bin/envoy.debuginfo ./bazel-bin/envoy
 	aws s3 cp bazel-bin/envoy.debuginfo s3://artifacts.solo.io/$(shell readelf -n ./bazel-bin/envoy|grep "Build ID:" |cut -f2 -d:|tr -d ' ')/envoy.debuginfo
 
+VERSION := $(shell readelf -n bazel-bin/envoy.stripped|grep "Build ID:" |cut -f2 -d:|tr -d ' ')
+RELEASE := "true"
+ifeq ($(TAGGED_VERSION),)
+	VERSION := $(shell echo $(TAGGED_VERSION) | cut -c 2-)
+        RELEASE := "false"
+endif
+
 .PHONY: build-docker
 build-docker: bazel-bin/envoy.stripped
 	cp bazel-bin/envoy.stripped ci/
-	cd ci && docker build -t soloio/envoy-gloo:$(shell readelf -n bazel-bin/envoy.stripped|grep "Build ID:" |cut -f2 -d:|tr -d ' ') .
+	cd ci && docker build -t soloio/envoy-gloo:$(VERSION)
+
+.PHONY: docker-push
+docker-push: build-docker
+	docker push soloio/envoy-gloo:$(VERSION)
+
