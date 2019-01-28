@@ -24,6 +24,17 @@ steps:
   - 'TAGGED_VERSION=$TAG_NAME'
   secretEnv: ['DOCKER_HUB_PASSWORD']
 
+- name: gcr.io/cloud-builders/gsutil
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    if [ -z "$$TAGGED_VERSION" ]; then exit 0; fi
+    gsutil cp ./ci/envoy.stripped gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
+  id: 'save-tagged-version'
+  env: 
+  - 'TAGGED_VERSION=$TAG_NAME'
+
 secrets:
 - kmsKeyName: projects/solo-public/locations/global/keyRings/build/cryptoKeys/build-key
   secretEnv:
