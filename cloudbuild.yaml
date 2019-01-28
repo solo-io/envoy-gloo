@@ -27,7 +27,7 @@ steps:
 - name: gcr.io/cloud-builders/gsutil
   entrypoint: 'bash'
   args:
-  - '-exc'
+  - '-ec'
   - |
     if [ -z "$$TAGGED_VERSION" ]; then exit 0; fi
     gsutil cp ./ci/envoy.stripped gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
