@@ -63,7 +63,7 @@ const std::string AwsAuthenticatorTest::SERVICE = "service";
 
 TEST_F(AwsAuthenticatorTest, BodyHash) {
   DangerousDeprecatedTestTime time;
-  AwsAuthenticator aws(time.timeSystem());
+  AwsAuthenticator aws(time.timeSource());
 
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
@@ -77,7 +77,7 @@ TEST_F(AwsAuthenticatorTest, BodyHash) {
 
 TEST_F(AwsAuthenticatorTest, UrlQuery) {
   DangerousDeprecatedTestTime time;
-  AwsAuthenticator aws(time.timeSystem());
+  AwsAuthenticator aws(time.timeSource());
 
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
@@ -102,7 +102,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 // https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html
 TEST_F(AwsAuthenticatorTest, TestGuide) {
   DangerousDeprecatedTestTime time;
-  AwsAuthenticator aws(time.timeSystem());
+  AwsAuthenticator aws(time.timeSource());
 
   std::string secretkey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
   std::string accesskey = "AKIDEXAMPLE";

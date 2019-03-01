@@ -53,7 +53,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_,
-        factory_context_.dispatcher().timeSystem());
+        factory_context_.dispatcher().timeSource());
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
