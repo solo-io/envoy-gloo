@@ -7,7 +7,11 @@ envoy_gloo_dependencies()
 load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
 load("@envoy//bazel:cc_configure.bzl", "cc_configure")
 
-envoy_dependencies()
+envoy_dependencies(path = "//ci/prebuilt")
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+rules_foreign_cc_dependencies()
+
 
 cc_configure()
 
