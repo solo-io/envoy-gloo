@@ -73,7 +73,12 @@ void Filter::onEvent(Network::ConnectionEvent event) {
 
   // TODO(talnordan): First call `connection.ssl()->peerCertificatePresented()`.
   auto &&ssl = connection.ssl();
-  std::string uri_san{ssl->uriSanPeerCertificate()};
+
+  const auto uriSans = ssl->uriSanPeerCertificate();
+  std::string uri_san;
+  if (!uriSans.empty()) { 
+   uri_san = uriSans[0];
+  }
   std::string serial_number{ssl->serialNumberPeerCertificate()};
   if (uri_san.empty() || serial_number.empty()) {
     ENVOY_CONN_LOG(trace, "consul_connect: Authorize REST not called",
