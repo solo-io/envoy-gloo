@@ -79,13 +79,6 @@ if [[ -d /bazel-prebuilt-output && ! -d "${TEST_TMPDIR}/_bazel_${USER}" ]]; then
   rsync -a /bazel-prebuilt-output "${BAZEL_OUTPUT_BASE}"
 fi
 
-# use prebuilt stuff
-sed -i -e 's|envoy_dependencies()|envoy_dependencies(path = "//ci/prebuilt")|' WORKSPACE
-
-# Build in the build dir so we can have concurrent steps using different build volumes
-# sed 's|envoy_dependencies()|envoy_dependencies(path = "//ci/prebuilt")|' WORKSPACE > ${BUILD_DIR}/WORKSPACE
-# cd ${BUILD_DIR}
-
 set -e
 
 # try compiling with clang as google cloud doesn't seem to like gcc.
