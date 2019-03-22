@@ -27,9 +27,8 @@ Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
  * Static registration for the Consul Connect filter. @see
  * RegisterFactory.
  */
-static Registry::RegisterFactory<
-    ConfigFactory, Server::Configuration::NamedNetworkFilterConfigFactory>
-    registered_;
+REGISTER_FACTORY(ConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace ConsulConnect
 } // namespace NetworkFilters

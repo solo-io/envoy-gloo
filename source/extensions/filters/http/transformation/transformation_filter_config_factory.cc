@@ -42,10 +42,8 @@ TransformationFilterConfigFactory::createRouteSpecificFilterConfig(
 /**
  * Static registration for this sample filter. @see RegisterFactory.
  */
-static Registry::RegisterFactory<
-    TransformationFilterConfigFactory,
-    Server::Configuration::NamedHttpFilterConfigFactory>
-    register_;
+REGISTER_FACTORY(TransformationFilterConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace Transformation
 } // namespace HttpFilters

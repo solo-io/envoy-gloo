@@ -2,7 +2,7 @@
 
 ## Laptop
 ```
-bazel build -c dbg :envoy --jobs=$[$(nproc --all)-2]
+bazel build -c dbg :envoy --jobs=$[$(nproc --all)-2] --sandbox_writable_path ~/.ccache
 ```
 In the command above `jobs` is set to number of CPUs minus 2. This should help keep your laptop alive.
 

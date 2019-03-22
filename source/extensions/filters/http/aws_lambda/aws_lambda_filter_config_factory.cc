@@ -54,10 +54,8 @@ AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfig(
 /**
  * Static registration for the AWS Lambda filter. @see RegisterFactory.
  */
-static Registry::RegisterFactory<
-    AWSLambdaFilterConfigFactory,
-    Server::Configuration::NamedHttpFilterConfigFactory>
-    register_;
+REGISTER_FACTORY(AWSLambdaFilterConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace AwsLambda
 } // namespace HttpFilters
