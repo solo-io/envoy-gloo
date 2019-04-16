@@ -226,7 +226,10 @@ void TransformationFilter::transformTemplate(
 
     if (body.length() > 0) {
       (this->*addData)(body);
-    } else {
+    } else if (!transformation.has_passthrough()) {
+      // only remove content type if the request is not passthrough.
+      // This means that the empty body is a result of the transformation.
+      // so the content type should be removed
       header_map.removeContentType();
     }
   } catch (nlohmann::json::parse_error &e) {
