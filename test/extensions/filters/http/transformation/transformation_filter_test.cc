@@ -63,7 +63,7 @@ public:
     initFilter(); // Re-load config.
   }
 
-  Http::TestHeaderMapImpl headers_{
+  Http::TestHeaderMapImpl headers_{{"content-type", "test"},
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
@@ -160,6 +160,24 @@ TEST_F(TransformationFilterTest, HappyPathWithBodyPassthrough) {
   Buffer::OwnedImpl downstream_body("{\"a\":\"b\"}");
   auto res = filter_->decodeData(downstream_body, true);
   EXPECT_EQ(Http::FilterDataStatus::Continue, res);
+}
+
+
+TEST_F(TransformationFilterTest, BodyPassthroughDoesntRemoveContentType) {
+  auto &transformation = (*route_config_.mutable_request_transformation());
+  transformation.mutable_transformation_template()->mutable_passthrough();
+  envoy::api::v2::filter::http::InjaTemplate header_value;
+  header_value.set_text("added-value");
+  (*transformation.mutable_transformation_template()->mutable_headers())["added-header"] = header_value;
+  initFilter(); // Re-load config.
+
+  auto resheaders = filter_->decodeHeaders(headers_, false);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, resheaders);
+
+  // as this is a passthrough body, transformation should have been triggered
+  // make sure that transformation did not remove content type.
+  EXPECT_EQ("test", headers_.get_("content-type"));
+  EXPECT_EQ("added-value", headers_.get_("added-header"));
 }
 
 TEST_F(TransformationFilterTest, HappyPathWithHeadersBodyTemplate) {
