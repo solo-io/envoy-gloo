@@ -26,6 +26,11 @@ public:
                ? &proto_config_.request_transformation()
                : nullptr;
   }
+
+  bool shouldClearCache() const {
+    return proto_config_.clear_route_cache();
+  }
+
   const envoy::api::v2::filter::http::Transformation *
   getResponseTranformation() const {
     return proto_config_.has_response_transformation()
