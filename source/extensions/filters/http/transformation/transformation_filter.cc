@@ -158,6 +158,7 @@ TransformationFilter::getTransformFromRoute(
   if (config != nullptr) {
     switch (direction) {
     case TransformationFilter::Direction::Request:
+      should_clear_cache_ = config->shouldClearCache();
       return config->getRequestTranformation();
     case TransformationFilter::Direction::Response:
       return config->getResponseTranformation();
@@ -173,6 +174,9 @@ void TransformationFilter::transformRequest() {
   transformSomething(&request_transformation_, *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
+  if (should_clear_cache_) {
+    decoder_callbacks_->clearRouteCache();
+  }
 }
 
 void TransformationFilter::transformResponse() {

@@ -82,6 +82,17 @@ TEST_F(TransformationFilterTest, EmptyConfig) {
 TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   initFilterWithBodyTemplate("solo");
 
+  EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(0);
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, TransformsOnHeadersAndClearCache) {
+  route_config_.set_clear_route_cache(true);
+  initFilter(); // Re-load config.
+
+  EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(1);
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
   auto res = filter_->decodeHeaders(headers_, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);

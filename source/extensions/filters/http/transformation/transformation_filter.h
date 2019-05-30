@@ -128,6 +128,7 @@ private:
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;
+  bool should_clear_cache_{};
 };
 
 } // namespace Transformation
