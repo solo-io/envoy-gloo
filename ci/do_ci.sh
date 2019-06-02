@@ -48,10 +48,10 @@ function setup_gcc_toolchain() {
 }
 
 function setup_clang_toolchain() {
-  export PATH=/usr/lib/llvm-7/bin:$PATH
+  export PATH=/usr/lib/llvm-8/bin:$PATH
   export CC=clang
   export CXX=clang++
-  export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-7/bin/llvm-symbolizer
+  export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
   echo "$CC/$CXX toolchain configured"
 }
 
@@ -64,20 +64,6 @@ function cleanup() {
 
 cleanup
 trap cleanup EXIT
-
-
-# link prebuilt stuff
-
-ln -sf /thirdparty "${ENVOY_CIDIR}"/prebuilt
-ln -sf /thirdparty_build "${ENVOY_CIDIR}"/prebuilt
-
-# Replace the existing Bazel output cache with a copy of the image's prebuilt deps.
-if [[ -d /bazel-prebuilt-output && ! -d "${TEST_TMPDIR}/_bazel_${USER}" ]]; then
-  BAZEL_OUTPUT_BASE="$(bazel info output_base)"
-  mkdir -p "${TEST_TMPDIR}/_bazel_${USER}/install"
-  rsync -a /bazel-prebuilt-root/install/* "${TEST_TMPDIR}/_bazel_${USER}/install/"
-  rsync -a /bazel-prebuilt-output "${BAZEL_OUTPUT_BASE}"
-fi
 
 set -e
 
