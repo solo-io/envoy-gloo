@@ -4,6 +4,9 @@ load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
 
 envoy_gloo_dependencies()
 
+load("@envoy//bazel:api_repositories.bzl", "envoy_api_dependencies")
+envoy_api_dependencies()
+
 load("@envoy//bazel:repositories.bzl", "GO_VERSION", "envoy_dependencies")
 load("@envoy//bazel:cc_configure.bzl", "cc_configure")
 
