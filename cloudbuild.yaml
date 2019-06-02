@@ -1,5 +1,5 @@
 steps:
-- name: 'envoyproxy/envoy-build:698009170e362f9ca0594f2b1927fbbee199bf98'
+- name: 'envoyproxy/envoy-build:cfc514546bc0284536893cca5fa43d7128edcd35'
   args: ['ci/do_ci.sh', 'test']
   volumes:
   - name: 'vol-build'
@@ -8,7 +8,7 @@ steps:
   - 'COMMIT_SHA=$COMMIT_SHA'
   timeout: 900s
 
-- name: 'envoyproxy/envoy-build:698009170e362f9ca0594f2b1927fbbee199bf98'
+- name: 'envoyproxy/envoy-build:cfc514546bc0284536893cca5fa43d7128edcd35'
   args: ['ci/do_ci.sh', 'build']
   volumes:
   - name: 'vol-build'
