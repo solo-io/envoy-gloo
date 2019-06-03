@@ -77,6 +77,8 @@ private:
     Sha256();
     void update(const Buffer::Instance &data);
     void update(const std::string &data);
+    void update(const absl::string_view& data);
+
     void update(char c);
     void update(const uint8_t *bytes, size_t size);
     void update(const char *chars, size_t size);
