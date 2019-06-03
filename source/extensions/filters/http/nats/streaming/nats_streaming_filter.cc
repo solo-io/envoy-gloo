@@ -59,10 +59,10 @@ NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
   auto mutable_headers = payload_.mutable_headers();
   headers.iterate(
       [](const Envoy::Http::HeaderEntry &e, void *ctx) {
-        Envoy::Protobuf::Map<Envoy::ProtobufTypes::String,
-                             Envoy::ProtobufTypes::String> *mutable_headers =
-            static_cast<Envoy::Protobuf::Map<Envoy::ProtobufTypes::String,
-                                             Envoy::ProtobufTypes::String> *>(
+        Envoy::Protobuf::Map<std::string,
+                             std::string> *mutable_headers =
+            static_cast<Envoy::Protobuf::Map<std::string,
+                                             std::string> *>(
                 ctx);
         (*mutable_headers)[std::string(e.key().getStringView())] =
             std::string(e.value().getStringView());
