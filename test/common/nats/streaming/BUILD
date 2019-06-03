@@ -2,13 +2,16 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
-    "envoy_cc_test",
     "envoy_package",
+)
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
 )
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "client_impl_test",
     srcs = ["client_impl_test.cc"],
     repository = "@envoy",
@@ -24,7 +27,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "connect_response_handler_test",
     srcs = ["connect_response_handler_test.cc"],
     repository = "@envoy",
@@ -35,7 +38,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "heartbeat_handler_test",
     srcs = ["heartbeat_handler_test.cc"],
     repository = "@envoy",
@@ -47,7 +50,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "message_utility_test",
     srcs = ["message_utility_test.cc"],
     repository = "@envoy",
@@ -58,7 +61,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "pub_request_handler_test",
     srcs = ["pub_request_handler_test.cc"],
     repository = "@envoy",

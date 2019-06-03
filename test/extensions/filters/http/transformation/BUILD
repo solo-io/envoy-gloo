@@ -2,13 +2,16 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
-    "envoy_cc_test",
     "envoy_package",
+)
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
 )
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "transformer_test",
     srcs = ["transformer_test.cc"],
     repository = "@envoy",
@@ -20,7 +23,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "transformation_filter_test",
     srcs = ["transformation_filter_test.cc"],
     repository = "@envoy",
@@ -32,7 +35,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "body_header_transformer_test",
     srcs = ["body_header_transformer_test.cc"],
     repository = "@envoy",

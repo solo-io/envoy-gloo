@@ -3,13 +3,16 @@ licenses(["notice"])  # Apache 2
 load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_mock",
-    "envoy_cc_test",
     "envoy_package",
+)
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
 )
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "aws_lambda_filter_test",
     srcs = ["aws_lambda_filter_test.cc"],
     repository = "@envoy",
@@ -22,7 +25,7 @@ envoy_cc_test(
     ],
 )
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "aws_authenticator_test",
     srcs = ["aws_authenticator_test.cc"],
     repository = "@envoy",
