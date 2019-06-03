@@ -161,10 +161,11 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
   processRequest(response);
 
-  EXPECT_STREQ("solo.io", upstream_request_->headers()
+  std::string xsolo_header(upstream_request_->headers()
                               .get(Http::LowerCaseString("x-solo"))
                               ->value()
                               .getStringView());
+  EXPECT_STREQ("solo.io", xsolo_header);
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ("abc 234", body);
 }
@@ -179,8 +180,9 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
   auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
   processRequest(response);
 
-  EXPECT_STREQ("/solo/234",
-               upstream_request_->headers().Path()->value().getStringView());
+  std::string path(upstream_request_->headers().Path()->value().getStringView());
+
+  EXPECT_STREQ("/solo/234", path);
 }
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
