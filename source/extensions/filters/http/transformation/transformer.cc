@@ -44,7 +44,7 @@ std::string ExtractorUtil::extract(
     return "";
   }
 
-  std::string value = header_entry->value().c_str();
+  std::string value(header_entry->value().getStringView());
   unsigned int group = extractor.subgroup();
   // get and regex
   std::regex extract_regex(extractor.regex());
@@ -82,7 +82,7 @@ json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
   if (!header_entry) {
     return "";
   }
-  return header_entry->value().c_str();
+  return std::string(header_entry->value().getStringView());
 }
 
 json TransformerInstance::extracted_callback(Parsed::Arguments args,

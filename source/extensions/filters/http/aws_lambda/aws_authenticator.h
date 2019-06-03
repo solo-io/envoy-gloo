@@ -119,10 +119,8 @@ private:
   std::string first_key_;
   const std::string *service_{};
   const std::string *method_{};
-  const char *query_string_start_{};
-  size_t query_string_len_{};
-  const char *url_start_{};
-  size_t url_len_{};
+  absl::string_view query_string_{};
+  absl::string_view url_base_{};
 
   Http::HeaderMap *request_headers_{};
 };

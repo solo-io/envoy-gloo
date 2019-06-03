@@ -127,7 +127,7 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
     ENVOY_CONN_LOG(error,
                    "consul_connect: Authorize REST call "
                    "responded with unexpected status {}",
-                   connection, m->headers().Status()->value().c_str());
+                   connection, m->headers().Status()->value().getStringView());
     closeConnection();
     return;
   }
@@ -135,7 +135,7 @@ void Filter::onSuccess(Http::MessagePtr &&m) {
   ENVOY_CONN_LOG(trace,
                  "consul_connect: Authorize REST call "
                  "succeeded, status={}, body={}",
-                 connection, m->headers().Status()->value().c_str(), json);
+                 connection, m->headers().Status()->value().getStringView(), json);
   agent::connect::authorize::v1::AuthorizeResponse authorize_response;
   const auto status =
       Protobuf::util::JsonStringToMessage(json, &authorize_response);
