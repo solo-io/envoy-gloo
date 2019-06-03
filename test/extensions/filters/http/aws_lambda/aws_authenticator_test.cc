@@ -39,10 +39,10 @@ public:
   }
 
   std::string get_query(const AwsAuthenticator &aws) {
-    return std::string(aws.query_string_start_, aws.query_string_len_);
+    return std::string(aws.query_string_);
   }
   std::string get_url(const AwsAuthenticator &aws) {
-    return std::string(aws.url_start_, aws.url_len_);
+    return std::string(aws.url_base_);
   }
 
   void set_guide_test_params(AwsAuthenticator &aws) {
