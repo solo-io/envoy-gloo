@@ -123,8 +123,9 @@ void AwsAuthenticator::fetchUrl() {
   query_string_ =
       Http::Utility::findQueryStringStart(canonical_url);
   if (query_string_.length() != 0) {
-    // +1 to skip the question mark
-    url_base_.remove_suffix(query_string_.length()+1);
+    url_base_.remove_suffix(query_string_.length());
+    // remove the question mark
+    query_string_.remove_prefix(1);
   }
 }
 
