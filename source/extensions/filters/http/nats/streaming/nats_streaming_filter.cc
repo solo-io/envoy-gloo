@@ -21,6 +21,13 @@ namespace HttpFilters {
 namespace Nats {
 namespace Streaming {
 
+struct RcDetailsValues {
+  // The jwt_authn filter rejected the request
+  const std::string PayloadTooLarge = "nats_payload_too_big";
+  const std::string Completion = "nats_completion";
+};
+typedef ConstSingleton<RcDetailsValues> RcDetails;
+
 NatsStreamingFilter::NatsStreamingFilter(
     NatsStreamingFilterConfigSharedPtr config,
     Envoy::Nats::Streaming::ClientPtr nats_streaming_client)
@@ -52,10 +59,10 @@ NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
   auto mutable_headers = payload_.mutable_headers();
   headers.iterate(
       [](const Envoy::Http::HeaderEntry &e, void *ctx) {
-        Envoy::Protobuf::Map<Envoy::ProtobufTypes::String,
-                             Envoy::ProtobufTypes::String> *mutable_headers =
-            static_cast<Envoy::Protobuf::Map<Envoy::ProtobufTypes::String,
-                                             Envoy::ProtobufTypes::String> *>(
+        Envoy::Protobuf::Map<std::string,
+                             std::string> *mutable_headers =
+            static_cast<Envoy::Protobuf::Map<std::string,
+                                             std::string> *>(
                 ctx);
         (*mutable_headers)[std::string(e.key().getStringView())] =
             std::string(e.value().getStringView());
@@ -84,7 +91,7 @@ NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
 
     decoder_callbacks_->sendLocalReply(Http::Code::PayloadTooLarge,
                                        "nats streaming paylaod too large",
-                                       nullptr, absl::nullopt);
+                                       nullptr, absl::nullopt, RcDetails::get().PayloadTooLarge);
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
@@ -171,7 +178,7 @@ void NatsStreamingFilter::onCompletion(Http::Code response_code,
   in_flight_request_ = nullptr;
 
   decoder_callbacks_->sendLocalReply(response_code, body_text, nullptr,
-                                     absl::nullopt);
+                                     absl::nullopt, RcDetails::get().Completion);
 }
 
 void NatsStreamingFilter::onCompletion(Http::Code response_code,

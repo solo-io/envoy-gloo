@@ -5,10 +5,14 @@ load(
     "envoy_cc_test",
     "envoy_package",
 )
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
+)
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "async_client_test",
     srcs = ["async_client_test.cc"],
     repository = "@envoy",

@@ -6,9 +6,14 @@ load(
     "envoy_package",
 )
 
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
+)
+
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "buffer_utility_test",
     srcs = ["buffer_utility_test.cc"],
     repository = "@envoy",

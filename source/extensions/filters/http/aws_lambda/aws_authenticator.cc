@@ -91,7 +91,7 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
 
     canonical_headers_stream << ':';
     if (headerEntry != nullptr) {
-      canonical_headers_stream << headerEntry->value().c_str();
+      canonical_headers_stream << headerEntry->value().getStringView();
       // TODO: add warning if null
     }
     canonical_headers_stream << '\n';
@@ -119,25 +119,13 @@ std::string AwsAuthenticator::getBodyHexSha() {
 
 void AwsAuthenticator::fetchUrl() {
   const Http::HeaderString &canonical_url = request_headers_->Path()->value();
-  url_len_ = canonical_url.size();
-  url_start_ = canonical_url.c_str();
-  const char *query_string_start =
+  url_base_ = canonical_url.getStringView();
+  query_string_ =
       Http::Utility::findQueryStringStart(canonical_url);
-  // bug in: findQueryStringStart - query_string_start will never be null as
-  // implied in config_impl.cc, but rather it is the end iterator of the string.
-  if (query_string_start != nullptr) {
-    url_len_ = query_string_start - url_start_;
-    if (url_len_ < canonical_url.size()) {
-      // we now know that query_string_start != std::end
-
-      // +1 to skip the question mark
-      // These should be sorted alphabetically, but I will leave that to the
-      // caller (which is internal, hence it's ok)
-      query_string_len_ = canonical_url.size() - url_len_ - 1;
-      query_string_start_ = query_string_start + 1;
-    } else {
-      query_string_start = nullptr;
-    }
+  if (query_string_.length() != 0) {
+    url_base_.remove_suffix(query_string_.length());
+    // remove the question mark
+    query_string_.remove_prefix(1);
   }
 }
 
@@ -150,10 +138,10 @@ std::string AwsAuthenticator::computeCanonicalRequestHash(
 
   canonicalRequestHash.update(request_method);
   canonicalRequestHash.update('\n');
-  canonicalRequestHash.update(url_start_, url_len_);
+  canonicalRequestHash.update(url_base_);
   canonicalRequestHash.update('\n');
-  if (query_string_start_ != nullptr) {
-    canonicalRequestHash.update(query_string_start_, query_string_len_);
+  if (query_string_.length() != 0) {
+    canonicalRequestHash.update(query_string_);
   }
   canonicalRequestHash.update('\n');
   canonicalRequestHash.update(canonical_headers);
@@ -277,6 +265,10 @@ void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
 
 void AwsAuthenticator::Sha256::update(const std::string &data) {
   update(data.c_str(), data.size());
+}
+
+void AwsAuthenticator::Sha256::update(const absl::string_view& data) {
+  update(data.data(), data.size());
 }
 
 void AwsAuthenticator::Sha256::update(const uint8_t *bytes, size_t size) {

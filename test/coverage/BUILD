@@ -6,13 +6,16 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
-    "envoy_cc_test",
     "envoy_package",
+)
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
 )
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "coverage_tests",
     coverage = False,
     # Needed when invoking external shell tests etc.
@@ -20,28 +23,28 @@ envoy_cc_test(
     repository = "@envoy",
     tags = ["manual"],
     deps = [
-        "//test/common/buffer:buffer_utility_test_lib",
-        "//test/common/grpc:async_client_test_lib",
-        "//test/common/http:solo_filter_utility_test_lib",
-        "//test/common/nats:codec_impl_test_lib",
-        "//test/common/nats:message_builder_test_lib",
-        "//test/common/nats:subject_utility_test_lib",
-        "//test/common/nats:token_generator_impl_test_lib",
-        "//test/common/nats/nuid:nuid_test_lib",
-        "//test/common/nats/streaming:client_impl_test_lib",
-        "//test/common/nats/streaming:connect_response_handler_test_lib",
-        "//test/common/nats/streaming:heartbeat_handler_test_lib",
-        "//test/common/nats/streaming:message_utility_test_lib",
-        "//test/common/nats/streaming:pub_request_handler_test_lib",
-        "//test/common/tcp:conn_pool_impl_test_lib",
-        "//test/extensions/filters/http/aws_lambda:aws_authenticator_test_lib",
-        "//test/extensions/filters/http/aws_lambda:aws_lambda_filter_test_lib",
-        "//test/extensions/filters/http/nats/streaming:nats_streaming_filter_test_lib",
-        "//test/extensions/filters/http/transformation:body_header_transformer_test_lib",
-        "//test/extensions/filters/http/transformation:transformation_filter_test_lib",
-        "//test/extensions/filters/http/transformation:transformer_test_lib",
-        "//test/extensions/filters/network/consul_connect:consul_connect_test_lib",
-        "//test/integration:aws_lambda_filter_integration_test_lib",
-        "//test/integration:transformation_filter_integration_test_lib",
+        "//test/common/buffer:buffer_utility_test_lib_internal_only",
+        "//test/common/grpc:async_client_test_lib_internal_only",
+        "//test/common/http:solo_filter_utility_test_lib_internal_only",
+        "//test/common/nats:codec_impl_test_lib_internal_only",
+        "//test/common/nats:message_builder_test_lib_internal_only",
+        "//test/common/nats:subject_utility_test_lib_internal_only",
+        "//test/common/nats:token_generator_impl_test_lib_internal_only",
+        "//test/common/nats/nuid:nuid_test_lib_internal_only",
+        "//test/common/nats/streaming:client_impl_test_lib_internal_only",
+        "//test/common/nats/streaming:connect_response_handler_test_lib_internal_only",
+        "//test/common/nats/streaming:heartbeat_handler_test_lib_internal_only",
+        "//test/common/nats/streaming:message_utility_test_lib_internal_only",
+        "//test/common/nats/streaming:pub_request_handler_test_lib_internal_only",
+        "//test/common/tcp:conn_pool_impl_test_lib_internal_only",
+        "//test/extensions/filters/http/aws_lambda:aws_authenticator_test_lib_internal_only",
+        "//test/extensions/filters/http/aws_lambda:aws_lambda_filter_test_lib_internal_only",
+        "//test/extensions/filters/http/nats/streaming:nats_streaming_filter_test_lib_internal_only",
+        "//test/extensions/filters/http/transformation:body_header_transformer_test_lib_internal_only",
+        "//test/extensions/filters/http/transformation:transformation_filter_test_lib_internal_only",
+        "//test/extensions/filters/http/transformation:transformer_test_lib_internal_only",
+        "//test/extensions/filters/network/consul_connect:consul_connect_test_lib_internal_only",
+        "//test/integration:aws_lambda_filter_integration_test_lib_internal_only",
+        "//test/integration:transformation_filter_integration_test_lib_internal_only",
     ],
 )

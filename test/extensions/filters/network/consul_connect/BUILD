@@ -4,13 +4,16 @@ load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_binary",
     "envoy_cc_library",
-    "envoy_cc_test",
     "envoy_package",
+)
+load(
+    "//bazel:envoy_test.bzl",
+    "envoy_gloo_cc_test",
 )
 
 envoy_package()
 
-envoy_cc_test(
+envoy_gloo_cc_test(
     name = "consul_connect_test",
     srcs = [
         "consul_connect_test.cc",

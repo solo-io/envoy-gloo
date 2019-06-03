@@ -23,7 +23,7 @@ void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
          void *context) -> Http::HeaderMap::Iterate {
         json *headers_ptr = static_cast<json *>(context);
         json &headers = *headers_ptr;
-        headers[header.key().c_str()] = header.value().c_str();
+        headers[std::string(header.key().getStringView())] = std::string(header.value().getStringView());
         return Http::HeaderMap::Iterate::Continue;
       },
       &headers);
