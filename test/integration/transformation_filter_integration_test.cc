@@ -122,7 +122,7 @@ public:
                     ->mutable_routes(0)
                     ->mutable_per_filter_config())["io.solo.transformation"];
 
-          MessageUtil::loadFromYaml(transformation_string_, perFilterConfig);
+          TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
         });
 
     HttpIntegrationTest::initialize();
