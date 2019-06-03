@@ -15,6 +15,12 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+struct RcDetailsValues {
+  // The fault filter injected an abort for this request.
+  const std::string TransformError = "transformation_filter_error";
+};
+typedef ConstSingleton<RcDetailsValues> RcDetails;
+
 TransformationFilter::TransformationFilter() {}
 
 TransformationFilter::~TransformationFilter() {}
@@ -266,7 +272,8 @@ void TransformationFilter::transformBodyHeaderTransformer(
 void TransformationFilter::requestError() {
   ASSERT(is_error());
   decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr,
-                                     absl::nullopt);
+                                     absl::nullopt,
+                                     RcDetails::get().TransformError);
 }
 
 void TransformationFilter::responseError() {
