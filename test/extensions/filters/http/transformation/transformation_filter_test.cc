@@ -120,7 +120,7 @@ TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
       .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
-        status = headers.Status()->value().getStringView();
+        status = std::string(headers.Status()->value().getStringView());
       }));
 
   auto res = filter_->decodeHeaders(headers_, true);
@@ -137,7 +137,7 @@ TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
       .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
-        status = headers.Status()->value().getStringView();
+        status = std::string(headers.Status()->value().getStringView());
       }));
 
   Buffer::OwnedImpl body("this is not json");
