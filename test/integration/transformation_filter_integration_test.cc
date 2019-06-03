@@ -165,7 +165,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
                               .get(Http::LowerCaseString("x-solo"))
                               ->value()
                               .getStringView());
-  EXPECT_STREQ("solo.io", xsolo_header);
+  EXPECT_EQ("solo.io", xsolo_header);
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ("abc 234", body);
 }
@@ -182,7 +182,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
 
   std::string path(upstream_request_->headers().Path()->value().getStringView());
 
-  EXPECT_STREQ("/solo/234", path);
+  EXPECT_EQ("/solo/234", path);
 }
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
@@ -263,7 +263,7 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   EXPECT_EQ(nullptr, rheaders.TransferEncoding());
   EXPECT_EQ(nullptr, rheaders.ContentType());
   if (rheaders.ContentLength() != nullptr) {
-    EXPECT_STREQ("0", rheaders.ContentLength()->value().getStringView());
+    EXPECT_EQ("0", rheaders.ContentLength()->value().getStringView());
   }
   // verify response
 
@@ -273,7 +273,7 @@ TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   EXPECT_EQ(nullptr, headers.TransferEncoding());
   EXPECT_EQ(nullptr, headers.ContentType());
   if (headers.ContentLength() != nullptr) {
-    EXPECT_STREQ("0", headers.ContentLength()->value().getStringView());
+    EXPECT_EQ("0", headers.ContentLength()->value().getStringView());
   }
 }
 
@@ -294,7 +294,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
 
   processRequest(response);
 
-  EXPECT_STREQ("12347", upstream_request_->headers()
+  EXPECT_EQ("12347", upstream_request_->headers()
                             .get(Http::LowerCaseString("x-solo"))
                             ->value()
                             .getStringView());
