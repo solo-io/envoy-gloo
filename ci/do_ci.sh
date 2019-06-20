@@ -41,6 +41,9 @@ export BAZEL_TEST_OPTIONS="${BAZEL_BUILD_OPTIONS} --test_env=HOME --test_env=PYT
   --test_env=UBSAN_OPTIONS=print_stacktrace=1 \
   --cache_test_results=no --test_output=all ${BAZEL_EXTRA_TEST_OPTIONS}"
 
+# added by yuval-k for the integration tests to run on google cloud build
+export BAZEL_TEST_OPTIONS="${BAZEL_TEST_OPTIONS} --test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors"
+
 function setup_gcc_toolchain() {
   export CC=gcc
   export CXX=g++
@@ -76,11 +79,7 @@ case "$1" in
     ${ENVOY_SRCDIR}test/run_envoy_bazel_coverage.sh
     ;;
 "test")
-    # build all the tests to prevent code rot.
-    bazel build ${BAZEL_TEST_OPTIONS} -c opt //test/...
-    echo "Tests built. running tests."
-    # only run extensions for now as integration tests fail on cloud build.
-    bazel test ${BAZEL_TEST_OPTIONS} -c opt //test/extensions/...
+    bazel test ${BAZEL_TEST_OPTIONS} -c opt //test/...
     ;;
 "build")
     bazel build ${BAZEL_BUILD_OPTIONS} -c opt :envoy
