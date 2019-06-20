@@ -24,7 +24,6 @@ envoy_gloo_cc_test(
     tags = ["manual"],
     deps = [
         "//test/common/buffer:buffer_utility_test_lib_internal_only",
-        "//test/common/grpc:async_client_test_lib_internal_only",
         "//test/common/http:solo_filter_utility_test_lib_internal_only",
         "//test/common/nats:codec_impl_test_lib_internal_only",
         "//test/common/nats:message_builder_test_lib_internal_only",
