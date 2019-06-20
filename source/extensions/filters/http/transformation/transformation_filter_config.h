@@ -22,6 +22,7 @@ public:
 
   const envoy::api::v2::filter::http::Transformation *
   getRequestTranformation() const {
+    // TODO: read files if this is a combine file
     return proto_config_.has_request_transformation()
                ? &proto_config_.request_transformation()
                : nullptr;
@@ -40,6 +41,7 @@ public:
 
 private:
   ProtoConfig proto_config_;
+  std::unordered_map<std::string, std::string> files_;
 };
 
 typedef std::shared_ptr<const RouteTransformationFilterConfig>

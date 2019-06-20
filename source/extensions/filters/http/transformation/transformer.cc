@@ -73,6 +73,9 @@ TransformerInstance::TransformerInstance(
   env_.add_callback(
       "extraction", 1,
       std::bind(&TransformerInstance::extracted_callback, this, _1, _2));
+  env_.add_callback(
+      "file", 1,
+      std::bind(&TransformerInstance::file_callback, this, _1, _2));
 }
 
 json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
@@ -90,6 +93,16 @@ json TransformerInstance::extracted_callback(Parsed::Arguments args,
   std::string name = env_.get_argument<std::string>(args, 0, data);
   const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
+    return value_it->second;
+  }
+  return "";
+}
+
+json TransformerInstance::file_callback(Parsed::Arguments args,
+                                             json data) {
+  std::string name = env_.get_argument<std::string>(args, 0, data);
+  const auto value_it = files_.find(name);
+  if (value_it != files_.end()) {
     return value_it->second;
   }
   return "";

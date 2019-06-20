@@ -28,6 +28,7 @@ class TransformerInstance {
 public:
   TransformerInstance(const Http::HeaderMap &header_map,
                       const std::map<std::string, std::string> &extractions,
+                      const std::map<std::string, std::string> &files,
                       const nlohmann::json &context);
   // header_value(name)
   // extracted_value(name, index)
@@ -47,6 +48,7 @@ private:
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
   const std::map<std::string, std::string> &extractions_;
+  const std::map<std::string, std::string> &files_;
   const nlohmann::json &context_;
 };
 
