@@ -33,6 +33,11 @@ namespace ConnPoolNats {
 using T = std::string;
 using TPtr = MessagePtr<T>;
 
+bool shouldMetricBeZero(const std::string& name){
+  // stats with the word remaining are initialized to not be zero. so we ignore them
+  return name.find("remaining") == std::string::npos;
+}
+
 class TcpClientImplTest : public testing::Test, public DecoderFactory<T> {
 public:
   // Tcp::DecoderFactory
@@ -47,10 +52,14 @@ public:
     // Make sure all gauges are 0.
     for (const Stats::GaugeSharedPtr &gauge :
          host_->cluster_.stats_store_.gauges()) {
-      EXPECT_EQ(0U, gauge->value());
+      if (shouldMetricBeZero(gauge->name())){
+        EXPECT_EQ(0U, gauge->value()) << "cluster." << gauge->name() << " is " << gauge->value();
+      }
     }
     for (const Stats::GaugeSharedPtr &gauge : host_->stats_store_.gauges()) {
-      EXPECT_EQ(0U, gauge->value());
+      if (shouldMetricBeZero(gauge->name())){
+        EXPECT_EQ(0U, gauge->value()) << "host." << gauge->name() << " is " << gauge->value();
+      }
     }
   }
 
