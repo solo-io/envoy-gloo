@@ -114,7 +114,7 @@ private:
     try {
       decoder_->decode(data);
     } catch (ProtocolError &) {
-      putOutlierEvent(Upstream::Outlier::Result::REQUEST_FAILED);
+      putOutlierEvent(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED);
       host_->cluster().stats().upstream_cx_protocol_error_.inc();
       connection_->close(Network::ConnectionCloseType::NoFlush);
     }
@@ -136,7 +136,7 @@ private:
     //   host_->cluster().stats().upstream_rq_cancelled_.inc();
     // }
 
-    putOutlierEvent(Upstream::Outlier::Result::SUCCESS);
+    putOutlierEvent(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS);
   }
 
   // Network::ConnectionCallbacks
@@ -147,7 +147,7 @@ private:
       // if (!pending_requests_.empty()) {
       //   host_->cluster().stats().upstream_cx_destroy_with_active_rq_.inc();
       if (event == Network::ConnectionEvent::RemoteClose) {
-        putOutlierEvent(Upstream::Outlier::Result::SERVER_FAILURE);
+        putOutlierEvent(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED);
         // host_->cluster()
         //     .stats()
         //     .upstream_cx_destroy_remote_with_active_rq_.inc();
