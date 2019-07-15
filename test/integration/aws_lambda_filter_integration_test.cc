@@ -77,7 +77,7 @@ public:
   void SetUp() override { initialize(); }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IpVersions, AWSLambdaFilterIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 

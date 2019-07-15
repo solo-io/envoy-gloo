@@ -148,7 +148,7 @@ public:
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IpVersions, TransformationFilterIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
