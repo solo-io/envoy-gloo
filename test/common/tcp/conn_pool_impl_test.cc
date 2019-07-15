@@ -211,7 +211,7 @@ TEST_F(TcpClientImplTest, FailAll) {
   onConnected();
 
   EXPECT_CALL(host_->outlier_detector_,
-              putResult(Upstream::Outlier::Result::SERVER_FAILURE));
+              putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED));
   EXPECT_CALL(pool_callbacks_, onClose());
   EXPECT_CALL(connection_callbacks,
               onEvent(Network::ConnectionEvent::RemoteClose));
