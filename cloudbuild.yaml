@@ -1,6 +1,6 @@
 steps:
 - name: 'envoyproxy/envoy-build:cd8574de783791b3353579b489222bfda74888da'
-  args: ['ci/do_ci.sh', 'test']
+  args: ['ci/do_ci.sh', 'build']
   volumes:
   - name: 'vol-build'
     path: '/build'
@@ -9,7 +9,7 @@ steps:
   timeout: 900s
 
 - name: 'envoyproxy/envoy-build:cd8574de783791b3353579b489222bfda74888da'
-  args: ['ci/do_ci.sh', 'build']
+  args: ['ci/do_ci.sh', 'test']
   volumes:
   - name: 'vol-build'
     path: '/build'
