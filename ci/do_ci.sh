@@ -103,7 +103,7 @@ case "$1" in
     ${ENVOY_SRCDIR}test/run_envoy_bazel_coverage.sh
     ;;
 "test")
-    bazel test ${BAZEL_TEST_OPTIONS} -c opt //test/...
+    bazel test ${BAZEL_TEST_OPTIONS} -c opt //test/... --jobs=$[$(nproc --all)-2]
     ;;
 "build")
     bazel build ${BAZEL_BUILD_OPTIONS} -c opt :envoy
