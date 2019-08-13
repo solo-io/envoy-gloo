@@ -45,17 +45,41 @@ export BAZEL_TEST_OPTIONS="${BAZEL_BUILD_OPTIONS} --test_env=HOME --test_env=PYT
 export BAZEL_TEST_OPTIONS="${BAZEL_TEST_OPTIONS} --test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors"
 
 function setup_gcc_toolchain() {
-  export CC=gcc
-  export CXX=g++
-  echo "$CC/$CXX toolchain configured"
+  if [[ -z "${ENVOY_RBE}" ]]; then
+    export CC=gcc
+    export CXX=g++
+    export BAZEL_COMPILER=gcc
+    echo "$CC/$CXX toolchain configured"
+  else
+    export BAZEL_BUILD_OPTIONS="--config=rbe-toolchain-gcc ${BAZEL_BUILD_OPTIONS}"
+  fi
 }
 
 function setup_clang_toolchain() {
-  export PATH=/usr/lib/llvm-8/bin:$PATH
-  export CC=clang
-  export CXX=clang++
-  export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
-  echo "$CC/$CXX toolchain configured"
+  if [[ -z "${ENVOY_RBE}" ]]; then
+    export PATH=/usr/lib/llvm-8/bin:$PATH
+    export CC=clang
+    export CXX=clang++
+    export BAZEL_COMPILER=clang
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
+    echo "$CC/$CXX toolchain configured"
+  else
+    export BAZEL_BUILD_OPTIONS="--config=rbe-toolchain-clang ${BAZEL_BUILD_OPTIONS}"
+  fi
+}
+
+function setup_clang_libcxx_toolchain() {
+  if [[ -z "${ENVOY_RBE}" ]]; then
+    export PATH=/usr/lib/llvm-8/bin:$PATH
+    export CC=clang
+    export CXX=clang++
+    export BAZEL_COMPILER=clang
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
+    export BAZEL_BUILD_OPTIONS="--config=libc++ ${BAZEL_BUILD_OPTIONS}"
+    echo "$CC/$CXX toolchain with libc++ configured"
+  else
+    export BAZEL_BUILD_OPTIONS="--config=rbe-toolchain-clang-libc++ ${BAZEL_BUILD_OPTIONS}"
+  fi
 }
 
 function cleanup() {
