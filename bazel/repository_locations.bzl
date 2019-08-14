@@ -8,7 +8,7 @@ REPOSITORY_LOCATIONS = dict(
         remote = "https://github.com/pantor/inja",
     ),
     json = dict(
-        commit = "d2dd27dc3b8472dbaa7d66f83619b3ebcd9185fe",  # v3.1.2
+        commit = "53c3eefa2cf790a7130fed3e13a3be35c2f2ace2",  # v3.7.0
         remote = "https://github.com/nlohmann/json",
     ),
 )
