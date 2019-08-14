@@ -68,15 +68,17 @@ TransformerInstance::TransformerInstance(
     const std::map<std::string, std::string> &extractions, const json &context)
     : header_map_(header_map), extractions_(extractions), context_(context) {
   env_.add_callback(
-      "header", 1,
-      std::bind(&TransformerInstance::header_callback, this, _1, _2));
+      "header", 1, [this](Arguments args) {
+        return header_callback(args);
+      });
   env_.add_callback(
-      "extraction", 1,
-      std::bind(&TransformerInstance::extracted_callback, this, _1, _2));
+      "extraction", 1, [this](Arguments args) {
+        return extracted_callback(args);
+      });
 }
 
-json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
-  std::string headername = env_.get_argument<std::string>(args, 0, data);
+json TransformerInstance::header_callback(Arguments args) {  
+  std::string headername = args.at(0)->get<std::string>();
   const Http::HeaderEntry *header_entry =
       getHeader(header_map_, std::move(headername));
   if (!header_entry) {
@@ -85,9 +87,8 @@ json TransformerInstance::header_callback(Parsed::Arguments args, json data) {
   return std::string(header_entry->value().getStringView());
 }
 
-json TransformerInstance::extracted_callback(Parsed::Arguments args,
-                                             json data) {
-  std::string name = env_.get_argument<std::string>(args, 0, data);
+json TransformerInstance::extracted_callback(Arguments args) {
+  std::string name = args.at(0)->get<std::string>();
   const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
     return value_it->second;

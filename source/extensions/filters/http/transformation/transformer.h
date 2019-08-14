@@ -31,11 +31,9 @@ public:
                       const nlohmann::json &context);
   // header_value(name)
   // extracted_value(name, index)
-  nlohmann::json header_callback(inja::Parsed::Arguments args,
-                                 nlohmann::json data);
+  nlohmann::json header_callback(inja::Arguments args);
 
-  nlohmann::json extracted_callback(inja::Parsed::Arguments args,
-                                    nlohmann::json data);
+  nlohmann::json extracted_callback(inja::Arguments args);
 
   std::string render(const std::string &input);
 
