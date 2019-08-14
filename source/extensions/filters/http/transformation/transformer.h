@@ -6,8 +6,8 @@
 #include "envoy/http/header_map.h"
 
 // clang-format off
-#include "json.hpp"
-#include "inja.hpp"
+#include "nlohmann/json.hpp"
+#include "inja/inja.hpp"
 // clang-format on
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
@@ -31,11 +31,9 @@ public:
                       const nlohmann::json &context);
   // header_value(name)
   // extracted_value(name, index)
-  nlohmann::json header_callback(inja::Parsed::Arguments args,
-                                 nlohmann::json data);
+  nlohmann::json header_callback(inja::Arguments args);
 
-  nlohmann::json extracted_callback(inja::Parsed::Arguments args,
-                                    nlohmann::json data);
+  nlohmann::json extracted_callback(inja::Arguments args);
 
   std::string render(const std::string &input);
 

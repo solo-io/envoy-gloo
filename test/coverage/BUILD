@@ -42,7 +42,6 @@ envoy_gloo_cc_test(
         "//test/extensions/filters/http/transformation:body_header_transformer_test_lib_internal_only",
         "//test/extensions/filters/http/transformation:transformation_filter_test_lib_internal_only",
         "//test/extensions/filters/http/transformation:transformer_test_lib_internal_only",
-        "//test/extensions/filters/network/consul_connect:consul_connect_test_lib_internal_only",
         "//test/integration:aws_lambda_filter_integration_test_lib_internal_only",
         "//test/integration:transformation_filter_integration_test_lib_internal_only",
     ],
