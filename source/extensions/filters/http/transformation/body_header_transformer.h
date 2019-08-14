@@ -5,7 +5,7 @@
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 
 namespace Envoy {
 namespace Extensions {
