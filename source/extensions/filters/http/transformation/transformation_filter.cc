@@ -3,7 +3,6 @@
 #include "common/common/empty_string.h"
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
-#include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
@@ -155,7 +154,7 @@ const Transformation *TransformationFilter::getTransformFromRoute(
     return nullptr;
   }
 
-  const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
+  const auto *config = Http::Utility::resolveMostSpecificPerFilterConfig<
       RouteTransformationFilterConfig>(
       SoloHttpFilterNames::get().Transformation, route_);
 
