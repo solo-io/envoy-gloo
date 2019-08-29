@@ -2,19 +2,16 @@
 
 #include <map>
 
-#include "envoy/buffer/buffer.h"
-#include "envoy/http/header_map.h"
-
-#include "nlohmann/json.hpp"
+#include "extensions/filters/http/transformation/transformer.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-class BodyHeaderTransformer {
+class BodyHeaderTransformer : public Transformer {
 public:
-  void transform(Http::HeaderMap &map, Buffer::Instance &body);
+  void transform(Http::HeaderMap &map, Buffer::Instance &body) const override;
 };
 
 } // namespace Transformation

@@ -79,16 +79,7 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  static bool
-  isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
-    if (t.transformation_type_case() ==
-        envoy::api::v2::filter::http::Transformation::kTransformationTemplate) {
-      return t.transformation_template().has_passthrough();
-    }
-    return false;
-  }
-
-  const envoy::api::v2::filter::http::Transformation *
+  const Transformation*
   getTransformFromRoute(Direction direction);
 
   void transformRequest();
@@ -97,16 +88,9 @@ private:
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
   void transformSomething(
-      const envoy::api::v2::filter::http::Transformation **transformation,
+      const Transformation **transformation,
       Http::HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilter::*responeWithError)(),
-      void (TransformationFilter::*addData)(Buffer::Instance &));
-  void transformTemplate(
-      const envoy::api::v2::filter::http::TransformationTemplate &,
-      Http::HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilter::*addData)(Buffer::Instance &));
-  void transformBodyHeaderTransformer(
-      Http::HeaderMap &header_map, Buffer::Instance &body,
       void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
@@ -121,9 +105,9 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  const envoy::api::v2::filter::http::Transformation *request_transformation_{
+  const Transformation *request_transformation_{
       nullptr};
-  const envoy::api::v2::filter::http::Transformation *response_transformation_{
+  const Transformation *response_transformation_{
       nullptr};
   absl::optional<Error> error_;
   Http::Code error_code_;

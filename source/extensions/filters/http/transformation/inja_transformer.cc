@@ -1,4 +1,4 @@
-#include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include <iterator>
 
@@ -63,6 +63,7 @@ std::string ExtractorUtil::extract(
   return "";
 }
 
+
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map,
     const std::map<std::string, std::string> &extractions, const json &context)
@@ -100,14 +101,14 @@ std::string TransformerInstance::render(const std::string &input) {
   return env_.render(input, context_);
 }
 
-Transformer::Transformer(
+InjaTransformer::InjaTransformer(
     const envoy::api::v2::filter::http::TransformationTemplate &transformation)
     : transformation_(transformation) {}
 
-Transformer::~Transformer() {}
+InjaTransformer::~InjaTransformer() {}
 
-void Transformer::transform(Http::HeaderMap &header_map,
-                            Buffer::Instance &body) {
+void InjaTransformer::transform(Http::HeaderMap &header_map,
+                            Buffer::Instance &body) const {
   json json_body;
   if (body.length() > 0) {
     const std::string bodystring = body.toString();

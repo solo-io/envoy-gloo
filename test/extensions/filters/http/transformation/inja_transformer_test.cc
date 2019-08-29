@@ -1,4 +1,4 @@
-#include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
@@ -126,7 +126,7 @@ TEST(Transformer, transform) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(true);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -157,7 +157,7 @@ TEST(Transformer, transformSimple) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -188,7 +188,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -214,7 +214,7 @@ TEST(Transformer, transformPassthrough) {
 
   transformation.set_advanced_templates(true);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -244,7 +244,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 
   transformation.set_advanced_templates(false);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -268,7 +268,7 @@ TEST(Transformer, transformBodyNotSet) {
 
   transformation.set_advanced_templates(true);
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -295,7 +295,7 @@ TEST(Transformer, transformWithHyphens) {
   transformation.set_advanced_templates(false);
   transformation.mutable_merge_extractors_to_body();
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
   transformer.transform(headers, body);
 
   std::string res = body.toString();
@@ -314,7 +314,7 @@ TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
 
   (*transformation.mutable_headers())[content_type] = empty;
 
-  Transformer transformer(transformation);
+  InjaTransformer transformer(transformation);
 
   EXPECT_TRUE(headers.has(content_type));
   transformer.transform(headers, body);

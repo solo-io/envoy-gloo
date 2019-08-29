@@ -1,4 +1,5 @@
 #include "extensions/filters/http/transformation/body_header_transformer.h"
+#include "nlohmann/json.hpp"
 
 #include "common/http/headers.h"
 
@@ -11,7 +12,7 @@ namespace HttpFilters {
 namespace Transformation {
 
 void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
-                                      Buffer::Instance &body) {
+                                      Buffer::Instance &body) const {
   json json_body;
   if (body.length() > 0) {
     json_body["body"] = body.toString();
