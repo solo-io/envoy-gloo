@@ -3,9 +3,9 @@
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "test/test_common/utility.h"
-#include "nlohmann/json.hpp"
 
 #include "fmt/format.h"
+#include "nlohmann/json.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

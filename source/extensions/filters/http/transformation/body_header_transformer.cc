@@ -1,7 +1,8 @@
 #include "extensions/filters/http/transformation/body_header_transformer.h"
-#include "nlohmann/json.hpp"
 
 #include "common/http/headers.h"
+
+#include "nlohmann/json.hpp"
 
 // For convenience
 using json = nlohmann::json;
@@ -24,7 +25,8 @@ void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
          void *context) -> Http::HeaderMap::Iterate {
         json *headers_ptr = static_cast<json *>(context);
         json &headers = *headers_ptr;
-        headers[std::string(header.key().getStringView())] = std::string(header.value().getStringView());
+        headers[std::string(header.key().getStringView())] =
+            std::string(header.value().getStringView());
         return Http::HeaderMap::Iterate::Continue;
       },
       &headers);

@@ -4,6 +4,7 @@
 
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
+
 #include "extensions/filters/http/transformation/transformer.h"
 
 // clang-format off
@@ -52,7 +53,7 @@ public:
 class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                  &transformation);
+                      &transformation);
   ~InjaTransformer();
 
   void transform(Http::HeaderMap &map, Buffer::Instance &body) const override;

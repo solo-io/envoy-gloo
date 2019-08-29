@@ -148,8 +148,7 @@ void TransformationFilter::checkResponseActive() {
       getTransformFromRoute(TransformationFilter::Direction::Response);
 }
 
-const Transformation *
-TransformationFilter::getTransformFromRoute(
+const Transformation *TransformationFilter::getTransformFromRoute(
     TransformationFilter::Direction direction) {
 
   if (!route_) {
@@ -162,15 +161,19 @@ TransformationFilter::getTransformFromRoute(
 
   if (config != nullptr) {
     switch (direction) {
-    case TransformationFilter::Direction::Request:{
+    case TransformationFilter::Direction::Request: {
 
       should_clear_cache_ = config->shouldClearCache();
-      const absl::optional<Transformation>& maybe_transformation = config->getRequestTranformation();
-      return maybe_transformation.has_value() ? &maybe_transformation.value() : nullptr;
+      const absl::optional<Transformation> &maybe_transformation =
+          config->getRequestTranformation();
+      return maybe_transformation.has_value() ? &maybe_transformation.value()
+                                              : nullptr;
     }
-    case TransformationFilter::Direction::Response:{
-      const absl::optional<Transformation>& maybe_transformation = config->getResponseTranformation();
-      return maybe_transformation.has_value() ? &maybe_transformation.value() : nullptr;
+    case TransformationFilter::Direction::Response: {
+      const absl::optional<Transformation> &maybe_transformation =
+          config->getResponseTranformation();
+      return maybe_transformation.has_value() ? &maybe_transformation.value()
+                                              : nullptr;
     }
     default:
       // TODO(yuval-k): should this be a warning log?
@@ -204,9 +207,8 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 }
 
 void TransformationFilter::transformSomething(
-    const Transformation **transformation,
-    Http::HeaderMap &header_map, Buffer::Instance &body,
-    void (TransformationFilter::*responeWithError)(),
+    const Transformation **transformation, Http::HeaderMap &header_map,
+    Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {

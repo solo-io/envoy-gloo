@@ -22,11 +22,11 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
-        "@envoy//include/envoy/router:router_interface",
-        ":transformer_lib",
         ":body_header_transformer_lib",
         ":inja_transformer_lib",
+        ":transformer_lib",
+        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
+        "@envoy//include/envoy/router:router_interface",
     ],
 )
 
@@ -60,10 +60,10 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":transformer_lib",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//source/common/http:header_map_lib",
         "@json//:json-lib",
-        ":transformer_lib",
     ],
 )
 
@@ -77,6 +77,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":transformer_lib",
         "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
@@ -84,7 +85,6 @@ envoy_cc_library(
         "@envoy//source/common/protobuf",
         "@inja//:inja-lib",
         "@json//:json-lib",
-        ":transformer_lib",
     ],
 )
 

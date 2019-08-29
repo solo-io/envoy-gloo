@@ -24,8 +24,7 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 struct RcDetailsValues {
-  // The jwt_authn filter rejected the request
-  const std::string FunctionNotFound = "aws_lambda_function_not_fou8nd";
+  const std::string FunctionNotFound = "aws_lambda_function_not_found";
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
 
@@ -82,9 +81,9 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
           SoloHttpFilterNames::get().AwsLambda, route_);
 
   if (!function_on_route_) {
-    decoder_callbacks_->sendLocalReply(Http::Code::NotFound,
-                                       "no function present for AWS upstream",
-                                       nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
+    decoder_callbacks_->sendLocalReply(
+        Http::Code::NotFound, "no function present for AWS upstream", nullptr,
+        absl::nullopt, RcDetails::get().FunctionNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 

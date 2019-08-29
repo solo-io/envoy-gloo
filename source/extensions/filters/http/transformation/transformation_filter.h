@@ -46,7 +46,7 @@ public:
   Http::FilterDataStatus encodeData(Buffer::Instance &data,
                                     bool end_stream) override;
   Http::FilterTrailersStatus encodeTrailers(Http::HeaderMap &trailers) override;
-  Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap&) override {
+  Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
 
@@ -79,19 +79,18 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  const Transformation*
-  getTransformFromRoute(Direction direction);
+  const Transformation *getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
 
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
-  void transformSomething(
-      const Transformation **transformation,
-      Http::HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilter::*responeWithError)(),
-      void (TransformationFilter::*addData)(Buffer::Instance &));
+  void
+  transformSomething(const Transformation **transformation,
+                     Http::HeaderMap &header_map, Buffer::Instance &body,
+                     void (TransformationFilter::*responeWithError)(),
+                     void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
 
@@ -105,10 +104,8 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  const Transformation *request_transformation_{
-      nullptr};
-  const Transformation *response_transformation_{
-      nullptr};
+  const Transformation *request_transformation_{nullptr};
+  const Transformation *response_transformation_{nullptr};
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;

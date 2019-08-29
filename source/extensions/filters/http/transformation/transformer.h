@@ -10,9 +10,10 @@ namespace Transformation {
 
 class Transformer {
 public:
-  virtual ~Transformer(){}
+  virtual ~Transformer() {}
 
-  virtual void transform(Http::HeaderMap &map, Buffer::Instance &body) const PURE;
+  virtual void transform(Http::HeaderMap &map,
+                         Buffer::Instance &body) const PURE;
 };
 
 } // namespace Transformation

@@ -63,22 +63,18 @@ std::string ExtractorUtil::extract(
   return "";
 }
 
-
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map,
     const std::map<std::string, std::string> &extractions, const json &context)
     : header_map_(header_map), extractions_(extractions), context_(context) {
-  env_.add_callback(
-      "header", 1, [this](Arguments args) {
-        return header_callback(args);
-      });
-  env_.add_callback(
-      "extraction", 1, [this](Arguments args) {
-        return extracted_callback(args);
-      });
+  env_.add_callback("header", 1,
+                    [this](Arguments args) { return header_callback(args); });
+  env_.add_callback("extraction", 1, [this](Arguments args) {
+    return extracted_callback(args);
+  });
 }
 
-json TransformerInstance::header_callback(Arguments args) {  
+json TransformerInstance::header_callback(Arguments args) {
   std::string headername = args.at(0)->get<std::string>();
   const Http::HeaderEntry *header_entry =
       getHeader(header_map_, std::move(headername));
@@ -108,7 +104,7 @@ InjaTransformer::InjaTransformer(
 InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::HeaderMap &header_map,
-                            Buffer::Instance &body) const {
+                                Buffer::Instance &body) const {
   json json_body;
   if (body.length() > 0) {
     const std::string bodystring = body.toString();

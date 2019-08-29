@@ -33,8 +33,9 @@ namespace ConnPoolNats {
 using T = std::string;
 using TPtr = MessagePtr<T>;
 
-bool shouldMetricBeZero(const std::string& name){
-  // stats with the word remaining are initialized to not be zero. so we ignore them
+bool shouldMetricBeZero(const std::string &name) {
+  // stats with the word remaining are initialized to not be zero. so we ignore
+  // them
   return name.find("remaining") == std::string::npos;
 }
 
@@ -52,13 +53,15 @@ public:
     // Make sure all gauges are 0.
     for (const Stats::GaugeSharedPtr &gauge :
          host_->cluster_.stats_store_.gauges()) {
-      if (shouldMetricBeZero(gauge->name())){
-        EXPECT_EQ(0U, gauge->value()) << "cluster." << gauge->name() << " is " << gauge->value();
+      if (shouldMetricBeZero(gauge->name())) {
+        EXPECT_EQ(0U, gauge->value())
+            << "cluster." << gauge->name() << " is " << gauge->value();
       }
     }
     for (const Stats::GaugeSharedPtr &gauge : host_->stats_store_.gauges()) {
-      if (shouldMetricBeZero(gauge->name())){
-        EXPECT_EQ(0U, gauge->value()) << "host." << gauge->name() << " is " << gauge->value();
+      if (shouldMetricBeZero(gauge->name())) {
+        EXPECT_EQ(0U, gauge->value())
+            << "host." << gauge->name() << " is " << gauge->value();
       }
     }
   }
@@ -134,14 +137,18 @@ TEST_F(TcpClientImplTest, Basic) {
         InSequence s;
         TPtr response1(new T());
         EXPECT_CALL(pool_callbacks_, onResponse_(Ref(response1)));
-        EXPECT_CALL(host_->outlier_detector_,
-                    putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS, _));
+        EXPECT_CALL(
+            host_->outlier_detector_,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
+                      _));
         callbacks_->onValue(std::move(response1));
 
         TPtr response2(new T());
         EXPECT_CALL(pool_callbacks_, onResponse_(Ref(response2)));
-        EXPECT_CALL(host_->outlier_detector_,
-                    putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS, _));
+        EXPECT_CALL(
+            host_->outlier_detector_,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
+                      _));
         callbacks_->onValue(std::move(response2));
       }));
   upstream_read_filter_->onData(fake_data, false);
@@ -176,14 +183,18 @@ TEST_F(TcpClientImplTest, Cancel) {
 
         TPtr response1(new T());
         EXPECT_CALL(pool_callbacks_, onResponse_(_)).Times(0);
-        EXPECT_CALL(host_->outlier_detector_,
-                    putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS, _));
+        EXPECT_CALL(
+            host_->outlier_detector_,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
+                      _));
         callbacks_->onValue(std::move(response1));
 
         TPtr response2(new T());
         EXPECT_CALL(pool_callbacks_, onResponse_(_)).Times(0);
-        EXPECT_CALL(host_->outlier_detector_,
-                    putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS, _));
+        EXPECT_CALL(
+            host_->outlier_detector_,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
+                      _));
         callbacks_->onValue(std::move(response2));
       }));
   upstream_read_filter_->onData(fake_data, false);
@@ -210,8 +221,9 @@ TEST_F(TcpClientImplTest, FailAll) {
 
   onConnected();
 
-  EXPECT_CALL(host_->outlier_detector_,
-              putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
+  EXPECT_CALL(
+      host_->outlier_detector_,
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
   EXPECT_CALL(pool_callbacks_, onClose());
   EXPECT_CALL(connection_callbacks,
               onEvent(Network::ConnectionEvent::RemoteClose));
@@ -269,8 +281,9 @@ TEST_F(TcpClientImplTest, ProtocolError) {
   EXPECT_CALL(*decoder_, decode(Ref(fake_data)))
       .WillOnce(Invoke(
           [&](Buffer::Instance &) -> void { throw ProtocolError("error"); }));
-  EXPECT_CALL(host_->outlier_detector_,
-              putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
+  EXPECT_CALL(
+      host_->outlier_detector_,
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
   EXPECT_CALL(*upstream_connection_,
               close(Network::ConnectionCloseType::NoFlush));
 
@@ -290,8 +303,9 @@ TEST_F(TcpClientImplTest, ConnectFail) {
   EXPECT_CALL(*encoder_, encode(Ref(request1), _));
   client_->makeRequest(request1);
 
-  EXPECT_CALL(host_->outlier_detector_,
-              putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
+  EXPECT_CALL(
+      host_->outlier_detector_,
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
 
   EXPECT_CALL(pool_callbacks_, onClose());
 
