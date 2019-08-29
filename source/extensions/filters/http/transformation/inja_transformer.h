@@ -21,33 +21,34 @@ namespace Transformation {
 
 class TransformerInstance {
 public:
-  TransformerInstance(const Http::HeaderMap &header_map,
-                      const std::map<std::string, std::string> &extractions,
-                      const nlohmann::json &context);
+  TransformerInstance(
+      const Http::HeaderMap &header_map,
+      const std::unordered_map<std::string, std::string> &extractions,
+      const nlohmann::json &context);
   // header_value(name)
   // extracted_value(name, index)
   nlohmann::json header_callback(inja::Arguments args);
 
   nlohmann::json extracted_callback(inja::Arguments args);
 
-  std::string render(const std::string &input);
-
-  void useDotNotation() {
-    env_.set_element_notation(inja::ElementNotation::Dot);
-  }
+  std::string render(const inja::Template &input);
 
 private:
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
-  const std::map<std::string, std::string> &extractions_;
+  const std::unordered_map<std::string, std::string> &extractions_;
   const nlohmann::json &context_;
 };
 
-class ExtractorUtil {
+class Extractor {
 public:
-  static std::string
-  extract(const envoy::api::v2::filter::http::Extraction &extractor,
-          const Http::HeaderMap &header_map);
+  Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
+  std::string extract(const Http::HeaderMap &header_map) const;
+
+private:
+  const Http::LowerCaseString headername_;
+  const unsigned int group_;
+  const std::regex extract_regex_;
 };
 
 class InjaTransformer : public Transformer {
@@ -69,7 +70,12 @@ private:
 
     std::aligned_storage<TransformerImplSize, TransformerImplAlign>::type impl_;
   */
-  const envoy::api::v2::filter::http::TransformationTemplate &transformation_;
+  bool advanced_templates_{};
+  std::vector<std::pair<std::string, Extractor>> extractors_;
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
+
+  absl::optional<inja::Template> body_template_;
+  bool merged_extractors_to_body_{};
 };
 
 } // namespace Transformation

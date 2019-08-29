@@ -23,7 +23,6 @@ public:
   const Transformer &transformer() const { return *transformer_; }
 
 private:
-  envoy::api::v2::filter::http::Transformation transformation_;
   std::unique_ptr<Transformer> transformer_;
   bool passthrough_body_{};
 };

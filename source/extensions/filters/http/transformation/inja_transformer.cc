@@ -34,24 +34,23 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 
 } // namespace
 
-std::string ExtractorUtil::extract(
-    const envoy::api::v2::filter::http::Extraction &extractor,
-    const Http::HeaderMap &header_map) {
+Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
+    : headername_(extractor.header()), group_(extractor.subgroup()),
+      extract_regex_(extractor.regex()) {}
+std::string Extractor::extract(const Http::HeaderMap &header_map) const {
   // TODO: should we lowercase them in the config?
-  const std::string &headername = extractor.header();
-  const Http::HeaderEntry *header_entry = getHeader(header_map, headername);
+  const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);
   if (!header_entry) {
     return "";
   }
 
   std::string value(header_entry->value().getStringView());
-  unsigned int group = extractor.subgroup();
+
   // get and regex
-  std::regex extract_regex(extractor.regex());
   std::smatch regex_result;
-  if (std::regex_match(value, regex_result, extract_regex)) {
+  if (std::regex_match(value, regex_result, extract_regex_)) {
     std::smatch::iterator submatch_it = regex_result.begin();
-    for (unsigned i = 0; i < group; i++) {
+    for (unsigned i = 0; i < group_; i++) {
       std::advance(submatch_it, 1);
       if (submatch_it == regex_result.end()) {
         return "";
@@ -65,7 +64,8 @@ std::string ExtractorUtil::extract(
 
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map,
-    const std::map<std::string, std::string> &extractions, const json &context)
+    const std::unordered_map<std::string, std::string> &extractions,
+    const json &context)
     : header_map_(header_map), extractions_(extractions), context_(context) {
   env_.add_callback("header", 1,
                     [this](Arguments args) { return header_callback(args); });
@@ -93,13 +93,50 @@ json TransformerInstance::extracted_callback(Arguments args) {
   return "";
 }
 
-std::string TransformerInstance::render(const std::string &input) {
+std::string TransformerInstance::render(const inja::Template &input) {
   return env_.render(input, context_);
 }
 
 InjaTransformer::InjaTransformer(
     const envoy::api::v2::filter::http::TransformationTemplate &transformation)
-    : transformation_(transformation) {}
+    : advanced_templates_(transformation.advanced_templates()) {
+  inja::ParserConfig parser_config;
+  inja::LexerConfig lexer_config;
+  inja::TemplateStorage template_storage;
+  if (!advanced_templates_) {
+    parser_config.notation = inja::ElementNotation::Dot;
+  }
+
+  inja::Parser parser(parser_config, lexer_config, template_storage);
+
+  const auto &extractors = transformation.extractors();
+  for (auto it = extractors.begin(); it != extractors.end(); it++) {
+    extractors_.emplace_back(std::make_pair(it->first, it->second));
+  }
+
+  const auto &headers = transformation.headers();
+
+  for (auto it = headers.begin(); it != headers.end(); it++) {
+    Http::LowerCaseString header_name(it->first);
+    headers_.emplace_back(std::make_pair(std::move(header_name),
+                                         parser.parse(it->second.text())));
+  }
+
+  switch (transformation.body_transformation_case()) {
+  case envoy::api::v2::filter::http::TransformationTemplate::kBody: {
+    body_template_.emplace(parser.parse(transformation.body().text()));
+  }
+  case envoy::api::v2::filter::http::TransformationTemplate::
+      kMergeExtractorsToBody: {
+    merged_extractors_to_body_ = true;
+  }
+  case envoy::api::v2::filter::http::TransformationTemplate::kPassthrough:
+  case envoy::api::v2::filter::http::TransformationTemplate::
+      BODY_TRANSFORMATION_NOT_SET: {
+    break;
+  }
+  }
+}
 
 InjaTransformer::~InjaTransformer() {}
 
@@ -113,15 +150,15 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     json_body = json::parse(bodystring);
   }
   // get the extractions
-  std::map<std::string, std::string> extractions;
+  std::unordered_map<std::string, std::string> extractions;
+  if (advanced_templates_) {
+    extractions.reserve(extractors_.size());
+  }
 
-  const auto &extractors = transformation_.extractors();
-
-  for (auto it = extractors.begin(); it != extractors.end(); it++) {
-    const std::string &name = it->first;
-    const envoy::api::v2::filter::http::Extraction &extractor = it->second;
-    if (transformation_.advanced_templates()) {
-      extractions[name] = ExtractorUtil::extract(extractor, header_map);
+  for (const auto &named_extractor : extractors_) {
+    const std::string &name = named_extractor.first;
+    if (advanced_templates_) {
+      extractions[name] = named_extractor.second.extract(header_map);
     } else {
       std::string name_to_split = name;
       json *current = &json_body;
@@ -131,62 +168,39 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
         current = &(*current)[field_name];
         name_to_split.erase(0, pos + 1);
       }
-      (*current)[name_to_split] = ExtractorUtil::extract(extractor, header_map);
+      (*current)[name_to_split] = named_extractor.second.extract(header_map);
     }
   }
   // start transforming!
   TransformerInstance instance(header_map, extractions, json_body);
 
-  if (!transformation_.advanced_templates()) {
-    instance.useDotNotation();
-  }
-
-  switch (transformation_.body_transformation_case()) {
-  case envoy::api::v2::filter::http::TransformationTemplate::kBody: {
-    const std::string &input = transformation_.body().text();
-    auto output = instance.render(input);
-
+  // Body transform:
+  auto replace_body = [&](std::string &output) {
     // remove content length, as we have new body.
     header_map.removeContentLength();
     // replace body
     body.drain(body.length());
     body.add(output);
     header_map.insertContentLength().value(body.length());
-    break;
-  }
+  };
 
-  case envoy::api::v2::filter::http::TransformationTemplate::
-      kMergeExtractorsToBody: {
+  if (body_template_.has_value()) {
+    auto output = instance.render(body_template_.value());
+    replace_body(output);
+  } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
-
-    // remove content length, as we have new body.
-    header_map.removeContentLength();
-    // replace body
-    body.drain(body.length());
-    body.add(output);
-    header_map.insertContentLength().value(body.length());
-    break;
-  }
-  case envoy::api::v2::filter::http::TransformationTemplate::kPassthrough:
-  case envoy::api::v2::filter::http::TransformationTemplate::
-      BODY_TRANSFORMATION_NOT_SET: {
-    break;
-  }
+    replace_body(output);
   }
 
-  // add headers
-  const auto &headers = transformation_.headers();
-
-  for (auto it = headers.begin(); it != headers.end(); it++) {
-    std::string name = it->first;
-    auto lkname = Http::LowerCaseString(std::move(name));
-    const envoy::api::v2::filter::http::InjaTemplate &text = it->second;
-    std::string output = instance.render(text.text());
+  // Headers transform:
+  for (const auto &templated_header : headers_) {
+    std::string output = instance.render(templated_header.second);
     // remove existing header
-    header_map.remove(lkname);
+    header_map.remove(templated_header.first);
     // TODO(yuval-k): Do we need to support intentional empty headers?
     if (!output.empty()) {
-      header_map.addCopy(lkname, output);
+      // we can add the key as reference is the headers_ lifetime is as the route's
+      header_map.addReferenceKey(templated_header.first, output);
     }
   }
 }

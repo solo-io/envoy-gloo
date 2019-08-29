@@ -9,14 +9,13 @@ namespace HttpFilters {
 namespace Transformation {
 
 Transformation::Transformation(
-    const envoy::api::v2::filter::http::Transformation &transformation)
-    : transformation_(transformation) {
-  switch (transformation_.transformation_type_case()) {
+    const envoy::api::v2::filter::http::Transformation &transformation) {
+  switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
     passthrough_body_ =
-        transformation_.transformation_template().has_passthrough();
+        transformation.transformation_template().has_passthrough();
     transformer_.reset(
-        new InjaTransformer(transformation_.transformation_template()));
+        new InjaTransformer(transformation.transformation_template()));
     break;
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
     transformer_.reset(new BodyHeaderTransformer());
