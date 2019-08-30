@@ -41,7 +41,7 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
 
   request_headers_ = &header_map;
 
-  if (end_stream || request_transformation_->body_passthrough()) {
+  if (end_stream || request_transformation_->passthrough_body()) {
     transformRequest();
 
     return is_error() ? Http::FilterHeadersStatus::StopIteration
@@ -97,7 +97,7 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
 
   response_headers_ = &header_map;
 
-  if (end_stream || response_transformation_->body_passthrough()) {
+  if (end_stream || response_transformation_->passthrough_body()) {
     transformResponse();
     return Http::FilterHeadersStatus::Continue;
   }
@@ -147,7 +147,7 @@ void TransformationFilter::checkResponseActive() {
       getTransformFromRoute(TransformationFilter::Direction::Response);
 }
 
-const Transformation *TransformationFilter::getTransformFromRoute(
+TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
     TransformationFilter::Direction direction) {
 
   if (!route_) {
@@ -161,18 +161,11 @@ const Transformation *TransformationFilter::getTransformFromRoute(
   if (config != nullptr) {
     switch (direction) {
     case TransformationFilter::Direction::Request: {
-
       should_clear_cache_ = config->shouldClearCache();
-      const absl::optional<Transformation> &maybe_transformation =
-          config->getRequestTranformation();
-      return maybe_transformation.has_value() ? &maybe_transformation.value()
-                                              : nullptr;
+      return config->getRequestTranformation();
     }
     case TransformationFilter::Direction::Response: {
-      const absl::optional<Transformation> &maybe_transformation =
-          config->getResponseTranformation();
-      return maybe_transformation.has_value() ? &maybe_transformation.value()
-                                              : nullptr;
+      return config->getResponseTranformation();
     }
     default:
       // TODO(yuval-k): should this be a warning log?
@@ -183,7 +176,7 @@ const Transformation *TransformationFilter::getTransformFromRoute(
 }
 
 void TransformationFilter::transformRequest() {
-  transformSomething(&request_transformation_, *request_headers_, request_body_,
+  transformSomething(request_transformation_, *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
   if (should_clear_cache_) {
@@ -192,7 +185,7 @@ void TransformationFilter::transformRequest() {
 }
 
 void TransformationFilter::transformResponse() {
-  transformSomething(&response_transformation_, *response_headers_,
+  transformSomething(response_transformation_, *response_headers_,
                      response_body_, &TransformationFilter::responseError,
                      &TransformationFilter::addEncoderData);
 }
@@ -206,16 +199,16 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 }
 
 void TransformationFilter::transformSomething(
-    const Transformation **transformation, Http::HeaderMap &header_map,
+    TransformerConstSharedPtr &transformation, Http::HeaderMap &header_map,
     Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    (*transformation)->transformer().transform(header_map, body);
+    transformation->transform(header_map, body);
 
     if (body.length() > 0) {
       (this->*addData)(body);
-    } else if (!(*transformation)->body_passthrough()) {
+    } else if (!transformation->passthrough_body()) {
       // only remove content type if the request is not passthrough.
       // This means that the empty body is a result of the transformation.
       // so the content type should be removed
@@ -225,7 +218,7 @@ void TransformationFilter::transformSomething(
     error(Error::TemplateParseError, e.what());
   }
 
-  *transformation = nullptr;
+  transformation = nullptr;
   if (is_error()) {
     (this->*responeWithError)();
   }

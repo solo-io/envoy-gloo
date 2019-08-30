@@ -58,6 +58,7 @@ public:
   ~InjaTransformer();
 
   void transform(Http::HeaderMap &map, Buffer::Instance &body) const override;
+  bool passthrough_body() const override { return passthrough_body_; };
 
 private:
   /*
@@ -71,6 +72,7 @@ private:
     std::aligned_storage<TransformerImplSize, TransformerImplAlign>::type impl_;
   */
   bool advanced_templates_{};
+  bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
 

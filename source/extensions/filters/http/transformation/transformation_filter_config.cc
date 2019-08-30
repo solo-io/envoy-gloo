@@ -8,20 +8,17 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-Transformation::Transformation(
+TransformerSharedPtr Transformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    passthrough_body_ =
-        transformation.transformation_template().has_passthrough();
-    transformer_.reset(
-        new InjaTransformer(transformation.transformation_template()));
-    break;
+    return std::make_unique<InjaTransformer>(
+        transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
-    transformer_.reset(new BodyHeaderTransformer());
-    break;
+    return std::make_unique<BodyHeaderTransformer>();
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
+    // TODO: return null here?
   default:
     throw EnvoyException("non existant transformation");
   }

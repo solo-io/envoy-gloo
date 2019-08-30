@@ -99,7 +99,8 @@ std::string TransformerInstance::render(const inja::Template &input) {
 
 InjaTransformer::InjaTransformer(
     const envoy::api::v2::filter::http::TransformationTemplate &transformation)
-    : advanced_templates_(transformation.advanced_templates()) {
+    : advanced_templates_(transformation.advanced_templates()),
+      passthrough_body_(transformation.has_passthrough()) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
   inja::TemplateStorage template_storage;
@@ -185,7 +186,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   };
 
   if (body_template_.has_value()) {
-    auto output = instance.render(body_template_.value());
+    std::string output = instance.render(body_template_.value());
     replace_body(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -199,7 +200,8 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     header_map.remove(templated_header.first);
     // TODO(yuval-k): Do we need to support intentional empty headers?
     if (!output.empty()) {
-      // we can add the key as reference is the headers_ lifetime is as the route's
+      // we can add the key as reference as the headers_ lifetime is as the
+      // route's
       header_map.addReferenceKey(templated_header.first, output);
     }
   }
