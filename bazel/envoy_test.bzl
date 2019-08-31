@@ -1,4 +1,3 @@
-
 # Copied from @envoy/bazel/envoy_test.bzl and uses public visibility for tests
 # So we can target them to use our coverage.
 
@@ -6,12 +5,11 @@ load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_test_library",
 )
-
 load(
     "@envoy//bazel:envoy_internal.bzl",
     "envoy_copts",
-    "envoy_select_force_libcpp",
     "envoy_linkstatic",
+    "envoy_select_force_libcpp",
     "tcmalloc_external_dep",
 )
 
@@ -32,7 +30,7 @@ def _envoy_test_linkopts():
         # TODO(mattklein123): It's not great that we universally link against the following libs.
         # In particular, -latomic and -lrt are not needed on all platforms. Make this more granular.
         "//conditions:default": ["-pthread", "-lrt", "-ldl"],
-    }) + envoy_select_force_libcpp(["-lc++fs"], ["-lstdc++fs", "-latomic"])
+    }) + envoy_select_force_libcpp([], ["-lstdc++fs", "-latomic"])
 
 # Envoy C++ test targets should be specified with this function.
 def envoy_gloo_cc_test(

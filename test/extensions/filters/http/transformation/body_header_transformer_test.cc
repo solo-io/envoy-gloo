@@ -5,6 +5,7 @@
 #include "test/test_common/utility.h"
 
 #include "fmt/format.h"
+#include "nlohmann/json.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

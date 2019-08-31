@@ -5,7 +5,6 @@ load(
     "envoy_cc_test",
     "envoy_package",
 )
-
 load(
     "//bazel:envoy_test.bzl",
     "envoy_gloo_cc_test",

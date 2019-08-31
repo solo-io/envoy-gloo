@@ -3,11 +3,9 @@
 #include "common/common/empty_string.h"
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
-#include "common/http/solo_filter_utility.h"
 #include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
-#include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/transformer.h"
 
 namespace Envoy {
@@ -43,7 +41,7 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
 
   request_headers_ = &header_map;
 
-  if (end_stream || isPassthrough(*request_transformation_)) {
+  if (end_stream || request_transformation_->body_passthrough()) {
     transformRequest();
 
     return is_error() ? Http::FilterHeadersStatus::StopIteration
@@ -99,7 +97,7 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
 
   response_headers_ = &header_map;
 
-  if (end_stream || isPassthrough(*response_transformation_)) {
+  if (end_stream || response_transformation_->body_passthrough()) {
     transformResponse();
     return Http::FilterHeadersStatus::Continue;
   }
@@ -149,25 +147,33 @@ void TransformationFilter::checkResponseActive() {
       getTransformFromRoute(TransformationFilter::Direction::Response);
 }
 
-const envoy::api::v2::filter::http::Transformation *
-TransformationFilter::getTransformFromRoute(
+const Transformation *TransformationFilter::getTransformFromRoute(
     TransformationFilter::Direction direction) {
 
   if (!route_) {
     return nullptr;
   }
 
-  const auto *config = Http::SoloFilterUtility::resolvePerFilterConfig<
+  const auto *config = Http::Utility::resolveMostSpecificPerFilterConfig<
       RouteTransformationFilterConfig>(
       SoloHttpFilterNames::get().Transformation, route_);
 
   if (config != nullptr) {
     switch (direction) {
-    case TransformationFilter::Direction::Request:
+    case TransformationFilter::Direction::Request: {
+
       should_clear_cache_ = config->shouldClearCache();
-      return config->getRequestTranformation();
-    case TransformationFilter::Direction::Response:
-      return config->getResponseTranformation();
+      const absl::optional<Transformation> &maybe_transformation =
+          config->getRequestTranformation();
+      return maybe_transformation.has_value() ? &maybe_transformation.value()
+                                              : nullptr;
+    }
+    case TransformationFilter::Direction::Response: {
+      const absl::optional<Transformation> &maybe_transformation =
+          config->getResponseTranformation();
+      return maybe_transformation.has_value() ? &maybe_transformation.value()
+                                              : nullptr;
+    }
     default:
       // TODO(yuval-k): should this be a warning log?
       NOT_REACHED_GCOVR_EXCL_LINE;
@@ -200,72 +206,28 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 }
 
 void TransformationFilter::transformSomething(
-    const envoy::api::v2::filter::http::Transformation **transformation,
-    Http::HeaderMap &header_map, Buffer::Instance &body,
-    void (TransformationFilter::*responeWithError)(),
+    const Transformation **transformation, Http::HeaderMap &header_map,
+    Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
-  switch ((*transformation)->transformation_type_case()) {
-  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    transformTemplate((*transformation)->transformation_template(), header_map,
-                      body, addData);
-    break;
-  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
-    transformBodyHeaderTransformer(header_map, body, addData);
-    break;
-  case envoy::api::v2::filter::http::Transformation::
-      TRANSFORMATION_TYPE_NOT_SET:
-    // no transformation is set, just re-add the body. this shouldnt happen.
-    (this->*addData)(body);
-    break;
-  }
-
-  *transformation = nullptr;
-  if (is_error()) {
-    (this->*responeWithError)();
-  }
-}
-
-void TransformationFilter::transformTemplate(
-    const envoy::api::v2::filter::http::TransformationTemplate &transformation,
-    Http::HeaderMap &header_map, Buffer::Instance &body,
-    void (TransformationFilter::*addData)(Buffer::Instance &)) {
   try {
-    Transformer transformer(transformation);
-    transformer.transform(header_map, body);
+    (*transformation)->transformer().transform(header_map, body);
 
     if (body.length() > 0) {
       (this->*addData)(body);
-    } else if (!transformation.has_passthrough()) {
+    } else if (!(*transformation)->body_passthrough()) {
       // only remove content type if the request is not passthrough.
       // This means that the empty body is a result of the transformation.
       // so the content type should be removed
       header_map.removeContentType();
     }
-  } catch (nlohmann::json::parse_error &e) {
-    // json may throw parse error
-    error(Error::JsonParseError, e.what());
-  } catch (std::runtime_error &e) {
-    // inja may throw runtime error
+  } catch (std::exception &e) {
     error(Error::TemplateParseError, e.what());
   }
-}
 
-void TransformationFilter::transformBodyHeaderTransformer(
-    Http::HeaderMap &header_map, Buffer::Instance &body,
-    void (TransformationFilter::*addData)(Buffer::Instance &)) {
-  try {
-    BodyHeaderTransformer transformer;
-    transformer.transform(header_map, body);
-
-    if (body.length() > 0) {
-      (this->*addData)(body);
-    } else {
-      header_map.removeContentType();
-    }
-  } catch (nlohmann::json::parse_error &e) {
-    // json may throw parse error
-    error(Error::JsonParseError, e.what());
+  *transformation = nullptr;
+  if (is_error()) {
+    (this->*responeWithError)();
   }
 }
 

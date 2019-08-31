@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package agent.connect.authorize.v1;
 
+option java_package = "io.envoyproxy.agent.connect.authorize.v1";
+option java_outer_classname = "AuthorizeProto";
+option java_multiple_files = true;
 import "google/protobuf/duration.proto";
 
 // [#protodoc-title: Authorize]

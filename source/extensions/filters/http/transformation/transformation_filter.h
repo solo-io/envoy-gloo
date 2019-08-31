@@ -46,7 +46,7 @@ public:
   Http::FilterDataStatus encodeData(Buffer::Instance &data,
                                     bool end_stream) override;
   Http::FilterTrailersStatus encodeTrailers(Http::HeaderMap &trailers) override;
-  Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap&) override {
+  Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
 
@@ -79,35 +79,18 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  static bool
-  isPassthrough(const envoy::api::v2::filter::http::Transformation &t) {
-    if (t.transformation_type_case() ==
-        envoy::api::v2::filter::http::Transformation::kTransformationTemplate) {
-      return t.transformation_template().has_passthrough();
-    }
-    return false;
-  }
-
-  const envoy::api::v2::filter::http::Transformation *
-  getTransformFromRoute(Direction direction);
+  const Transformation *getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
 
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
-  void transformSomething(
-      const envoy::api::v2::filter::http::Transformation **transformation,
-      Http::HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilter::*responeWithError)(),
-      void (TransformationFilter::*addData)(Buffer::Instance &));
-  void transformTemplate(
-      const envoy::api::v2::filter::http::TransformationTemplate &,
-      Http::HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilter::*addData)(Buffer::Instance &));
-  void transformBodyHeaderTransformer(
-      Http::HeaderMap &header_map, Buffer::Instance &body,
-      void (TransformationFilter::*addData)(Buffer::Instance &));
+  void
+  transformSomething(const Transformation **transformation,
+                     Http::HeaderMap &header_map, Buffer::Instance &body,
+                     void (TransformationFilter::*responeWithError)(),
+                     void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
 
@@ -121,10 +104,8 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  const envoy::api::v2::filter::http::Transformation *request_transformation_{
-      nullptr};
-  const envoy::api::v2::filter::http::Transformation *response_transformation_{
-      nullptr};
+  const Transformation *request_transformation_{nullptr};
+  const Transformation *response_transformation_{nullptr};
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;

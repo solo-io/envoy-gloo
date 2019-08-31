@@ -120,8 +120,7 @@ std::string AwsAuthenticator::getBodyHexSha() {
 void AwsAuthenticator::fetchUrl() {
   const Http::HeaderString &canonical_url = request_headers_->Path()->value();
   url_base_ = canonical_url.getStringView();
-  query_string_ =
-      Http::Utility::findQueryStringStart(canonical_url);
+  query_string_ = Http::Utility::findQueryStringStart(canonical_url);
   if (query_string_.length() != 0) {
     url_base_.remove_suffix(query_string_.length());
     // remove the question mark
@@ -267,7 +266,7 @@ void AwsAuthenticator::Sha256::update(const std::string &data) {
   update(data.c_str(), data.size());
 }
 
-void AwsAuthenticator::Sha256::update(const absl::string_view& data) {
+void AwsAuthenticator::Sha256::update(const absl::string_view &data) {
   update(data.data(), data.size());
 }
 

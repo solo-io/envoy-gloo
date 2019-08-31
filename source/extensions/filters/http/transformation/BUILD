@@ -14,11 +14,17 @@ load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
 
 envoy_cc_library(
     name = "transformation_filter_config",
+    srcs = [
+        "transformation_filter_config.cc",
+    ],
     hdrs = [
         "transformation_filter_config.h",
     ],
     repository = "@envoy",
     deps = [
+        ":body_header_transformer_lib",
+        ":inja_transformer_lib",
+        ":transformer_lib",
         "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/router:router_interface",
     ],
@@ -34,7 +40,6 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        ":body_header_transformer_lib",
         ":transformation_filter_config",
         ":transformer_lib",
         "//source/common/http:solo_filter_utility_lib",
@@ -55,6 +60,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":transformer_lib",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//source/common/http:header_map_lib",
         "@json//:json-lib",
@@ -62,15 +68,16 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "transformer_lib",
+    name = "inja_transformer_lib",
     srcs = [
-        "transformer.cc",
+        "inja_transformer.cc",
     ],
     hdrs = [
-        "transformer.h",
+        "inja_transformer.h",
     ],
     repository = "@envoy",
     deps = [
+        ":transformer_lib",
         "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
@@ -78,6 +85,18 @@ envoy_cc_library(
         "@envoy//source/common/protobuf",
         "@inja//:inja-lib",
         "@json//:json-lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "transformer_lib",
+    hdrs = [
+        "transformer.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "@envoy//include/envoy/buffer:buffer_interface",
+        "@envoy//include/envoy/http:header_map_interface",
     ],
 )
 

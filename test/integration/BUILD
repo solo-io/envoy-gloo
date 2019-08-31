@@ -12,7 +12,6 @@ load(
 
 envoy_package()
 
-
 envoy_gloo_cc_test(
     name = "aws_lambda_filter_integration_test",
     srcs = ["aws_lambda_filter_integration_test.cc"],

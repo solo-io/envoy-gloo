@@ -11,6 +11,7 @@
 #include "common/common/macros.h"
 #include "common/common/utility.h"
 #include "common/grpc/common.h"
+#include "common/http/utility.h"
 #include "common/http/solo_filter_utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
@@ -59,11 +60,8 @@ NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
   auto mutable_headers = payload_.mutable_headers();
   headers.iterate(
       [](const Envoy::Http::HeaderEntry &e, void *ctx) {
-        Envoy::Protobuf::Map<std::string,
-                             std::string> *mutable_headers =
-            static_cast<Envoy::Protobuf::Map<std::string,
-                                             std::string> *>(
-                ctx);
+        Envoy::Protobuf::Map<std::string, std::string> *mutable_headers =
+            static_cast<Envoy::Protobuf::Map<std::string, std::string> *>(ctx);
         (*mutable_headers)[std::string(e.key().getStringView())] =
             std::string(e.value().getStringView());
         return Envoy::Http::HeaderMap::Iterate::Continue;
@@ -89,9 +87,9 @@ NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
   if ((decoder_buffer_limit_.has_value()) &&
       ((body_.length() + data.length()) > decoder_buffer_limit_.value())) {
 
-    decoder_callbacks_->sendLocalReply(Http::Code::PayloadTooLarge,
-                                       "nats streaming paylaod too large",
-                                       nullptr, absl::nullopt, RcDetails::get().PayloadTooLarge);
+    decoder_callbacks_->sendLocalReply(
+        Http::Code::PayloadTooLarge, "nats streaming paylaod too large",
+        nullptr, absl::nullopt, RcDetails::get().PayloadTooLarge);
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
@@ -138,7 +136,7 @@ void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
   // remains valid for the current request.
   route_ = decoder_callbacks_->route();
 
-  const auto *route_local = Http::SoloFilterUtility::resolvePerFilterConfig<
+  const auto *route_local = Http::Utility::resolveMostSpecificPerFilterConfig<
       const NatsStreamingRouteSpecificFilterConfig>(name, route_);
 
   if (route_local != nullptr) {
@@ -178,7 +176,8 @@ void NatsStreamingFilter::onCompletion(Http::Code response_code,
   in_flight_request_ = nullptr;
 
   decoder_callbacks_->sendLocalReply(response_code, body_text, nullptr,
-                                     absl::nullopt, RcDetails::get().Completion);
+                                     absl::nullopt,
+                                     RcDetails::get().Completion);
 }
 
 void NatsStreamingFilter::onCompletion(Http::Code response_code,
