@@ -176,7 +176,8 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
 }
 
 void TransformationFilter::transformRequest() {
-  transformSomething(request_transformation_, *request_headers_, request_body_,
+  transformSomething(*decoder_callbacks_, request_transformation_,
+                     *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
   if (should_clear_cache_) {
@@ -185,8 +186,9 @@ void TransformationFilter::transformRequest() {
 }
 
 void TransformationFilter::transformResponse() {
-  transformSomething(response_transformation_, *response_headers_,
-                     response_body_, &TransformationFilter::responseError,
+  transformSomething(*encoder_callbacks_, response_transformation_,
+                     *response_headers_, response_body_,
+                     &TransformationFilter::responseError,
                      &TransformationFilter::addEncoderData);
 }
 
@@ -199,6 +201,7 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 }
 
 void TransformationFilter::transformSomething(
+    Http::StreamFilterCallbacks &callbacks,
     TransformerConstSharedPtr &transformation, Http::HeaderMap &header_map,
     Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
@@ -215,6 +218,7 @@ void TransformationFilter::transformSomething(
       header_map.removeContentType();
     }
   } catch (std::exception &e) {
+    ENVOY_STREAM_LOG(debug, "failure transforming {}", callbacks, e.what());
     error(Error::TemplateParseError, e.what());
   }
 

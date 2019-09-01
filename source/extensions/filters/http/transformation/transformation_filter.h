@@ -17,7 +17,8 @@ namespace Transformation {
  * Translation we can be used either as a functional filter, or a non functional
  * filter.
  */
-class TransformationFilter : public Http::StreamFilter {
+class TransformationFilter : public Http::StreamFilter,
+                             Logger::Loggable<Logger::Id::filter> {
 public:
   TransformationFilter();
   ~TransformationFilter();
@@ -87,7 +88,8 @@ private:
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
   void
-  transformSomething(TransformerConstSharedPtr &transformation,
+  transformSomething(Http::StreamFilterCallbacks &callbacks,
+                     TransformerConstSharedPtr &transformation,
                      Http::HeaderMap &header_map, Buffer::Instance &body,
                      void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));

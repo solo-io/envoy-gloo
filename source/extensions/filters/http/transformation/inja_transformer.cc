@@ -3,6 +3,7 @@
 #include <iterator>
 
 #include "common/common/macros.h"
+#include "common/common/utility.h"
 
 // For convenience
 using namespace inja;
@@ -36,7 +37,7 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), group_(extractor.subgroup()),
-      extract_regex_(extractor.regex()) {}
+      extract_regex_(RegexUtil::parseRegex(extractor.regex())) {}
 std::string Extractor::extract(const Http::HeaderMap &header_map) const {
   // TODO: should we lowercase them in the config?
   const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);
@@ -114,18 +115,26 @@ InjaTransformer::InjaTransformer(
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
     extractors_.emplace_back(std::make_pair(it->first, it->second));
   }
-
   const auto &headers = transformation.headers();
-
   for (auto it = headers.begin(); it != headers.end(); it++) {
     Http::LowerCaseString header_name(it->first);
-    headers_.emplace_back(std::make_pair(std::move(header_name),
-                                         parser.parse(it->second.text())));
+    try {
+      headers_.emplace_back(std::make_pair(std::move(header_name),
+                                           parser.parse(it->second.text())));
+    } catch (const std::runtime_error &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it->first, e.what()));
+    }
   }
 
   switch (transformation.body_transformation_case()) {
   case envoy::api::v2::filter::http::TransformationTemplate::kBody: {
-    body_template_.emplace(parser.parse(transformation.body().text()));
+    try {
+      body_template_.emplace(parser.parse(transformation.body().text()));
+    } catch (const std::runtime_error &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse body template {}", e.what()));
+    }
   }
   case envoy::api::v2::filter::http::TransformationTemplate::
       kMergeExtractorsToBody: {
