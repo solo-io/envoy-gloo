@@ -135,12 +135,15 @@ InjaTransformer::InjaTransformer(
       throw EnvoyException(
           fmt::format("Failed to parse body template {}", e.what()));
     }
+    break;
   }
   case envoy::api::v2::filter::http::TransformationTemplate::
       kMergeExtractorsToBody: {
     merged_extractors_to_body_ = true;
+    break;
   }
   case envoy::api::v2::filter::http::TransformationTemplate::kPassthrough:
+    break;
   case envoy::api::v2::filter::http::TransformationTemplate::
       BODY_TRANSFORMATION_NOT_SET: {
     break;
