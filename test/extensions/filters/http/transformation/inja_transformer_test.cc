@@ -25,13 +25,22 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+inja::Template parse(std::string s) {
+  inja::ParserConfig parser_config;
+  inja::LexerConfig lexer_config;
+  inja::TemplateStorage template_storage;
+
+  inja::Parser parser(parser_config, lexer_config, template_storage);
+  return parser.parse(s);
+}
+
 TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, {}, originalbody);
 
-  auto res = t.render("{{field1}}");
+  auto res = t.render(parse("{{field1}}"));
 
   EXPECT_EQ(originalbody["field1"], res);
 }
@@ -46,7 +55,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
 
   TransformerInstance t(headers, {}, originalbody);
 
-  auto res = t.render("{{header(\":path\")}}");
+  auto res = t.render(parse("{{header(\":path\")}}"));
 
   EXPECT_EQ(path, res);
 }
@@ -61,32 +70,32 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {"x-custom-header", header}};
   TransformerInstance t(headers, {}, originalbody);
 
-  auto res = t.render("{{header(\"x-custom-header\")}}");
+  auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
   EXPECT_EQ(header, res);
 }
 
 TEST(TransformerInstance, ReplaceFromExtracted) {
   json originalbody;
-  std::map<std::string, std::string> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   std::string field = "res";
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
 
-  auto res = t.render("{{extraction(\"f\")}}");
+  auto res = t.render(parse("{{extraction(\"f\")}}"));
 
   EXPECT_EQ(field, res);
 }
 
 TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::map<std::string, std::string> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   extractions["foo"] = "bar";
   Http::TestHeaderMapImpl headers;
   TransformerInstance t(headers, extractions, originalbody);
 
-  auto res = t.render("{{extraction(\"notsuchfield\")}}");
+  auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
   EXPECT_EQ("", res);
 }
@@ -99,7 +108,7 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
-  auto res = ExtractorUtil::extract(extractor, headers);
+  auto res = Extractor(extractor).extract(headers);
 
   EXPECT_EQ("123", res);
 }
@@ -277,7 +286,7 @@ TEST(Transformer, transformBodyNotSet) {
   EXPECT_EQ("456", headers.get_("x-header"));
 }
 
-TEST(Transformer, transformWithHyphens) {
+TEST(InjaTransformer, transformWithHyphens) {
   Http::TestHeaderMapImpl headers{
       {":method", "GET"},
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
@@ -303,7 +312,7 @@ TEST(Transformer, transformWithHyphens) {
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
-TEST(ExtractorUtil, RemoveHeadersUsingEmptyTemplate) {
+TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   const std::string content_type = "content-type";
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};

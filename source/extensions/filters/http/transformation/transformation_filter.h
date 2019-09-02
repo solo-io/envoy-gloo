@@ -17,7 +17,8 @@ namespace Transformation {
  * Translation we can be used either as a functional filter, or a non functional
  * filter.
  */
-class TransformationFilter : public Http::StreamFilter {
+class TransformationFilter : public Http::StreamFilter,
+                             Logger::Loggable<Logger::Id::filter> {
 public:
   TransformationFilter();
   ~TransformationFilter();
@@ -79,7 +80,7 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  const Transformation *getTransformFromRoute(Direction direction);
+  TransformerConstSharedPtr getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -87,7 +88,8 @@ private:
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
   void
-  transformSomething(const Transformation **transformation,
+  transformSomething(Http::StreamFilterCallbacks &callbacks,
+                     TransformerConstSharedPtr &transformation,
                      Http::HeaderMap &header_map, Buffer::Instance &body,
                      void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
@@ -104,8 +106,8 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  const Transformation *request_transformation_{nullptr};
-  const Transformation *response_transformation_{nullptr};
+  TransformerConstSharedPtr request_transformation_;
+  TransformerConstSharedPtr response_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;
