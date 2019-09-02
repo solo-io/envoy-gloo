@@ -113,6 +113,19 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
   EXPECT_EQ("123", res);
 }
 
+TEST(ExtractorUtil, ExtractorFail) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/users/123"}};
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("ILLEGAL REGEX \\ \\ \\ \\ a\\ \\a\\ a\\  \\d+)");
+  extractor.set_subgroup(1);
+  EXPECT_THROW_WITH_MESSAGE(Extractor a(extractor), EnvoyException,
+                            "Invalid regex 'ILLEGAL REGEX \\ \\ \\ \\ a\\ "
+                            "\\a\\ a\\  \\d+)': regex_error");
+}
+
 TEST(Transformer, transform) {
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
