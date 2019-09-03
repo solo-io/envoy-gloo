@@ -36,6 +36,14 @@ public:
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
 
+    ON_CALL(encoder_filter_callbacks_, route())
+        .WillByDefault(Invoke([this]() -> Router::RouteConstSharedPtr {
+          if (headers_.Host() == nullptr) {
+            throw std::runtime_error("no host");
+          }
+          return encoder_filter_callbacks_.route_;
+        }));
+
     filter_ = std::make_unique<TransformationFilter>();
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
     filter_->setEncoderFilterCallbacks(encoder_filter_callbacks_);
@@ -112,6 +120,21 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeaders) {
 
   filter_->decodeHeaders(headers_, true);
   EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(1);
+  auto res = filter_->encodeHeaders(headers_, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
+  headers_.remove(":authority");
+  route_config_.mutable_response_transformation()
+      ->mutable_transformation_template()
+      ->mutable_body()
+      ->set_text("solo");
+
+  initFilter();
+
+  filter_->decodeHeaders(headers_, true);
+  EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(0);
   auto res = filter_->encodeHeaders(headers_, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
 }

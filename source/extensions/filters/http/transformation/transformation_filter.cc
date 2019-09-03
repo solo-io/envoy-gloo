@@ -28,6 +28,11 @@ void TransformationFilter::onDestroy() { resetInternalState(); }
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
+  // no host header -> no route
+  // we should never get here, but just in case...
+  if (header_map.Host() == nullptr) {
+    return Http::FilterHeadersStatus::Continue;
+  }
 
   checkRequestActive();
 
@@ -86,6 +91,12 @@ TransformationFilter::decodeTrailers(Http::HeaderMap &) {
 Http::FilterHeadersStatus
 TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
+  // no host header -> no route
+  // this can happen if envoy does a sendLocalReply to fail a request without a
+  // host header.
+  if (header_map.Host() == nullptr) {
+    return Http::FilterHeadersStatus::Continue;
+  }
 
   checkResponseActive();
 
