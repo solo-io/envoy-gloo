@@ -133,7 +133,7 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
 
   initFilter();
 
-  filter_->decodeHeaders(headers_, true);
+  // no encode headers to simulate local reply error.
   EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(0);
   auto res = filter_->encodeHeaders(headers_, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
