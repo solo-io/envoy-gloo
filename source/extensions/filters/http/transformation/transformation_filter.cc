@@ -28,7 +28,6 @@ void TransformationFilter::onDestroy() { resetInternalState(); }
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
-
   checkRequestActive();
 
   if (is_error()) {
@@ -86,7 +85,6 @@ TransformationFilter::decodeTrailers(Http::HeaderMap &) {
 Http::FilterHeadersStatus
 TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
-
   checkResponseActive();
 
   if (!responseActive()) {
@@ -142,7 +140,6 @@ void TransformationFilter::checkRequestActive() {
 }
 
 void TransformationFilter::checkResponseActive() {
-  route_ = encoder_callbacks_->route();
   response_transformation_ =
       getTransformFromRoute(TransformationFilter::Direction::Response);
 }
