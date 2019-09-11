@@ -20,18 +20,19 @@ public:
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
           &protoconfig);
 
-  const std::string &name() const { return name_; }
-  const std::string &qualifier() const { return qualifier_; }
+  const std::string &path() const { return path_; }
   bool async() const { return async_; }
   const absl::optional<std::string> &defaultBody() const {
     return default_body_;
   }
 
 private:
-  std::string name_;
-  std::string qualifier_;
+  std::string path_;
   bool async_;
   absl::optional<std::string> default_body_;
+
+  static std::string functionUrlPath(const std::string &name,
+                                     const std::string &qualifier);
 };
 
 class AWSLambdaProtocolExtensionConfig

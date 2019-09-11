@@ -44,8 +44,6 @@ private:
   void handleDefaultBody();
 
   void lambdafy();
-  static std::string functionUrlPath(const std::string &name,
-                                     const std::string &qualifier);
   void cleanup();
 
   Http::HeaderMap *request_headers_{};
