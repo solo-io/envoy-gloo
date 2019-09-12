@@ -56,7 +56,8 @@ NatsStreamingFilterConfigFactory::createRouteSpecificFilterConfigTyped(
 /**
  * Static registration for this filter. @see RegisterFactory.
  */
-REGISTER_FACTORY(NatsStreamingFilterConfigFactory, Server::Configuration::NamedHttpFilterConfigFactory);
+REGISTER_FACTORY(NatsStreamingFilterConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace Streaming
 } // namespace Nats

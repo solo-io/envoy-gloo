@@ -42,7 +42,8 @@ TransformationFilterConfigFactory::createRouteSpecificFilterConfig(
 /**
  * Static registration for this filter. @see RegisterFactory.
  */
-REGISTER_FACTORY(TransformationFilterConfigFactory, Server::Configuration::NamedHttpFilterConfigFactory);
+REGISTER_FACTORY(TransformationFilterConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace Transformation
 } // namespace HttpFilters

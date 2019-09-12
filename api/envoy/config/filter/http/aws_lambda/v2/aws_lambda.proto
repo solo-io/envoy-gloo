@@ -16,7 +16,7 @@ import "validate/validate.proto";
 message AWSLambdaPerRoute {
   // The name of the function
   string name = 1 [ (validate.rules).string.min_bytes = 1 ];
-  // The qualifier of the function (defualts to $LATEST if not specified)
+  // The qualifier of the function (defaults to $LATEST if not specified)
   string qualifier = 2;
 
   // Invocation type - async or regular.
@@ -33,7 +33,13 @@ message AWSLambdaProtocolExtension {
   // The region for this cluster
   string region = 2 [ (validate.rules).string.min_bytes = 1 ];
   // The access_key for AWS this cluster
-  string access_key = 3 [ (validate.rules).string.min_bytes = 1 ];
+  string access_key = 3;
   // The secret_key for AWS this cluster
-  string secret_key = 4 [ (validate.rules).string.min_bytes = 1 ];
+  string secret_key = 4;
+}
+
+message AWSLambdaConfig {
+  // Use IAM metadata for credentials. This will be used if they are not present
+  // on the cluster.
+  bool use_instance_metadata = 1;
 }

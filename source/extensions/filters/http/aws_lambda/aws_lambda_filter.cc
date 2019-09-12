@@ -23,10 +23,17 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
+namespace {
 struct RcDetailsValues {
   const std::string FunctionNotFound = "aws_lambda_function_not_found";
+  const std::string FunctionNotFoundBody =
+      "no function present for AWS upstream";
+  const std::string CredentialsNotFound = "aws_lambda_credentials_not_found";
+  const std::string CredentialsNotFoundBody =
+      "no credentials present for AWS upstream";
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
+} // namespace
 
 class AWSLambdaHeaderValues {
 public:
@@ -47,8 +54,10 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 TimeSource &time_source)
-    : aws_authenticator_(time_source), cluster_manager_(cluster_manager) {}
+                                 TimeSource &time_source,
+                                 AWSLambdaConfigConstSharedPtr filter_config)
+    : aws_authenticator_(time_source), cluster_manager_(cluster_manager),
+      filter_config_(filter_config) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
@@ -59,8 +68,32 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
       const AWSLambdaProtocolExtensionConfig>(
       SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
       cluster_manager_);
+
   if (!protocol_options_) {
     return Http::FilterHeadersStatus::Continue;
+  }
+
+  const std::string *access_key{};
+  const std::string *secret_key{};
+  if (protocol_options_->accessKey().has_value() &&
+      protocol_options_->secretKey().has_value()) {
+    access_key = &protocol_options_->accessKey().value();
+    secret_key = &protocol_options_->secretKey().value();
+  } else {
+    auto credentials = filter_config_->getCredentials();
+    if (credentials) {
+      if (!credentials->accessKeyId() || !credentials->secretAccessKey()) {
+        access_key = &credentials->accessKeyId().value();
+        secret_key = &credentials->secretAccessKey().value();
+      }
+    }
+  }
+
+  if ((access_key == nullptr) || (secret_key == nullptr)) {
+    decoder_callbacks_->sendLocalReply(
+        Http::Code::NotFound, RcDetails::get().CredentialsNotFoundBody, nullptr,
+        absl::nullopt, RcDetails::get().CredentialsNotFound);
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   route_ = decoder_callbacks_->route();
@@ -71,13 +104,12 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(
-        Http::Code::NotFound, "no function present for AWS upstream", nullptr,
+        Http::Code::NotFound, RcDetails::get().FunctionNotFoundBody, nullptr,
         absl::nullopt, RcDetails::get().FunctionNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  aws_authenticator_.init(&protocol_options_->accessKey(),
-                          &protocol_options_->secretKey());
+  aws_authenticator_.init(access_key, secret_key);
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(

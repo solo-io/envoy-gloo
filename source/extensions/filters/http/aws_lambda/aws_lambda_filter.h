@@ -23,7 +23,8 @@ namespace AwsLambda {
 class AWSLambdaFilter : public Http::StreamDecoderFilter {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                  TimeSource &time_source);
+                  TimeSource &time_source,
+                  AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
   // Http::StreamFilterBase
@@ -57,6 +58,8 @@ private:
   Router::RouteConstSharedPtr route_;
   const AWSLambdaRouteConfig *function_on_route_{};
   bool has_body_{};
+
+  AWSLambdaConfigConstSharedPtr filter_config_;
 };
 
 } // namespace AwsLambda

@@ -64,6 +64,9 @@ envoy_cc_library(
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/http:utility_lib",
+        "@envoy//source/extensions/filters/http/common/aws:credentials_provider_impl_lib",
+        "@envoy//source/extensions/filters/http/common/aws:credentials_provider_interface",
+        "@envoy//source/extensions/filters/http/common/aws:utility_lib",
     ],
 )
 
@@ -75,6 +78,6 @@ envoy_cc_library(
     deps = [
         ":aws_lambda_filter_lib",
         "@envoy//include/envoy/registry",
-        "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )

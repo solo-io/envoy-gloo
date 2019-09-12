@@ -11,8 +11,8 @@
 #include "common/common/macros.h"
 #include "common/common/utility.h"
 #include "common/grpc/common.h"
-#include "common/http/utility.h"
 #include "common/http/solo_filter_utility.h"
+#include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 

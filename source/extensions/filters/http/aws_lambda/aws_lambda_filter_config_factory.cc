@@ -4,20 +4,24 @@
 
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 
-#include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
-
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-Http::FilterFactoryCb AWSLambdaFilterConfigFactory::createFilter(
+Http::FilterFactoryCb
+AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+        &proto_config,
     const std::string &, Server::Configuration::FactoryContext &context) {
-  return [&context](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new AWSLambdaFilter(context.clusterManager(),
-                                      context.dispatcher().timeSource());
-    callbacks.addStreamDecoderFilter(
-        Http::StreamDecoderFilterSharedPtr{filter});
+
+  auto config = std::make_shared<AWSLambdaConfig>(
+      context.api(), context.dispatcher(), context.threadLocal(), proto_config);
+
+  return [&context,
+          config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
+    callbacks.addStreamDecoderFilter(std::make_shared<AWSLambdaFilter>(
+        context.clusterManager(), context.dispatcher().timeSource(), config));
   };
 }
 
@@ -36,25 +40,19 @@ AWSLambdaFilterConfigFactory::createEmptyProtocolOptionsProto() {
                               AWSLambdaProtocolExtension>();
 }
 
-ProtobufTypes::MessagePtr
-AWSLambdaFilterConfigFactory::createEmptyRouteConfigProto() {
-  return std::make_unique<
-      envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute>();
-}
-
 Router::RouteSpecificFilterConfigConstSharedPtr
-AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfig(
-    const Protobuf::Message &config, Server::Configuration::FactoryContext &) {
-  const auto &proto_config = dynamic_cast<
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &>(
-      config);
+AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfigTyped(
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
+        &proto_config,
+    Server::Configuration::FactoryContext &) {
   return std::make_shared<const AWSLambdaRouteConfig>(proto_config);
 }
 
 /**
  * Static registration for the AWS Lambda filter. @see RegisterFactory.
  */
-REGISTER_FACTORY(AWSLambdaFilterConfigFactory, Server::Configuration::NamedHttpFilterConfigFactory);
+REGISTER_FACTORY(AWSLambdaFilterConfigFactory,
+                 Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace AwsLambda
 } // namespace HttpFilters
