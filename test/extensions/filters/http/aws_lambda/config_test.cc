@@ -42,19 +42,27 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   protoconfig.mutable_use_default_credentials()->set_value(true);
   EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
   // No need to expect a call createTimer as the mock timer does that.
-  EXPECT_CALL(*timer, enableTimer(_)).Times(1);
+  EXPECT_CALL(*timer, enableTimer(_)).Times(2);
 
   const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
       "access_key", "secret_key");
 
+  const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds2(
+      "access_key2", "secret_key2");
+
   auto cred_provider = std::make_unique<NiceMock<
       Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
-  EXPECT_CALL(*cred_provider, getCredentials()).WillOnce(Return(creds));
+  EXPECT_CALL(*cred_provider, getCredentials())
+      .WillOnce(Return(creds))
+      .WillOnce(Return(creds2));
 
   AWSLambdaConfigImpl a(std::move(cred_provider), context_.dispatcher_,
                         context_.thread_local_, protoconfig);
 
   EXPECT_EQ(creds, *a.getCredentials());
+
+  timer->invokeCallback();
+  EXPECT_EQ(creds2, *a.getCredentials());
 }
 
 TEST_F(ConfigTest, WithoutUseDefaultCreds) {

@@ -48,8 +48,9 @@ public:
       config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
     }
 
-    config_helper_.addConfigModifier([this](envoy::config::bootstrap::v2::Bootstrap
-                                            &bootstrap) {
+    config_helper_.addConfigModifier([this](
+                                         envoy::config::bootstrap::v2::Bootstrap
+                                             &bootstrap) {
       envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
           protoextconfig;
       protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
