@@ -79,12 +79,16 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
       protocol_options_->secretKey().has_value()) {
     access_key = &protocol_options_->accessKey().value();
     secret_key = &protocol_options_->secretKey().value();
-  } else {
-    auto credentials = filter_config_->getCredentials();
-    if (credentials) {
-      if (!credentials->accessKeyId() || !credentials->secretAccessKey()) {
-        access_key = &credentials->accessKeyId().value();
-        secret_key = &credentials->secretAccessKey().value();
+  } else if (filter_config_) {
+    credentials_ = filter_config_->getCredentials();
+    if (credentials_) {
+      const absl::optional<std::string> &maybeAccessKeyId =
+          credentials_->accessKeyId();
+      const absl::optional<std::string> &maybeSecretAccessKey =
+          credentials_->secretAccessKey();
+      if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
+        access_key = &maybeAccessKeyId.value();
+        secret_key = &maybeSecretAccessKey.value();
       }
     }
   }

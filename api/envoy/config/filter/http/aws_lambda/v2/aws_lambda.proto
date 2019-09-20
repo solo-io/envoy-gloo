@@ -39,7 +39,12 @@ message AWSLambdaProtocolExtension {
 }
 
 message AWSLambdaConfig {
-  // Use IAM metadata for credentials. This will be used if they are not present
-  // on the cluster.
-  bool use_instance_metadata = 1;
+  // Use AWS default credentials chain to get credentials.
+  // This will search environment variables, ECS metadata and instance metadata
+  // to get the credentials. credentials will be rotated automatically.
+  //
+  // If credentials are provided on the cluster (using the
+  // AWSLambdaProtocolExtension), it will override these credentials. This
+  // defaults to false, but may change in the future to true.
+  google.protobuf.BoolValue use_default_credentials = 1;
 }

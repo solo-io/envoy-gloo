@@ -60,6 +60,8 @@ private:
   bool has_body_{};
 
   AWSLambdaConfigConstSharedPtr filter_config_;
+
+  CredentialsConstSharedPtr credentials_;
 };
 
 } // namespace AwsLambda

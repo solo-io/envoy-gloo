@@ -25,14 +25,24 @@ typedef std::shared_ptr<
 
 class AWSLambdaConfig {
 public:
-  AWSLambdaConfig(
-      Api::Api &api, Event::Dispatcher &dispatcher,
-      Envoy::ThreadLocal::SlotAllocator &,
+  virtual CredentialsConstSharedPtr getCredentials() const PURE;
+  virtual ~AWSLambdaConfig() = default;
+};
+
+class AWSLambdaConfigImpl
+    : public AWSLambdaConfig,
+      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+public:
+  AWSLambdaConfigImpl(
+      std::unique_ptr<
+          Envoy::Extensions::HttpFilters::Common::Aws::CredentialsProvider>
+          &&provider,
+      Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
-  ~AWSLambdaConfig();
+  ~AWSLambdaConfigImpl() = default;
 
-  CredentialsConstSharedPtr getCredentials() const;
+  CredentialsConstSharedPtr getCredentials() const override;
 
 private:
   void timerCallback();
@@ -72,10 +82,7 @@ class AWSLambdaProtocolExtensionConfig
 public:
   AWSLambdaProtocolExtensionConfig(
       const envoy::config::filter::http::aws_lambda::v2::
-          AWSLambdaProtocolExtension &protoconfig)
-      : host_(protoconfig.host()), region_(protoconfig.region()),
-        access_key_(protoconfig.access_key()),
-        secret_key_(protoconfig.secret_key()) {}
+          AWSLambdaProtocolExtension &protoconfig);
 
   const std::string &host() const { return host_; }
   const std::string &region() const { return region_; }
