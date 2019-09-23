@@ -15,12 +15,14 @@ Http::FilterFactoryCb
 AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &proto_config,
-    const std::string &, Server::Configuration::FactoryContext &context) {
+    const std::string &stats_prefix,
+    Server::Configuration::FactoryContext &context) {
 
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::make_unique<Common::Aws::DefaultCredentialsProviderChain>(
           context.api(), HttpFilters::Common::Aws::Utility::metadataFetcher),
-      context.dispatcher(), context.threadLocal(), proto_config);
+      context.dispatcher(), context.threadLocal(), stats_prefix,
+      context.scope(), proto_config);
 
   return [&context,
           config](Http::FilterChainFactoryCallbacks &callbacks) -> void {

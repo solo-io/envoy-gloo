@@ -4,6 +4,8 @@
 #include <string>
 
 #include "envoy/http/filter.h"
+#include "envoy/stats/scope.h"
+#include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
 
 #include "extensions/filters/http/common/aws/credentials_provider.h"
@@ -15,6 +17,22 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
+
+/**
+ * All stats for the fault filter. @see stats_macros.h
+ */
+#define ALL_AWS_LAMBDA_FILTER_STATS(COUNTER, GAUGE)                            \
+  COUNTER(fetch_failed)                                                        \
+  COUNTER(fetch_success)                                                       \
+  COUNTER(creds_rotated)                                                       \
+  GAUGE(current_state, NeverImport)
+
+/**
+ * Wrapper struct for connection manager stats. @see stats_macros.h
+ */
+struct AwsLambdaFilterStats {
+  ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
+};
 
 typedef std::shared_ptr<
     Envoy::Extensions::HttpFilters::Common::Aws::Credentials>
@@ -38,6 +56,7 @@ public:
           Envoy::Extensions::HttpFilters::Common::Aws::CredentialsProvider>
           &&provider,
       Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
+      const std::string &stats_prefix, Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
@@ -45,6 +64,9 @@ public:
   CredentialsConstSharedPtr getCredentials() const override;
 
 private:
+  static AwsLambdaFilterStats generateStats(const std::string &prefix,
+                                            Stats::Scope &scope);
+
   void timerCallback();
 
   std::unique_ptr<Common::Aws::CredentialsProvider> provider_;
@@ -52,6 +74,8 @@ private:
   ThreadLocal::SlotPtr tls_slot_;
 
   Event::TimerPtr timer_;
+
+  AwsLambdaFilterStats stats_;
 };
 
 typedef std::shared_ptr<const AWSLambdaConfig> AWSLambdaConfigConstSharedPtr;

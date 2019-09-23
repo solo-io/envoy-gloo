@@ -40,8 +40,10 @@ struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Common::Aws::CredentialsProvider> &&provider,
     Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
+    const std::string &stats_prefix, Stats::Scope &scope,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
-        &protoconfig) {
+        &protoconfig)
+    : stats_(generateStats(stats_prefix, scope)) {
   bool use_default_credentials = false;
 
   if (protoconfig.has_use_default_credentials()) {
@@ -77,13 +79,16 @@ void AWSLambdaConfigImpl::timerCallback() {
   // get new credentials.
   auto new_creds = provider_->getCredentials();
   if (new_creds == CommonAws::Credentials()) {
+    stats_.fetch_failed_.inc();
+    stats_.current_state_.set(0);
     ENVOY_LOG(warn, "can't get AWS credentials - credentials will not be "
                     "refreshed and request to AWS may fail");
-    // TODO: add a stat here
   } else {
-    // TODO: add a stat here
+    stats_.fetch_success_.inc();
+    stats_.current_state_.set(1);
     auto currentCreds = getCredentials();
     if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
+      stats_.creds_rotated_.inc();
       ENVOY_LOG(debug, "refreshing AWS credentials");
       auto shared_new_creds =
           std::make_shared<const CommonAws::Credentials>(new_creds);
@@ -97,6 +102,14 @@ void AWSLambdaConfigImpl::timerCallback() {
     // re-enable refersh timer
     timer_->enableTimer(REFRESH_AWS_CREDS);
   }
+}
+
+AwsLambdaFilterStats
+AWSLambdaConfigImpl::generateStats(const std::string &prefix,
+                                   Stats::Scope &scope) {
+  const std::string final_prefix = prefix + "aws_lambda.";
+  return {ALL_AWS_LAMBDA_FILTER_STATS(POOL_COUNTER_PREFIX(scope, final_prefix),
+                                      POOL_GAUGE_PREFIX(scope, final_prefix))};
 }
 
 AWSLambdaRouteConfig::AWSLambdaRouteConfig(
