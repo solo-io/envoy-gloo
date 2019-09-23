@@ -35,15 +35,20 @@ protected:
   Stats::IsolatedStoreImpl stats_;
 
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig protoconfig;
+
+  NiceMock<Event::MockTimer> *prpareTimer() {
+    NiceMock<Event::MockTimer> *timer =
+        new NiceMock<Event::MockTimer>(&context_.dispatcher_);
+    protoconfig.mutable_use_default_credentials()->set_value(true);
+    EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
+    // No need to expect a call createTimer as the mock timer does that.
+    EXPECT_CALL(*timer, enableTimer(_)).Times(2);
+    return timer;
+  }
 };
 
 TEST_F(ConfigTest, WithUseDefaultCreds) {
-  NiceMock<Event::MockTimer> *timer =
-      new NiceMock<Event::MockTimer>(&context_.dispatcher_);
-  protoconfig.mutable_use_default_credentials()->set_value(true);
-  EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
-  // No need to expect a call createTimer as the mock timer does that.
-  EXPECT_CALL(*timer, enableTimer(_)).Times(2);
+  auto timer = prpareTimer();
 
   const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
       "access_key", "secret_key");
@@ -57,13 +62,14 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
 
-  AWSLambdaConfigImpl a(std::move(cred_provider), context_.dispatcher_,
-                        context_.thread_local_, "prefix.", stats_, protoconfig);
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_,
+                             protoconfig);
 
-  EXPECT_EQ(creds, *a.getCredentials());
+  EXPECT_EQ(creds, *config.getCredentials());
 
   timer->invokeCallback();
-  EXPECT_EQ(creds2, *a.getCredentials());
+  EXPECT_EQ(creds2, *config.getCredentials());
 
   EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
   EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
@@ -75,12 +81,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
 }
 
 TEST_F(ConfigTest, FailingToRotate) {
-  NiceMock<Event::MockTimer> *timer =
-      new NiceMock<Event::MockTimer>(&context_.dispatcher_);
-  protoconfig.mutable_use_default_credentials()->set_value(true);
-  EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
-  // No need to expect a call createTimer as the mock timer does that.
-  EXPECT_CALL(*timer, enableTimer(_)).Times(2);
+  auto timer = prpareTimer();
 
   const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
       "access_key", "secret_key");
@@ -92,13 +93,16 @@ TEST_F(ConfigTest, FailingToRotate) {
       .WillOnce(
           Return(Envoy::Extensions::HttpFilters::Common::Aws::Credentials()));
 
-  AWSLambdaConfigImpl a(std::move(cred_provider), context_.dispatcher_,
-                        context_.thread_local_, "prefix.", stats_, protoconfig);
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_,
+                             protoconfig);
 
-  EXPECT_EQ(creds, *a.getCredentials());
+  EXPECT_EQ(creds, *config.getCredentials());
 
   timer->invokeCallback();
-  EXPECT_EQ(creds, *a.getCredentials());
+
+  // When we fail to rotate we latch to the last good credentials
+  EXPECT_EQ(creds, *config.getCredentials());
 
   EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
   EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
@@ -110,12 +114,7 @@ TEST_F(ConfigTest, FailingToRotate) {
 }
 
 TEST_F(ConfigTest, SameCredsOnTimer) {
-  NiceMock<Event::MockTimer> *timer =
-      new NiceMock<Event::MockTimer>(&context_.dispatcher_);
-  protoconfig.mutable_use_default_credentials()->set_value(true);
-  EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
-  // No need to expect a call createTimer as the mock timer does that.
-  EXPECT_CALL(*timer, enableTimer(_)).Times(2);
+  auto timer = prpareTimer();
 
   const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
       "access_key", "secret_key");
@@ -126,13 +125,14 @@ TEST_F(ConfigTest, SameCredsOnTimer) {
       .WillOnce(Return(creds))
       .WillOnce(Return(creds));
 
-  AWSLambdaConfigImpl a(std::move(cred_provider), context_.dispatcher_,
-                        context_.thread_local_, "prefix.", stats_, protoconfig);
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_,
+                             protoconfig);
 
-  EXPECT_EQ(creds, *a.getCredentials());
+  EXPECT_EQ(creds, *config.getCredentials());
 
   timer->invokeCallback();
-  EXPECT_EQ(creds, *a.getCredentials());
+  EXPECT_EQ(creds, *config.getCredentials());
 
   EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
   EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
@@ -152,10 +152,11 @@ TEST_F(ConfigTest, WithoutUseDefaultCreds) {
       Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials()).Times(0);
 
-  AWSLambdaConfigImpl a(std::move(cred_provider), context_.dispatcher_,
-                        context_.thread_local_, "prefix.", stats_, protoconfig);
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_,
+                             protoconfig);
 
-  EXPECT_EQ(nullptr, a.getCredentials());
+  EXPECT_EQ(nullptr, config.getCredentials());
 }
 
 } // namespace AwsLambda

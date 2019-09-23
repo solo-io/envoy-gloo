@@ -40,9 +40,9 @@ public:
   AWSLambdaFilterTest() {}
 
 protected:
-  void SetUp() override { setupRoute(false); }
+  void SetUp() override { setupRoute(true, false); }
 
-  void setupRoute(bool cfg) {
+  void setupRoute(bool credsOnCluster, bool fetchCredentials) {
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -54,10 +54,10 @@ protected:
         protoextconfig;
     protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
     protoextconfig.set_region("us-east-1");
-    if (!cfg) {
+    if (credsOnCluster) {
       protoextconfig.set_access_key("access key");
       protoextconfig.set_secret_key("secret key");
-    } else {
+    } else if (fetchCredentials) {
       filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
       filter_config_->credentials_ = std::make_shared<
           Envoy::Extensions::HttpFilters::Common::Aws::Credentials>(
@@ -97,7 +97,7 @@ protected:
 
 // see:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
@@ -109,8 +109,8 @@ TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
-TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStreamWithConfig) {
-  setupRoute(true);
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
+  setupRoute(false, true);
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
@@ -123,8 +123,8 @@ TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStreamWithConfig) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
-TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStreamWithBadConfig) {
-  setupRoute(true);
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
+  setupRoute(false, true);
   filter_config_->credentials_ = std::make_shared<
       Envoy::Extensions::HttpFilters::Common::Aws::Credentials>("access key");
 
@@ -139,7 +139,7 @@ TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStreamWithBadConfig) {
   EXPECT_FALSE(headers.has("Authorization"));
 }
 
-TEST_F(AWSLambdaFilterTest, SingsOnDataEndStream) {
+TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
@@ -317,6 +317,38 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
       }));
 
   filter_->decodeTrailers(headers);
+}
+
+TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
+  ON_CALL(filter_callbacks_.route_->route_entry_,
+          perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+      .WillByDefault(Return(nullptr));
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  EXPECT_CALL(filter_callbacks_,
+              sendLocalReply(Http::Code::InternalServerError, _, _, _, _))
+      .Times(1);
+
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
+}
+
+TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
+  setupRoute(false, false);
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  EXPECT_CALL(filter_callbacks_,
+              sendLocalReply(Http::Code::InternalServerError, _, _, _, _))
+      .Times(1);
+
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
 }
 
 } // namespace AwsLambda

@@ -94,9 +94,10 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
   }
 
   if ((access_key == nullptr) || (secret_key == nullptr)) {
-    decoder_callbacks_->sendLocalReply(
-        Http::Code::NotFound, RcDetails::get().CredentialsNotFoundBody, nullptr,
-        absl::nullopt, RcDetails::get().CredentialsNotFound);
+    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
+                                       RcDetails::get().CredentialsNotFoundBody,
+                                       nullptr, absl::nullopt,
+                                       RcDetails::get().CredentialsNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 
@@ -108,8 +109,8 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(
-        Http::Code::NotFound, RcDetails::get().FunctionNotFoundBody, nullptr,
-        absl::nullopt, RcDetails::get().FunctionNotFound);
+        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
+        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 

@@ -100,7 +100,7 @@ INSTANTIATE_TEST_SUITE_P(
     IpVersions, AWSLambdaFilterIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
-TEST_P(AWSLambdaFilterIntegrationTest, Test1) {
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfig) {
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
@@ -113,7 +113,7 @@ TEST_P(AWSLambdaFilterIntegrationTest, Test1) {
                    ->value()
                    .size());
 }
-TEST_P(AWSLambdaFilterIntegrationTest, Test2) {
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithChain) {
   use_chain_ = true;
   initialize();
   Http::TestHeaderMapImpl request_headers{
@@ -126,5 +126,9 @@ TEST_P(AWSLambdaFilterIntegrationTest, Test2) {
                    .get(Http::LowerCaseString("authorization"))
                    ->value()
                    .size());
+  EXPECT_EQ(1UL, test_server_->gauge("http.config_test.aws_lambda.current_state")->value());
+  EXPECT_EQ(1UL, test_server_->counter("http.config_test.aws_lambda.creds_rotated")->value());
+  EXPECT_EQ(1UL, test_server_->counter("http.config_test.aws_lambda.creds_rotated")->value());
+  EXPECT_EQ(0UL, test_server_->counter("http.config_test.aws_lambda.fetch_failed")->value());
 }
 } // namespace Envoy
