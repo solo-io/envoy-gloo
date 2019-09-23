@@ -2,37 +2,42 @@
 
 #include "envoy/upstream/upstream.h"
 
-#include "extensions/filters/http/common/empty_http_filter_config.h"
+#include "extensions/filters/http/common/factory_base.h"
 #include "extensions/filters/http/solo_well_known_names.h"
+
+#include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-using Extensions::HttpFilters::Common::EmptyHttpFilterConfig;
-
 /**
  * Config registration for the AWS Lambda filter.
  */
-class AWSLambdaFilterConfigFactory : public EmptyHttpFilterConfig {
+class AWSLambdaFilterConfigFactory
+    : public Common::FactoryBase<
+          envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig,
+          envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute> {
 public:
   AWSLambdaFilterConfigFactory()
-      : EmptyHttpFilterConfig(SoloHttpFilterNames::get().AwsLambda) {}
+      : FactoryBase(SoloHttpFilterNames::get().AwsLambda) {}
 
   Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message &config) override;
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;
-  ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
-  Router::RouteSpecificFilterConfigConstSharedPtr
-  createRouteSpecificFilterConfig(
-      const Protobuf::Message &,
-      Server::Configuration::FactoryContext &) override;
 
 private:
-  Http::FilterFactoryCb
-  createFilter(const std::string &stat_prefix,
-               Server::Configuration::FactoryContext &context) override;
+  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+          &proto_config,
+      const std::string &stats_prefix,
+      Server::Configuration::FactoryContext &context) override;
+
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfigTyped(
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &,
+      Server::Configuration::FactoryContext &) override;
 };
 
 } // namespace AwsLambda

@@ -176,7 +176,7 @@ std::string AwsAuthenticator::computeSignature(
     const std::string &region, const std::string &credentials_scope_date,
     const std::string &credential_scope, const std::string &request_date_time,
     const std::string &hashed_canonical_request) {
-  static std::string aws_request = "aws4_request";
+  static const std::string aws_request = "aws4_request";
 
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
