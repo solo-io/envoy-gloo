@@ -2,10 +2,8 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
-    "envoy_cc_binary",
-    "envoy_cc_library",
-    "envoy_cc_test",
     "envoy_package",
+    "envoy_sh_test",
 )
 
 envoy_package()
@@ -18,5 +16,6 @@ sh_test(
     data = [
         "//:envoy",
         "//e2e/extensions/filters/http/aws_lambda:create_config.sh",
+        "//e2e/extensions/filters/http/aws_lambda:create_config_env.sh",
     ],
 )

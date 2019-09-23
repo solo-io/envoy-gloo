@@ -23,10 +23,17 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
+namespace {
 struct RcDetailsValues {
   const std::string FunctionNotFound = "aws_lambda_function_not_found";
+  const std::string FunctionNotFoundBody =
+      "no function present for AWS upstream";
+  const std::string CredentialsNotFound = "aws_lambda_credentials_not_found";
+  const std::string CredentialsNotFoundBody =
+      "no credentials present for AWS upstream";
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
+} // namespace
 
 class AWSLambdaHeaderValues {
 public:
@@ -47,21 +54,12 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 TimeSource &time_source)
-    : aws_authenticator_(time_source), cluster_manager_(cluster_manager) {}
+                                 TimeSource &time_source,
+                                 AWSLambdaConfigConstSharedPtr filter_config)
+    : aws_authenticator_(time_source), cluster_manager_(cluster_manager),
+      filter_config_(filter_config) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
-
-std::string AWSLambdaFilter::functionUrlPath(const std::string &name,
-                                             const std::string &qualifier) {
-
-  std::stringstream val;
-  val << "/2015-03-31/functions/" << name << "/invocations";
-  if (!qualifier.empty()) {
-    val << "?Qualifier=" << qualifier;
-  }
-  return val.str();
-}
 
 Http::FilterHeadersStatus
 AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
@@ -70,8 +68,37 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
       const AWSLambdaProtocolExtensionConfig>(
       SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
       cluster_manager_);
+
   if (!protocol_options_) {
     return Http::FilterHeadersStatus::Continue;
+  }
+
+  const std::string *access_key{};
+  const std::string *secret_key{};
+  if (protocol_options_->accessKey().has_value() &&
+      protocol_options_->secretKey().has_value()) {
+    access_key = &protocol_options_->accessKey().value();
+    secret_key = &protocol_options_->secretKey().value();
+  } else if (filter_config_) {
+    credentials_ = filter_config_->getCredentials();
+    if (credentials_) {
+      const absl::optional<std::string> &maybeAccessKeyId =
+          credentials_->accessKeyId();
+      const absl::optional<std::string> &maybeSecretAccessKey =
+          credentials_->secretAccessKey();
+      if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
+        access_key = &maybeAccessKeyId.value();
+        secret_key = &maybeSecretAccessKey.value();
+      }
+    }
+  }
+
+  if ((access_key == nullptr) || (secret_key == nullptr)) {
+    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
+                                       RcDetails::get().CredentialsNotFoundBody,
+                                       nullptr, absl::nullopt,
+                                       RcDetails::get().CredentialsNotFound);
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   route_ = decoder_callbacks_->route();
@@ -82,20 +109,19 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
 
   if (!function_on_route_) {
     decoder_callbacks_->sendLocalReply(
-        Http::Code::NotFound, "no function present for AWS upstream", nullptr,
-        absl::nullopt, RcDetails::get().FunctionNotFound);
+        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
+        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  aws_authenticator_.init(&protocol_options_->accessKey(),
-                          &protocol_options_->secretKey());
+  aws_authenticator_.init(access_key, secret_key);
   request_headers_ = &headers;
 
   request_headers_->insertMethod().value().setReference(
       Http::Headers::get().MethodValues.Post);
 
-  request_headers_->insertPath().value(functionUrlPath(
-      function_on_route_->name(), function_on_route_->qualifier()));
+  request_headers_->insertPath().value().setReference(
+      function_on_route_->path());
 
   if (end_stream) {
     lambdafy();

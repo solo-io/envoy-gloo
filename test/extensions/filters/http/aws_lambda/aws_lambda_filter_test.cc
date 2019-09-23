@@ -24,12 +24,25 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
+class AWSLambdaConfigTestImpl : public AWSLambdaConfig {
+public:
+  CredentialsConstSharedPtr getCredentials() const override {
+    called_ = true;
+    return credentials_;
+  }
+
+  CredentialsConstSharedPtr credentials_;
+  mutable bool called_{};
+};
+
 class AWSLambdaFilterTest : public testing::Test {
 public:
   AWSLambdaFilterTest() {}
 
 protected:
-  void SetUp() override {
+  void SetUp() override { setupRoute(true, false); }
+
+  void setupRoute(bool credsOnCluster, bool fetchCredentials) {
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -41,8 +54,15 @@ protected:
         protoextconfig;
     protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
     protoextconfig.set_region("us-east-1");
-    protoextconfig.set_access_key("access key");
-    protoextconfig.set_secret_key("secret key");
+    if (credsOnCluster) {
+      protoextconfig.set_access_key("access key");
+      protoextconfig.set_secret_key("secret key");
+    } else if (fetchCredentials) {
+      filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
+      filter_config_->credentials_ = std::make_shared<
+          Envoy::Extensions::HttpFilters::Common::Aws::Credentials>(
+          "access key", "secret key");
+    }
 
     ON_CALL(
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
@@ -53,7 +73,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_,
-        factory_context_.dispatcher().timeSource());
+        factory_context_.dispatcher().timeSource(), filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -72,11 +92,12 @@ protected:
   std::unique_ptr<AWSLambdaFilter> filter_;
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute routeconfig_;
   std::unique_ptr<AWSLambdaRouteConfig> filter_route_config_;
+  std::shared_ptr<AWSLambdaConfigTestImpl> filter_config_;
 };
 
 // see:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
@@ -88,7 +109,37 @@ TEST_F(AWSLambdaFilterTest, SingsOnHeadersEndStream) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
-TEST_F(AWSLambdaFilterTest, SingsOnDataEndStream) {
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
+  setupRoute(false, true);
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+
+  EXPECT_TRUE(filter_config_->called_);
+  // Check aws headers.
+  EXPECT_TRUE(headers.has("Authorization"));
+}
+
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
+  setupRoute(false, true);
+  filter_config_->credentials_ = std::make_shared<
+      Envoy::Extensions::HttpFilters::Common::Aws::Credentials>("access key");
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
+
+  // Check no aws headers.
+  EXPECT_TRUE(filter_config_->called_);
+  EXPECT_FALSE(headers.has("Authorization"));
+}
+
+TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
@@ -266,6 +317,38 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
       }));
 
   filter_->decodeTrailers(headers);
+}
+
+TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
+  ON_CALL(filter_callbacks_.route_->route_entry_,
+          perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+      .WillByDefault(Return(nullptr));
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  EXPECT_CALL(filter_callbacks_,
+              sendLocalReply(Http::Code::InternalServerError, _, _, _, _))
+      .Times(1);
+
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
+}
+
+TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
+  setupRoute(false, false);
+
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/getsomething"}};
+
+  EXPECT_CALL(filter_callbacks_,
+              sendLocalReply(Http::Code::InternalServerError, _, _, _, _))
+      .Times(1);
+
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, true));
 }
 
 } // namespace AwsLambda
