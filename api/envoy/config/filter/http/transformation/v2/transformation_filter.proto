@@ -23,7 +23,6 @@ message Transformation {
   oneof transformation_type {
     TransformationTemplate transformation_template = 1;
     HeaderBodyTransform header_body_transform = 2;
-    DlpTransformation dlp_transformation = 3;
   }
 }
 
@@ -61,21 +60,3 @@ message Passthrough {}
 message MergeExtractorsToBody {}
 
 message HeaderBodyTransform {}
-
-message DlpTransformation {
-  repeated Action actions = 1;
-}
-
-message Action {
-  // List of regexes to apply to the response body to match data which should be masked
-  // They will be apploied iteratively in the order which they are specified/
-  repeated string regex = 1;
-  // If specified, this rule will not actually be applied, but only logged.
-  bool shadow = 2;
-  // The percent of the string which should be masked.
-  // If not set, defaults to 75%
-  float percent = 3 [(validate.rules).float.lte = 1];
-  // The character which should overwrite the masked data
-  // If left empty, defaults to "X"
-  string mask_char = 4 [(validate.rules).string.max_bytes = 1];
-}
