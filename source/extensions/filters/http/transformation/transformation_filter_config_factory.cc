@@ -36,7 +36,7 @@ TransformationFilterConfigFactory::createRouteSpecificFilterConfig(
   const auto &proto_config =
       dynamic_cast<const envoy::api::v2::filter::http::RouteTransformations &>(
           config);
-  return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
+  return std::make_shared<const RouteTransformationFilterConfig>(proto_config, Transformation{});
 }
 
 /**

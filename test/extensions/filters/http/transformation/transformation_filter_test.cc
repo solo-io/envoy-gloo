@@ -28,7 +28,7 @@ public:
   void initFilter() {
 
     route_config_wrapper_.reset(
-        new RouteTransformationFilterConfig(route_config_));
+        new RouteTransformationFilterConfig(route_config_, Transformation{}));
     ON_CALL(*filter_callbacks_.route_,
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));

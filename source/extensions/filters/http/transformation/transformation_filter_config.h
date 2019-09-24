@@ -15,7 +15,7 @@ namespace Transformation {
 
 class Transformation {
 public:
-  static TransformerSharedPtr getTransformer(
+  TransformerSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation);
 };
 
@@ -25,14 +25,14 @@ class RouteTransformationFilterConfig
   using ProtoConfig = envoy::api::v2::filter::http::RouteTransformations;
 
 public:
-  RouteTransformationFilterConfig(ProtoConfig proto_config)
-      : clear_route_cache_(proto_config.clear_route_cache()) {
+  RouteTransformationFilterConfig(ProtoConfig proto_config, Transformation transformation)
+      : clear_route_cache_(proto_config.clear_route_cache()), transformation_(transformation) {
     if (proto_config.has_request_transformation()) {
       request_transformation_ =
-          Transformation::getTransformer(proto_config.request_transformation());
+          transformation_.getTransformer(proto_config.request_transformation());
     }
     if (proto_config.has_response_transformation()) {
-      response_transformation_ = Transformation::getTransformer(
+      response_transformation_ = transformation_.getTransformer(
           proto_config.response_transformation());
     }
   }
@@ -51,6 +51,7 @@ private:
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
   bool clear_route_cache_{};
+  Transformation transformation_;
 };
 
 typedef std::shared_ptr<const RouteTransformationFilterConfig>
