@@ -19,7 +19,7 @@ struct RcDetailsValues {
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
 
-TransformationFilter::TransformationFilter() {}
+TransformationFilter::TransformationFilter(FilterConfigConstSharedPtr config) : filter_config_(config) {}
 
 TransformationFilter::~TransformationFilter() {}
 
@@ -151,24 +151,28 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
     return nullptr;
   }
 
-  const auto *config = Http::Utility::resolveMostSpecificPerFilterConfig<
-      RouteTransformationFilterConfig>(
-      SoloHttpFilterNames::get().Transformation, route_);
+  const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
+      RouteTransformationFilterConfig>(filter_config_->name(), route_);
 
-  if (config != nullptr) {
-    switch (direction) {
+  switch (direction) {
     case TransformationFilter::Direction::Request: {
-      should_clear_cache_ = config->shouldClearCache();
-      return config->getRequestTranformation();
+      if (route_config != nullptr) {
+        should_clear_cache_ = route_config->shouldClearCache();
+        return route_config->getRequestTranformation();
+      } else {
+        should_clear_cache_ = filter_config_->shouldClearCache();
+        return filter_config_->getRequestTranformation();
+      }
     }
     case TransformationFilter::Direction::Response: {
-      return config->getResponseTranformation();
-    }
-    default:
-      // TODO(yuval-k): should this be a warning log?
-      NOT_REACHED_GCOVR_EXCL_LINE;
+      if (route_config != nullptr) {
+        return route_config->getResponseTranformation();
+      } else {
+        return filter_config_->getRequestTranformation();
+      }
     }
   }
+
   return nullptr;
 }
 

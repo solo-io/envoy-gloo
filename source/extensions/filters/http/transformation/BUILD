@@ -25,6 +25,7 @@ envoy_cc_library(
         ":body_header_transformer_lib",
         ":inja_transformer_lib",
         ":transformer_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
         "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
         "@envoy//include/envoy/router:router_interface",
     ],
@@ -98,6 +99,7 @@ envoy_cc_library(
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
+        "@envoy//include/envoy/router:router_interface",
     ],
 )
 

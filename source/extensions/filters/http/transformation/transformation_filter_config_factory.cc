@@ -16,11 +16,17 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-Http::FilterFactoryCb TransformationFilterConfigFactory::createFilter(
-    const std::string &, Server::Configuration::FactoryContext &) {
 
-  return [](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    auto filter = new TransformationFilter();
+Http::FilterFactoryCb 
+TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
+  const TransformationConfigProto &proto_config, const std::string&,
+  Server::Configuration::FactoryContext&) {
+
+  FilterConfigConstSharedPtr config =
+    std::make_shared<const TransformationFilterConfig>(proto_config);
+
+  return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
+    auto filter = new TransformationFilter(config);
     callbacks.addStreamFilter(Http::StreamFilterSharedPtr{filter});
   };
 }
@@ -31,12 +37,9 @@ TransformationFilterConfigFactory::createEmptyRouteConfigProto() {
 }
 
 Router::RouteSpecificFilterConfigConstSharedPtr
-TransformationFilterConfigFactory::createRouteSpecificFilterConfig(
-    const Protobuf::Message &config, Server::Configuration::FactoryContext &) {
-  const auto &proto_config =
-      dynamic_cast<const envoy::api::v2::filter::http::RouteTransformations &>(
-          config);
-  return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
+TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
+  Server::Configuration::FactoryContext&) {
+    return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
 }
 
 /**

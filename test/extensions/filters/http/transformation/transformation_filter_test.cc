@@ -43,8 +43,11 @@ public:
           }
           return encoder_filter_callbacks_.route_;
         }));
+    
+    FilterConfigConstSharedPtr config =
+      std::make_shared<const TransformationFilterConfig>(route_config_);
 
-    filter_ = std::make_unique<TransformationFilter>();
+    filter_ = std::make_unique<TransformationFilter>(config);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
     filter_->setEncoderFilterCallbacks(encoder_filter_callbacks_);
   }
@@ -80,7 +83,7 @@ public:
   NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::filter::http::RouteTransformations route_config_;
-  RouteTransformationFilterConfigConstSharedPtr route_config_wrapper_;
+  RouteFilterConfigConstSharedPtr route_config_wrapper_;
 };
 
 TEST_F(TransformationFilterTest, EmptyConfig) {

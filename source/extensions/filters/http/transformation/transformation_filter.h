@@ -5,6 +5,7 @@
 #include "common/buffer/buffer_impl.h"
 
 #include "extensions/filters/http/transformation/transformation_filter_config.h"
+#include "extensions/filters/http/transformation/transformer.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
@@ -20,7 +21,7 @@ namespace Transformation {
 class TransformationFilter : public Http::StreamFilter,
                              Logger::Loggable<Logger::Id::filter> {
 public:
-  TransformationFilter();
+  TransformationFilter(FilterConfigConstSharedPtr);
   ~TransformationFilter();
 
   // Http::FunctionalFilterBase
@@ -112,6 +113,9 @@ private:
   Http::Code error_code_;
   std::string error_messgae_;
   bool should_clear_cache_{};
+  
+  RouteFilterConfigConstSharedPtr route_filter_config_;
+  FilterConfigConstSharedPtr filter_config_;
 };
 
 } // namespace Transformation
