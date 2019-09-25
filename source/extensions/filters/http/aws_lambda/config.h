@@ -44,7 +44,7 @@ typedef std::shared_ptr<
 class AWSLambdaConfig {
 public:
   virtual CredentialsConstSharedPtr getCredentials() const PURE;
-  virtual ~AWSLambdaConfig() = default;
+  virtual ~AWSLambdaConfig() = default; 
 };
 
 class AWSLambdaConfigImpl

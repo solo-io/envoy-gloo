@@ -25,8 +25,8 @@ using RouteTransformationConfigProto = envoy::api::v2::filter::http::RouteTransf
 
 class TransformationFilterConfig : public FilterConfig {
 public:
-  TransformationFilterConfig(const TransformationConfigProto &proto_config)
-      : clear_route_cache_(proto_config.clear_route_cache()) {
+  TransformationFilterConfig(const TransformationConfigProto &proto_config, const std::string& prefix, Stats::Scope& scope)
+      : FilterConfig(prefix, scope), clear_route_cache_(proto_config.clear_route_cache()) {
     if (proto_config.has_request_transformation()) {
       request_transformation_ =
           Transformation::getTransformer(proto_config.request_transformation());

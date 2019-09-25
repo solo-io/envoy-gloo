@@ -6,10 +6,32 @@
 #include "envoy/http/header_map.h"
 #include "envoy/router/router.h"
 
+#include "envoy/stats/scope.h"
+#include "envoy/stats/stats_macros.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
+
+
+/**
+ * All stats for the transformation filter. @see stats_macros.h
+ */
+#define ALL_TRANSFORMATION_FILTER_STATS(COUNTER, GAUGE)                                                     \
+  COUNTER(aborts_injected)                                                                         \
+  COUNTER(delays_injected)                                                                         \
+  COUNTER(faults_overflow)                                                                         \
+  COUNTER(response_rl_injected)                                                                    \
+  GAUGE(active_faults, Accumulate)
+
+/**
+ * Wrapper struct for transformation @see stats_macros.h
+ */
+struct TransformationFilterStats {
+  ALL_TRANSFORMATION_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
+};
+
 
 class Transformer {
 public:
@@ -31,11 +53,25 @@ public:
   virtual TransformerConstSharedPtr getRequestTranformation() const PURE;
   virtual bool shouldClearCache() const PURE;
   virtual TransformerConstSharedPtr getResponseTranformation() const PURE;
+
 };
 
 class FilterConfig : public TransormConfig {
 public:
-    virtual std::string name() const PURE;   
+  FilterConfig(const std::string& prefix, Stats::Scope& scope) : stats_(generateStats(prefix, scope)) {};
+
+  static TransformationFilterStats generateStats(const std::string& prefix, Stats::Scope& scope) {
+    const std::string final_prefix = prefix + "transformation.";
+    return {ALL_TRANSFORMATION_FILTER_STATS(POOL_COUNTER_PREFIX(scope, final_prefix),
+                                 POOL_GAUGE_PREFIX(scope, final_prefix))};
+  }
+
+  TransformationFilterStats& stats() { return stats_; }
+
+  virtual std::string name() const PURE;   
+
+private: 
+  TransformationFilterStats stats_;
 };
 
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};

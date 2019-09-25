@@ -19,11 +19,11 @@ namespace Transformation {
 
 Http::FilterFactoryCb 
 TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
-  const TransformationConfigProto &proto_config, const std::string&,
-  Server::Configuration::FactoryContext&) {
+  const TransformationConfigProto &proto_config, const std::string &stats_prefix,
+  Server::Configuration::FactoryContext &context) {
 
   FilterConfigConstSharedPtr config =
-    std::make_shared<const TransformationFilterConfig>(proto_config);
+    std::make_shared<const TransformationFilterConfig>(proto_config, stats_prefix, context.scope());
 
   return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new TransformationFilter(config);
