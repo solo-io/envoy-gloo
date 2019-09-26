@@ -78,6 +78,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 TransformationFilter::decodeTrailers(Http::HeaderMap &) {
   if (requestActive()) {
+    filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
   }
   return is_error() ? Http::FilterTrailersStatus::StopIteration
@@ -132,6 +133,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   if (responseActive()) {
+    filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
   }
   return Http::FilterTrailersStatus::Continue;

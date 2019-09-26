@@ -41,13 +41,13 @@ public:
     return SoloHttpFilterNames::get().Transformation;
   }
 
-  TransformerConstSharedPtr getRequestTranformation() const {
+  TransformerConstSharedPtr getRequestTranformation() const override {
     return request_transformation_;
   }
 
-  bool shouldClearCache() const { return clear_route_cache_; }
+  bool shouldClearCache() const override { return clear_route_cache_; }
 
-  TransformerConstSharedPtr getResponseTranformation() const {
+  TransformerConstSharedPtr getResponseTranformation() const override {
     return response_transformation_;
   }
   
@@ -72,13 +72,13 @@ public:
     }
   }
 
-  TransformerConstSharedPtr getRequestTranformation() const {
+  TransformerConstSharedPtr getRequestTranformation() const override {
     return request_transformation_;
   }
 
-  bool shouldClearCache() const { return clear_route_cache_; }
+  bool shouldClearCache() const override { return clear_route_cache_; }
 
-  TransformerConstSharedPtr getResponseTranformation() const {
+  TransformerConstSharedPtr getResponseTranformation() const override {
     return response_transformation_;
   }
 
