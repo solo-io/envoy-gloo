@@ -50,6 +50,7 @@ public:
   TransformerConstSharedPtr getResponseTranformation() const {
     return response_transformation_;
   }
+  
 private:
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;

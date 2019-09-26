@@ -44,7 +44,7 @@ NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
   };
 }
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+Router::RouteSpecificFilterConfigSharedPtr
 NatsStreamingFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::nats::streaming::v2::
         NatsStreamingPerRoute &proto_config,

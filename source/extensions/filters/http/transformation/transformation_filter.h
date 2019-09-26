@@ -21,7 +21,7 @@ namespace Transformation {
 class TransformationFilter : public Http::StreamFilter,
                              Logger::Loggable<Logger::Id::filter> {
 public:
-  TransformationFilter(FilterConfigConstSharedPtr);
+  TransformationFilter(FilterConfigSharedPtr);
   ~TransformationFilter();
 
   // Http::FunctionalFilterBase
@@ -114,8 +114,8 @@ private:
   std::string error_messgae_;
   bool should_clear_cache_{};
   
-  RouteFilterConfigConstSharedPtr route_filter_config_;
-  FilterConfigConstSharedPtr filter_config_;
+  RouteFilterConfigSharedPtr route_filter_config_;
+  FilterConfigSharedPtr filter_config_;
 };
 
 } // namespace Transformation

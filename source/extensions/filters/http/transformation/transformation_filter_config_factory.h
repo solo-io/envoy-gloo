@@ -28,10 +28,10 @@ public:
 private:
 
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const TransformationConfigProto &proto_config, const std::string &,
-      Server::Configuration::FactoryContext &) override;
+      const TransformationConfigProto &proto_config, const std::string &stats_prefix,
+      Server::Configuration::FactoryContext &context) override;
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+Router::RouteSpecificFilterConfigSharedPtr
     createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto&,
                                        Server::Configuration::FactoryContext&) override;
 };

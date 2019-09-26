@@ -22,7 +22,7 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
   const TransformationConfigProto &proto_config, const std::string &stats_prefix,
   Server::Configuration::FactoryContext &context) {
 
-  FilterConfigConstSharedPtr config =
+  FilterConfigSharedPtr config =
     std::make_shared<const TransformationFilterConfig>(proto_config, stats_prefix, context.scope());
 
   return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
@@ -36,7 +36,7 @@ TransformationFilterConfigFactory::createEmptyRouteConfigProto() {
   return std::make_unique<envoy::api::v2::filter::http::RouteTransformations>();
 }
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+Router::RouteSpecificFilterConfigSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
   Server::Configuration::FactoryContext&) {
     return std::make_shared<const RouteTransformationFilterConfig>(proto_config);

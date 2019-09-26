@@ -19,10 +19,12 @@ namespace Transformation {
  * All stats for the transformation filter. @see stats_macros.h
  */
 #define ALL_TRANSFORMATION_FILTER_STATS(COUNTER, GAUGE)                                                     \
-  COUNTER(aborts_injected)                                                                         \
-  COUNTER(delays_injected)                                                                         \
-  COUNTER(faults_overflow)                                                                         \
-  COUNTER(response_rl_injected)                                                                    \
+  COUNTER(request_body_transformations)                                                                         \
+  COUNTER(request_header_transformations)                                                                         \
+  COUNTER(response_header_transformations)                                                                         \
+  COUNTER(response_body_transformations)                                                                         \
+  COUNTER(request_error)                                                                         \
+  COUNTER(response_error)                                                                    \
   GAUGE(active_faults, Accumulate)
 
 /**
@@ -77,9 +79,9 @@ private:
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};
 
 typedef std::shared_ptr<const RouteFilterConfig>
-    RouteFilterConfigConstSharedPtr;
-typedef std::shared_ptr<const FilterConfig>
-    FilterConfigConstSharedPtr;
+    RouteFilterConfigSharedPtr;
+typedef std::shared_ptr<FilterConfig>
+    FilterConfigSharedPtr;
 
 } // namespace Transformation
 } // namespace HttpFilters
