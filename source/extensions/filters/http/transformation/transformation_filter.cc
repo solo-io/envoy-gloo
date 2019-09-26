@@ -78,7 +78,6 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 TransformationFilter::decodeTrailers(Http::HeaderMap &) {
   if (requestActive()) {
-    filter_config_->stats().response_header_transformations_.inc();
     transformRequest();
   }
   return is_error() ? Http::FilterTrailersStatus::StopIteration
@@ -99,7 +98,7 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
   response_headers_ = &header_map;
 
   if (end_stream || response_transformation_->passthrough_body()) {
-    filter_config_->stats().response_body_transformations_.inc();
+    filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
     return Http::FilterHeadersStatus::Continue;
   }
@@ -117,6 +116,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
   if ((encoder_buffer_limit_ != 0) &&
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
+    filter_config_->stats().response_body_transformations_.inc();
     responseError();
     return Http::FilterDataStatus::Continue;
   }
@@ -157,19 +157,19 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
       RouteTransformationFilterConfig>(filter_config_->name(), route_);
-
+  
   switch (direction) {
     case TransformationFilter::Direction::Request: {
-      if (route_config != nullptr) {
+      should_clear_cache_ = filter_config_->shouldClearCache();
+      if (route_config != nullptr && route_config->getRequestTranformation() != nullptr) {
         should_clear_cache_ = route_config->shouldClearCache();
         return route_config->getRequestTranformation();
       } else {
-        should_clear_cache_ = filter_config_->shouldClearCache();
         return filter_config_->getRequestTranformation();
       }
     }
     case TransformationFilter::Direction::Response: {
-      if (route_config != nullptr) {
+      if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
         return route_config->getResponseTranformation();
       } else {
         return filter_config_->getRequestTranformation();
