@@ -174,7 +174,7 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
       if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
         return route_config->getResponseTranformation();
       } else {
-        return filter_config_->getRequestTranformation();
+        return filter_config_->getResponseTranformation();
       }
     }
   }

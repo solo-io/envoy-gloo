@@ -322,4 +322,46 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   EXPECT_EQ(origBody, body);
 }
 
+TEST_P(TransformationFilterIntegrationTest, RequestListenerConfigResponseRouteConfig) {
+  filter_config_string_ = BODY_TRANSFORMATION;
+  transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
+  initialize();
+  Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, data.toString());
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("efg", body);
+  std::string rbody = response->body();
+  EXPECT_NE(std::string::npos, rbody.find("bad request"));
+}
+
+TEST_P(TransformationFilterIntegrationTest, RequestRouteConfigResponseListenerConfig) {
+  filter_config_string_ = BODY_RESPONSE_TRANSFORMATION;
+  transformation_string_ = BODY_TRANSFORMATION;
+  initialize();
+  Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, data.toString());
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("efg", body);
+  std::string rbody = response->body();
+  EXPECT_NE(std::string::npos, rbody.find("bad request"));
+}
+
 } // namespace Envoy
