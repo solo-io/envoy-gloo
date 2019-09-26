@@ -79,7 +79,7 @@ private:
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};
 
 typedef std::shared_ptr<const RouteFilterConfig>
-    RouteFilterConfigSharedPtr;
+    RouteFilterConfigConstSharedPtr;
 typedef std::shared_ptr<FilterConfig>
     FilterConfigSharedPtr;
 

@@ -83,7 +83,7 @@ public:
   NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
   std::unique_ptr<TransformationFilter> filter_;
   envoy::api::v2::filter::http::RouteTransformations route_config_;
-  RouteFilterConfigSharedPtr route_config_wrapper_;
+  RouteFilterConfigConstSharedPtr route_config_wrapper_;
 };
 
 TEST_F(TransformationFilterTest, EmptyConfig) {

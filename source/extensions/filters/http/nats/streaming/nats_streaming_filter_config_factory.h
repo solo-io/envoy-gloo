@@ -32,7 +32,7 @@ private:
       const std::string &stats_prefix,
       Server::Configuration::FactoryContext &context) override;
 
-  Router::RouteSpecificFilterConfigSharedPtr
+  Router::RouteSpecificFilterConfigConstSharedPtr
   createRouteSpecificFilterConfigTyped(
       const envoy::config::filter::http::nats::streaming::v2::
           NatsStreamingPerRoute &proto_config,

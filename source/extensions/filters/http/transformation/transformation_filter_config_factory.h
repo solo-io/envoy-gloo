@@ -31,7 +31,7 @@ private:
       const TransformationConfigProto &proto_config, const std::string &stats_prefix,
       Server::Configuration::FactoryContext &context) override;
 
-Router::RouteSpecificFilterConfigSharedPtr
+Router::RouteSpecificFilterConfigConstSharedPtr
     createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto&,
                                        Server::Configuration::FactoryContext&) override;
 };
