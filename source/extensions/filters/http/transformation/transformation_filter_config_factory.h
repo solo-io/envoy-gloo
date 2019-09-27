@@ -23,8 +23,6 @@ public:
   TransformationFilterConfigFactory()
       : FactoryBase(SoloHttpFilterNames::get().Transformation) {}
 
-  ProtobufTypes::MessagePtr createEmptyRouteConfigProto() override;
-
 private:
 
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(

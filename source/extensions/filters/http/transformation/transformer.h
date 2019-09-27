@@ -18,20 +18,19 @@ namespace Transformation {
 /**
  * All stats for the transformation filter. @see stats_macros.h
  */
-#define ALL_TRANSFORMATION_FILTER_STATS(COUNTER, GAUGE)                                                     \
-  COUNTER(request_body_transformations)                                                                         \
-  COUNTER(request_header_transformations)                                                                         \
-  COUNTER(response_header_transformations)                                                                         \
-  COUNTER(response_body_transformations)                                                                         \
-  COUNTER(request_error)                                                                         \
-  COUNTER(response_error)                                                                    \
-  GAUGE(active_faults, Accumulate)
+#define ALL_TRANSFORMATION_FILTER_STATS(COUNTER)                                       \
+  COUNTER(request_body_transformations)                                                       \
+  COUNTER(request_header_transformations)                                                     \
+  COUNTER(response_header_transformations)                                                    \
+  COUNTER(response_body_transformations)                                                      \
+  COUNTER(request_error)                                                                      \
+  COUNTER(response_error)                                                                    
 
 /**
  * Wrapper struct for transformation @see stats_macros.h
  */
 struct TransformationFilterStats {
-  ALL_TRANSFORMATION_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
+  ALL_TRANSFORMATION_FILTER_STATS(GENERATE_COUNTER_STRUCT)
 };
 
 
@@ -64,8 +63,7 @@ public:
 
   static TransformationFilterStats generateStats(const std::string& prefix, Stats::Scope& scope) {
     const std::string final_prefix = prefix + "transformation.";
-    return {ALL_TRANSFORMATION_FILTER_STATS(POOL_COUNTER_PREFIX(scope, final_prefix),
-                                 POOL_GAUGE_PREFIX(scope, final_prefix))};
+    return {ALL_TRANSFORMATION_FILTER_STATS(POOL_COUNTER_PREFIX(scope, final_prefix))};
   }
 
   TransformationFilterStats& stats() { return stats_; }

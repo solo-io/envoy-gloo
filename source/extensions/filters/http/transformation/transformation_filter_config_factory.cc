@@ -31,11 +31,6 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
   };
 }
 
-ProtobufTypes::MessagePtr
-TransformationFilterConfigFactory::createEmptyRouteConfigProto() {
-  return std::make_unique<envoy::api::v2::filter::http::RouteTransformations>();
-}
-
 Router::RouteSpecificFilterConfigConstSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
   Server::Configuration::FactoryContext&) {

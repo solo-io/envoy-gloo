@@ -114,7 +114,6 @@ private:
   std::string error_messgae_;
   bool should_clear_cache_{};
   
-  RouteFilterConfigConstSharedPtr route_filter_config_;
   FilterConfigSharedPtr filter_config_;
 };
 

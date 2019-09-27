@@ -153,7 +153,7 @@ public:
     EXPECT_EQ(val, config_->stats().request_body_transformations_.value());
   }
   
-  void happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType configType) {
+  void happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType configType, unsigned int val) {
     initFilterWithBodyPassthrough(configType);
 
     auto resheaders = filter_->decodeHeaders(headers_, false);
@@ -163,6 +163,7 @@ public:
     auto res = filter_->decodeData(downstream_body, true);
     EXPECT_EQ(Http::FilterDataStatus::Continue, res);
     EXPECT_EQ(0U, config_->stats().request_body_transformations_.value());
+    EXPECT_EQ(val, config_->stats().request_header_transformations_.value());
   }
 
 
@@ -262,9 +263,9 @@ TEST_F(TransformationFilterTest, HappyPathWithBody) {
 }
 
 TEST_F(TransformationFilterTest, HappyPathWithBodyPassthrough) {
-  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Both);
-  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Route);
-  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Listener);
+  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Both, 1U);
+  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Route, 2U);
+  happyPathWithBodyPassthrough(TransformationFilterTest::ConfigType::Listener, 3U);
 }
 
 TEST_F(TransformationFilterTest, BodyPassthroughDoesntRemoveContentType) {
