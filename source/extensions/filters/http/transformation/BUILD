@@ -101,6 +101,7 @@ envoy_cc_library(
     deps = [
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
+        "@envoy//include/envoy/http:filter_interface",
         "@envoy//include/envoy/router:router_interface",
     ],
 )

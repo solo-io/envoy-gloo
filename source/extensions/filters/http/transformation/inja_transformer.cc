@@ -154,7 +154,8 @@ InjaTransformer::InjaTransformer(
 InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::HeaderMap &header_map,
-                                Buffer::Instance &body) const {
+                                Buffer::Instance &body,
+                                Http::StreamFilterCallbacks&) const {
   json json_body;
   if (body.length() > 0) {
     const std::string bodystring = body.toString();
