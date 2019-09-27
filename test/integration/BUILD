@@ -29,6 +29,7 @@ envoy_gloo_cc_test(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
     ],

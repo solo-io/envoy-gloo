@@ -19,7 +19,7 @@ struct RcDetailsValues {
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
 
-TransformationFilter::TransformationFilter() {}
+TransformationFilter::TransformationFilter(FilterConfigSharedPtr config) : filter_config_(config) {}
 
 TransformationFilter::~TransformationFilter() {}
 
@@ -41,6 +41,7 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
   request_headers_ = &header_map;
 
   if (end_stream || request_transformation_->passthrough_body()) {
+    filter_config_->stats().request_header_transformations_.inc();
     transformRequest();
 
     return is_error() ? Http::FilterHeadersStatus::StopIteration
@@ -65,6 +66,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
   }
 
   if (end_stream) {
+    filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
     return is_error() ? Http::FilterDataStatus::StopIterationNoBuffer
                       : Http::FilterDataStatus::Continue;
@@ -76,6 +78,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 TransformationFilter::decodeTrailers(Http::HeaderMap &) {
   if (requestActive()) {
+    filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
   }
   return is_error() ? Http::FilterTrailersStatus::StopIteration
@@ -96,6 +99,7 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
   response_headers_ = &header_map;
 
   if (end_stream || response_transformation_->passthrough_body()) {
+    filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
     return Http::FilterHeadersStatus::Continue;
   }
@@ -113,6 +117,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
   if ((encoder_buffer_limit_ != 0) &&
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
+    filter_config_->stats().response_body_transformations_.inc();
     responseError();
     return Http::FilterDataStatus::Continue;
   }
@@ -128,6 +133,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   if (responseActive()) {
+    filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
   }
   return Http::FilterTrailersStatus::Continue;
@@ -151,24 +157,28 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
     return nullptr;
   }
 
-  const auto *config = Http::Utility::resolveMostSpecificPerFilterConfig<
-      RouteTransformationFilterConfig>(
-      SoloHttpFilterNames::get().Transformation, route_);
-
-  if (config != nullptr) {
-    switch (direction) {
+  const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
+      RouteTransformationFilterConfig>(filter_config_->name(), route_);
+  
+  switch (direction) {
     case TransformationFilter::Direction::Request: {
-      should_clear_cache_ = config->shouldClearCache();
-      return config->getRequestTranformation();
+      should_clear_cache_ = filter_config_->shouldClearCache();
+      if (route_config != nullptr && route_config->getRequestTranformation() != nullptr) {
+        should_clear_cache_ = route_config->shouldClearCache();
+        return route_config->getRequestTranformation();
+      } else {
+        return filter_config_->getRequestTranformation();
+      }
     }
     case TransformationFilter::Direction::Response: {
-      return config->getResponseTranformation();
-    }
-    default:
-      // TODO(yuval-k): should this be a warning log?
-      NOT_REACHED_GCOVR_EXCL_LINE;
+      if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
+        return route_config->getResponseTranformation();
+      } else {
+        return filter_config_->getResponseTranformation();
+      }
     }
   }
+
   return nullptr;
 }
 
@@ -227,6 +237,7 @@ void TransformationFilter::transformSomething(
 
 void TransformationFilter::requestError() {
   ASSERT(is_error());
+  filter_config_->stats().request_error_.inc();
   decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr,
                                      absl::nullopt,
                                      RcDetails::get().TransformError);
@@ -234,6 +245,7 @@ void TransformationFilter::requestError() {
 
 void TransformationFilter::responseError() {
   ASSERT(is_error());
+  filter_config_->stats().response_error_.inc();
   response_headers_->Status()->value(enumToInt(error_code_));
   Buffer::OwnedImpl data(error_messgae_);
   response_headers_->removeContentType();

@@ -5,6 +5,7 @@
 #include "envoy/router/router.h"
 
 #include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
@@ -19,13 +20,47 @@ public:
       const envoy::api::v2::filter::http::Transformation &transformation);
 };
 
-class RouteTransformationFilterConfig
-    : public Router::RouteSpecificFilterConfig {
+using TransformationConfigProto = envoy::api::v2::filter::http::RouteTransformations;
+using RouteTransformationConfigProto = envoy::api::v2::filter::http::RouteTransformations;
 
-  using ProtoConfig = envoy::api::v2::filter::http::RouteTransformations;
-
+class TransformationFilterConfig : public FilterConfig {
 public:
-  RouteTransformationFilterConfig(ProtoConfig proto_config)
+  TransformationFilterConfig(const TransformationConfigProto &proto_config, const std::string& prefix, Stats::Scope& scope)
+      : FilterConfig(prefix, scope), clear_route_cache_(proto_config.clear_route_cache()) {
+    if (proto_config.has_request_transformation()) {
+      request_transformation_ =
+          Transformation::getTransformer(proto_config.request_transformation());
+    }
+    if (proto_config.has_response_transformation()) {
+      response_transformation_ = Transformation::getTransformer(
+          proto_config.response_transformation());
+    }
+  }
+
+  std::string name() const override {
+    return SoloHttpFilterNames::get().Transformation;
+  }
+
+  TransformerConstSharedPtr getRequestTranformation() const override {
+    return request_transformation_;
+  }
+
+  bool shouldClearCache() const override { return clear_route_cache_; }
+
+  TransformerConstSharedPtr getResponseTranformation() const override {
+    return response_transformation_;
+  }
+  
+private:
+  TransformerConstSharedPtr request_transformation_;
+  TransformerConstSharedPtr response_transformation_;
+  bool clear_route_cache_{};
+};
+
+
+class RouteTransformationFilterConfig : public RouteFilterConfig {
+public:
+  RouteTransformationFilterConfig(const RouteTransformationConfigProto &proto_config)
       : clear_route_cache_(proto_config.clear_route_cache()) {
     if (proto_config.has_request_transformation()) {
       request_transformation_ =
@@ -37,13 +72,13 @@ public:
     }
   }
 
-  TransformerConstSharedPtr getRequestTranformation() const {
+  TransformerConstSharedPtr getRequestTranformation() const override {
     return request_transformation_;
   }
 
-  bool shouldClearCache() const { return clear_route_cache_; }
+  bool shouldClearCache() const override { return clear_route_cache_; }
 
-  TransformerConstSharedPtr getResponseTranformation() const {
+  TransformerConstSharedPtr getResponseTranformation() const override {
     return response_transformation_;
   }
 
@@ -52,9 +87,6 @@ private:
   TransformerConstSharedPtr response_transformation_;
   bool clear_route_cache_{};
 };
-
-typedef std::shared_ptr<const RouteTransformationFilterConfig>
-    RouteTransformationFilterConfigConstSharedPtr;
 
 } // namespace Transformation
 } // namespace HttpFilters

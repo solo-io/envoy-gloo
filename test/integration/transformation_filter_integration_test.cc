@@ -4,99 +4,116 @@
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
 
+#include "fmt/printf.h"
+
+#include "extensions/filters/http/solo_well_known_names.h"
+
 namespace Envoy {
 
 const std::string DEFAULT_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: true
-    extractors:
-      ext1:
-        header: :path
-        regex: /users/(\d+)
-        subgroup: 1
-    headers:
-      x-solo:
-        text: solo.io
-    body:
-      text: abc {{extraction("ext1")}}
+  request_transformation:
+    transformation_template:
+      advanced_templates: true
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
+      headers:
+        x-solo:
+          text: solo.io
+      body:
+        text: abc {{extraction("ext1")}}
 )EOF";
 
 const std::string BODY_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: true
-    body:
-      text: "{{abc}}"
+  request_transformation:
+    transformation_template:
+      advanced_templates: true
+      body:
+        text: "{{abc}}"
 )EOF";
 
 const std::string BODY_RESPONSE_TRANSFORMATION =
     R"EOF(
-response_transformation:
-  transformation_template:
-    advanced_templates: true
-    body:
-      text: "{{abc}}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: true
+      body:
+        text: "{{abc}}"
 )EOF";
 
 const std::string BODY_REQUEST_RESPONSE_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: true
-    body:
-      text: "{{abc}}"
-response_transformation:
-  transformation_template:
-    advanced_templates: true
-    body:
-      text: "{{abc}}"
+  request_transformation:
+    transformation_template:
+      advanced_templates: true
+      body:
+        text: "{{abc}}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: true
+      body:
+        text: "{{abc}}"
 )EOF";
 
 const std::string PATH_TO_PATH_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: false
-    extractors:
-      ext1:
-        header: :path
-        regex: /users/(\d+)
-        subgroup: 1
-    headers: { ":path": {"text": "/solo/{{ext1}}"} }
-    body:
-      text: soloio
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
+      headers: { ":path": {"text": "/solo/{{ext1}}"} }
+      body:
+        text: soloio
 )EOF";
 
 const std::string EMPTY_BODY_REQUEST_RESPONSE_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: false
-    body:
-      text: ""
-response_transformation:
-  transformation_template:
-    advanced_templates: false
-    body:
-      text: ""
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      body:
+        text: ""
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      body:
+        text: ""
 )EOF";
 
 const std::string PASSTHROUGH_TRANSFORMATION =
     R"EOF(
-request_transformation:
-  transformation_template:
-    advanced_templates: true
-    extractors:
-      ext1:
-        header: :path
-        regex: /users/(\d+)
-        subgroup: 1
-    headers: { "x-solo": {"text": "{{extraction(\"ext1\")}}"} }
-    passthrough: {}
+  request_transformation:
+    transformation_template:
+      advanced_templates: true
+      extractors:
+        ext1:
+          header: :path
+          regex: /users/(\d+)
+          subgroup: 1
+      headers: { "x-solo": {"text": "{{extraction(\"ext1\")}}"} }
+      passthrough: {}
 )EOF";
+
+const std::string DEFAULT_FILTER = 
+    R"EOF(
+name: %s
+config: 
+  %s
+)EOF";
+
+const std::string DEFAULT_FILTER_CONFIG = 
+    R"EOF(
+  {}
+)EOF";
+
 
 class TransformationFilterIntegrationTest
     : public HttpIntegrationTest,
@@ -110,8 +127,9 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
+    const std::string default_filter = fmt::sprintf(DEFAULT_FILTER, Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation, filter_config_string_);
     // set the default transformation
-    config_helper_.addFilter("name: io.solo.transformation");
+    config_helper_.addFilter(default_filter);
 
     config_helper_.addConfigModifier(
         [this](envoy::config::filter::network::http_connection_manager::v2::
@@ -120,7 +138,7 @@ public:
               (*hcm.mutable_route_config()
                     ->mutable_virtual_hosts(0)
                     ->mutable_routes(0)
-                    ->mutable_per_filter_config())["io.solo.transformation"];
+                    ->mutable_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
 
           TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
         });
@@ -146,6 +164,7 @@ public:
   }
 
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
+  std::string filter_config_string_{DEFAULT_FILTER_CONFIG};
 };
 
 INSTANTIATE_TEST_SUITE_P(
@@ -301,6 +320,48 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
                          .getStringView());
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ(origBody, body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, RequestListenerConfigResponseRouteConfig) {
+  filter_config_string_ = BODY_TRANSFORMATION;
+  transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
+  initialize();
+  Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, data.toString());
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("efg", body);
+  std::string rbody = response->body();
+  EXPECT_NE(std::string::npos, rbody.find("bad request"));
+}
+
+TEST_P(TransformationFilterIntegrationTest, RequestRouteConfigResponseListenerConfig) {
+  filter_config_string_ = BODY_RESPONSE_TRANSFORMATION;
+  transformation_string_ = BODY_TRANSFORMATION;
+  initialize();
+  Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, data.toString());
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("efg", body);
+  std::string rbody = response->body();
+  EXPECT_NE(std::string::npos, rbody.find("bad request"));
 }
 
 } // namespace Envoy

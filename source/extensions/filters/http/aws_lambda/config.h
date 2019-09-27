@@ -19,7 +19,7 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 /**
- * All stats for the fault filter. @see stats_macros.h
+ * All stats for the aws filter. @see stats_macros.h
  */
 #define ALL_AWS_LAMBDA_FILTER_STATS(COUNTER, GAUGE)                            \
   COUNTER(fetch_failed)                                                        \
@@ -28,7 +28,7 @@ namespace AwsLambda {
   GAUGE(current_state, NeverImport)
 
 /**
- * Wrapper struct for connection manager stats. @see stats_macros.h
+ * Wrapper struct for aws filter stats. @see stats_macros.h
  */
 struct AwsLambdaFilterStats {
   ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
@@ -44,7 +44,7 @@ typedef std::shared_ptr<
 class AWSLambdaConfig {
 public:
   virtual CredentialsConstSharedPtr getCredentials() const PURE;
-  virtual ~AWSLambdaConfig() = default;
+  virtual ~AWSLambdaConfig() = default; 
 };
 
 class AWSLambdaConfigImpl
