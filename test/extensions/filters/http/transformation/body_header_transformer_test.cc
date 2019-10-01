@@ -3,6 +3,7 @@
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "test/test_common/utility.h"
+#include "test/mocks/server/mocks.h"
 
 #include "fmt/format.h"
 #include "nlohmann/json.hpp"
@@ -33,7 +34,8 @@ TEST(BodyHeaderTransformer, transform) {
   Buffer::OwnedImpl body("testbody");
 
   BodyHeaderTransformer transformer;
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);

@@ -149,7 +149,8 @@ TEST(Transformer, transform) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -180,7 +181,8 @@ TEST(Transformer, transformSimple) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -211,7 +213,8 @@ TEST(Transformer, transformSimpleNestedStructs) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -237,7 +240,8 @@ TEST(Transformer, transformPassthrough) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -267,7 +271,8 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -291,7 +296,8 @@ TEST(Transformer, transformBodyNotSet) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -318,7 +324,8 @@ TEST(InjaTransformer, transformWithHyphens) {
   transformation.mutable_merge_extractors_to_body();
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -339,7 +346,8 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   InjaTransformer transformer(transformation);
 
   EXPECT_TRUE(headers.has(content_type));
-  transformer.transform(headers, body);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
   EXPECT_FALSE(headers.has(content_type));
 }
 
