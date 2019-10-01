@@ -4,6 +4,7 @@
 
 #include "test/test_common/utility.h"
 #include "test/mocks/server/mocks.h"
+#include "test/mocks/http/mocks.h"
 
 #include "fmt/format.h"
 #include "nlohmann/json.hpp"
