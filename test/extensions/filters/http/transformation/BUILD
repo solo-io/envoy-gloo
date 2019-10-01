@@ -43,5 +43,6 @@ envoy_gloo_cc_test(
     deps = [
         "//source/extensions/filters/http/transformation:body_header_transformer_lib",
         "@envoy//test/test_common:utility_lib",
+        "@envoy//test/mocks/http:http_mocks",
     ],
 )
