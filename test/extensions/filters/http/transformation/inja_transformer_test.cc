@@ -3,6 +3,7 @@
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
+#include "test/mocks/http/mocks.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -24,6 +25,10 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
+
+namespace {
+  Http::MockStreamDecoderFilterCallbacks stream_callbacks;
+}
 
 inja::Template parse(std::string s) {
   inja::ParserConfig parser_config;
@@ -149,7 +154,7 @@ TEST(Transformer, transform) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -180,7 +185,7 @@ TEST(Transformer, transformSimple) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -211,7 +216,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -237,7 +242,7 @@ TEST(Transformer, transformPassthrough) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -267,7 +272,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -291,7 +296,7 @@ TEST(Transformer, transformBodyNotSet) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -318,7 +323,7 @@ TEST(InjaTransformer, transformWithHyphens) {
   transformation.mutable_merge_extractors_to_body();
 
   InjaTransformer transformer(transformation);
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
 
   std::string res = body.toString();
 
@@ -339,7 +344,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   InjaTransformer transformer(transformation);
 
   EXPECT_TRUE(headers.has(content_type));
-  transformer.transform(headers, body);
+  transformer.transform(headers, body, stream_callbacks);
   EXPECT_FALSE(headers.has(content_type));
 }
 
