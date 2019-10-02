@@ -11,7 +11,8 @@ namespace Transformation {
 
 class BodyHeaderTransformer : public Transformer {
 public:
-  void transform(Http::HeaderMap &map, Buffer::Instance &body) const override;
+  void transform(Http::HeaderMap &map, Buffer::Instance &body,
+    Http::StreamFilterCallbacks&) const override;
   bool passthrough_body() const override { return false; };
 };
 

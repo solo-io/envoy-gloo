@@ -4,6 +4,7 @@
 
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
+#include "envoy/http/filter.h"
 #include "envoy/router/router.h"
 
 #include "envoy/stats/scope.h"
@@ -41,7 +42,8 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::HeaderMap &map,
-                         Buffer::Instance &body) const PURE;
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &callbacks) const PURE;
 };
 
 typedef std::shared_ptr<Transformer> TransformerSharedPtr;

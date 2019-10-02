@@ -214,7 +214,7 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    transformation->transform(header_map, body);
+    transformation->transform(header_map, body, callbacks);
 
     if (body.length() > 0) {
       (this->*addData)(body);
