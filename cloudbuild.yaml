@@ -22,6 +22,7 @@ steps:
   args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && make docker-release']
   env: 
   - 'TAGGED_VERSION=$TAG_NAME'
+  - 'COMMIT_SHA=$COMMIT_SHA'
   secretEnv: ['QUAY_IO_PASSWORD']
 
 - name: gcr.io/cloud-builders/gsutil
