@@ -7,6 +7,6 @@ endif
 
 .PHONY: docker-release
 docker-release:
-ifeq ($(RELEASE),"true")
+# ifeq ($(RELEASE),"true")
 	cd ci && docker build -t quay.io/solo-io/envoy-gloo:$(VERSION) . && docker push quay.io/solo-io/envoy-gloo:$(VERSION)
-endif
+# endif
