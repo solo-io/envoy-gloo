@@ -1,4 +1,4 @@
-VERSION := $(shell readelf -n bazel-bin/envoy.stripped|grep "Build ID:" |cut -f2 -d:|tr -d ' ')
+VERSION := $(COMMIT_SHA)
 RELEASE := "false"
 ifneq ($(TAGGED_VERSION),)
         VERSION := $(shell echo $(TAGGED_VERSION) | cut -c 2-)
