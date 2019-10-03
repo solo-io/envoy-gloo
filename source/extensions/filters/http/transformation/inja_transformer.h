@@ -19,11 +19,13 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+using GetBodyFunc = std::function<const std::string &()>;
+
 class TransformerInstance {
 public:
   TransformerInstance(
-      const Http::HeaderMap &header_map,
-      const std::unordered_map<std::string, std::string> &extractions,
+      const Http::HeaderMap &header_map, GetBodyFunc body,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context);
   // header_value(name)
   // extracted_value(name, index)
@@ -36,17 +38,22 @@ public:
 private:
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
-  const std::unordered_map<std::string, std::string> &extractions_;
+  GetBodyFunc body_;
+  const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
 };
 
 class Extractor {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
-  std::string extract(const Http::HeaderMap &header_map) const;
+  absl::string_view extract(const Http::HeaderMap &header_map,
+                            GetBodyFunc body) const;
 
 private:
+  absl::string_view extractValue(absl::string_view value) const;
+
   const Http::LowerCaseString headername_;
+  const bool body_;
   const unsigned int group_;
   const std::regex extract_regex_;
 };
@@ -57,8 +64,8 @@ public:
                       &transformation);
   ~InjaTransformer();
 
-  void transform(Http::HeaderMap &map, Buffer::Instance &body, 
-    Http::StreamFilterCallbacks&) const override;
+  void transform(Http::HeaderMap &map, Buffer::Instance &body,
+                 Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return passthrough_body_; };
 
 private:
@@ -76,6 +83,9 @@ private:
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
+
+  envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
+      parse_body_behavior_;
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};

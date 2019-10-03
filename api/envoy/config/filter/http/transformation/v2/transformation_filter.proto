@@ -7,6 +7,8 @@ option java_outer_classname = "TransformationFilterProto";
 option java_multiple_files = true;
 option go_package = "transformation";
 
+import "google/protobuf/empty.proto";
+
 message RouteTransformations {
   Transformation request_transformation = 1;
   // clear the route cache if the request transformation was applied
@@ -25,7 +27,10 @@ message Transformation {
 }
 
 message Extraction {
-  string header = 1;
+  oneof source {
+    string header = 1;
+    google.protobuf.Empty body = 4;
+  }
   // what information to extract. if extraction fails the result is
   // an empty value.
   string regex = 2;
@@ -44,6 +49,15 @@ message TransformationTemplate {
     Passthrough passthrough = 5;
     MergeExtractorsToBody merge_extractors_to_body = 6;
   }
+
+  enum RequestBodyParse {
+    ParseAsJson = 0;
+    ParseAsJsonIgnoreError = 1;
+    DontParse = 2;
+  }
+  RequestBodyParse parse_body_behavior = 7;
+
+  string response_on_error = 8;
 }
 
 /*

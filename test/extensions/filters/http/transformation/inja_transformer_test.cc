@@ -1,9 +1,9 @@
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include "test/mocks/common.h"
+#include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
-#include "test/mocks/http/mocks.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -26,6 +26,10 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+namespace {
+std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
+}
+
 inja::Template parse(std::string s) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
@@ -39,7 +43,7 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -54,7 +58,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
 
-  TransformerInstance t(headers, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -69,7 +73,7 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
-  TransformerInstance t(headers, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -78,11 +82,11 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
 
 TEST(TransformerInstance, ReplaceFromExtracted) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
-  std::string field = "res";
+  std::unordered_map<std::string, absl::string_view> extractions;
+  absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, extractions, originalbody);
+  TransformerInstance t(headers, empty_body, extractions, originalbody);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -91,10 +95,10 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
 
 TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
-  extractions["foo"] = "bar";
+  std::unordered_map<std::string, absl::string_view> extractions;
+  extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, extractions, originalbody);
+  TransformerInstance t(headers, empty_body, extractions, originalbody);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -109,7 +113,7 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
-  auto res = Extractor(extractor).extract(headers);
+  std::string res(Extractor(extractor).extract(headers, empty_body));
 
   EXPECT_EQ("123", res);
 }
