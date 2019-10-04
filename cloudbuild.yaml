@@ -44,7 +44,7 @@ secrets:
 
 options:
   machineType: 'N1_HIGHCPU_32'
-timeout: 3200s
+timeout: 2400s
 
 artifacts:
   objects:
