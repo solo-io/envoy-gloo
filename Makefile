@@ -1,4 +1,4 @@
-VERSION := $(shell readelf -n bazel-bin/envoy.stripped|grep "Build ID:" |cut -f2 -d:|tr -d ' ')
+VERSION := $(COMMIT_SHA)
 RELEASE := "false"
 ifneq ($(TAGGED_VERSION),)
         VERSION := $(shell echo $(TAGGED_VERSION) | cut -c 2-)
@@ -7,6 +7,5 @@ endif
 
 .PHONY: docker-release
 docker-release:
-ifeq ($(RELEASE),"true")
-	cd ci && docker build -t soloio/envoy-gloo:$(VERSION) . && docker push soloio/envoy-gloo:$(VERSION)
-endif
+	cd ci && docker build -t quay.io/solo-io/envoy-gloo:$(VERSION) . && docker push quay.io/solo-io/envoy-gloo:$(VERSION)
+
