@@ -2,6 +2,7 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
+    "envoy_cc_binary",
     "envoy_package",
 )
 load(
@@ -14,6 +15,22 @@ envoy_package()
 envoy_gloo_cc_test(
     name = "inja_transformer_test",
     srcs = ["inja_transformer_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:inja_transformer_lib",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks",
+    ],
+)
+
+envoy_cc_binary(
+    name = "inja_transformer_speed_test",
+    testonly = 1,
+    srcs = ["inja_transformer_speed_test.cc"],
+    external_deps = [
+        "benchmark",
+    ],
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:inja_transformer_lib",
