@@ -10,8 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
 envoy_cc_library(
     name = "aws_authenticator_lib",
     srcs = ["aws_authenticator.cc"],
@@ -42,7 +40,7 @@ envoy_cc_library(
     deps = [
         ":aws_authenticator_lib",
         ":config_lib",
-        "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/http:utility_lib",
@@ -60,7 +58,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
-        "//api/envoy/config/filter/http/aws_lambda/v2:aws_lambda_proto_cc",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/http:utility_lib",
@@ -78,6 +76,7 @@ envoy_cc_library(
     deps = [
         ":aws_lambda_filter_lib",
         "@envoy//include/envoy/registry",
+        "@envoy//include/envoy/server:filter_config_interface",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )

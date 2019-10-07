@@ -7,9 +7,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
-api_proto_library(
-    name = "transformation_filter_proto",
-    srcs = ["transformation_filter.proto"],
-)
+api_proto_package()

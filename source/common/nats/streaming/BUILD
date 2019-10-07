@@ -73,7 +73,7 @@ envoy_cc_library(
     external_deps = ["abseil_optional"],
     repository = "@envoy",
     deps = [
-        "//:protocol_proto_cc",
+        "//api/envoy/type/streaming:pkg_cc_proto",
     ],
 )
 
