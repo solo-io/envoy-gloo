@@ -10,12 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
-api_proto_library(
-    name = "protocol_proto",
-    srcs = ["protocol.proto"],
-)
 
 envoy_cc_library(
     name = "envoy_gloo_all_filters_lib",

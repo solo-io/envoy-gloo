@@ -10,8 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
 envoy_cc_library(
     name = "nats_streaming_filter_config",
     hdrs = [
@@ -19,7 +17,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        "//api/envoy/config/filter/http/nats/streaming/v2:nats_streaming_cc",
+        "//api/envoy/config/filter/http/nats/streaming/v2:pkg_cc_proto",
     ],
 )
 
@@ -35,7 +33,7 @@ envoy_cc_library(
     deps = [
         ":nats_streaming_filter_config",
         ":nats_streaming_route_specific_filter_config",
-        "//api/envoy/config/filter/http/nats/streaming/v2:payload_proto_cc",
+        "//api/envoy/config/filter/http/nats/streaming/v2:pkg_cc_proto",
         "//include/envoy/nats/streaming:client_interface",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
@@ -64,7 +62,7 @@ envoy_cc_library(
     hdrs = ["nats_streaming_route_specific_filter_config.h"],
     repository = "@envoy",
     deps = [
-        "//api/envoy/config/filter/http/nats/streaming/v2:nats_streaming_cc",
+        "//api/envoy/config/filter/http/nats/streaming/v2:pkg_cc_proto",
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/router:router_interface",
     ],

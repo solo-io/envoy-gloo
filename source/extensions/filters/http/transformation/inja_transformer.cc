@@ -4,6 +4,7 @@
 
 #include "common/common/macros.h"
 #include "common/common/utility.h"
+#include "common/common/regex.h"
 
 // For convenience
 using namespace inja;
@@ -37,7 +38,7 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), group_(extractor.subgroup()),
-      extract_regex_(RegexUtil::parseRegex(extractor.regex())) {}
+      extract_regex_(Regex::Utility::parseStdRegex(extractor.regex())) {}
 std::string Extractor::extract(const Http::HeaderMap &header_map) const {
   // TODO: should we lowercase them in the config?
   const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);

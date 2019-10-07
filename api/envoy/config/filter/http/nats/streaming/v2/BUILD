@@ -7,14 +7,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
-api_proto_library(
-    name = "nats_streaming",
-    srcs = ["nats_streaming.proto"],
-)
-
-api_proto_library(
-    name = "payload_proto",
-    srcs = ["payload.proto"],
-)
+api_proto_package()

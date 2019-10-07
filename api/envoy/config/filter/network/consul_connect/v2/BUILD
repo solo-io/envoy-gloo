@@ -9,14 +9,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package" "api_cc_py_proto_library")
 
-api_proto_library(
-    name = "consul_connect_proto",
-    srcs = ["consul_connect.proto"],
-)
-
-api_proto_library(
-    name = "authorize_proto",
-    srcs = ["authorize.proto"],
-)
+api_proto_package()
