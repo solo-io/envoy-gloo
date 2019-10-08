@@ -219,6 +219,7 @@ void TransformationFilter::transformSomething(
   // if there is no route level config, and there are header matchers, check them
   if (!has_route_level_config_ && !filter_config_->matchHeaders(*request_headers_)) {
     ENVOY_STREAM_LOG(debug, "found no header match, skipping transformation", callbacks);
+    filter_config_->stats().transformations_skipped_.inc();
     return;
   }
 

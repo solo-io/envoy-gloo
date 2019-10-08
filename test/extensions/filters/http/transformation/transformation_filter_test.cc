@@ -106,10 +106,11 @@ public:
     *header_matchers.Add() = header_matcher;
   }
 
-  void transformsOnHeaders(TransformationFilterTest::ConfigType configType, unsigned int val) {
+  void transformsOnHeaders(TransformationFilterTest::ConfigType configType, bool skip_transform, unsigned int val) {
     initFilterWithBodyTemplate(configType, "solo");
 
-    EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
+    uint mock_calls = skip_transform ? 0 : 1;
+    EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(mock_calls);
     EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(0);
     auto res = filter_->decodeHeaders(headers_, true);
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
@@ -133,7 +134,7 @@ public:
       ->mutable_transformation_template()
       ->mutable_body()
       ->set_text("solo");
-
+    
     initFilter();
 
     filter_->decodeHeaders(headers_, true);
@@ -212,15 +213,28 @@ TEST_F(TransformationFilterTest, EmptyConfig) {
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeaders) {
-  transformsOnHeaders(TransformationFilterTest::ConfigType::Both, 1U);
-  transformsOnHeaders(TransformationFilterTest::ConfigType::Route, 2U);
-  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 3U);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Both, false, 1U);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Route, false, 2U);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, false, 3U);
 }
 
 TEST_F(TransformationFilterTest, SkipTransformWithHeaderMatcher) {
   addHeaderMatchersToListenerFilter(invalid_header_matcher_);
-  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 0U);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, true, 1U);
   EXPECT_EQ(1U, config_->stats().transformations_skipped_.value());
+}
+
+TEST_F(TransformationFilterTest, EnableTransformWithHeaderMatcher) {
+  addHeaderMatchersToListenerFilter(get_method_matcher_);
+  addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, false, 1U);
+  EXPECT_EQ(0U, config_->stats().transformations_skipped_.value());
+}
+
+TEST_F(TransformationFilterTest, IgnoreHeaderMatcherWithRouteConfig) {
+  addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  transformsOnHeadersAndClearCache(TransformationFilterTest::ConfigType::Both, 1U);
+  EXPECT_EQ(0U, config_->stats().transformations_skipped_.value());
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeadersAndClearCache) {
