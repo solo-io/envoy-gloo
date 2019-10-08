@@ -6,9 +6,12 @@
 #include "envoy/http/header_map.h"
 #include "envoy/http/filter.h"
 #include "envoy/router/router.h"
+#include "common/http/header_utility.h"
 
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
+
+#include "common/protobuf/protobuf.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -24,6 +27,7 @@ namespace Transformation {
   COUNTER(request_header_transformations)                                                     \
   COUNTER(response_header_transformations)                                                    \
   COUNTER(response_body_transformations)                                                      \
+  COUNTER(transformations_skipped)                                                            \
   COUNTER(request_error)                                                                      \
   COUNTER(response_error)                                                                    
 
@@ -61,7 +65,9 @@ public:
 
 class FilterConfig : public TransormConfig {
 public:
-  FilterConfig(const std::string& prefix, Stats::Scope& scope) : stats_(generateStats(prefix, scope)) {};
+  FilterConfig(const Protobuf::RepeatedPtrField<envoy::api::v2::route::HeaderMatcher>& header_matchers, 
+    const std::string& prefix, Stats::Scope& scope) : stats_(generateStats(prefix, scope)), 
+    header_matchers_(Envoy::Http::HeaderUtility::buildHeaderDataVector(header_matchers)) {};
 
   static TransformationFilterStats generateStats(const std::string& prefix, Stats::Scope& scope) {
     const std::string final_prefix = prefix + "transformation.";
@@ -70,10 +76,14 @@ public:
 
   TransformationFilterStats& stats() { return stats_; }
 
+  const std::vector<Envoy::Http::HeaderUtility::HeaderDataPtr>& header_matchers() { return header_matchers_; }
+
   virtual std::string name() const PURE;   
 
 private: 
   TransformationFilterStats stats_;
+
+  const std::vector<Envoy::Http::HeaderUtility::HeaderDataPtr> header_matchers_;
 };
 
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};

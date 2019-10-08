@@ -102,6 +102,7 @@ envoy_cc_library(
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//include/envoy/router:router_interface",
+        "@envoy//source/common/http:header_utility_lib",
     ],
 )
 

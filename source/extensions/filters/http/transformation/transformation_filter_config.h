@@ -20,20 +20,25 @@ public:
       const envoy::api::v2::filter::http::Transformation &transformation);
 };
 
-using TransformationConfigProto = envoy::api::v2::filter::http::RouteTransformations;
+using TransformationConfigProto = envoy::api::v2::filter::http::FilterTransformations;
 using RouteTransformationConfigProto = envoy::api::v2::filter::http::RouteTransformations;
 
 class TransformationFilterConfig : public FilterConfig {
 public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config, const std::string& prefix, Stats::Scope& scope)
-      : FilterConfig(prefix, scope), clear_route_cache_(proto_config.clear_route_cache()) {
-    if (proto_config.has_request_transformation()) {
-      request_transformation_ =
-          Transformation::getTransformer(proto_config.request_transformation());
-    }
-    if (proto_config.has_response_transformation()) {
-      response_transformation_ = Transformation::getTransformer(
-          proto_config.response_transformation());
+      : FilterConfig(proto_config.header_matchers(), prefix, scope) {
+    
+    if (proto_config.has_route_transformations()) {
+      const auto& route_transformation = proto_config.route_transformations();
+      clear_route_cache_ = route_transformation.clear_route_cache();
+      if (route_transformation.has_request_transformation()) {
+        request_transformation_ =
+            Transformation::getTransformer(route_transformation.request_transformation());
+      }
+      if (route_transformation.has_response_transformation()) {
+        response_transformation_ = Transformation::getTransformer(
+            route_transformation.response_transformation());
+      }
     }
   }
 

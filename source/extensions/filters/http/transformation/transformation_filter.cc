@@ -4,6 +4,7 @@
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/http/utility.h"
+#include "common/http/header_utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformer.h"
@@ -160,6 +161,10 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
       RouteTransformationFilterConfig>(filter_config_->name(), route_);
   
+  if (route_config != nullptr) {
+    has_route_level_config_ = true;
+  }
+  
   switch (direction) {
     case TransformationFilter::Direction::Request: {
       should_clear_cache_ = filter_config_->shouldClearCache();
@@ -212,6 +217,13 @@ void TransformationFilter::transformSomething(
     TransformerConstSharedPtr &transformation, Http::HeaderMap &header_map,
     Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
+
+  if (!has_route_level_config_) {
+    if (Envoy::Http::HeaderUtility::matchHeaders(*request_headers_, filter_config_->header_matchers())) {
+      ENVOY_STREAM_LOG(debug, "found header match, skipping transformation", callbacks);
+      return;
+    }
+  }
 
   try {
     transformation->transform(header_map, body, callbacks);

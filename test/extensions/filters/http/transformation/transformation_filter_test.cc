@@ -62,7 +62,7 @@ public:
 
   void initFilterWithBodyTemplate(TransformationFilterTest::ConfigType configType, std::string body) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*listener_config_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_body()->set_text(
           body);
     }  
@@ -76,7 +76,7 @@ public:
 
   void initFilterWithBodyPassthrough(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*listener_config_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_passthrough();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {
@@ -88,7 +88,7 @@ public:
 
   void initFilterWithHeadersBody(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*listener_config_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_header_body_transform();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {

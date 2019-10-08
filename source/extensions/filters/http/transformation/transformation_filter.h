@@ -113,7 +113,8 @@ private:
   Http::Code error_code_;
   std::string error_messgae_;
   bool should_clear_cache_{};
-  
+
+  bool has_route_level_config_ = false;
   FilterConfigSharedPtr filter_config_;
 };
 
