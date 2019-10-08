@@ -24,6 +24,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+
 class TransformationFilterTest : public testing::Test {
 public:
   enum class ConfigType {
@@ -97,6 +98,13 @@ public:
     }
     initFilter(); // Re-load config.
   }
+  
+  void addHeaderMatchersToListenerFilter(const std::string header_string) {
+    auto &header_matchers = (*listener_config_.mutable_header_matchers());
+    envoy::api::v2::route::HeaderMatcher header_matcher;
+    TestUtility::loadFromYaml(header_string, header_matcher);
+    *header_matchers.Add() = header_matcher;
+  }
 
   void transformsOnHeaders(TransformationFilterTest::ConfigType configType, unsigned int val) {
     initFilterWithBodyTemplate(configType, "solo");
@@ -136,7 +144,7 @@ public:
   }
 
   void happyPathWithBody(TransformationFilterTest::ConfigType configType, unsigned int val) {
-      initFilterWithBodyTemplate(configType, "{{a}}");
+    initFilterWithBodyTemplate(configType, "{{a}}");
 
     auto resheaders = filter_->decodeHeaders(headers_, false);
     ASSERT_EQ(Http::FilterHeadersStatus::StopIteration, resheaders);
@@ -180,6 +188,21 @@ public:
   FilterConfigSharedPtr config_;
   RouteFilterConfigConstSharedPtr route_config_wrapper_;
 
+  const std::string get_method_matcher_ = R"EOF(
+    name: :method
+    exact_match: GET
+  )EOF";
+
+  const std::string path_header_matcher_ = R"EOF(
+    name: :path
+    regex_match: /path
+  )EOF";
+
+  const std::string invalid_header_matcher_ = R"EOF(
+    name: :path
+    exact_match: /hello
+  )EOF";
+
 };
 
 TEST_F(TransformationFilterTest, EmptyConfig) {
@@ -192,6 +215,12 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   transformsOnHeaders(TransformationFilterTest::ConfigType::Both, 1U);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Route, 2U);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 3U);
+}
+
+TEST_F(TransformationFilterTest, SkipTransformWithHeaderMatcher) {
+  addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 0U);
+  EXPECT_EQ(1U, config_->stats().transformations_skipped_.value());
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeadersAndClearCache) {
