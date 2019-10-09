@@ -1,0 +1,4 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/33
+  description: Address envoy CVE-2019-15225 and CVE-2019-15226
