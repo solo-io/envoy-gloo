@@ -160,12 +160,16 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
       RouteTransformationFilterConfig>(filter_config_->name(), route_);
+
+  // if there is a route level config present, automatically disregard header_matching rules
+  if (route_config != nullptr) {
+    has_route_level_config_ = true;
+  }
   
   switch (direction) {
     case TransformationFilter::Direction::Request: {
       should_clear_cache_ = filter_config_->shouldClearCache();
       if (route_config != nullptr && route_config->getRequestTranformation() != nullptr) {
-        has_route_level_config_ = true;
         should_clear_cache_ = route_config->shouldClearCache();
         return route_config->getRequestTranformation();
       } else {
@@ -174,7 +178,6 @@ TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
     }
     case TransformationFilter::Direction::Response: {
       if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
-        has_route_level_config_ = true;
         return route_config->getResponseTranformation();
       } else {
         return filter_config_->getResponseTranformation();

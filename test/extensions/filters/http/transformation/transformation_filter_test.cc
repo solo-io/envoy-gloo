@@ -37,12 +37,22 @@ public:
 
     route_config_wrapper_.reset(
         new RouteTransformationFilterConfig(route_config_));
-    ON_CALL(*filter_callbacks_.route_,
+    
+    if (!null_route_config_) {
+      ON_CALL(*filter_callbacks_.route_,
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
-    ON_CALL(*encoder_filter_callbacks_.route_,
+      ON_CALL(*encoder_filter_callbacks_.route_,
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
+    } else {
+      ON_CALL(*filter_callbacks_.route_,
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
+        .WillByDefault(Return(nullptr));
+      ON_CALL(*encoder_filter_callbacks_.route_,
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
+        .WillByDefault(Return(nullptr));
+    }
 
     ON_CALL(encoder_filter_callbacks_, route())
         .WillByDefault(Invoke([this]() -> Router::RouteConstSharedPtr {
@@ -189,6 +199,8 @@ public:
   FilterConfigSharedPtr config_;
   RouteFilterConfigConstSharedPtr route_config_wrapper_;
 
+  bool null_route_config_ = false;
+
   const std::string get_method_matcher_ = R"EOF(
     name: :method
     exact_match: GET
@@ -218,7 +230,8 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, false, 3U);
 }
 
-TEST_F(TransformationFilterTest, SkipTransformWithHeaderMatcher) {
+TEST_F(TransformationFilterTest, SkipTransformWithInvalidHeaderMatcher) {
+  null_route_config_ = true;
   addHeaderMatchersToListenerFilter(invalid_header_matcher_);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, true, 1U);
   EXPECT_EQ(1U, config_->stats().transformations_skipped_.value());
@@ -232,7 +245,7 @@ TEST_F(TransformationFilterTest, EnableTransformWithHeaderMatcher) {
 }
 
 TEST_F(TransformationFilterTest, IgnoreHeaderMatcherWithRouteConfig) {
-  addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  addHeaderMatchersToListenerFilter(get_method_matcher_);
   transformsOnHeadersAndClearCache(TransformationFilterTest::ConfigType::Both, 1U);
   EXPECT_EQ(0U, config_->stats().transformations_skipped_.value());
 }

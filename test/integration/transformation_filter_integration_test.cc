@@ -7,6 +7,9 @@
 #include "fmt/printf.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
+#include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
+
+using ::envoy::config::filter::network::http_connection_manager::v2::HttpFilter;
 
 namespace Envoy {
 
@@ -102,18 +105,16 @@ const std::string PASSTHROUGH_TRANSFORMATION =
       passthrough: {}
 )EOF";
 
-const std::string DEFAULT_FILTER = 
+const std::string DEFAULT_FILTER_TRANSFORMATION = 
     R"EOF(
-name: %s
-config: 
-  %s
+      {}
 )EOF";
 
-const std::string DEFAULT_FILTER_CONFIG = 
+const std::string DEFAULT_HEADER_MATCHER = 
     R"EOF(
-  {}
+    name: :method
+    exact_match: GET
 )EOF";
-
 
 class TransformationFilterIntegrationTest
     : public HttpIntegrationTest,
@@ -127,7 +128,8 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-    const std::string default_filter = fmt::sprintf(DEFAULT_FILTER, Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation, filter_config_string_);
+
+    const std::string default_filter = loadListenerConfig(filter_transformation_string_, header_matcher_string_);
     // set the default transformation
     config_helper_.addFilter(default_filter);
 
@@ -164,7 +166,30 @@ public:
   }
 
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
-  std::string filter_config_string_{DEFAULT_FILTER_CONFIG};
+  std::string filter_transformation_string_{DEFAULT_FILTER_TRANSFORMATION};
+  std::string header_matcher_string_{DEFAULT_HEADER_MATCHER};
+
+private:
+
+  std::string loadListenerConfig(const std::string& transformation_config_str,
+      const std::string& header_matcher_str) {
+    envoy::api::v2::filter::http::RouteTransformations proto_config;
+    TestUtility::loadFromYaml(transformation_config_str, proto_config);
+
+    envoy::api::v2::route::HeaderMatcher header_matcher;
+    TestUtility::loadFromYaml(header_matcher_str, header_matcher);
+
+    envoy::api::v2::filter::http::FilterTransformations filter_config;
+    *filter_config.mutable_route_transformations() = proto_config;
+    *filter_config.mutable_header_matchers()->Add() = header_matcher;
+
+    HttpFilter filter;
+    filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
+    TestUtility::jsonConvert(filter_config, *filter.mutable_config());
+
+    return MessageUtil::getJsonStringFromMessage(filter);
+  }
+
 };
 
 INSTANTIATE_TEST_SUITE_P(
@@ -323,7 +348,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
 }
 
 TEST_P(TransformationFilterIntegrationTest, RequestListenerConfigResponseRouteConfig) {
-  filter_config_string_ = BODY_TRANSFORMATION;
+  filter_transformation_string_ = BODY_TRANSFORMATION;
   transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   initialize();
   Http::TestHeaderMapImpl request_headers{
@@ -344,7 +369,7 @@ TEST_P(TransformationFilterIntegrationTest, RequestListenerConfigResponseRouteCo
 }
 
 TEST_P(TransformationFilterIntegrationTest, RequestRouteConfigResponseListenerConfig) {
-  filter_config_string_ = BODY_RESPONSE_TRANSFORMATION;
+  filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   transformation_string_ = BODY_TRANSFORMATION;
   initialize();
   Http::TestHeaderMapImpl request_headers{
