@@ -133,17 +133,20 @@ public:
     // set the default transformation
     config_helper_.addFilter(default_filter);
 
-    config_helper_.addConfigModifier(
-        [this](envoy::config::filter::network::http_connection_manager::v2::
-                   HttpConnectionManager &hcm) {
-          auto &perFilterConfig =
-              (*hcm.mutable_route_config()
-                    ->mutable_virtual_hosts(0)
-                    ->mutable_routes(0)
-                    ->mutable_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
+    if (transformation_string_ != "") {
+      config_helper_.addConfigModifier(
+          [this](envoy::config::filter::network::http_connection_manager::v2::
+                      HttpConnectionManager &hcm) {
+            auto &perFilterConfig =
+                (*hcm.mutable_route_config()
+                      ->mutable_virtual_hosts(0)
+                      ->mutable_routes(0)
+                      ->mutable_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
 
-          TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
-        });
+            TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
+          });
+    }
+
 
     HttpIntegrationTest::initialize();
 
