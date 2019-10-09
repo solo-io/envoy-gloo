@@ -184,7 +184,8 @@ private:
 
     envoy::api::v2::filter::http::FilterTransformations filter_config;
     *filter_config.mutable_route_transformations() = proto_config;
-    *filter_config.mutable_header_matchers()->Add() = header_matcher;
+    auto &header_matchers = (*filter_config.mutable_header_matchers());
+    *header_matchers.Add() = header_matcher;
 
     HttpFilter filter;
     filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
@@ -287,6 +288,25 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
 
   std::string rbody = response->body();
   EXPECT_EQ("soloio", rbody);
+}
+
+TEST_P(TransformationFilterIntegrationTest, SkipResponseTransformation) {
+  transformation_string_ = "";
+  filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
+  initialize();
+  Http::TestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+  // TODO add another test that the upstream body was not changed
+  processRequest(response, "{\"abc\":\"soloio\"}");
+
+  std::string rbody = response->body();
+  EXPECT_EQ("{\"abc\":\"soloio\"}", rbody);
 }
 
 TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {

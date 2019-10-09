@@ -29,6 +29,9 @@ void TransformationFilter::onDestroy() { resetInternalState(); }
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
+
+  request_headers_ = &header_map;
+
   checkRequestActive();
 
   if (is_error()) {
@@ -38,8 +41,6 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
   if (!requestActive()) {
     return Http::FilterHeadersStatus::Continue;
   }
-
-  request_headers_ = &header_map;
 
   if (end_stream || request_transformation_->passthrough_body()) {
     filter_config_->stats().request_header_transformations_.inc();
@@ -89,6 +90,9 @@ TransformationFilter::decodeTrailers(Http::HeaderMap &) {
 Http::FilterHeadersStatus
 TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
+
+  response_headers_ = &header_map;
+
   checkResponseActive();
 
   if (!responseActive()) {
@@ -96,9 +100,6 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
     // responseActive() == false
     return Http::FilterHeadersStatus::Continue;
   }
-
-  response_headers_ = &header_map;
-
   if (end_stream || response_transformation_->passthrough_body()) {
     filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
@@ -118,12 +119,12 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
   if ((encoder_buffer_limit_ != 0) &&
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
-    filter_config_->stats().response_body_transformations_.inc();
     responseError();
     return Http::FilterDataStatus::Continue;
   }
 
   if (end_stream) {
+    filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
     return Http::FilterDataStatus::Continue;
   }
@@ -223,6 +224,8 @@ void TransformationFilter::transformSomething(
   if (!has_route_level_config_ && !filter_config_->matchHeaders(*request_headers_)) {
     ENVOY_STREAM_LOG(debug, "found no header match, skipping transformation", callbacks);
     filter_config_->stats().transformations_skipped_.inc();
+    // necessary as the body has been moved out of the normal buffer and into the transformation one.
+    (this->*addData)(body);
     return;
   }
 
