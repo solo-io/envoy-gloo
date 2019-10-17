@@ -1,0 +1,4 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/34
+  description: Add envoy header matching into transformation filter.
