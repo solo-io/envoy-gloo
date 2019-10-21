@@ -98,6 +98,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":matchers_lib",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//include/envoy/http:filter_interface",
@@ -119,3 +120,17 @@ envoy_cc_library(
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )
+
+envoy_cc_library(
+    name = "matchers_lib",
+    srcs = ["matcher.cc"],
+    hdrs = ["matcher.h"],
+    repository = "@envoy",
+    deps = [
+        # ":verifier_lib",
+        "@envoy//source/common/router:config_lib",
+        "@envoy//source/common/http:header_utility_lib",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
+    ],
+)
+

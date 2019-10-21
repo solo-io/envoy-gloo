@@ -32,7 +32,7 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
 
   request_headers_ = &header_map;
 
-  checkRequestActive();
+  setupTransformationPair();
 
   if (is_error()) {
     return Http::FilterHeadersStatus::StopIteration;
@@ -93,8 +93,6 @@ TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
 
   response_headers_ = &header_map;
 
-  checkResponseActive();
-
   if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
     // responseActive() == false
@@ -141,52 +139,25 @@ TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   return Http::FilterTrailersStatus::Continue;
 }
 
-void TransformationFilter::checkRequestActive() {
+void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
-  request_transformation_ =
-      getTransformFromRoute(TransformationFilter::Direction::Request);
-}
-
-void TransformationFilter::checkResponseActive() {
-  response_transformation_ =
-      getTransformFromRoute(TransformationFilter::Direction::Response);
-}
-
-TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
-    TransformationFilter::Direction direction) {
-
-  if (!route_) {
-    return nullptr;
-  }
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
-      RouteTransformationFilterConfig>(filter_config_->name(), route_);
+    RouteTransformationFilterConfig>(filter_config_->name(), route_);
 
   // if there is a route level config present, automatically disregard header_matching rules
   if (route_config != nullptr) {
     has_route_level_config_ = true;
-  }
-  
-  switch (direction) {
-    case TransformationFilter::Direction::Request: {
-      should_clear_cache_ = filter_config_->shouldClearCache();
-      if (route_config != nullptr && route_config->getRequestTranformation() != nullptr) {
-        should_clear_cache_ = route_config->shouldClearCache();
-        return route_config->getRequestTranformation();
-      } else {
-        return filter_config_->getRequestTranformation();
-      }
-    }
-    case TransformationFilter::Direction::Response: {
-      if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
-        return route_config->getResponseTranformation();
-      } else {
-        return filter_config_->getResponseTranformation();
-      }
-    }
+    should_clear_cache_ = route_config->shouldClearCache();
+    active_transformer_pair_ = route_config->findTransformers(*response_headers_);
+  } else {
+    active_transformer_pair_ = filter_config_->findTransformers(*response_headers_);
   }
 
-  return nullptr;
+  if (active_transformer_pair_ != nullptr) {
+    request_transformation_ = active_transformer_pair_->getRequestTranformation();
+    response_transformation_ = active_transformer_pair_->getResponseTranformation();
+  }
 }
 
 void TransformationFilter::transformRequest() {
@@ -219,15 +190,6 @@ void TransformationFilter::transformSomething(
     TransformerConstSharedPtr &transformation, Http::HeaderMap &header_map,
     Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
-
-  // if there is no route level config, and there are header matchers, check them
-  if (!has_route_level_config_ && !filter_config_->matchHeaders(*request_headers_)) {
-    ENVOY_STREAM_LOG(debug, "found no header match, skipping transformation", callbacks);
-    filter_config_->stats().transformations_skipped_.inc();
-    // necessary as the body has been moved out of the normal buffer and into the transformation one.
-    (this->*addData)(body);
-    return;
-  }
 
   try {
     transformation->transform(header_map, body, callbacks);

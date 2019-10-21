@@ -70,9 +70,7 @@ private:
     Request,
     Response,
   };
-
-  virtual void checkRequestActive();
-  virtual void checkResponseActive();
+  virtual void setupTransformationPair();
 
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
@@ -81,7 +79,7 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  TransformerConstSharedPtr getTransformFromRoute(Direction direction);
+  // TransformerConstSharedPtr getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -106,6 +104,8 @@ private:
   Http::HeaderMap *response_headers_{nullptr};
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
+
+  TransformerPairConstSharedPtr active_transformer_pair_;
 
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;

@@ -26,40 +26,46 @@ using RouteTransformationConfigProto = envoy::api::v2::filter::http::RouteTransf
 class TransformationFilterConfig : public FilterConfig {
 public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config, const std::string& prefix, Stats::Scope& scope)
-      : FilterConfig(proto_config.header_matchers(), prefix, scope) {
+      : FilterConfig(prefix, scope) {
     
-    if (proto_config.has_route_transformations()) {
-      const auto& route_transformation = proto_config.route_transformations();
-      clear_route_cache_ = route_transformation.clear_route_cache();
-      if (route_transformation.has_request_transformation()) {
-        request_transformation_ =
-            Transformation::getTransformer(route_transformation.request_transformation());
+    for (const auto& rule : proto_config.transformations()) {
+      TransformerConstSharedPtr request_transformation;
+      TransformerConstSharedPtr response_transformation;
+      if (rule.has_route_transformations()) {
+        const auto& route_transformation = rule.route_transformations();
+        clear_route_cache_ = route_transformation.clear_route_cache();
+        if (route_transformation.has_request_transformation()) {
+          request_transformation =
+              Transformation::getTransformer(route_transformation.request_transformation());
+        }
+        if (route_transformation.has_response_transformation()) {
+          response_transformation = Transformation::getTransformer(
+              route_transformation.response_transformation());
+        }
       }
-      if (route_transformation.has_response_transformation()) {
-        response_transformation_ = Transformation::getTransformer(
-            route_transformation.response_transformation());
-      }
+      TransformerPairConstSharedPtr transformer_pair = std::make_unique<TransformerPair>(request_transformation, response_transformation);
+      transformer_pairs_.emplace_back(
+          Matcher::create(rule),
+          transformer_pair
+      );
     }
   }
+
+  const std::vector<MatcherTransformerPair>& transformerPairs() const {
+    return transformer_pairs_;
+  };
 
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
   }
 
-  TransformerConstSharedPtr getRequestTranformation() const override {
-    return request_transformation_;
-  }
-
   bool shouldClearCache() const override { return clear_route_cache_; }
-
-  TransformerConstSharedPtr getResponseTranformation() const override {
-    return response_transformation_;
-  }
   
 private:
-  TransformerConstSharedPtr request_transformation_;
-  TransformerConstSharedPtr response_transformation_;
   bool clear_route_cache_{};
+
+  // The list of transformer matchers.
+  std::vector<MatcherTransformerPair> transformer_pairs_{};
 };
 
 
@@ -67,29 +73,29 @@ class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
   RouteTransformationFilterConfig(const RouteTransformationConfigProto &proto_config)
       : clear_route_cache_(proto_config.clear_route_cache()) {
+
+    TransformerConstSharedPtr request_transformation;
+    TransformerConstSharedPtr response_transformation;
+
     if (proto_config.has_request_transformation()) {
-      request_transformation_ =
+      request_transformation =
           Transformation::getTransformer(proto_config.request_transformation());
     }
     if (proto_config.has_response_transformation()) {
-      response_transformation_ = Transformation::getTransformer(
+      response_transformation = Transformation::getTransformer(
           proto_config.response_transformation());
     }
+    transformer_pair_  = std::make_shared<TransformerPair>(request_transformation, response_transformation);
   }
 
-  TransformerConstSharedPtr getRequestTranformation() const override {
-    return request_transformation_;
+  TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap&) const override {
+    return transformer_pair_;
   }
 
   bool shouldClearCache() const override { return clear_route_cache_; }
 
-  TransformerConstSharedPtr getResponseTranformation() const override {
-    return response_transformation_;
-  }
-
 private:
-  TransformerConstSharedPtr request_transformation_;
-  TransformerConstSharedPtr response_transformation_;
+  TransformerPairConstSharedPtr transformer_pair_;
   bool clear_route_cache_{};
 };
 
