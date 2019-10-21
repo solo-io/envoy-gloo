@@ -149,9 +149,9 @@ void TransformationFilter::setupTransformationPair() {
   if (route_config != nullptr) {
     has_route_level_config_ = true;
     should_clear_cache_ = route_config->shouldClearCache();
-    active_transformer_pair_ = route_config->findTransformers(*response_headers_);
+    active_transformer_pair_ = route_config->findTransformers(*request_headers_);
   } else {
-    active_transformer_pair_ = filter_config_->findTransformers(*response_headers_);
+    active_transformer_pair_ = filter_config_->findTransformers(*request_headers_);
   }
 
   if (active_transformer_pair_ != nullptr) {

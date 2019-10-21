@@ -35,6 +35,8 @@ public:
 
   void initFilter() {
 
+    *listener_config_.mutable_transformations()->Add() = transformation_rule_;
+
     route_config_wrapper_.reset(
         new RouteTransformationFilterConfig(route_config_));
     
@@ -73,8 +75,7 @@ public:
 
   void initFilterWithBodyTemplate(TransformationFilterTest::ConfigType configType, std::string body) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto matcher = listener_config_.mutable_transformations()->Add();
-      auto &transformation = (*matcher->mutable_route_transformations()->mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_body()->set_text(
           body);
     }  
@@ -88,8 +89,7 @@ public:
 
   void initFilterWithBodyPassthrough(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto matcher = listener_config_.mutable_transformations()->Add();
-      auto &transformation = (*matcher->mutable_route_transformations()->mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_passthrough();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {
@@ -101,8 +101,7 @@ public:
 
   void initFilterWithHeadersBody(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto matcher = listener_config_.mutable_transformations()->Add();
-      auto &transformation = (*matcher->mutable_route_transformations()->mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_header_body_transform();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {
@@ -112,11 +111,10 @@ public:
     initFilter(); // Re-load config.
   }
   
-  void addHeaderMatchersToListenerFilter(const std::string) {
-    // auto &header_matchers = (*listener_config_.mutable_header_matchers());
-    // envoy::api::v2::route::HeaderMatcher header_matcher;
-    // TestUtility::loadFromYaml(header_string, header_matcher);
-    // *header_matchers.Add() = header_matcher;
+  void addMatchersToListenerFilter(const std::string match_string) {
+    auto &route_matcher = (*transformation_rule_.mutable_match());
+    TestUtility::loadFromYaml(match_string, route_matcher);
+
   }
 
   void transformsOnHeaders(TransformationFilterTest::ConfigType configType, unsigned int val) {
@@ -198,24 +196,22 @@ public:
   std::unique_ptr<TransformationFilter> filter_;
   RouteTransformationConfigProto route_config_;
   TransformationConfigProto listener_config_;
+  envoy::api::v2::filter::http::TransformationRule transformation_rule_;
   FilterConfigSharedPtr config_;
   RouteFilterConfigConstSharedPtr route_config_wrapper_;
 
   bool null_route_config_ = false;
 
   const std::string get_method_matcher_ = R"EOF(
-    name: :method
-    exact_match: GET
+    prefix: /
   )EOF";
 
   const std::string path_header_matcher_ = R"EOF(
-    name: :path
-    regex_match: /path
+    prefix: /path
   )EOF";
 
   const std::string invalid_header_matcher_ = R"EOF(
-    name: :path
-    exact_match: /hello
+    prefix: /path-2
   )EOF";
 
 };
@@ -234,22 +230,18 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
 
 TEST_F(TransformationFilterTest, SkipTransformWithInvalidHeaderMatcher) {
   null_route_config_ = true;
-  // addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  addMatchersToListenerFilter(invalid_header_matcher_);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 1U);
-  EXPECT_EQ(1U, config_->stats().transformations_skipped_.value());
 }
 
 TEST_F(TransformationFilterTest, EnableTransformWithHeaderMatcher) {
-  // addHeaderMatchersToListenerFilter(get_method_matcher_);
-  // addHeaderMatchersToListenerFilter(invalid_header_matcher_);
+  addMatchersToListenerFilter(get_method_matcher_);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 1U);
-  EXPECT_EQ(0U, config_->stats().transformations_skipped_.value());
 }
 
 TEST_F(TransformationFilterTest, IgnoreHeaderMatcherWithRouteConfig) {
-  addHeaderMatchersToListenerFilter(get_method_matcher_);
+  addMatchersToListenerFilter(get_method_matcher_);
   transformsOnHeadersAndClearCache(TransformationFilterTest::ConfigType::Both, 1U);
-  EXPECT_EQ(0U, config_->stats().transformations_skipped_.value());
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeadersAndClearCache) {

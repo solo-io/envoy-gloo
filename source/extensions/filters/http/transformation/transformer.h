@@ -28,7 +28,6 @@ namespace Transformation {
   COUNTER(request_header_transformations)                                                     \
   COUNTER(response_header_transformations)                                                    \
   COUNTER(response_body_transformations)                                                      \
-  COUNTER(transformations_skipped)                                                            \
   COUNTER(request_error)                                                                      \
   COUNTER(response_error)                                                                    
 
