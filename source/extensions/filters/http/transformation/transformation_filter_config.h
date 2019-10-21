@@ -29,6 +29,9 @@ public:
       : FilterConfig(prefix, scope) {
     
     for (const auto& rule : proto_config.transformations()) {
+      if (!rule.has_match()) {
+        continue;
+      }
       TransformerConstSharedPtr request_transformation;
       TransformerConstSharedPtr response_transformation;
       if (rule.has_route_transformations()) {
