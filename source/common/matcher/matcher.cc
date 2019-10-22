@@ -10,9 +10,7 @@ using ::envoy::api::v2::route::RouteMatch;
 using Envoy::Router::ConfigUtility;
 
 namespace Envoy {
-namespace Extensions {
-namespace HttpFilters {
-namespace Transformation {
+namespace Matcher {
 namespace {
 
 /**
@@ -158,8 +156,5 @@ MatcherConstPtr Matcher::create(const ::envoy::api::v2::route::RouteMatch& match
   }
 }
 
-
-} // namespace JwtAuthn
-} // namespace HttpFilters
-} // namespace Extensions
+} // namespace Matcher
 } // namespace Envoy

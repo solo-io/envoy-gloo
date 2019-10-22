@@ -75,19 +75,19 @@ typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;
 
 class MatcherTransformerPair {
 public:
-  MatcherTransformerPair(MatcherConstPtr matcher, TransformerPairConstSharedPtr transformer_pair)
+  MatcherTransformerPair(Matcher::MatcherConstPtr matcher, TransformerPairConstSharedPtr transformer_pair)
       : matcher_(matcher), transformer_pair_(transformer_pair) {}
 
   TransformerPairConstSharedPtr transformer_pair() const {
     return transformer_pair_;
   }
 
-  MatcherConstPtr matcher() const {
+  Matcher::MatcherConstPtr matcher() const {
     return matcher_;
   }
 
 private:
-  MatcherConstPtr matcher_;
+  Matcher::MatcherConstPtr matcher_;
   TransformerPairConstSharedPtr transformer_pair_;
 };
 

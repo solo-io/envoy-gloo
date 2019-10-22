@@ -4,9 +4,7 @@
 #include "envoy/http/header_map.h"
 
 namespace Envoy {
-namespace Extensions {
-namespace HttpFilters {
-namespace Transformation {
+namespace Matcher {
 
 class Matcher;
 using MatcherConstPtr = std::shared_ptr<const Matcher>;
@@ -37,8 +35,5 @@ public:
   create(const ::envoy::api::v2::route::RouteMatch& match);
 };
 
-
-} // namespace JwtAuthn
-} // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy
