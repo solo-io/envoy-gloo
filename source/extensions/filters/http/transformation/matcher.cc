@@ -21,10 +21,10 @@ namespace {
  */
 class BaseMatcherImpl : public Matcher, public Logger::Loggable<Logger::Id::jwt> {
 public:
-  BaseMatcherImpl(const TransformationRule& rule)
-      : case_sensitive_(PROTOBUF_GET_WRAPPED_OR_DEFAULT(rule.match(), case_sensitive, true)),
-        config_headers_(Http::HeaderUtility::buildHeaderDataVector(rule.match().headers())) {
-    for (const auto& query_parameter : rule.match().query_parameters()) {
+  BaseMatcherImpl(const ::envoy::api::v2::route::RouteMatch& match)
+      : case_sensitive_(PROTOBUF_GET_WRAPPED_OR_DEFAULT(match, case_sensitive, true)),
+        config_headers_(Http::HeaderUtility::buildHeaderDataVector(match.headers())) {
+    for (const auto& query_parameter : match.query_parameters()) {
       config_query_parameters_.push_back(
           std::make_unique<Router::ConfigUtility::QueryParameterMatcher>(query_parameter));
     }
@@ -57,8 +57,8 @@ private:
  */
 class PrefixMatcherImpl : public BaseMatcherImpl {
 public:
-  PrefixMatcherImpl(const TransformationRule& rule)
-      : BaseMatcherImpl(rule), prefix_(rule.match().prefix()) {}
+  PrefixMatcherImpl(const ::envoy::api::v2::route::RouteMatch& match)
+      : BaseMatcherImpl(match), prefix_(match.prefix()) {}
 
   bool matches(const Http::HeaderMap& headers) const override {
     if (BaseMatcherImpl::matchRoute(headers) &&
@@ -81,8 +81,8 @@ private:
  */
 class PathMatcherImpl : public BaseMatcherImpl {
 public:
-  PathMatcherImpl(const TransformationRule& rule)
-      : BaseMatcherImpl(rule), path_(rule.match().path()) {}
+  PathMatcherImpl(const ::envoy::api::v2::route::RouteMatch& match)
+      : BaseMatcherImpl(match), path_(match.path()) {}
 
   bool matches(const Http::HeaderMap& headers) const override {
     if (BaseMatcherImpl::matchRoute(headers)) {
@@ -110,14 +110,14 @@ private:
  */
 class RegexMatcherImpl : public BaseMatcherImpl {
 public:
-  RegexMatcherImpl(const TransformationRule& rule) : BaseMatcherImpl(rule) {
-    if (rule.match().path_specifier_case() == envoy::api::v2::route::RouteMatch::kRegex) {
-      regex_ = Regex::Utility::parseStdRegexAsCompiledMatcher(rule.match().regex());
-      regex_str_ = rule.match().regex();
+  RegexMatcherImpl(const ::envoy::api::v2::route::RouteMatch& match) : BaseMatcherImpl(match) {
+    if (match.path_specifier_case() == envoy::api::v2::route::RouteMatch::kRegex) {
+      regex_ = Regex::Utility::parseStdRegexAsCompiledMatcher(match.regex());
+      regex_str_ = match.regex();
     } else {
-      ASSERT(rule.match().path_specifier_case() == envoy::api::v2::route::RouteMatch::kSafeRegex);
-      regex_ = Regex::Utility::parseRegex(rule.match().safe_regex());
-      regex_str_ = rule.match().safe_regex().regex();
+      ASSERT(match.path_specifier_case() == envoy::api::v2::route::RouteMatch::kSafeRegex);
+      regex_ = Regex::Utility::parseRegex(match.safe_regex());
+      regex_str_ = match.safe_regex().regex();
     }
   }
 
@@ -143,15 +143,15 @@ private:
 
 } // namespace
 
-MatcherConstPtr Matcher::create(const TransformationRule& rule) {
-  switch (rule.match().path_specifier_case()) {
+MatcherConstPtr Matcher::create(const ::envoy::api::v2::route::RouteMatch& match) {
+  switch (match.path_specifier_case()) {
   case RouteMatch::PathSpecifierCase::kPrefix:
-    return std::make_shared<PrefixMatcherImpl>(rule);
+    return std::make_shared<PrefixMatcherImpl>(match);
   case RouteMatch::PathSpecifierCase::kPath:
-    return std::make_shared<PathMatcherImpl>(rule);
+    return std::make_shared<PathMatcherImpl>(match);
   case RouteMatch::PathSpecifierCase::kRegex:
   case RouteMatch::PathSpecifierCase::kSafeRegex:
-    return std::make_shared<RegexMatcherImpl>(rule);
+    return std::make_shared<RegexMatcherImpl>(match);
   // path specifier is required.
   case RouteMatch::PathSpecifierCase::PATH_SPECIFIER_NOT_SET:
   default:

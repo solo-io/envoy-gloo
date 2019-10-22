@@ -34,7 +34,7 @@ public:
    * @return the matcher instance.
    */
   static MatcherConstPtr
-  create(const envoy::api::v2::filter::http::TransformationRule& rule);
+  create(const ::envoy::api::v2::route::RouteMatch& match);
 };
 
 

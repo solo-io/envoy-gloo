@@ -48,7 +48,7 @@ public:
       }
       TransformerPairConstSharedPtr transformer_pair = std::make_unique<TransformerPair>(request_transformation, response_transformation);
       transformer_pairs_.emplace_back(
-          Matcher::create(rule),
+          Matcher::create(rule.match()),
           transformer_pair
       );
     }
