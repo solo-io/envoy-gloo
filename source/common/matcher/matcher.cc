@@ -1,4 +1,4 @@
-#include "extensions/filters/http/transformation/matcher.h"
+#include "common/matcher/matcher.h"
 
 #include "common/common/logger.h"
 #include "common/common/regex.h"
@@ -7,7 +7,6 @@
 #include "absl/strings/match.h"
 
 using ::envoy::api::v2::route::RouteMatch;
-using ::envoy::api::v2::filter::http::TransformationRule;
 using Envoy::Router::ConfigUtility;
 
 namespace Envoy {

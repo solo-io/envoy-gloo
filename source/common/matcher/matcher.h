@@ -1,6 +1,6 @@
 #pragma once
 
-#include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
+#include "envoy/api/v2/route/route.pb.h"
 #include "envoy/http/header_map.h"
 
 namespace Envoy {

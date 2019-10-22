@@ -7,7 +7,7 @@
 #include "envoy/http/filter.h"
 #include "envoy/router/router.h"
 #include "common/http/header_utility.h"
-#include "extensions/filters/http/transformation/matcher.h"
+#include "common/matcher/matcher.h"
 
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
