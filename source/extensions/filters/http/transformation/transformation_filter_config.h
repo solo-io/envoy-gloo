@@ -54,7 +54,7 @@ public:
     }
   }
 
-  const std::vector<MatcherTransformerPair>& transformerPairs() const {
+  const std::vector<MatcherTransformerPair>& transformerPairs() const override {
     return transformer_pairs_;
   };
 
