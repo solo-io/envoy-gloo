@@ -110,10 +110,14 @@ const std::string DEFAULT_FILTER_TRANSFORMATION =
       {}
 )EOF";
 
-const std::string DEFAULT_HEADER_MATCHER = 
+const std::string DEFAULT_MATCHER = 
     R"EOF(
-    name: :method
-    exact_match: GET
+    prefix: /
+)EOF";
+
+const std::string INVALID_MATCHER = 
+    R"EOF(
+    prefix: /invalid
 )EOF";
 
 class TransformationFilterIntegrationTest
@@ -129,7 +133,7 @@ public:
    */
   void initialize() override {
 
-    const std::string default_filter = loadListenerConfig(filter_transformation_string_, header_matcher_string_);
+    const std::string default_filter = loadListenerConfig(filter_transformation_string_, matcher_string_);
     // set the default transformation
     config_helper_.addFilter(default_filter);
 
@@ -170,22 +174,25 @@ public:
 
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
   std::string filter_transformation_string_{DEFAULT_FILTER_TRANSFORMATION};
-  std::string header_matcher_string_{DEFAULT_HEADER_MATCHER};
+  std::string matcher_string_{DEFAULT_MATCHER};
 
 private:
 
   std::string loadListenerConfig(const std::string& transformation_config_str,
-      const std::string& header_matcher_str) {
-    envoy::api::v2::filter::http::RouteTransformations proto_config;
-    TestUtility::loadFromYaml(transformation_config_str, proto_config);
+      const std::string& matcher_str) {
 
-    envoy::api::v2::route::HeaderMatcher header_matcher;
-    TestUtility::loadFromYaml(header_matcher_str, header_matcher);
+    envoy::api::v2::filter::http::TransformationRule transformation_rule;
+    envoy::api::v2::filter::http::RouteTransformations route_transformations;
+    TestUtility::loadFromYaml(transformation_config_str, route_transformations);
+
+    envoy::api::v2::route::RouteMatch route_match;
+    TestUtility::loadFromYaml(matcher_str, route_match);
+
+    *transformation_rule.mutable_route_transformations() = route_transformations;
+    *transformation_rule.mutable_match() = route_match;
 
     envoy::api::v2::filter::http::FilterTransformations filter_config;
-    *filter_config.mutable_route_transformations() = proto_config;
-    auto &header_matchers = (*filter_config.mutable_header_matchers());
-    *header_matchers.Add() = header_matcher;
+    *filter_config.mutable_transformations()->Add() = transformation_rule;
 
     HttpFilter filter;
     filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
@@ -290,9 +297,10 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   EXPECT_EQ("soloio", rbody);
 }
 
-TEST_P(TransformationFilterIntegrationTest, SkipResponseTransformation) {
+TEST_P(TransformationFilterIntegrationTest, SkipTransformation) {
   transformation_string_ = "";
   filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
+  matcher_string_ = INVALID_MATCHER;
   initialize();
   Http::TestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
@@ -368,48 +376,6 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
                          .getStringView());
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ(origBody, body);
-}
-
-TEST_P(TransformationFilterIntegrationTest, RequestListenerConfigResponseRouteConfig) {
-  filter_transformation_string_ = BODY_TRANSFORMATION;
-  transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
-  initialize();
-  Http::TestHeaderMapImpl request_headers{
-      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto encoder_decoder = codec_client_->startRequest(request_headers);
-
-  auto downstream_request = &encoder_decoder.first;
-  auto response = std::move(encoder_decoder.second);
-  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
-  codec_client_->sendData(*downstream_request, data, true);
-
-  processRequest(response, data.toString());
-
-  std::string body = upstream_request_->body().toString();
-  EXPECT_EQ("efg", body);
-  std::string rbody = response->body();
-  EXPECT_NE(std::string::npos, rbody.find("bad request"));
-}
-
-TEST_P(TransformationFilterIntegrationTest, RequestRouteConfigResponseListenerConfig) {
-  filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
-  transformation_string_ = BODY_TRANSFORMATION;
-  initialize();
-  Http::TestHeaderMapImpl request_headers{
-      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
-  auto encoder_decoder = codec_client_->startRequest(request_headers);
-
-  auto downstream_request = &encoder_decoder.first;
-  auto response = std::move(encoder_decoder.second);
-  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
-  codec_client_->sendData(*downstream_request, data, true);
-
-  processRequest(response, data.toString());
-
-  std::string body = upstream_request_->body().toString();
-  EXPECT_EQ("efg", body);
-  std::string rbody = response->body();
-  EXPECT_NE(std::string::npos, rbody.find("bad request"));
 }
 
 } // namespace Envoy
