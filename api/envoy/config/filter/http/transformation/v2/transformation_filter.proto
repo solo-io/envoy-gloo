@@ -65,7 +65,7 @@ message Extraction {
 
 message TransformationTemplate {
   bool advanced_templates = 1;
-  // Extractors are in the origin request language domain
+  // Extractors are in the original request language domain
   map<string, Extraction> extractors = 2;
 
   map<string, InjaTemplate> headers = 3;
@@ -78,12 +78,10 @@ message TransformationTemplate {
 
   enum RequestBodyParse {
     ParseAsJson = 0;
-    ParseAsJsonIgnoreError = 1;
-    DontParse = 2;
+    DontParse = 1;
   }
   RequestBodyParse parse_body_behavior = 7;
-
-  string response_on_error = 8;
+  bool ignore_error_on_parse = 8;
 }
 
 /*

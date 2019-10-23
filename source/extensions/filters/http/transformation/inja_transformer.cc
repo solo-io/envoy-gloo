@@ -1,3 +1,4 @@
+#include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include <iterator>
@@ -77,18 +78,19 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context)
+    const json &context, Http::StreamFilterCallbacks &callbacks)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context) {
+      context_(context), callbacks_(callbacks) {
   env_.add_callback("header", 1,
-                    [this](Arguments args) { return header_callback(args); });
-  env_.add_callback("extraction", 1, [this](Arguments args) {
+                    [this](Arguments& args) { return header_callback(args); });
+  env_.add_callback("extraction", 1, [this](Arguments& args) {
     return extracted_callback(args);
   });
-  env_.add_callback("body", 0, [this](Arguments) { return body_(); });
+  env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
+  env_.add_callback("dynamic_metadata", 2, [this](Arguments& args) { return dynamic_metadata(args); });
 }
 
-json TransformerInstance::header_callback(Arguments args) {
+json TransformerInstance::header_callback(const inja::Arguments& args) {
   std::string headername = args.at(0)->get<std::string>();
   const Http::HeaderEntry *header_entry = getHeader(header_map_, headername);
   if (!header_entry) {
@@ -97,13 +99,23 @@ json TransformerInstance::header_callback(Arguments args) {
   return std::string(header_entry->value().getStringView());
 }
 
-json TransformerInstance::extracted_callback(Arguments args) {
+json TransformerInstance::extracted_callback(const inja::Arguments& args) {
   std::string name = args.at(0)->get<std::string>();
   const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
     return value_it->second;
   }
   return "";
+}
+
+json TransformerInstance::dynamic_metadata(const inja::Arguments& args) {
+  std::string key = args.at(0)->get<std::string>();
+  std::string value = args.at(1)->get<std::string>();
+  
+  ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(key, value));
+
+  callbacks_.streamInfo().setDynamicMetadata(SoloHttpFilterNames::get().Transformation, strct);
+  return {};
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {
@@ -113,7 +125,8 @@ std::string TransformerInstance::render(const inja::Template &input) {
 InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
     : advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
-      parse_body_behavior_(transformation.parse_body_behavior()) {
+      parse_body_behavior_(transformation.parse_body_behavior()),
+      ignore_error_on_parse_(transformation.ignore_error_on_parse()) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
   inja::TemplateStorage template_storage;
@@ -165,7 +178,7 @@ InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::HeaderMap &header_map,
                                 Buffer::Instance &body,
-                                Http::StreamFilterCallbacks &) const {
+                                Http::StreamFilterCallbacks &sfc) const {
   absl::optional<std::string> string_body;
   auto get_body = [&string_body, &body]() -> const std::string & {
     if (!string_body.has_value()) {
@@ -182,12 +195,13 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     // parse the body as json
     // TODO: gate this under a parse_body boolean
     if (parse_body_behavior_ == TransformationTemplate::ParseAsJson) {
-      json_body = json::parse(bodystring);
-    } else if (parse_body_behavior_ ==
-               TransformationTemplate::ParseAsJsonIgnoreError) {
-      try {
+      if (ignore_error_on_parse_) {
+        try {
+          json_body = json::parse(bodystring);
+        } catch (std::exception &) {
+        }
+      } else {
         json_body = json::parse(bodystring);
-      } catch (std::exception &) {
       }
     } else {
       ASSERT("missing behavior");
@@ -217,7 +231,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     }
   }
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, sfc);
 
   // Body transform:
   auto replace_body = [&](std::string &output) {

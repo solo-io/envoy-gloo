@@ -59,6 +59,6 @@ BUILDIFIER=$GOPATH/bin/buildifier CLANG_FORMAT=clang-format /path/to/envoy/tools
 
 # Submit a build
 ```
-gcloud builds submit --config=cloudbuild.yaml \
+gcloud builds submit --project=solo-public --config=cloudbuild.yaml \
    --substitutions=COMMIT_SHA=$(git rev-parse HEAD) .
 ```

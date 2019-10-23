@@ -26,21 +26,24 @@ public:
   TransformerInstance(
       const Http::HeaderMap &header_map, GetBodyFunc body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context);
-  // header_value(name)
-  // extracted_value(name, index)
-  nlohmann::json header_callback(inja::Arguments args);
-
-  nlohmann::json extracted_callback(inja::Arguments args);
+      const nlohmann::json &context, Http::StreamFilterCallbacks &callbacks);
+  
 
   std::string render(const inja::Template &input);
 
 private:
+// header_value(name)
+  nlohmann::json header_callback(const inja::Arguments& args);
+  // extracted_value(name, index)
+  nlohmann::json extracted_callback(const inja::Arguments& args);
+  nlohmann::json dynamic_metadata(const inja::Arguments& args);
+
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
   GetBodyFunc body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
+  Http::StreamFilterCallbacks &callbacks_;
 };
 
 class Extractor {
@@ -86,6 +89,7 @@ private:
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;
+  bool ignore_error_on_parse_;
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};

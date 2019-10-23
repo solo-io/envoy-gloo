@@ -26,6 +26,9 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+using TransformationTemplate =
+    envoy::api::v2::filter::http::TransformationTemplate;
+
 namespace {
 std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 }
@@ -43,7 +46,8 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
+  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -58,7 +62,8 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
 
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
+  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -73,7 +78,8 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+                                  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
+  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -86,7 +92,8 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, empty_body, extractions, originalbody);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
+  TransformerInstance t(headers, empty_body, extractions, originalbody, filter_callbacks);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -98,7 +105,8 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
-  TransformerInstance t(headers, empty_body, extractions, originalbody);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
+  TransformerInstance t(headers, empty_body, extractions, originalbody, filter_callbacks);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -143,7 +151,7 @@ TEST(Transformer, transform) {
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   (*transformation.mutable_extractors())["ext1"] = extractor;
   transformation.mutable_body()->set_text(
@@ -175,7 +183,7 @@ TEST(Transformer, transformSimple) {
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   (*transformation.mutable_extractors())["ext1"] = extractor;
   transformation.mutable_body()->set_text(
@@ -207,7 +215,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   (*transformation.mutable_extractors())["ext1.field1"] = extractor;
   transformation.mutable_body()->set_text(
@@ -236,7 +244,7 @@ TEST(Transformer, transformPassthrough) {
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   transformation.mutable_passthrough();
   (*transformation.mutable_headers())["x-header"].set_text(
@@ -263,7 +271,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   transformation.mutable_merge_extractors_to_body();
 
@@ -292,7 +300,7 @@ TEST(Transformer, transformBodyNotSet) {
   std::string originalBody = "{\"a\":\"456\"}";
   Buffer::OwnedImpl body(originalBody);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   // trying to get a value from the body; which should be available in default
   // mode
@@ -321,7 +329,7 @@ TEST(InjaTransformer, transformWithHyphens) {
   extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
   extractor.set_subgroup(1);
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
 
   (*transformation.mutable_extractors())["id"] = extractor;
 
@@ -343,7 +351,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
       {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
   Buffer::OwnedImpl body("{}");
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  TransformationTemplate transformation;
   envoy::api::v2::filter::http::InjaTemplate empty;
 
   (*transformation.mutable_headers())[content_type] = empty;
@@ -354,6 +362,31 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, body, filter_callbacks_);
   EXPECT_FALSE(headers.has(content_type));
+}
+
+TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Buffer::OwnedImpl body("not json body");
+
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.mutable_body();
+  extractor.set_regex("not ([\\-._[:alnum:]]+) body");
+  extractor.set_subgroup(1);
+  (*transformation.mutable_extractors())["param"] = extractor;
+
+  transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, body, filter_callbacks_);
+  EXPECT_EQ(body.toString(), "json");
 }
 
 } // namespace Transformation
