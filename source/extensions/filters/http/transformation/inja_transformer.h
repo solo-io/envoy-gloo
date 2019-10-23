@@ -26,7 +26,7 @@ public:
   TransformerInstance(
       const Http::HeaderMap &header_map, GetBodyFunc body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context, Http::StreamFilterCallbacks &callbacks);
+      const nlohmann::json &context);
   
 
   std::string render(const inja::Template &input);
@@ -43,7 +43,6 @@ private:
   GetBodyFunc body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
-  Http::StreamFilterCallbacks &callbacks_;
 };
 
 class Extractor {
@@ -72,20 +71,17 @@ public:
   bool passthrough_body() const override { return passthrough_body_; };
 
 private:
-  /*
-    TransformerImpl& impl() { return reinterpret_cast<TransformerImpl&>(impl_);
-    } const TransformerImpl& impl() const { return reinterpret_cast<const
-    TransformerImpl &>(impl_); }
+  struct DynamicMetadataValue {
+    std::string namespace_;
+    std::string key_;
+    inja::Template template_;
+  };
 
-    static const size_t TransformerImplSize = 464;
-    static const size_t TransformerImplAlign = 8;
-
-    std::aligned_storage<TransformerImplSize, TransformerImplAlign>::type impl_;
-  */
   bool advanced_templates_{};
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
+  std::vector<DynamicMetadataValue> dynamic_metadata_;
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;

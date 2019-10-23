@@ -82,6 +82,9 @@ message TransformationTemplate {
   }
   RequestBodyParse parse_body_behavior = 7;
   bool ignore_error_on_parse = 8;
+
+  map<string, InjaTemplate> dynamic_metadata = 9;
+
 }
 
 /*

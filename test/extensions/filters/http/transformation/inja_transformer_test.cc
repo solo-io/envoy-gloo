@@ -46,8 +46,8 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
-  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
+  
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -62,8 +62,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
 
-NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
-  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -78,8 +77,8 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
-                                  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
-  TransformerInstance t(headers, empty_body, {}, originalbody, filter_callbacks);
+                                  
+  TransformerInstance t(headers, empty_body, {}, originalbody);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -92,8 +91,8 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
-  TransformerInstance t(headers, empty_body, extractions, originalbody, filter_callbacks);
+  
+  TransformerInstance t(headers, empty_body, extractions, originalbody);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -105,8 +104,8 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks;
-  TransformerInstance t(headers, empty_body, extractions, originalbody, filter_callbacks);
+  
+  TransformerInstance t(headers, empty_body, extractions, originalbody);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -387,6 +386,49 @@ TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, body, filter_callbacks_);
   EXPECT_EQ(body.toString(), "json");
+}
+
+TEST(InjaTransformer, UseBodyFunction) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  transformation.mutable_body()->set_text("{{body()}} {{body()}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, filter_callbacks_);
+  EXPECT_EQ(body.toString(), "1 1");
+}
+
+TEST(InjaTransformer, UseDynamicMeta) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+  dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("bar");
+  dynamic_meta->mutable_value()->set_text("123");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, filter_callbacks_);
+  EXPECT_EQ(body.toString(), "1");
 }
 
 } // namespace Transformation

@@ -78,16 +78,15 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context, Http::StreamFilterCallbacks &callbacks)
+    const json &context)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context), callbacks_(callbacks) {
+      context_(context) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
     return extracted_callback(args);
   });
   env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
-  env_.add_callback("dynamic_metadata", 2, [this](Arguments& args) { return dynamic_metadata(args); });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments& args) {
@@ -106,16 +105,6 @@ json TransformerInstance::extracted_callback(const inja::Arguments& args) {
     return value_it->second;
   }
   return "";
-}
-
-json TransformerInstance::dynamic_metadata(const inja::Arguments& args) {
-  std::string key = args.at(0)->get<std::string>();
-  std::string value = args.at(1)->get<std::string>();
-  
-  ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(key, value));
-
-  callbacks_.streamInfo().setDynamicMetadata(SoloHttpFilterNames::get().Transformation, strct);
-  return {};
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {
@@ -151,6 +140,22 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
   }
+  const auto &dynamic_metadata_values = transformation.dynamic_metadata_values();
+  for (auto it = dynamic_metadata_values.begin(); it != dynamic_metadata_values.end(); it++) {
+    try {
+      DynamicMetadataValue dynamicMetadataValue;
+      dynamicMetadataValue.namespace_ = it->metadata_namespace();
+      if (dynamicMetadataValue.namespace_.empty()){
+        dynamicMetadataValue.namespace_ = SoloHttpFilterNames::get().Transformation;
+      }
+      dynamicMetadataValue.key_ = it->key();
+      dynamicMetadataValue.template_ = parser.parse(it->value().text());
+      dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
+    } catch (const std::runtime_error &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it->key(), e.what()));
+    }
+  }
 
   switch (transformation.body_transformation_case()) {
   case TransformationTemplate::kBody: {
@@ -178,7 +183,7 @@ InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::HeaderMap &header_map,
                                 Buffer::Instance &body,
-                                Http::StreamFilterCallbacks &sfc) const {
+                                Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;
   auto get_body = [&string_body, &body]() -> const std::string & {
     if (!string_body.has_value()) {
@@ -231,7 +236,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     }
   }
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, sfc);
+  TransformerInstance instance(header_map, get_body, extractions, json_body);
 
   // Body transform:
   auto replace_body = [&](std::string &output) {
@@ -262,6 +267,12 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
       // route's
       header_map.addReferenceKey(templated_header.first, output);
     }
+  }
+  // DynamicMetadata transform:
+  for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
+    std::string output = instance.render(templated_dynamic_metadata.template_);
+    ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+    callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
   }
 }
 
