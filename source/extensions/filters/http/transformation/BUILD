@@ -98,10 +98,12 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        "//source/common/matcher:matchers_lib",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//include/envoy/router:router_interface",
+        "@envoy//source/common/http:header_utility_lib",
     ],
 )
 
@@ -118,3 +120,4 @@ envoy_cc_library(
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )
+
