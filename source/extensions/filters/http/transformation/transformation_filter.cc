@@ -4,6 +4,7 @@
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/http/utility.h"
+#include "common/http/header_utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformer.h"
@@ -28,7 +29,10 @@ void TransformationFilter::onDestroy() { resetInternalState(); }
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
-  checkRequestActive();
+
+  request_headers_ = &header_map;
+
+  setupTransformationPair();
 
   if (is_error()) {
     return Http::FilterHeadersStatus::StopIteration;
@@ -37,8 +41,6 @@ TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
   if (!requestActive()) {
     return Http::FilterHeadersStatus::Continue;
   }
-
-  request_headers_ = &header_map;
 
   if (end_stream || request_transformation_->passthrough_body()) {
     filter_config_->stats().request_header_transformations_.inc();
@@ -88,16 +90,14 @@ TransformationFilter::decodeTrailers(Http::HeaderMap &) {
 Http::FilterHeadersStatus
 TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
                                     bool end_stream) {
-  checkResponseActive();
+
+  response_headers_ = &header_map;
 
   if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
     // responseActive() == false
     return Http::FilterHeadersStatus::Continue;
   }
-
-  response_headers_ = &header_map;
-
   if (end_stream || response_transformation_->passthrough_body()) {
     filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
@@ -117,12 +117,12 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
   if ((encoder_buffer_limit_ != 0) &&
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
-    filter_config_->stats().response_body_transformations_.inc();
     responseError();
     return Http::FilterDataStatus::Continue;
   }
 
   if (end_stream) {
+    filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
     return Http::FilterDataStatus::Continue;
   }
@@ -139,47 +139,24 @@ TransformationFilter::encodeTrailers(Http::HeaderMap &) {
   return Http::FilterTrailersStatus::Continue;
 }
 
-void TransformationFilter::checkRequestActive() {
+void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
-  request_transformation_ =
-      getTransformFromRoute(TransformationFilter::Direction::Request);
-}
-
-void TransformationFilter::checkResponseActive() {
-  response_transformation_ =
-      getTransformFromRoute(TransformationFilter::Direction::Response);
-}
-
-TransformerConstSharedPtr TransformationFilter::getTransformFromRoute(
-    TransformationFilter::Direction direction) {
-
-  if (!route_) {
-    return nullptr;
-  }
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
-      RouteTransformationFilterConfig>(filter_config_->name(), route_);
-  
-  switch (direction) {
-    case TransformationFilter::Direction::Request: {
-      should_clear_cache_ = filter_config_->shouldClearCache();
-      if (route_config != nullptr && route_config->getRequestTranformation() != nullptr) {
-        should_clear_cache_ = route_config->shouldClearCache();
-        return route_config->getRequestTranformation();
-      } else {
-        return filter_config_->getRequestTranformation();
-      }
-    }
-    case TransformationFilter::Direction::Response: {
-      if (route_config != nullptr && route_config->getResponseTranformation() != nullptr) {
-        return route_config->getResponseTranformation();
-      } else {
-        return filter_config_->getResponseTranformation();
-      }
-    }
+    RouteTransformationFilterConfig>(filter_config_->name(), route_);
+  TransformerPairConstSharedPtr active_transformer_pair;
+  // if there is a route level config present, automatically disregard header_matching rules
+  if (route_config != nullptr) {
+    active_transformer_pair = route_config->findTransformers(*request_headers_);
+  } else {
+    active_transformer_pair = filter_config_->findTransformers(*request_headers_);
   }
 
-  return nullptr;
+  if (active_transformer_pair != nullptr) {
+    should_clear_cache_ = active_transformer_pair->shouldClearCache();
+    request_transformation_ = active_transformer_pair->getRequestTranformation();
+    response_transformation_ = active_transformer_pair->getResponseTranformation();
+  }
 }
 
 void TransformationFilter::transformRequest() {

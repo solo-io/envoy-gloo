@@ -10,8 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
 envoy_cc_library(
     name = "transformation_filter_config",
     srcs = [
@@ -26,7 +24,7 @@ envoy_cc_library(
         ":inja_transformer_lib",
         ":transformer_lib",
         "//source/extensions/filters/http:solo_well_known_names",
-        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//include/envoy/router:router_interface",
     ],
 )
@@ -81,12 +79,13 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":transformer_lib",
-        "//api/envoy/config/filter/http/transformation/v2:transformation_filter_proto_cc",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//source/common/common:macros",
         "@envoy//source/common/common:utility_lib",
         "@envoy//source/common/protobuf",
+        "@envoy//source/common/common:regex_lib",
         "@inja//:inja-lib",
         "@json//:json-lib",
     ],
@@ -99,10 +98,12 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        "//source/common/matcher:matchers_lib",
         "@envoy//include/envoy/buffer:buffer_interface",
         "@envoy//include/envoy/http:header_map_interface",
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//include/envoy/router:router_interface",
+        "@envoy//source/common/http:header_utility_lib",
     ],
 )
 
@@ -119,3 +120,4 @@ envoy_cc_library(
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )
+

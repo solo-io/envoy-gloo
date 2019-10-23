@@ -70,9 +70,7 @@ private:
     Request,
     Response,
   };
-
-  virtual void checkRequestActive();
-  virtual void checkResponseActive();
+  virtual void setupTransformationPair();
 
   bool requestActive() { return request_transformation_ != nullptr; }
   bool responseActive() { return response_transformation_ != nullptr; }
@@ -81,7 +79,7 @@ private:
   void error(Error error, std::string msg = "");
   bool is_error();
 
-  TransformerConstSharedPtr getTransformFromRoute(Direction direction);
+  // TransformerConstSharedPtr getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -113,7 +111,7 @@ private:
   Http::Code error_code_;
   std::string error_messgae_;
   bool should_clear_cache_{};
-  
+
   FilterConfigSharedPtr filter_config_;
 };
 

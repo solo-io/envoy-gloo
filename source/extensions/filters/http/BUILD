@@ -10,8 +10,6 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
-
 envoy_cc_library(
     name = "solo_well_known_names",
     hdrs = ["solo_well_known_names.h"],

@@ -24,6 +24,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+
 class TransformationFilterTest : public testing::Test {
 public:
   enum class ConfigType {
@@ -34,14 +35,26 @@ public:
 
   void initFilter() {
 
+    *listener_config_.mutable_transformations()->Add() = transformation_rule_;
+
     route_config_wrapper_.reset(
         new RouteTransformationFilterConfig(route_config_));
-    ON_CALL(*filter_callbacks_.route_,
+    
+    if (!null_route_config_) {
+      ON_CALL(*filter_callbacks_.route_,
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
-    ON_CALL(*encoder_filter_callbacks_.route_,
+      ON_CALL(*encoder_filter_callbacks_.route_,
             perFilterConfig(SoloHttpFilterNames::get().Transformation))
         .WillByDefault(Return(route_config_wrapper_.get()));
+    } else {
+      ON_CALL(*filter_callbacks_.route_,
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
+        .WillByDefault(Return(nullptr));
+      ON_CALL(*encoder_filter_callbacks_.route_,
+            perFilterConfig(SoloHttpFilterNames::get().Transformation))
+        .WillByDefault(Return(nullptr));
+    }
 
     ON_CALL(encoder_filter_callbacks_, route())
         .WillByDefault(Invoke([this]() -> Router::RouteConstSharedPtr {
@@ -62,7 +75,7 @@ public:
 
   void initFilterWithBodyTemplate(TransformationFilterTest::ConfigType configType, std::string body) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_body()->set_text(
           body);
     }  
@@ -76,7 +89,7 @@ public:
 
   void initFilterWithBodyPassthrough(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_transformation_template()->mutable_passthrough();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {
@@ -88,7 +101,7 @@ public:
 
   void initFilterWithHeadersBody(TransformationFilterTest::ConfigType configType) {
     if (configType == TransformationFilterTest::ConfigType::Listener || configType == TransformationFilterTest::ConfigType::Both) {
-      auto &transformation = (*listener_config_.mutable_request_transformation());
+      auto &transformation = (*transformation_rule_.mutable_route_transformations()->mutable_request_transformation());
       transformation.mutable_header_body_transform();
     }
     if ((configType == TransformationFilterTest::ConfigType::Route || configType == TransformationFilterTest::ConfigType::Both)) {
@@ -97,11 +110,17 @@ public:
     }
     initFilter(); // Re-load config.
   }
+  
+  void addMatchersToListenerFilter(const std::string match_string) {
+    auto &route_matcher = (*transformation_rule_.mutable_match());
+    TestUtility::loadFromYaml(match_string, route_matcher);
+
+  }
 
   void transformsOnHeaders(TransformationFilterTest::ConfigType configType, unsigned int val) {
     initFilterWithBodyTemplate(configType, "solo");
-
-    EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
+    int decoded_data_calls = val == 0 ? 0 : 1;
+    EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(decoded_data_calls);
     EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(0);
     auto res = filter_->decodeHeaders(headers_, true);
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
@@ -125,7 +144,7 @@ public:
       ->mutable_transformation_template()
       ->mutable_body()
       ->set_text("solo");
-
+    
     initFilter();
 
     filter_->decodeHeaders(headers_, true);
@@ -136,7 +155,7 @@ public:
   }
 
   void happyPathWithBody(TransformationFilterTest::ConfigType configType, unsigned int val) {
-      initFilterWithBodyTemplate(configType, "{{a}}");
+    initFilterWithBodyTemplate(configType, "{{a}}");
 
     auto resheaders = filter_->decodeHeaders(headers_, false);
     ASSERT_EQ(Http::FilterHeadersStatus::StopIteration, resheaders);
@@ -177,8 +196,23 @@ public:
   std::unique_ptr<TransformationFilter> filter_;
   RouteTransformationConfigProto route_config_;
   TransformationConfigProto listener_config_;
+  envoy::api::v2::filter::http::TransformationRule transformation_rule_;
   FilterConfigSharedPtr config_;
   RouteFilterConfigConstSharedPtr route_config_wrapper_;
+
+  bool null_route_config_ = false;
+
+  const std::string get_method_matcher_ = R"EOF(
+    prefix: /
+  )EOF";
+
+  const std::string path_header_matcher_ = R"EOF(
+    prefix: /path
+  )EOF";
+
+  const std::string invalid_header_matcher_ = R"EOF(
+    prefix: /path-2
+  )EOF";
 
 };
 
@@ -192,6 +226,23 @@ TEST_F(TransformationFilterTest, TransformsOnHeaders) {
   transformsOnHeaders(TransformationFilterTest::ConfigType::Both, 1U);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Route, 2U);
   transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 3U);
+}
+
+TEST_F(TransformationFilterTest, SkipTransformWithInvalidHeaderMatcher) {
+  null_route_config_ = true;
+  addMatchersToListenerFilter(invalid_header_matcher_);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 0U);
+}
+
+TEST_F(TransformationFilterTest, EnableTransformWithHeaderMatcher) {
+  null_route_config_ = true;
+  addMatchersToListenerFilter(path_header_matcher_);
+  transformsOnHeaders(TransformationFilterTest::ConfigType::Listener, 1U);
+}
+
+TEST_F(TransformationFilterTest, IgnoreHeaderMatcherWithRouteConfig) {
+  addMatchersToListenerFilter(invalid_header_matcher_);
+  transformsOnHeadersAndClearCache(TransformationFilterTest::ConfigType::Both, 1U);
 }
 
 TEST_F(TransformationFilterTest, TransformsOnHeadersAndClearCache) {

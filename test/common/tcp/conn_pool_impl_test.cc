@@ -58,10 +58,12 @@ public:
             << "cluster." << gauge->name() << " is " << gauge->value();
       }
     }
-    for (const Stats::GaugeSharedPtr &gauge : host_->stats_store_.gauges()) {
-      if (shouldMetricBeZero(gauge->name())) {
-        EXPECT_EQ(0U, gauge->value())
-            << "host." << gauge->name() << " is " << gauge->value();
+    for (const auto& gauge : host_->stats_.gauges()) {
+      std::string name = gauge.first.data();
+      const auto value = gauge.second.get().value();
+      if (shouldMetricBeZero(name)) {
+        EXPECT_EQ(0U, value)
+            << "host." << name << " is " << value;
       }
     }
   }

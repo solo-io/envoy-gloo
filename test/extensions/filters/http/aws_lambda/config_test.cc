@@ -41,8 +41,6 @@ protected:
         new NiceMock<Event::MockTimer>(&context_.dispatcher_);
     protoconfig.mutable_use_default_credentials()->set_value(true);
     EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
-    // No need to expect a call createTimer as the mock timer does that.
-    EXPECT_CALL(*timer, enableTimer(_)).Times(2);
     return timer;
   }
 };

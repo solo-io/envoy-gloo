@@ -8,7 +8,7 @@ load(
 
 envoy_package()
 
-load("@envoy_api//bazel:api_build_system.bzl", "api_proto_library")
+load("@envoy_api//bazel:api_build_system.bzl", "api_cc_py_proto_library")
 
 sh_test(
     name = "e2e2e_test",
