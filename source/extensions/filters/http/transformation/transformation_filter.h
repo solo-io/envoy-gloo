@@ -105,8 +105,6 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  TransformerPairConstSharedPtr active_transformer_pair_;
-
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
   absl::optional<Error> error_;
@@ -114,7 +112,6 @@ private:
   std::string error_messgae_;
   bool should_clear_cache_{};
 
-  bool has_route_level_config_ = false;
   FilterConfigSharedPtr filter_config_;
 };
 

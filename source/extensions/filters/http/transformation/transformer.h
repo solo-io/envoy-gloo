@@ -55,8 +55,12 @@ typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
 
 class TransformerPair {
 public:
-  TransformerPair(TransformerConstSharedPtr request_transformer, TransformerConstSharedPtr response_transformer):
-    request_transformation_(request_transformer), response_transformation_(response_transformer) {}
+  TransformerPair(TransformerConstSharedPtr request_transformer, 
+                  TransformerConstSharedPtr response_transformer, 
+                  bool should_clear_cache):
+    clear_route_cache_(should_clear_cache),
+    request_transformation_(request_transformer), 
+    response_transformation_(response_transformer) {}
 
   TransformerConstSharedPtr getRequestTranformation() const {
     return request_transformation_;
@@ -65,8 +69,11 @@ public:
   TransformerConstSharedPtr getResponseTranformation() const {
     return response_transformation_;
   }
+
+  bool shouldClearCache() const { return clear_route_cache_; }
   
 private:
+  bool clear_route_cache_{};
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
 };
@@ -97,8 +104,6 @@ public:
   virtual ~TransormConfig() {}
 
   virtual TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap& headers) const PURE;
-  
-  virtual bool shouldClearCache() const PURE;
 };
 
 class FilterConfig : public TransormConfig {

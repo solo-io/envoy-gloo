@@ -144,19 +144,18 @@ void TransformationFilter::setupTransformationPair() {
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
     RouteTransformationFilterConfig>(filter_config_->name(), route_);
-
+  TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard header_matching rules
   if (route_config != nullptr) {
-    has_route_level_config_ = true;
-    should_clear_cache_ = route_config->shouldClearCache();
-    active_transformer_pair_ = route_config->findTransformers(*request_headers_);
+    active_transformer_pair = route_config->findTransformers(*request_headers_);
   } else {
-    active_transformer_pair_ = filter_config_->findTransformers(*request_headers_);
+    active_transformer_pair = filter_config_->findTransformers(*request_headers_);
   }
 
-  if (active_transformer_pair_ != nullptr) {
-    request_transformation_ = active_transformer_pair_->getRequestTranformation();
-    response_transformation_ = active_transformer_pair_->getResponseTranformation();
+  if (active_transformer_pair != nullptr) {
+    should_clear_cache_ = active_transformer_pair->shouldClearCache();
+    request_transformation_ = active_transformer_pair->getRequestTranformation();
+    response_transformation_ = active_transformer_pair->getResponseTranformation();
   }
 }
 

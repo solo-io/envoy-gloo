@@ -16,7 +16,7 @@ namespace {
 /**
  * Perform a match against any HTTP header or pseudo-header.
  */
-class BaseMatcherImpl : public Matcher, public Logger::Loggable<Logger::Id::jwt> {
+class BaseMatcherImpl : public Matcher, public Logger::Loggable<Logger::Id::filter> {
 public:
   BaseMatcherImpl(const ::envoy::api::v2::route::RouteMatch& match)
       : case_sensitive_(PROTOBUF_GET_WRAPPED_OR_DEFAULT(match, case_sensitive, true)),

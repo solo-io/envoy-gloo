@@ -34,9 +34,10 @@ public:
       }
       TransformerConstSharedPtr request_transformation;
       TransformerConstSharedPtr response_transformation;
+      bool clear_route_cache = false;
       if (rule.has_route_transformations()) {
         const auto& route_transformation = rule.route_transformations();
-        clear_route_cache_ = route_transformation.clear_route_cache();
+        clear_route_cache = route_transformation.clear_route_cache();
         if (route_transformation.has_request_transformation()) {
           request_transformation =
               Transformation::getTransformer(route_transformation.request_transformation());
@@ -46,7 +47,8 @@ public:
               route_transformation.response_transformation());
         }
       }
-      TransformerPairConstSharedPtr transformer_pair = std::make_unique<TransformerPair>(request_transformation, response_transformation);
+      TransformerPairConstSharedPtr transformer_pair = 
+        std::make_unique<TransformerPair>(request_transformation, response_transformation, clear_route_cache);
       transformer_pairs_.emplace_back(
           Matcher::Matcher::create(rule.match()),
           transformer_pair
@@ -61,12 +63,8 @@ public:
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
   }
-
-  bool shouldClearCache() const override { return clear_route_cache_; }
   
 private:
-  bool clear_route_cache_{};
-
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
 };
@@ -74,8 +72,7 @@ private:
 
 class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
-  RouteTransformationFilterConfig(const RouteTransformationConfigProto &proto_config)
-      : clear_route_cache_(proto_config.clear_route_cache()) {
+  RouteTransformationFilterConfig(const RouteTransformationConfigProto &proto_config) {
 
     TransformerConstSharedPtr request_transformation;
     TransformerConstSharedPtr response_transformation;
@@ -88,18 +85,16 @@ public:
       response_transformation = Transformation::getTransformer(
           proto_config.response_transformation());
     }
-    transformer_pair_  = std::make_shared<TransformerPair>(request_transformation, response_transformation);
+    transformer_pair_  = std::make_shared<TransformerPair>(
+      request_transformation, response_transformation, proto_config.clear_route_cache());
   }
 
   TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap&) const override {
     return transformer_pair_;
   }
 
-  bool shouldClearCache() const override { return clear_route_cache_; }
-
 private:
   TransformerPairConstSharedPtr transformer_pair_;
-  bool clear_route_cache_{};
 };
 
 } // namespace Transformation
