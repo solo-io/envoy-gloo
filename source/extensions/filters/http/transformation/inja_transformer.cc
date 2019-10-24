@@ -78,19 +78,20 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context)
+    const json &context, const std::unordered_map<std::string, std::string>& environ)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context) {
+      context_(context), environ_(environ) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
     return extracted_callback(args);
   });
   env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
+  env_.add_callback("env", 1, [this](Arguments& args) { return env(args); });
 }
 
-json TransformerInstance::header_callback(const inja::Arguments& args) {
-  std::string headername = args.at(0)->get<std::string>();
+json TransformerInstance::header_callback(const inja::Arguments& args) const  {
+  const std::string& headername = args.at(0)->get_ref<const std::string&>();
   const Http::HeaderEntry *header_entry = getHeader(header_map_, headername);
   if (!header_entry) {
     return "";
@@ -98,11 +99,19 @@ json TransformerInstance::header_callback(const inja::Arguments& args) {
   return std::string(header_entry->value().getStringView());
 }
 
-json TransformerInstance::extracted_callback(const inja::Arguments& args) {
-  std::string name = args.at(0)->get<std::string>();
+json TransformerInstance::extracted_callback(const inja::Arguments& args) const  {
+  const std::string& name = args.at(0)->get_ref<const std::string&>();
   const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
     return value_it->second;
+  }
+  return "";
+}
+json TransformerInstance::env(const inja::Arguments& args) const {
+  const std::string& key = args.at(0)->get_ref<const std::string&>();
+  auto it = environ_.find(key);
+  if (it != environ_.end()) {
+    return it->second;
   }
   return "";
 }
@@ -177,6 +186,17 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
     break;
   }
   }
+
+  // parse environment
+    for (char **env = environ; *env != 0; env++) {
+      std::string current_env(*env);
+      size_t equals = current_env.find("=");
+      if (equals > 0) {
+        std::string key = current_env.substr(0, equals);
+        std::string value = current_env.substr(equals + 1);
+        environ_[key] = value;
+      }
+  }
 }
 
 InjaTransformer::~InjaTransformer() {}
@@ -236,7 +256,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     }
   }
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_);
 
   // Body transform:
   auto replace_body = [&](std::string &output) {

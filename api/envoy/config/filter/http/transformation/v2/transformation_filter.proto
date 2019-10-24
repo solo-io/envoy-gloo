@@ -86,7 +86,7 @@ message TransformationTemplate {
   message DynamicMetadataValue {
     // optional. if not set filter namespace will be used.
     string metadata_namespace = 1;
-    string key = 2;
+    string key = 2 [(validate.rules).string = {min_bytes: 1}];
     InjaTemplate value = 3; 
   }
   repeated DynamicMetadataValue dynamic_metadata_values = 9;

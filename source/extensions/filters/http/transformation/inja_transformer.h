@@ -26,23 +26,25 @@ public:
   TransformerInstance(
       const Http::HeaderMap &header_map, GetBodyFunc body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context);
+      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ);
   
 
   std::string render(const inja::Template &input);
 
 private:
 // header_value(name)
-  nlohmann::json header_callback(const inja::Arguments& args);
+  nlohmann::json header_callback(const inja::Arguments& args) const;
   // extracted_value(name, index)
-  nlohmann::json extracted_callback(const inja::Arguments& args);
-  nlohmann::json dynamic_metadata(const inja::Arguments& args);
+  nlohmann::json extracted_callback(const inja::Arguments& args) const;
+  nlohmann::json dynamic_metadata(const inja::Arguments& args) const;
+  nlohmann::json env(const inja::Arguments& args) const;
 
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
   GetBodyFunc body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
+  const std::unordered_map<std::string, std::string>& environ_;
 };
 
 class Extractor {
@@ -82,6 +84,7 @@ private:
   std::vector<std::pair<std::string, Extractor>> extractors_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
   std::vector<DynamicMetadataValue> dynamic_metadata_;
+  std::unordered_map<std::string, std::string> environ_;
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;

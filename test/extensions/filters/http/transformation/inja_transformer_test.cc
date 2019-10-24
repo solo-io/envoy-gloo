@@ -1,5 +1,6 @@
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
+#include "test/test_common/environment.h"
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
@@ -47,7 +48,7 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
   
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody, {});
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -60,9 +61,10 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   std::string path = "/getsomething";
 
   Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
+      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}
+    };
 
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody, {});
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -78,7 +80,7 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
                                   
-  TransformerInstance t(headers, empty_body, {}, originalbody);
+  TransformerInstance t(headers, empty_body, {}, originalbody, {});
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -92,7 +94,7 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -105,10 +107,34 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
+  EXPECT_EQ("", res);
+}
+
+TEST(TransformerInstance, Environment) {
+  json originalbody;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Http::TestHeaderMapImpl headers;
+  std::unordered_map<std::string, std::string> env;
+  env["FOO"] = "BAR";
+  
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+
+  auto res = t.render(parse("{{env(\"FOO\")}}"));
+  EXPECT_EQ("BAR", res);
+}
+
+TEST(TransformerInstance, EmptyEnvironment) {
+  json originalbody;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Http::TestHeaderMapImpl headers;
+  
+  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
+
+  auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -422,9 +448,7 @@ TEST(InjaTransformer, UseDefaultNS) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
 
-  auto meta = MessageUtil::keyValueStruct("foo", "1");
-
-  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation",meta)).Times(1);
+  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1);
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, filter_callbacks_);
 }
@@ -451,7 +475,6 @@ TEST(InjaTransformer, UseCustomNS) {
   transformer.transform(headers, body, filter_callbacks_);
 }
 
-
 TEST(InjaTransformer, UseDynamicMetaTwice) {
   const std::string content_type = "content-type";
   Http::TestHeaderMapImpl headers{
@@ -469,10 +492,28 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
 
-
   EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, filter_callbacks_);
+}
+
+TEST(InjaTransformer, UseEnvVar) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{env(\"FOO\")}}");
+  // set env before calling transforer
+  TestEnvironment::setEnvVar("FOO", "BAR", 1);
+  TestEnvironment::setEnvVar("EMPTY", "", 1);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, filter_callbacks_);
+  EXPECT_EQ(body.toString(), "BAR");
 }
 
 } // namespace Transformation
