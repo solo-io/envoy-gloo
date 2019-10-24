@@ -1,0 +1,4 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/37
+  description: Add body() function to template, allow using templates wit dynamic metadata, add env() function to template
