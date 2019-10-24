@@ -143,7 +143,7 @@ void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 
   const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
-    RouteTransformationFilterConfig>(filter_config_->name(), route_);
+    RouteFilterConfig>(filter_config_->name(), route_);
   TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard header_matching rules
   if (route_config != nullptr) {
