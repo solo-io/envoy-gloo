@@ -48,7 +48,6 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
 
 absl::string_view Extractor::extract(const Http::HeaderMap &header_map,
                                      GetBodyFunc body) const {
-  // TODO: should we lowercase them in the config?
   if (body_) {
     return extractValue(body());
   } else {
@@ -66,7 +65,8 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
   if (std::regex_match(value.begin(), value.end(), regex_result,
                        extract_regex_)) {
     if (group_ >= regex_result.size()) {
-      // TODO: this indicates user misconfiguration... log or stat?
+      ASSERT("no such group in the regex");
+      //ENVOY_STREAM_LOG(debug, "invalid group specified for regex", callbacks_);
       return "";
     }
     const auto &sub_match = regex_result[group_];
@@ -78,9 +78,10 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context, const std::unordered_map<std::string, std::string>& environ)
+    const json &context, const std::unordered_map<std::string, std::string>& environ, 
+    Http::StreamFilterCallbacks &callbacks)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context), environ_(environ) {
+      context_(context), environ_(environ), callbacks_(callbacks) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
@@ -256,24 +257,17 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     }
   }
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_, callbacks);
 
   // Body transform:
-  auto replace_body = [&](std::string &output) {
-    // remove content length, as we have new body.
-    header_map.removeContentLength();
-    // replace body
-    body.drain(body.length());
-    body.add(output);
-    header_map.insertContentLength().value(body.length());
-  };
+  absl::optional<Buffer::OwnedImpl> maybe_body;
 
   if (body_template_.has_value()) {
     std::string output = instance.render(body_template_.value());
-    replace_body(output);
+    maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
-    replace_body(output);
+    maybe_body.emplace(output);
   }
 
   // DynamicMetadata transform:
@@ -297,6 +291,17 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
       header_map.addReferenceKey(templated_header.first, output);
     }
   }
+
+  // replace body. we do it here so that headers and dynamic metadata have the original body.
+  if (maybe_body.has_value()) {
+    // remove content length, as we have new body.
+    header_map.removeContentLength();
+    // replace body
+    body.drain(body.length());
+    body.prepend(maybe_body.value());
+    header_map.insertContentLength().value(body.length());
+  }
+
 }
 
 } // namespace Transformation
