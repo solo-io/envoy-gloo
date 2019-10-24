@@ -83,7 +83,13 @@ message TransformationTemplate {
   RequestBodyParse parse_body_behavior = 7;
   bool ignore_error_on_parse = 8;
 
-  map<string, InjaTemplate> dynamic_metadata = 9;
+  message DynamicMetadataValue {
+    // optional. if not set filter namespace will be used.
+    string metadata_namespace = 1;
+    string key = 2;
+    InjaTemplate value = 3; 
+  }
+  repeated DynamicMetadataValue dynamic_metadata_values = 9;
 
 }
 

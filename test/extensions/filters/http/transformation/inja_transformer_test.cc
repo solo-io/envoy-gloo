@@ -406,13 +406,57 @@ TEST(InjaTransformer, UseBodyFunction) {
   EXPECT_EQ(body.toString(), "1 1");
 }
 
-TEST(InjaTransformer, UseDynamicMeta) {
+TEST(InjaTransformer, UseDefaultNS) {
   const std::string content_type = "content-type";
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  auto meta = MessageUtil::keyValueStruct("foo", "1");
+
+  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation",meta)).Times(1);
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, filter_callbacks_);
+}
+
+TEST(InjaTransformer, UseCustomNS) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->set_metadata_namespace("foo.ns");
+  dynamic_meta->mutable_value()->set_text("123");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
+  Buffer::OwnedImpl body;
+  transformer.transform(headers, body, filter_callbacks_);
+}
+
+
+TEST(InjaTransformer, UseDynamicMetaTwice) {
+  const std::string content_type = "content-type";
+  Http::TestHeaderMapImpl headers{
+      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  TransformationTemplate transformation;
 
   auto dynamic_meta = transformation.add_dynamic_metadata_values();
   dynamic_meta->set_key("foo");
@@ -425,10 +469,10 @@ TEST(InjaTransformer, UseDynamicMeta) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
 
+
   EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, filter_callbacks_);
-  EXPECT_EQ(body.toString(), "1");
 }
 
 } // namespace Transformation
