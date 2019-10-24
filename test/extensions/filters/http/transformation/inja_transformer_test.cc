@@ -267,8 +267,8 @@ TEST(Transformer, transformSimpleNestedStructs) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -294,8 +294,8 @@ TEST(Transformer, transformPassthrough) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -325,8 +325,8 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -350,8 +350,8 @@ TEST(Transformer, transformBodyNotSet) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -378,8 +378,8 @@ TEST(InjaTransformer, transformWithHyphens) {
   transformation.mutable_merge_extractors_to_body();
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -400,15 +400,13 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   InjaTransformer transformer(transformation);
 
   EXPECT_TRUE(headers.has(content_type));
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
   EXPECT_FALSE(headers.has(content_type));
 }
 
 TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   Buffer::OwnedImpl body("not json body");
 
   TransformationTemplate transformation;
@@ -425,15 +423,13 @@ TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
   EXPECT_EQ(body.toString(), "json");
 }
 
 TEST(InjaTransformer, UseBodyFunction) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -442,16 +438,14 @@ TEST(InjaTransformer, UseBodyFunction) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, body, callbacks);
   EXPECT_EQ(body.toString(), "1 1");
 }
 
 TEST(InjaTransformer, UseDefaultNS) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -462,17 +456,15 @@ TEST(InjaTransformer, UseDefaultNS) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1);
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1);
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseCustomNS) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -484,17 +476,15 @@ TEST(InjaTransformer, UseCustomNS) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
   Buffer::OwnedImpl body;
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseDynamicMetaTwice) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   auto dynamic_meta = transformation.add_dynamic_metadata_values();
@@ -506,17 +496,15 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(filter_callbacks_.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseEnvVar) {
-  const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
-      {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{env(\"FOO\")}}");
   // set env before calling transforer
@@ -525,11 +513,25 @@ TEST(InjaTransformer, UseEnvVar) {
 
   InjaTransformer transformer(transformation);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, body, callbacks);
   EXPECT_EQ(body.toString(), "BAR");
+}
+
+
+TEST(InjaTransformer, ParseBodyListUsingContext) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{% for i in context() %}{{ i }}{% endfor %}");
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("[3,2,1]");
+  transformer.transform(headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "321");
 }
 
 } // namespace Transformation

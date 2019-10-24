@@ -88,6 +88,7 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("extraction", 1, [this](Arguments& args) {
     return extracted_callback(args);
   });
+  env_.add_callback("context", 0, [this](Arguments&) { return context_; });
   env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
   env_.add_callback("env", 1, [this](Arguments& args) { return env(args); });
 }
@@ -119,7 +120,12 @@ json TransformerInstance::env(const inja::Arguments& args) const {
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {
-  return env_.render(input, context_);
+  // inja can't handle context that are not objects correctly, so we give it an empty object in that case
+  if (context_.is_object()) {
+    return env_.render(input, context_);
+  } else {
+    return env_.render(input, {});
+  }
 }
 
 InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
