@@ -271,8 +271,10 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   // DynamicMetadata transform:
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
     std::string output = instance.render(templated_dynamic_metadata.template_);
-    ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
-    callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
+    if (!output.empty()) {
+      ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+      callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
+    }
   }
 }
 
