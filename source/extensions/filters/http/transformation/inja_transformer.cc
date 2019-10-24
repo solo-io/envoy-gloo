@@ -276,6 +276,15 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     replace_body(output);
   }
 
+  // DynamicMetadata transform:
+  for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
+    std::string output = instance.render(templated_dynamic_metadata.template_);
+    if (!output.empty()) {
+      ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+      callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
+    }
+  }
+  
   // Headers transform:
   for (const auto &templated_header : headers_) {
     std::string output = instance.render(templated_header.second);
@@ -286,14 +295,6 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
       // we can add the key as reference as the headers_ lifetime is as the
       // route's
       header_map.addReferenceKey(templated_header.first, output);
-    }
-  }
-  // DynamicMetadata transform:
-  for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
-    std::string output = instance.render(templated_dynamic_metadata.template_);
-    if (!output.empty()) {
-      ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
-      callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
     }
   }
 }
