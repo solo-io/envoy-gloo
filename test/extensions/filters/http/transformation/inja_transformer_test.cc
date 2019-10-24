@@ -47,8 +47,10 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestHeaderMapImpl headers;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> env;
   
-  TransformerInstance t(headers, empty_body, {}, originalbody, {});
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -63,8 +65,10 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   Http::TestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}
     };
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> env;
 
-  TransformerInstance t(headers, empty_body, {}, originalbody, {});
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -79,8 +83,10 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> env;
                                   
-  TransformerInstance t(headers, empty_body, {}, originalbody, {});
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -93,8 +99,9 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
+  std::unordered_map<std::string, std::string> env;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -106,8 +113,9 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
+  std::unordered_map<std::string, std::string> env;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -132,7 +140,8 @@ TEST(TransformerInstance, EmptyEnvironment) {
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestHeaderMapImpl headers;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, {});
+  std::unordered_map<std::string, std::string> env;
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
