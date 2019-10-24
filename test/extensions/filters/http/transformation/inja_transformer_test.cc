@@ -49,8 +49,9 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -67,8 +68,9 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
     };
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -85,8 +87,9 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {"x-custom-header", header}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
                                   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -100,8 +103,9 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -114,8 +118,9 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -128,8 +133,9 @@ TEST(TransformerInstance, Environment) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   env["FOO"] = "BAR";
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -141,7 +147,8 @@ TEST(TransformerInstance, EmptyEnvironment) {
   Http::TestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
@@ -196,8 +203,8 @@ TEST(Transformer, transform) {
   transformation.set_advanced_templates(true);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -228,8 +235,8 @@ TEST(Transformer, transformSimple) {
   transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, body, callbacks);
 
   std::string res = body.toString();
 

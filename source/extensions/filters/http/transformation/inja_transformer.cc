@@ -3,6 +3,7 @@
 
 #include <iterator>
 
+#include "common/buffer/buffer_impl.h"
 #include "common/common/macros.h"
 #include "common/common/utility.h"
 #include "common/common/regex.h"
@@ -298,6 +299,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     header_map.removeContentLength();
     // replace body
     body.drain(body.length());
+    // prepend is used because it doesn't copy, it drains maybe_body
     body.prepend(maybe_body.value());
     header_map.insertContentLength().value(body.length());
   }
