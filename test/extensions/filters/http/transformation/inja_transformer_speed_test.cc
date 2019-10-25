@@ -3,6 +3,7 @@
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include "test/test_common/utility.h"
+#include "test/mocks/http/mocks.h"
 
 #include "benchmark/benchmark.h"
 #include "fmt/format.h"
@@ -27,10 +28,11 @@ static void BM_ExrtactHeader(benchmark::State &state) {
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
   size_t output_bytes = 0;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   Extractor ext(extractor);
   for (auto _ : state) {
-    auto view = ext.extract(headers, empty_body);
+    auto view = ext.extract(callbacks, headers, empty_body);
     output_bytes += view.length();
   }
   benchmark::DoNotOptimize(output_bytes);
