@@ -49,9 +49,8 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -68,9 +67,8 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
     };
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -87,9 +85,8 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {"x-custom-header", header}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
                                   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -103,9 +100,8 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -118,9 +114,8 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -133,9 +128,8 @@ TEST(TransformerInstance, Environment) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   env["FOO"] = "BAR";
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -147,14 +141,14 @@ TEST(TransformerInstance, EmptyEnvironment) {
   Http::TestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, callbacks);
+
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
 }
 
-TEST(ExtractorUtil, ExtractIdFromHeader) {
+TEST(Extraction, ExtractIdFromHeader) {
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
@@ -162,12 +156,14 @@ TEST(ExtractorUtil, ExtractIdFromHeader) {
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
-  std::string res(Extractor(extractor).extract(headers, empty_body));
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  std::string res(Extractor(extractor).extract(callbacks, headers, empty_body));
 
   EXPECT_EQ("123", res);
 }
 
-TEST(ExtractorUtil, ExtractorFail) {
+TEST(Extraction, ExtractorFail) {
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
@@ -178,6 +174,18 @@ TEST(ExtractorUtil, ExtractorFail) {
   EXPECT_THROW_WITH_MESSAGE(Extractor a(extractor), EnvoyException,
                             "Invalid regex 'ILLEGAL REGEX \\ \\ \\ \\ a\\ "
                             "\\a\\ a\\  \\d+)': regex_error");
+}
+
+TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/users/123"}};
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("(\\d+)");
+  extractor.set_subgroup(123);
+  EXPECT_THROW_WITH_MESSAGE(Extractor a(extractor), EnvoyException,
+                            "group 123 requested for regex with only 1 sub groups");
 }
 
 TEST(Transformer, transform) {

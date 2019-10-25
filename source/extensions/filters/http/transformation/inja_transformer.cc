@@ -45,33 +45,43 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
-      extract_regex_(Regex::Utility::parseStdRegex(extractor.regex())) {}
+      extract_regex_(Regex::Utility::parseStdRegex(extractor.regex())) {
+        // mark count == number of sub groups, and we need to add one for match number 0
+        // so we test for < instead of <=
+        // see: http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
+        if (extract_regex_.mark_count() < group_) {
+          throw EnvoyException(fmt::format("group {} requested for regex with only {} sub groups", group_, extract_regex_.mark_count()));
+        }
+      }
 
-absl::string_view Extractor::extract(const Http::HeaderMap &header_map,
+absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, const Http::HeaderMap &header_map,
                                      GetBodyFunc body) const {
   if (body_) {
-    return extractValue(body());
+    return extractValue(callbacks, body());
   } else {
     const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);
     if (!header_entry) {
       return "";
     }
-    return extractValue(header_entry->value().getStringView());
+    return extractValue(callbacks, header_entry->value().getStringView());
   }
 }
 
-absl::string_view Extractor::extractValue(absl::string_view value) const {
+absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks, absl::string_view value) const {
   // get and regex
   std::match_results<absl::string_view::const_iterator> regex_result;
   if (std::regex_match(value.begin(), value.end(), regex_result,
                        extract_regex_)) {
     if (group_ >= regex_result.size()) {
+      // this should never happen as we test this in the ctor.
       ASSERT("no such group in the regex");
-      //ENVOY_STREAM_LOG(debug, "invalid group specified for regex", callbacks_);
+      ENVOY_STREAM_LOG(debug, "invalid group specified for regex", callbacks);
       return "";
     }
     const auto &sub_match = regex_result[group_];
     return absl::string_view(sub_match.first, sub_match.length());
+  } else {
+      ENVOY_STREAM_LOG(debug, "extractor regex did not match input", callbacks);
   }
   return "";
 }
@@ -79,10 +89,9 @@ absl::string_view Extractor::extractValue(absl::string_view value) const {
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context, const std::unordered_map<std::string, std::string>& environ, 
-    Http::StreamFilterCallbacks &callbacks)
+    const json &context, const std::unordered_map<std::string, std::string>& environ)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context), environ_(environ), callbacks_(callbacks) {
+      context_(context), environ_(environ) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
@@ -195,7 +204,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
   }
   }
 
-  // parse environment
+    // parse environment
     for (char **env = environ; *env != 0; env++) {
       std::string current_env(*env);
       size_t equals = current_env.find("=");
@@ -249,7 +258,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
     if (advanced_templates_) {
-      extractions[name] = named_extractor.second.extract(header_map, get_body);
+      extractions[name] = named_extractor.second.extract(callbacks, header_map, get_body);
     } else {
       absl::string_view name_to_split = name;
       json *current = &json_body;
@@ -260,11 +269,11 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
         name_to_split = name_to_split.substr(pos + 1);
       }
       (*current)[std::string(name_to_split)] =
-          named_extractor.second.extract(header_map, get_body);
+          named_extractor.second.extract(callbacks, header_map, get_body);
     }
   }
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_, callbacks);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

@@ -26,8 +26,7 @@ public:
   TransformerInstance(
       const Http::HeaderMap &header_map, GetBodyFunc body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ,
-      Http::StreamFilterCallbacks &callbacks);
+      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ);
   
 
   std::string render(const inja::Template &input);
@@ -46,17 +45,16 @@ private:
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string>& environ_;
-  Http::StreamFilterCallbacks &callbacks_;
 };
 
-class Extractor {
+class Extractor : Logger::Loggable<Logger::Id::filter> {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
-  absl::string_view extract(const Http::HeaderMap &header_map,
+  absl::string_view extract(Http::StreamFilterCallbacks &callbacks, const Http::HeaderMap &header_map,
                             GetBodyFunc body) const;
 
 private:
-  absl::string_view extractValue(absl::string_view value) const;
+  absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks, absl::string_view value) const;
 
   const Http::LowerCaseString headername_;
   const bool body_;
