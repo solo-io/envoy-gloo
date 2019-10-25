@@ -466,7 +466,11 @@ TEST(InjaTransformer, UseDefaultNS) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1);
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1)
+      .WillOnce(Invoke([](const std::string&, const ProtobufWkt::Struct& value) {
+        auto field = value.fields().at("foo");
+        EXPECT_EQ(field.string_value(), "1");
+      }));
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, callbacks);
 }
