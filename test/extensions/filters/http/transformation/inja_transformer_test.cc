@@ -163,6 +163,26 @@ TEST(Extraction, ExtractIdFromHeader) {
   EXPECT_EQ("123", res);
 }
 
+TEST(Extraction, ExtractorWorkWithNewlines) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"},
+                                  {":authority", "www.solo.io"},
+                                  {":path", "/users/123"}};
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.mutable_body();
+  extractor.set_regex("[\\S\\s]*");
+  extractor.set_subgroup(0);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  std::string body("1\n2\n3");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & {
+    return body;
+  };
+
+  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+
+  EXPECT_EQ(body, res);
+}
+
 TEST(Extraction, ExtractorFail) {
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
