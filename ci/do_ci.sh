@@ -34,9 +34,7 @@ export PYTHONUSERBASE="${FAKE_HOME}"
 
 if [[ -f "/etc/redhat-release" ]]
 then
-  export BAZEL_BUILD_EXTRA_OPTIONS="--copt=-DENVOY_IGNORE_GLIBCXX_USE_CXX11_ABI_ERROR=1 --action_env=PATH ${BAZEL_BUILD_EXTRA_OPTIONS}"
-else
-  export BAZEL_BUILD_EXTRA_OPTIONS="--action_env=PATH=/bin:/usr/bin:/usr/lib/llvm-8/bin --linkopt=-fuse-ld=lld ${BAZEL_BUILD_EXTRA_OPTIONS}"
+  export BAZEL_BUILD_EXTRA_OPTIONS+=" --copt=-DENVOY_IGNORE_GLIBCXX_USE_CXX11_ABI_ERROR=1 "
 fi
 
 # added by yuval-k for the integration tests to run on google cloud build
@@ -46,6 +44,7 @@ export BAZEL_QUERY_OPTIONS="${BAZEL_OPTIONS}"
 export BAZEL_BUILD_OPTIONS="--verbose_failures ${BAZEL_OPTIONS} --action_env=HOME --action_env=PYTHONUSERBASE \
   --local_cpu_resources=${NUM_CPUS} --show_task_finish --experimental_generate_json_trace_profile \
   --test_env=HOME --test_env=PYTHONUSERBASE --cache_test_results=no --test_output=all \
+  --repository_cache=${BUILD_DIR}/repository_cache --experimental_repository_cache_hardlinks \
   ${BAZEL_BUILD_EXTRA_OPTIONS} ${BAZEL_EXTRA_TEST_OPTIONS}"
 
 function setup_gcc_toolchain() {
@@ -61,15 +60,11 @@ function setup_gcc_toolchain() {
 
 function setup_clang_toolchain() {
   if [[ -z "${ENVOY_RBE}" ]]; then
-    export PATH=/usr/lib/llvm-8/bin:$PATH
-    export CC=clang
-    export CXX=clang++
-    export BAZEL_COMPILER=clang
-    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
-    echo "$CC/$CXX toolchain configured"
+    export BAZEL_BUILD_OPTIONS="--config=clang ${BAZEL_BUILD_OPTIONS}"
   else
     export BAZEL_BUILD_OPTIONS="--config=rbe-toolchain-clang ${BAZEL_BUILD_OPTIONS}"
   fi
+  echo "clang toolchain configured"
 }
 
 function setup_clang_libcxx_toolchain() {
@@ -114,7 +109,7 @@ case "$1" in
 #    bazel test ${BAZEL_BUILD_OPTIONS} -c opt //test/...
     ;;
 "build")
-    bazel build ${BAZEL_BUILD_OPTIONS} -c opt :envoy
+    bazel build ${BAZEL_BUILD_OPTIONS} -c opt :envoy --config=sizeopt
     objcopy --only-keep-debug bazel-bin/envoy bazel-bin/envoy.debuginfo
     strip -g bazel-bin/envoy -o bazel-bin/envoy.stripped
 
