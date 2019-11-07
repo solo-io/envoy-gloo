@@ -33,7 +33,7 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 Router::RouteSpecificFilterConfigConstSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
-  Server::Configuration::FactoryContext&) {
+  Server::Configuration::ServerFactoryContext&, ProtobufMessage::ValidationVisitor&) {
     return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
 }
 

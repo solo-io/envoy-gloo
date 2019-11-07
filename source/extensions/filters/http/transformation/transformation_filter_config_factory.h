@@ -31,7 +31,7 @@ private:
 
 Router::RouteSpecificFilterConfigConstSharedPtr
     createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto&,
-                                       Server::Configuration::FactoryContext&) override;
+                                       Server::Configuration::ServerFactoryContext& ,ProtobufMessage::ValidationVisitor&) override;
 };
 
 } // namespace Transformation

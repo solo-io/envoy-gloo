@@ -38,7 +38,7 @@ private:
   Router::RouteSpecificFilterConfigConstSharedPtr
   createRouteSpecificFilterConfigTyped(
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &,
-      Server::Configuration::FactoryContext &) override;
+      Server::Configuration::ServerFactoryContext &, ProtobufMessage::ValidationVisitor&) override;
 };
 
 } // namespace AwsLambda
