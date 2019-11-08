@@ -55,9 +55,11 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
       }
 
 absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, const Http::HeaderMap &header_map,
-                                     GetBodyFunc body) const {
+                                     GetBodyFunc& body) const {
   if (body_) {
-    return extractValue(callbacks, body());
+    const std::string& string_body = body();
+    absl::string_view sv(string_body);
+    return extractValue(callbacks, sv);
   } else {
     const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);
     if (!header_entry) {
@@ -87,7 +89,7 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 }
 
 TransformerInstance::TransformerInstance(
-    const Http::HeaderMap &header_map, GetBodyFunc body,
+    const Http::HeaderMap &header_map, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ)
     : header_map_(header_map), body_(body), extractions_(extractions),
@@ -222,7 +224,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
                                 Buffer::Instance &body,
                                 Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;
-  auto get_body = [&string_body, &body]() -> const std::string & {
+  GetBodyFunc get_body = [&string_body, &body]() -> const std::string & {
     if (!string_body.has_value()) {
       string_body.emplace(body.toString());
     }

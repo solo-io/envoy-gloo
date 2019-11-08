@@ -24,7 +24,7 @@ using GetBodyFunc = std::function<const std::string &()>;
 class TransformerInstance {
 public:
   TransformerInstance(
-      const Http::HeaderMap &header_map, GetBodyFunc body,
+      const Http::HeaderMap &header_map, GetBodyFunc& body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ);
   
@@ -41,7 +41,7 @@ private:
 
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
-  GetBodyFunc body_;
+  GetBodyFunc& body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string>& environ_;
@@ -51,7 +51,7 @@ class Extractor : Logger::Loggable<Logger::Id::filter> {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks, const Http::HeaderMap &header_map,
-                            GetBodyFunc body) const;
+                            GetBodyFunc& body) const;
 
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks, absl::string_view value) const;
