@@ -22,7 +22,6 @@ envoy_cc_library(
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:empty_string",
         "@envoy//source/common/common:hex_lib",
-        "@envoy//source/common/config:json_utility_lib",
         "@envoy//source/common/http:headers_lib",
         "@envoy//source/common/http:utility_lib",
     ],

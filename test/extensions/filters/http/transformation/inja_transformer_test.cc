@@ -171,9 +171,8 @@ TEST(Extraction, ExtractorFail) {
   extractor.set_header(":path");
   extractor.set_regex("ILLEGAL REGEX \\ \\ \\ \\ a\\ \\a\\ a\\  \\d+)");
   extractor.set_subgroup(1);
-  EXPECT_THROW_WITH_MESSAGE(Extractor a(extractor), EnvoyException,
-                            "Invalid regex 'ILLEGAL REGEX \\ \\ \\ \\ a\\ "
-                            "\\a\\ a\\  \\d+)': regex_error");
+  EXPECT_THAT_THROWS_MESSAGE(Extractor a(extractor), EnvoyException,
+                            HasSubstr("Invalid regex"));
 }
 
 TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {

@@ -5,7 +5,6 @@
 #include "envoy/registry/registry.h"
 
 #include "common/common/macros.h"
-#include "common/config/json_utility.h"
 #include "common/protobuf/utility.h"
 
 #include "extensions/filters/http/transformation/transformation_filter.h"
