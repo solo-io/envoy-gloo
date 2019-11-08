@@ -141,7 +141,7 @@ TEST_F(TcpClientImplTest, Basic) {
         EXPECT_CALL(pool_callbacks_, onResponse_(Ref(response1)));
         EXPECT_CALL(
             host_->outlier_detector_,
-            putResult(Upstream::Outlier::Result::ExtOriginRequestSuccess,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
                       _));
         callbacks_->onValue(std::move(response1));
 
@@ -149,7 +149,7 @@ TEST_F(TcpClientImplTest, Basic) {
         EXPECT_CALL(pool_callbacks_, onResponse_(Ref(response2)));
         EXPECT_CALL(
             host_->outlier_detector_,
-            putResult(Upstream::Outlier::Result::ExtOriginRequestSuccess,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
                       _));
         callbacks_->onValue(std::move(response2));
       }));
@@ -187,7 +187,7 @@ TEST_F(TcpClientImplTest, Cancel) {
         EXPECT_CALL(pool_callbacks_, onResponse_(_)).Times(0);
         EXPECT_CALL(
             host_->outlier_detector_,
-            putResult(Upstream::Outlier::Result::ExtOriginRequestSuccess,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
                       _));
         callbacks_->onValue(std::move(response1));
 
@@ -195,7 +195,7 @@ TEST_F(TcpClientImplTest, Cancel) {
         EXPECT_CALL(pool_callbacks_, onResponse_(_)).Times(0);
         EXPECT_CALL(
             host_->outlier_detector_,
-            putResult(Upstream::Outlier::Result::ExtOriginRequestSuccess,
+            putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_SUCCESS,
                       _));
         callbacks_->onValue(std::move(response2));
       }));
@@ -225,7 +225,7 @@ TEST_F(TcpClientImplTest, FailAll) {
 
   EXPECT_CALL(
       host_->outlier_detector_,
-      putResult(Upstream::Outlier::Result::ExtOriginRequestFailed, _));
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
   EXPECT_CALL(pool_callbacks_, onClose());
   EXPECT_CALL(connection_callbacks,
               onEvent(Network::ConnectionEvent::RemoteClose));
@@ -285,7 +285,7 @@ TEST_F(TcpClientImplTest, ProtocolError) {
           [&](Buffer::Instance &) -> void { throw ProtocolError("error"); }));
   EXPECT_CALL(
       host_->outlier_detector_,
-      putResult(Upstream::Outlier::Result::ExtOriginRequestFailed, _));
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
   EXPECT_CALL(*upstream_connection_,
               close(Network::ConnectionCloseType::NoFlush));
 
@@ -307,7 +307,7 @@ TEST_F(TcpClientImplTest, ConnectFail) {
 
   EXPECT_CALL(
       host_->outlier_detector_,
-      putResult(Upstream::Outlier::Result::ExtOriginRequestFailed, _));
+      putResult(Upstream::Outlier::Result::EXT_ORIGIN_REQUEST_FAILED, _));
 
   EXPECT_CALL(pool_callbacks_, onClose());
 
