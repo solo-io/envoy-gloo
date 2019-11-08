@@ -116,7 +116,6 @@ envoy_cc_library(
     deps = [
         ":transformation_filter_lib",
         "@envoy//include/envoy/registry",
-        "@envoy//source/common/config:json_utility_lib",
         "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],

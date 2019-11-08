@@ -5,7 +5,6 @@
 #include "envoy/registry/registry.h"
 
 #include "common/common/macros.h"
-#include "common/config/json_utility.h"
 #include "common/protobuf/utility.h"
 
 #include "extensions/filters/http/transformation/transformation_filter.h"
@@ -33,7 +32,7 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 Router::RouteSpecificFilterConfigConstSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
-  Server::Configuration::FactoryContext&) {
+  Server::Configuration::ServerFactoryContext&, ProtobufMessage::ValidationVisitor&) {
     return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
 }
 

@@ -1,15 +1,6 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu@sha256:1500b75cb9bc2184a26f72f63631e926cd05d6ee628e6fd005f069d2f9756ac7'
-  args: ['ci/do_ci.sh', 'test']
-  volumes:
-  - name: 'vol-build'
-    path: '/build'
-  env:
-  - 'COMMIT_SHA=$COMMIT_SHA'
-  timeout: 900s
-
-- name: 'envoyproxy/envoy-build-ubuntu@sha256:1500b75cb9bc2184a26f72f63631e926cd05d6ee628e6fd005f069d2f9756ac7'
-  args: ['ci/do_ci.sh', 'build']
+- name: 'envoyproxy/envoy-build-ubuntu@sha256:3ca8acc35fdb57ab26e1bb5f9488f37095f45acd77a12602510410dbefa00b58'
+  args: ['ci/do_ci.sh', 'bazel.release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
   volumes:
   - name: 'vol-build'
     path: '/build'
@@ -19,11 +10,14 @@ steps:
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
-  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && make docker-release']
+  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp build_release_stripped/envoy ci/envoy.stripped && make docker-release']
   env: 
   - 'TAGGED_VERSION=$TAG_NAME'
   - 'COMMIT_SHA=$COMMIT_SHA'
   secretEnv: ['QUAY_IO_PASSWORD']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
 
 - name: gcr.io/cloud-builders/gsutil
   entrypoint: 'bash'
@@ -31,7 +25,7 @@ steps:
   - '-ec'
   - |
     if [ -z "$$TAGGED_VERSION" ]; then exit 0; fi
-    gsutil cp ./ci/envoy.stripped gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
+    gsutil cp ./build_release_stripped/envoy gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
   id: 'save-tagged-version'
   env: 
   - 'TAGGED_VERSION=$TAG_NAME'
@@ -49,4 +43,4 @@ timeout: 2400s
 artifacts:
   objects:
     location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
-    paths: ['ci/envoy.stripped', 'ci/envoy', 'ci/envoy.debuginfo']
+    paths: ['build_release/envoy', 'build_release_stripped/envoy']

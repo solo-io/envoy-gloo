@@ -36,7 +36,7 @@ private:
   createRouteSpecificFilterConfigTyped(
       const envoy::config::filter::http::nats::streaming::v2::
           NatsStreamingPerRoute &proto_config,
-      Server::Configuration::FactoryContext &context) override;
+      Server::Configuration::ServerFactoryContext &context, ProtobufMessage::ValidationVisitor&) override;
 };
 
 } // namespace Streaming
