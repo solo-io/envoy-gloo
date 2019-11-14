@@ -32,3 +32,7 @@ export BAZEL_BUILD_EXTRA_OPTIONS+=" --define wasm=enabled "
 
 echo Building
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
+
+# use envoy run_envoy_docker:
+# sudo setenforce 0
+# bash -x $HOME/sources/envoy-wasm/ci/run_envoy_docker.sh "export TEST_TMPDIR=/tmp; ./ci/do_ci.sh bazel.debug.server_only"
