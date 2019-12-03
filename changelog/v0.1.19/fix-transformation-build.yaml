@@ -1,0 +1,3 @@
+changelog:
+- type: FIX
+  description: make the environ variable explicit in the inja transformer code
