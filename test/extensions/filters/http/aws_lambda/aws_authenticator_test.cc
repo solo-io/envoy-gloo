@@ -110,9 +110,9 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   std::string url = "/?Param1=value1&Param2=value2";
   Http::TestHeaderMapImpl headers;
-  headers.setPath().value(url);
-  headers.setMethod().value(std::string("GET"));
-  headers.setHost().value(std::string("example.amazonaws.com"));
+  headers.setPath(url);
+  headers.setMethod(std::string("GET"));
+  headers.setHost(std::string("example.amazonaws.com"));
 
   set_guide_test_params(aws);
 
