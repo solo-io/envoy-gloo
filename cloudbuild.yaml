@@ -6,7 +6,7 @@ steps:
     path: '/build'
   env:
   - 'COMMIT_SHA=$COMMIT_SHA'
-  timeout: 900s
+  timeout: 1800s
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
