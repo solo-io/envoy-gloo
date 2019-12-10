@@ -223,7 +223,7 @@ void TransformationFilter::requestError() {
 void TransformationFilter::responseError() {
   ASSERT(is_error());
   filter_config_->stats().response_error_.inc();
-  response_headers_->Status()->value(enumToInt(error_code_));
+  response_headers_->setStatus(enumToInt(error_code_));
   Buffer::OwnedImpl data(error_messgae_);
   response_headers_->removeContentType();
   response_headers_->setContentLength(data.length());
