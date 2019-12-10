@@ -226,7 +226,7 @@ void TransformationFilter::responseError() {
   response_headers_->Status()->value(enumToInt(error_code_));
   Buffer::OwnedImpl data(error_messgae_);
   response_headers_->removeContentType();
-  response_headers_->insertContentLength().value(data.length());
+  response_headers_->setContentLength(data.length());
   encoder_callbacks_->addEncodedData(data, false);
 }
 

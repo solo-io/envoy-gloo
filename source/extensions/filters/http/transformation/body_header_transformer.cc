@@ -36,13 +36,12 @@ void BodyHeaderTransformer::transform(Http::HeaderMap &header_map,
   header_map.removeContentLength();
   // we know that the new content type is json:
   header_map.removeContentType();
-  header_map.insertContentType().value().setReference(
-      Http::Headers::get().ContentTypeValues.Json);
+  header_map.setReferenceContentType(Http::Headers::get().ContentTypeValues.Json);
 
   // replace body
   body.drain(body.length());
   body.add(json_body.dump());
-  header_map.insertContentLength().value(body.length());
+  header_map.setContentLength(body.length());
 }
 
 } // namespace Transformation

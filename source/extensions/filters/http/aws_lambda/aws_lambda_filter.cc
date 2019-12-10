@@ -117,11 +117,9 @@ AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
   aws_authenticator_.init(access_key, secret_key);
   request_headers_ = &headers;
 
-  request_headers_->insertMethod().value().setReference(
-      Http::Headers::get().MethodValues.Post);
+  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
 
-  request_headers_->insertPath().value().setReference(
-      function_on_route_->path());
+  request_headers_->setReferencePath(function_on_route_->path());
 
   if (end_stream) {
     lambdafy();
@@ -171,7 +169,7 @@ void AWSLambdaFilter::lambdafy() {
                                  invocation_type);
   request_headers_->addReference(AWSLambdaHeaderNames::get().LogType,
                                  AWSLambdaHeaderNames::get().LogNone);
-  request_headers_->insertHost().value(protocol_options_->host());
+  request_headers_->setReferenceHost(protocol_options_->host());
 
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
@@ -182,9 +180,8 @@ void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
 
-    request_headers_->insertContentType().value().setReference(
-        Http::Headers::get().ContentTypeValues.Json);
-    request_headers_->insertContentLength().value(data.length());
+    request_headers_->setReferenceContentType(Http::Headers::get().ContentTypeValues.Json);
+    request_headers_->setContentLength(data.length());
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }

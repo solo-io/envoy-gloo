@@ -210,7 +210,7 @@ void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
   auto now = time_source_.systemTime();
 
   std::string sig = signWithTime(request_headers, headers_to_sign, region, now);
-  request_headers->insertAuthorization().value(sig);
+  request_headers->setAuthorization(sig);
 }
 
 std::string AwsAuthenticator::signWithTime(

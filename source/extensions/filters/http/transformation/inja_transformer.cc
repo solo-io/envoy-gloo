@@ -318,7 +318,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
     body.drain(body.length());
     // prepend is used because it doesn't copy, it drains maybe_body
     body.prepend(maybe_body.value());
-    header_map.insertContentLength().value(body.length());
+    header_map.setContentLength(body.length());
   }
 
 }
