@@ -8,6 +8,8 @@
 #include "common/common/utility.h"
 #include "common/common/regex.h"
 
+extern char **environ;
+
 // For convenience
 using namespace inja;
 using json = nlohmann::json;
