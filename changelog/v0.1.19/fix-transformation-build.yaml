@@ -1,0 +1,4 @@
+changelog:
+- type: FIX
+  description: make the environ variable explicit in the inja transformer code
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/43
