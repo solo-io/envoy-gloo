@@ -2,4 +2,4 @@ changelog:
 - type: DEPENDENCY_BUMP
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
-  dependencyTag: 2cd917e12e218f569773a6b7bdef8c2d72cdc897
+  dependencyTag: bd637fc7aab5de06707e3e478f507c2e7aacad75

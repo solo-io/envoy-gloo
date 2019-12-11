@@ -86,9 +86,9 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
   Http::TestHeaderMapImpl headers;
-  headers.insertPath().value(url + "?" + query);
-  headers.insertMethod().value(std::string("GET"));
-  headers.insertHost().value(std::string("www.solo.io"));
+  headers.setPath(url + "?" + query);
+  headers.setMethod(std::string("GET"));
+  headers.setHost(std::string("www.solo.io"));
 
   updatePayloadHash(aws, "abc");
 
@@ -110,9 +110,9 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   std::string url = "/?Param1=value1&Param2=value2";
   Http::TestHeaderMapImpl headers;
-  headers.insertPath().value(url);
-  headers.insertMethod().value(std::string("GET"));
-  headers.insertHost().value(std::string("example.amazonaws.com"));
+  headers.setPath(url);
+  headers.setMethod(std::string("GET"));
+  headers.setHost(std::string("example.amazonaws.com"));
 
   set_guide_test_params(aws);
 
