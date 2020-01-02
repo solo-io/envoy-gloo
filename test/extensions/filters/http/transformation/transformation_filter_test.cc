@@ -25,6 +25,24 @@ namespace HttpFilters {
 namespace Transformation {
 
 
+
+TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
+  NiceMock<Stats::MockIsolatedStatsStore> scope;
+  envoy::api::v2::filter::http::TransformationRule transformation_rule;
+  auto &route_matcher = (*transformation_rule.mutable_match());
+  route_matcher.set_prefix("/");
+
+  TransformationConfigProto listener_config;
+  *listener_config.mutable_transformations()->Add() = transformation_rule;
+
+  auto &transformation = (*transformation_rule.mutable_route_transformations()->mutable_request_transformation());
+  transformation.mutable_transformation_template()->mutable_body()->set_text(
+    "{{garbage}}");
+
+  EXPECT_THROW(std::make_unique<TransformationFilterConfig>(listener_config, "foo", scope), EnvoyException);
+}
+
+
 class TransformationFilterTest : public testing::Test {
 public:
   enum class ConfigType {
