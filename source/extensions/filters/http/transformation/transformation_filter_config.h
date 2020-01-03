@@ -47,7 +47,7 @@ public:
                 route_transformation.request_transformation());
           } catch (const std::exception &e) {
             throw EnvoyException(
-                fmt::format("Failed to parse request template {}", e.what()));
+                fmt::format("Failed to parse request template: {}", e.what()));
           }
         }
         if (route_transformation.has_response_transformation()) {
@@ -56,7 +56,7 @@ public:
                 route_transformation.response_transformation());
           } catch (const std::exception &e) {
             throw EnvoyException(
-                fmt::format("Failed to parse response template {}", e.what()));
+                fmt::format("Failed to parse response template: {}", e.what()));
           }
         }
       }
@@ -97,7 +97,7 @@ public:
       }
     } catch (const std::exception &e) {
       throw EnvoyException(
-          fmt::format("Failed to parse request template {}", e.what()));
+          fmt::format("Failed to parse request template: {}", e.what()));
     }
     try {
       if (proto_config.has_response_transformation()) {
@@ -106,7 +106,7 @@ public:
       }
     } catch (const std::exception &e) {
       throw EnvoyException(
-          fmt::format("Failed to parse response template {}", e.what()));
+          fmt::format("Failed to parse response template: {}", e.what()));
     }
     transformer_pair_ = std::make_shared<TransformerPair>(
         request_transformation, response_transformation,
