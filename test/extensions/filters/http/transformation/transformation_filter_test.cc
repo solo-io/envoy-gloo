@@ -25,6 +25,56 @@ namespace HttpFilters {
 namespace Transformation {
 
 
+
+TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
+  NiceMock<Stats::MockIsolatedStatsStore> scope;
+  envoy::api::v2::filter::http::TransformationRule transformation_rule;
+  auto &route_matcher = (*transformation_rule.mutable_match());
+  route_matcher.set_prefix("/");
+  {
+    auto &transformation = (*transformation_rule.mutable_route_transformations()->mutable_request_transformation());
+    transformation.mutable_transformation_template()->mutable_body()->set_text(
+      "{{not a valid template");
+
+    TransformationConfigProto listener_config;
+    *listener_config.mutable_transformations()->Add() = transformation_rule;
+
+    EXPECT_THROW_WITH_MESSAGE(std::make_unique<TransformationFilterConfig>(listener_config, "foo", scope), EnvoyException, "Failed to parse request template: Failed to parse body template [inja.exception.parser_error] expected expression close, got 'valid'");
+  }
+  transformation_rule.mutable_route_transformations()->Clear();
+  {
+    auto &transformation = (*transformation_rule.mutable_route_transformations()->mutable_response_transformation());
+    transformation.mutable_transformation_template()->mutable_body()->set_text(
+      "{{not a valid template");
+
+    TransformationConfigProto listener_config;
+    *listener_config.mutable_transformations()->Add() = transformation_rule;
+
+    EXPECT_THROW_WITH_MESSAGE(std::make_unique<TransformationFilterConfig>(listener_config, "foo", scope), EnvoyException, "Failed to parse response template: Failed to parse body template [inja.exception.parser_error] expected expression close, got 'valid'");
+  }
+
+}
+
+TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
+  {
+    RouteTransformationConfigProto route_config;
+    auto &transformation = (*route_config.mutable_request_transformation());
+    transformation.mutable_transformation_template()->mutable_body()->set_text(
+      "{{not a valid template");
+
+    EXPECT_THROW_WITH_MESSAGE(std::make_unique<RouteTransformationFilterConfig>(route_config), EnvoyException, "Failed to parse request template: Failed to parse body template [inja.exception.parser_error] expected expression close, got 'valid'");
+  }
+  {
+    RouteTransformationConfigProto route_config;
+    auto &transformation = (*route_config.mutable_response_transformation());
+    transformation.mutable_transformation_template()->mutable_body()->set_text(
+      "{{not a valid template");
+
+    EXPECT_THROW_WITH_MESSAGE(std::make_unique<RouteTransformationFilterConfig>(route_config), EnvoyException, "Failed to parse response template: Failed to parse body template [inja.exception.parser_error] expected expression close, got 'valid'");
+  }
+}
+
+
 class TransformationFilterTest : public testing::Test {
 public:
   enum class ConfigType {

@@ -4,8 +4,8 @@
 
 #include "envoy/router/router.h"
 
-#include "extensions/filters/http/transformation/transformer.h"
 #include "extensions/filters/http/solo_well_known_names.h"
+#include "extensions/filters/http/transformation/transformer.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
@@ -20,15 +20,18 @@ public:
       const envoy::api::v2::filter::http::Transformation &transformation);
 };
 
-using TransformationConfigProto = envoy::api::v2::filter::http::FilterTransformations;
-using RouteTransformationConfigProto = envoy::api::v2::filter::http::RouteTransformations;
+using TransformationConfigProto =
+    envoy::api::v2::filter::http::FilterTransformations;
+using RouteTransformationConfigProto =
+    envoy::api::v2::filter::http::RouteTransformations;
 
 class TransformationFilterConfig : public FilterConfig {
 public:
-  TransformationFilterConfig(const TransformationConfigProto &proto_config, const std::string& prefix, Stats::Scope& scope)
+  TransformationFilterConfig(const TransformationConfigProto &proto_config,
+                             const std::string &prefix, Stats::Scope &scope)
       : FilterConfig(prefix, scope) {
-    
-    for (const auto& rule : proto_config.transformations()) {
+
+    for (const auto &rule : proto_config.transformations()) {
       if (!rule.has_match()) {
         continue;
       }
@@ -36,60 +39,82 @@ public:
       TransformerConstSharedPtr response_transformation;
       bool clear_route_cache = false;
       if (rule.has_route_transformations()) {
-        const auto& route_transformation = rule.route_transformations();
+        const auto &route_transformation = rule.route_transformations();
         clear_route_cache = route_transformation.clear_route_cache();
         if (route_transformation.has_request_transformation()) {
-          request_transformation =
-              Transformation::getTransformer(route_transformation.request_transformation());
+          try {
+            request_transformation = Transformation::getTransformer(
+                route_transformation.request_transformation());
+          } catch (const std::exception &e) {
+            throw EnvoyException(
+                fmt::format("Failed to parse request template: {}", e.what()));
+          }
         }
         if (route_transformation.has_response_transformation()) {
-          response_transformation = Transformation::getTransformer(
-              route_transformation.response_transformation());
+          try {
+            response_transformation = Transformation::getTransformer(
+                route_transformation.response_transformation());
+          } catch (const std::exception &e) {
+            throw EnvoyException(
+                fmt::format("Failed to parse response template: {}", e.what()));
+          }
         }
       }
-      TransformerPairConstSharedPtr transformer_pair = 
-        std::make_unique<TransformerPair>(request_transformation, response_transformation, clear_route_cache);
-      transformer_pairs_.emplace_back(
-          Matcher::Matcher::create(rule.match()),
-          transformer_pair
-      );
+      TransformerPairConstSharedPtr transformer_pair =
+          std::make_unique<TransformerPair>(request_transformation,
+                                            response_transformation,
+                                            clear_route_cache);
+      transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
+                                      transformer_pair);
     }
   }
 
-  const std::vector<MatcherTransformerPair>& transformerPairs() const override {
+  const std::vector<MatcherTransformerPair> &transformerPairs() const override {
     return transformer_pairs_;
   };
 
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
   }
-  
+
 private:
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
 };
 
-
 class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
-  RouteTransformationFilterConfig(const RouteTransformationConfigProto &proto_config) {
+  RouteTransformationFilterConfig(
+      const RouteTransformationConfigProto &proto_config) {
 
     TransformerConstSharedPtr request_transformation;
     TransformerConstSharedPtr response_transformation;
 
-    if (proto_config.has_request_transformation()) {
-      request_transformation =
-          Transformation::getTransformer(proto_config.request_transformation());
+    try {
+      if (proto_config.has_request_transformation()) {
+        request_transformation = Transformation::getTransformer(
+            proto_config.request_transformation());
+      }
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse request template: {}", e.what()));
     }
-    if (proto_config.has_response_transformation()) {
-      response_transformation = Transformation::getTransformer(
-          proto_config.response_transformation());
+    try {
+      if (proto_config.has_response_transformation()) {
+        response_transformation = Transformation::getTransformer(
+            proto_config.response_transformation());
+      }
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse response template: {}", e.what()));
     }
-    transformer_pair_  = std::make_shared<TransformerPair>(
-      request_transformation, response_transformation, proto_config.clear_route_cache());
+    transformer_pair_ = std::make_shared<TransformerPair>(
+        request_transformation, response_transformation,
+        proto_config.clear_route_cache());
   }
 
-  TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap&) const override {
+  TransformerPairConstSharedPtr
+  findTransformers(const Http::HeaderMap &) const override {
     return transformer_pair_;
   }
 
