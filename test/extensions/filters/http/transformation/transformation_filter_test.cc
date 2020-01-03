@@ -37,7 +37,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
   auto &transformation = (*transformation_rule.mutable_route_transformations()->mutable_request_transformation());
   transformation.mutable_transformation_template()->mutable_body()->set_text(
-    "{{garbage}}");
+    "{{g-a-r-b-a-g-e}}");
 
   EXPECT_THROW(std::make_unique<TransformationFilterConfig>(listener_config, "foo", scope), EnvoyException);
 }
