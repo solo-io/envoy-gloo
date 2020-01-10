@@ -43,4 +43,4 @@ timeout: 3600s
 artifacts:
   objects:
     location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
-    paths: ['build_release/envoy', 'build_release_stripped/envoy']
+    paths: ['build_release/envoy']
