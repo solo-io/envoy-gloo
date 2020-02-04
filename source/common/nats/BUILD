@@ -18,7 +18,6 @@ envoy_cc_library(
         "//include/envoy/tcp:codec_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
-        "@envoy//source/common/common:stack_array",
         "@envoy//source/common/common:utility_lib",
     ],
 )
