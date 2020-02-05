@@ -1,6 +1,6 @@
 #include "extensions/filters/http/aws_lambda/config.h"
 
-#include "test/extensions/filters/http/common/aws/mocks.h"
+#include "test/extensions/common/aws/mocks.h"
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
