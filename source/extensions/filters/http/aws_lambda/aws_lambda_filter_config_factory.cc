@@ -3,8 +3,8 @@
 #include "envoy/registry/registry.h"
 
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
-#include "extensions/filters/http/common/aws/credentials_provider_impl.h"
-#include "extensions/filters/http/common/aws/utility.h"
+#include "extensions/common/aws/credentials_provider_impl.h"
+#include "extensions/common/aws/utility.h"
 
 namespace Envoy {
 namespace Extensions {
