@@ -1,4 +1,5 @@
 #include "common/config/metadata.h"
+#include "common/config/metadata.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -9,7 +10,7 @@
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
-using ::envoy::config::filter::network::http_connection_manager::v2::HttpFilter;
+using ::envoy::extensions::filters::network::http_connection_manager::v3::HttpFilter;
 
 namespace Envoy {
 
@@ -139,15 +140,16 @@ public:
 
     if (transformation_string_ != "") {
       config_helper_.addConfigModifier(
-          [this](envoy::config::filter::network::http_connection_manager::v2::
+          [this](envoy::extensions::filters::network::http_connection_manager::v3::
                       HttpConnectionManager &hcm) {
             auto &perFilterConfig =
                 (*hcm.mutable_route_config()
                       ->mutable_virtual_hosts(0)
                       ->mutable_routes(0)
-                      ->mutable_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
-
-            TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
+                      ->mutable_typed_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
+            envoy::api::v2::filter::http::RouteTransformations transformations;
+            TestUtility::loadFromYaml(transformation_string_, transformations);
+            perFilterConfig.PackFrom(transformations);
           });
     }
 
@@ -185,7 +187,7 @@ private:
     envoy::api::v2::filter::http::RouteTransformations route_transformations;
     TestUtility::loadFromYaml(transformation_config_str, route_transformations);
 
-    envoy::api::v2::route::RouteMatch route_match;
+    envoy::config::route::v3::RouteMatch route_match;
     TestUtility::loadFromYaml(matcher_str, route_match);
 
     *transformation_rule.mutable_route_transformations() = route_transformations;
@@ -196,7 +198,7 @@ private:
 
     HttpFilter filter;
     filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
-    TestUtility::jsonConvert(filter_config, *filter.mutable_config());
+    filter.mutable_typed_config()->PackFrom(filter_config);
 
     return MessageUtil::getJsonStringFromMessage(filter);
   }
