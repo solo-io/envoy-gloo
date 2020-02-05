@@ -31,7 +31,7 @@ envoy_gloo_cc_test(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
-        "@envoy//test/extensions/filters/http/common/aws:aws_mocks",
+        "@envoy//test/extensions/common/aws:aws_mocks",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
