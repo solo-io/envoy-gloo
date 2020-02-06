@@ -69,7 +69,7 @@ private:
 
   void timerCallback();
 
-  std::unique_ptr<Common::Aws::CredentialsProvider> provider_;
+  std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider> provider_;
 
   ThreadLocal::SlotPtr tls_slot_;
 
