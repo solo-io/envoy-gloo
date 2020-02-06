@@ -3,8 +3,8 @@
 #include "envoy/registry/registry.h"
 
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
-#include "extensions/filters/http/common/aws/credentials_provider_impl.h"
-#include "extensions/filters/http/common/aws/utility.h"
+#include "extensions/common/aws/credentials_provider_impl.h"
+#include "extensions/common/aws/utility.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -19,8 +19,8 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
 
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::make_unique<Common::Aws::DefaultCredentialsProviderChain>(
-          context.api(), HttpFilters::Common::Aws::Utility::metadataFetcher),
+      std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
+          context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
       context.dispatcher(), context.threadLocal(), stats_prefix,
       context.scope(), proto_config);
 
