@@ -7,7 +7,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-namespace CommonAws = Envoy::Extensions::HttpFilters::Common::Aws;
+namespace CommonAws = Envoy::Extensions::Common::Aws;
 
 namespace {
 

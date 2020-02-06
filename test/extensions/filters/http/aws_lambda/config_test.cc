@@ -48,14 +48,14 @@ protected:
 TEST_F(ConfigTest, WithUseDefaultCreds) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
+  const Envoy::Extensions::Common::Aws::Credentials creds(
       "access_key", "secret_key");
 
-  const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds2(
+  const Envoy::Extensions::Common::Aws::Credentials creds2(
       "access_key2", "secret_key2");
 
   auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
+      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
@@ -81,15 +81,15 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
 TEST_F(ConfigTest, FailingToRotate) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
+  const Envoy::Extensions::Common::Aws::Credentials creds(
       "access_key", "secret_key");
 
   auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
+      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(
-          Return(Envoy::Extensions::HttpFilters::Common::Aws::Credentials()));
+          Return(Envoy::Extensions::Common::Aws::Credentials()));
 
   AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
                              context_.thread_local_, "prefix.", stats_,
@@ -114,11 +114,11 @@ TEST_F(ConfigTest, FailingToRotate) {
 TEST_F(ConfigTest, SameCredsOnTimer) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::HttpFilters::Common::Aws::Credentials creds(
+  const Envoy::Extensions::Common::Aws::Credentials creds(
       "access_key", "secret_key");
 
   auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
+      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds));
@@ -147,7 +147,7 @@ TEST_F(ConfigTest, WithoutUseDefaultCreds) {
   EXPECT_CALL(context_.dispatcher_, createTimer_(_)).Times(0);
 
   auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::HttpFilters::Common::Aws::MockCredentialsProvider>>();
+      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials()).Times(0);
 
   AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
