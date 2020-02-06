@@ -35,10 +35,10 @@ struct AwsLambdaFilterStats {
 };
 
 typedef std::shared_ptr<
-    Envoy::Extensions::HttpFilters::Common::Aws::Credentials>
+    Envoy::Extensions::Common::Aws::Credentials>
     CredentialsSharedPtr;
 typedef std::shared_ptr<
-    const Envoy::Extensions::HttpFilters::Common::Aws::Credentials>
+    const Envoy::Extensions::Common::Aws::Credentials>
     CredentialsConstSharedPtr;
 
 class AWSLambdaConfig {
@@ -53,7 +53,7 @@ class AWSLambdaConfigImpl
 public:
   AWSLambdaConfigImpl(
       std::unique_ptr<
-          Envoy::Extensions::HttpFilters::Common::Aws::CredentialsProvider>
+          Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
       Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
       const std::string &stats_prefix, Stats::Scope &scope,
