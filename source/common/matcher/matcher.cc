@@ -88,7 +88,7 @@ public:
       const size_t compare_length =
           path.getStringView().length() - Http::Utility::findQueryStringStart(path).length();
       auto real_path = path.getStringView().substr(0, compare_length);
-      bool match = case_sensitive_ ? real_path == path_ : StringUtil::caseCompare(real_path, path_);
+      bool match = case_sensitive_ ? real_path == path_ : absl::EqualsIgnoreCase(real_path, path_);
       if (match) {
         ENVOY_LOG(debug, "Path requirement '{}' matched.", path_);
         return true;

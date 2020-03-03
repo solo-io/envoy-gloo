@@ -45,7 +45,7 @@ void NatsStreamingFilter::onDestroy() {
 }
 
 Http::FilterHeadersStatus
-NatsStreamingFilter::decodeHeaders(Envoy::Http::HeaderMap &headers,
+NatsStreamingFilter::decodeHeaders(Envoy::Http::RequestHeaderMap &headers,
                                    bool end_stream) {
   retrieveRouteSpecificFilterConfig();
 
@@ -107,7 +107,7 @@ NatsStreamingFilter::decodeData(Envoy::Buffer::Instance &data,
 }
 
 Http::FilterTrailersStatus
-NatsStreamingFilter::decodeTrailers(Envoy::Http::HeaderMap &) {
+NatsStreamingFilter::decodeTrailers(Envoy::Http::RequestTrailerMap &) {
   if (!isActive()) {
     return Http::FilterTrailersStatus::Continue;
   }

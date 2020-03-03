@@ -62,7 +62,7 @@ AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
 Http::FilterHeadersStatus
-AWSLambdaFilter::decodeHeaders(Http::HeaderMap &headers, bool end_stream) {
+AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers, bool end_stream) {
 
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
@@ -149,7 +149,7 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   return Http::FilterDataStatus::StopIterationAndBuffer;
 }
 
-Http::FilterTrailersStatus AWSLambdaFilter::decodeTrailers(Http::HeaderMap &) {
+Http::FilterTrailersStatus AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
   if (function_on_route_ != nullptr) {
     lambdafy();
   }
