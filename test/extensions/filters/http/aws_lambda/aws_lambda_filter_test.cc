@@ -99,7 +99,7 @@ protected:
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
@@ -112,7 +112,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
   setupRoute(false, true);
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
@@ -128,7 +128,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
   filter_config_->credentials_ = std::make_shared<
       Envoy::Extensions::Common::Aws::Credentials>("access key");
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
@@ -141,7 +141,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
 
 TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -157,7 +157,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
 TEST_F(AWSLambdaFilterTest, CorrectFuncCalled) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -174,7 +174,7 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
   routeconfig_.clear_qualifier();
   setup_func();
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -186,7 +186,7 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
 }
 
 TEST_F(AWSLambdaFilterTest, AsyncCalled) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
   routeconfig_.set_async(true);
@@ -198,7 +198,7 @@ TEST_F(AWSLambdaFilterTest, AsyncCalled) {
 }
 
 TEST_F(AWSLambdaFilterTest, SyncCalled) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -211,7 +211,7 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
 }
 
 TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -223,7 +223,7 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
             filter_->decodeData(data, false));
   EXPECT_FALSE(headers.has("Authorization"));
 
-  Http::TestHeaderMapImpl trailers;
+  Http::TestRequestTrailerMapImpl trailers;
   EXPECT_EQ(Http::FilterTrailersStatus::Continue,
             filter_->decodeTrailers(trailers));
 
@@ -236,7 +236,7 @@ TEST_F(AWSLambdaFilterTest, InvalidFunction) {
               perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillRepeatedly(Return(nullptr));
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
@@ -247,7 +247,7 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyGetsOverriden) {
   routeconfig_.mutable_empty_body_override()->set_value("{}");
   setup_func();
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -267,7 +267,7 @@ TEST_F(AWSLambdaFilterTest, NonEmptyBodyDoesNotGetsOverriden) {
   routeconfig_.mutable_empty_body_override()->set_value("{}");
   setup_func();
 
-  Http::TestHeaderMapImpl headers{{":method", "POST"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -284,7 +284,7 @@ TEST_F(AWSLambdaFilterTest, EmptyDecodedDataBufferGetsOverriden) {
   routeconfig_.mutable_empty_body_override()->set_value("{}");
   setup_func();
 
-  Http::TestHeaderMapImpl headers{{":method", "POST"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -304,7 +304,7 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
   routeconfig_.mutable_empty_body_override()->set_value("{}");
   setup_func();
 
-  Http::TestHeaderMapImpl headers{{":method", "POST"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -316,7 +316,11 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
         EXPECT_EQ(data.toString(), "{}");
       }));
 
-  filter_->decodeTrailers(headers);
+  Http::TestRequestTrailerMapImpl trailers{{":method", "POST"},
+                                {":authority", "www.solo.io"},
+                                {":path", "/getsomething"}};
+
+  filter_->decodeTrailers(trailers);
 }
 
 TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
@@ -324,7 +328,7 @@ TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
           perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillByDefault(Return(nullptr));
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
@@ -339,7 +343,7 @@ TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
 TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
   setupRoute(false, false);
 
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"}};
 
