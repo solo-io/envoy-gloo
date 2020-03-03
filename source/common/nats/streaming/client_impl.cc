@@ -139,13 +139,13 @@ void ClientImpl::onOperation(Nats::MessagePtr &&value) {
       StringUtil::splitToken(value->asString(), delimiters, keep_empty_string);
 
   auto &&op = tokens[0];
-  if (StringUtil::caseCompare(op, "INFO")) {
+  if (absl::EqualsIgnoreCase(op, "INFO")) {
     onInfo(std::move(value));
-  } else if (StringUtil::caseCompare(op, "MSG")) {
+  } else if (absl::EqualsIgnoreCase(op, "MSG")) {
     onMsg(std::move(tokens));
-  } else if (StringUtil::caseCompare(op, "PING")) {
+  } else if (absl::EqualsIgnoreCase(op, "PING")) {
     onPing();
-  } else if (StringUtil::caseCompare(op, "+OK")) {
+  } else if (absl::EqualsIgnoreCase(op, "+OK")) {
     ENVOY_LOG(error, "on operation: op is [{}], not throwing", op);
   } else {
     // TODO(talnordan): Error handling.

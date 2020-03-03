@@ -190,6 +190,11 @@ public:
   }
 
   void transformsResponseOnHeaders(unsigned int val) {
+
+    Http::TestResponseHeaderMapImpl response_headers{{"content-type", "test"},
+                                    {":method", "GET"},
+                                    {":authority", "www.solo.io"},
+                                    {":path", "/path"}};
     route_config_.mutable_response_transformation()
       ->mutable_transformation_template()
       ->mutable_body()
@@ -199,7 +204,7 @@ public:
 
     filter_->decodeHeaders(headers_, true);
     EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(1);
-    auto res = filter_->encodeHeaders(headers_, true);
+    auto res = filter_->encodeHeaders(response_headers, true);
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
     EXPECT_EQ(val , config_->stats().response_header_transformations_.value());
   }
@@ -236,7 +241,7 @@ public:
   }
 
 
-  Http::TestHeaderMapImpl headers_{{"content-type", "test"},
+  Http::TestRequestHeaderMapImpl headers_{{"content-type", "test"},
                                    {":method", "GET"},
                                    {":authority", "www.solo.io"},
                                    {":path", "/path"}};
@@ -308,6 +313,9 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeaders) {
 }
 
 TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
+  Http::TestResponseHeaderMapImpl response_headers{{"content-type", "test"},
+                                  {":method", "GET"},
+                                  {":path", "/path"}};
   headers_.remove(":authority");
   route_config_.mutable_response_transformation()
       ->mutable_transformation_template()
@@ -318,7 +326,7 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
 
   // no encode headers to simulate local reply error.
   EXPECT_CALL(encoder_filter_callbacks_, addEncodedData(_, false)).Times(0);
-  auto res = filter_->encodeHeaders(headers_, true);
+  auto res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   EXPECT_EQ(0U, config_->stats().response_header_transformations_.value());
 }
