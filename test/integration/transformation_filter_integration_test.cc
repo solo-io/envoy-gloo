@@ -164,7 +164,7 @@ public:
                       std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
-        Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
+        Http::TestRequestHeaderMapImpl{{":status", "200"}}, body.empty());
 
     if (!body.empty()) {
       Buffer::OwnedImpl data(body);
@@ -211,7 +211,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
@@ -230,7 +230,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
   transformation_string_ = PATH_TO_PATH_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
@@ -246,7 +246,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   transformation_string_ = BODY_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -264,7 +264,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   transformation_string_ = BODY_REQUEST_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -284,7 +284,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -304,7 +304,7 @@ TEST_P(TransformationFilterIntegrationTest, SkipTransformation) {
   filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   matcher_string_ = INVALID_MATCHER;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -322,7 +322,7 @@ TEST_P(TransformationFilterIntegrationTest, SkipTransformation) {
 TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   transformation_string_ = EMPTY_BODY_REQUEST_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "POST"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/empty-body-test"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
@@ -359,7 +359,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   transformation_string_ = PASSTHROUGH_TRANSFORMATION;
   initialize();
   std::string origBody = "{\"abc\":\"efg\"}";
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/12347"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);

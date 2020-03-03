@@ -101,7 +101,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfig) {
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
   sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
@@ -115,7 +115,7 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfig) {
 TEST_P(AWSLambdaFilterIntegrationTest, TestWithChain) {
   use_chain_ = true;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
 
   sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
