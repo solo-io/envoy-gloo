@@ -8,7 +8,7 @@
 #include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "extensions/filters/http/common/aws/credentials_provider.h"
+#include "extensions/common/aws/credentials_provider.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -35,10 +35,10 @@ struct AwsLambdaFilterStats {
 };
 
 typedef std::shared_ptr<
-    Envoy::Extensions::HttpFilters::Common::Aws::Credentials>
+    Envoy::Extensions::Common::Aws::Credentials>
     CredentialsSharedPtr;
 typedef std::shared_ptr<
-    const Envoy::Extensions::HttpFilters::Common::Aws::Credentials>
+    const Envoy::Extensions::Common::Aws::Credentials>
     CredentialsConstSharedPtr;
 
 class AWSLambdaConfig {
@@ -53,7 +53,7 @@ class AWSLambdaConfigImpl
 public:
   AWSLambdaConfigImpl(
       std::unique_ptr<
-          Envoy::Extensions::HttpFilters::Common::Aws::CredentialsProvider>
+          Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
       Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
       const std::string &stats_prefix, Stats::Scope &scope,
@@ -69,7 +69,7 @@ private:
 
   void timerCallback();
 
-  std::unique_ptr<Common::Aws::CredentialsProvider> provider_;
+  std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider> provider_;
 
   ThreadLocal::SlotPtr tls_slot_;
 

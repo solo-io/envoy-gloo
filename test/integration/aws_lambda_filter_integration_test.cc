@@ -49,7 +49,7 @@ public:
     }
 
     config_helper_.addConfigModifier([this](
-                                         envoy::config::bootstrap::v2::Bootstrap
+                                         envoy::config::bootstrap::v3::Bootstrap
                                              &bootstrap) {
       envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension
           protoextconfig;
@@ -64,27 +64,26 @@ public:
       auto &lambda_cluster =
           (*bootstrap.mutable_static_resources()->mutable_clusters(0));
 
-      auto &cluster_struct =
-          (*lambda_cluster.mutable_extension_protocol_options())
+      auto &cluster_any =
+          (*lambda_cluster.mutable_typed_extension_protocol_options())
               [Extensions::HttpFilters::SoloHttpFilterNames::get().AwsLambda];
-      MessageUtil::jsonConvert(protoextconfig, cluster_struct);
+        cluster_any.PackFrom(protoextconfig);
     });
 
     config_helper_.addConfigModifier(
-        [](envoy::config::filter::network::http_connection_manager::v2::
+        [](envoy::extensions::filters::network::http_connection_manager::v3::
                HttpConnectionManager &hcm) {
           auto &perFilterConfig = (*hcm.mutable_route_config()
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
-                                        ->mutable_per_filter_config())
+                                        ->mutable_typed_per_filter_config())
               [Extensions::HttpFilters::SoloHttpFilterNames::get().AwsLambda];
 
           envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
               proto_config;
           proto_config.set_name("FunctionName");
           proto_config.set_qualifier("v1");
-
-          MessageUtil::jsonConvert(proto_config, perFilterConfig);
+          perFilterConfig.PackFrom(proto_config);
         });
 
     HttpIntegrationTest::initialize();
