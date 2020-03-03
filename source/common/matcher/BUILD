@@ -20,6 +20,7 @@ envoy_cc_library(
         "@envoy//source/common/router:config_lib",
         "@envoy//source/common/http:header_utility_lib",
         "@envoy_api//envoy/api/v2/route:pkg_cc_proto",
+        "@envoy_api//envoy/config/route/v3:pkg_cc_proto",
     ],
 )
 
