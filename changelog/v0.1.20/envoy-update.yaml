@@ -1,5 +1,0 @@
-changelog:
-- type: DEPENDENCY_BUMP
-  dependencyOwner: yuval-k
-  dependencyRepo: envoy
-  dependencyTag: 9d188319baf3ecec5cac12710bcc460ebfd9de3e

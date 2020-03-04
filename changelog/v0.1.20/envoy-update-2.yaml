@@ -1,5 +1,0 @@
-changelog:
-- type: DEPENDENCY_BUMP
-  dependencyOwner: envoyproxy
-  dependencyRepo: envoy
-  dependencyTag: f64ade1d90d9209982008391f337ed76e7aca3d2
