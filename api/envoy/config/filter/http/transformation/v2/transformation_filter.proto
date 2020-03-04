@@ -10,7 +10,7 @@ option go_package = "transformation";
 import "google/protobuf/empty.proto";
 import "validate/validate.proto";
 
-import "envoy/api/v2/route/route.proto";
+import "envoy/config/route/v3/route_components.proto";
 
 message FilterTransformations {
   // Specifies transformations based on the route matches. The first matched transformation will be
@@ -29,7 +29,7 @@ message TransformationRule {
   //    match:
   //      prefix: /
   //
-  api.v2.route.RouteMatch match = 1 [(validate.rules).message = {required: true}];
+  envoy.config.route.v3.RouteMatch match = 1 [(validate.rules).message = {required: true}];
   // transformation to perform 
   RouteTransformations route_transformations = 2;
 }

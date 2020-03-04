@@ -11,8 +11,9 @@ load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
 api_proto_package(
     deps = [
-        "@envoy_api//envoy/api/v2/route:pkg",
-        "@envoy_api//envoy/type/matcher:pkg",
+        "@envoy_api//envoy/config/route/v3:pkg",
         "@envoy_api//envoy/type:pkg",
+        "@envoy_api//envoy/type/matcher:pkg",
     ],
-    visibility = ["//visibility:public"],)
+    visibility = ["//visibility:public"],
+)

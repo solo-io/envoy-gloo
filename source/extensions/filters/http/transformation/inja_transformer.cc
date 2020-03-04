@@ -165,7 +165,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
     try {
       headers_.emplace_back(std::make_pair(std::move(header_name),
                                            parser.parse(it->second.text())));
-    } catch (const std::runtime_error &e) {
+    } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
@@ -181,7 +181,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
       dynamicMetadataValue.key_ = it->key();
       dynamicMetadataValue.template_ = parser.parse(it->value().text());
       dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
-    } catch (const std::runtime_error &e) {
+    } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it->key(), e.what()));
     }
@@ -191,7 +191,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
   case TransformationTemplate::kBody: {
     try {
       body_template_.emplace(parser.parse(transformation.body().text()));
-    } catch (const std::runtime_error &e) {
+    } catch (const std::exception &e) {
       throw EnvoyException(
           fmt::format("Failed to parse body template {}", e.what()));
     }
@@ -244,7 +244,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
       if (ignore_error_on_parse_) {
         try {
           json_body = json::parse(bodystring);
-        } catch (std::exception &) {
+        } catch (const std::exception &) {
         }
       } else {
         json_body = json::parse(bodystring);

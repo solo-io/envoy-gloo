@@ -4,7 +4,6 @@
 
 #include "envoy/server/filter_config.h"
 
-#include "extensions/filters/http/common/empty_http_filter_config.h"
 #include "extensions/filters/http/common/factory_base.h"
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformation_filter_config.h"
