@@ -7,7 +7,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-namespace CommonAws = Envoy::Extensions::Common::Aws;
+namespace CommonAws = Envoy::Extensions::HttpFilters::Common::Aws;
 
 namespace {
 
@@ -38,7 +38,7 @@ struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
-    std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
+    std::unique_ptr<Common::Aws::CredentialsProvider> &&provider,
     Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
     const std::string &stats_prefix, Stats::Scope &scope,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig

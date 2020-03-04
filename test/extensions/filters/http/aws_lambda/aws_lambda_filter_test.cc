@@ -60,7 +60,7 @@ protected:
     } else if (fetchCredentials) {
       filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
       filter_config_->credentials_ = std::make_shared<
-          Envoy::Extensions::Common::Aws::Credentials>(
+          Envoy::Extensions::HttpFilters::Common::Aws::Credentials>(
           "access key", "secret key");
     }
 
@@ -126,7 +126,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
   setupRoute(false, true);
   filter_config_->credentials_ = std::make_shared<
-      Envoy::Extensions::Common::Aws::Credentials>("access key");
+      Envoy::Extensions::HttpFilters::Common::Aws::Credentials>("access key");
 
   Http::TestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
