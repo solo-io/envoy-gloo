@@ -37,7 +37,7 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 
 const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
                                    const std::string &key) {
-  // use explicit consturctor so string is lowered
+  // use explicit constuctor so string is lowered
   auto lowerkey = Http::LowerCaseString(key);
   return getHeader(header_map, lowerkey);
 }
@@ -93,9 +93,10 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context, const std::unordered_map<std::string, std::string>& environ)
+    const json &context, const std::unordered_map<std::string, std::string>& environ,
+    const std::unordered_map<std::string, absl::string_view> &cluster_metadata)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context), environ_(environ) {
+      context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
@@ -104,6 +105,7 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("context", 0, [this](Arguments&) { return context_; });
   env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
   env_.add_callback("env", 1, [this](Arguments& args) { return env(args); });
+  env_.add_callback("clusterMetadata", 1, [this](Arguments& args) { return cluster_metadata_callback(args); });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments& args) const  {
@@ -123,10 +125,20 @@ json TransformerInstance::extracted_callback(const inja::Arguments& args) const 
   }
   return "";
 }
+
 json TransformerInstance::env(const inja::Arguments& args) const {
   const std::string& key = args.at(0)->get_ref<const std::string&>();
   auto it = environ_.find(key);
   if (it != environ_.end()) {
+    return it->second;
+  }
+  return "";
+}
+
+json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args) const {
+  const std::string& key = args.at(0)->get_ref<const std::string&>();
+  auto it = cluster_metadata_.find(key);
+  if (it != cluster_metadata_.end()) {
     return it->second;
   }
   return "";
@@ -208,15 +220,15 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
   }
   }
 
-    // parse environment
-    for (char **env = environ; *env != 0; env++) {
-      std::string current_env(*env);
-      size_t equals = current_env.find("=");
-      if (equals > 0) {
-        std::string key = current_env.substr(0, equals);
-        std::string value = current_env.substr(equals + 1);
-        environ_[key] = value;
-      }
+  // parse environment
+  for (char **env = environ; *env != 0; env++) {
+    std::string current_env(*env);
+    size_t equals = current_env.find("=");
+    if (equals > 0) {
+      std::string key = current_env.substr(0, equals);
+      std::string value = current_env.substr(equals + 1);
+      environ_[key] = value;
+    }
   }
 }
 
@@ -276,8 +288,19 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
           named_extractor.second.extract(callbacks, header_map, get_body);
     }
   }
+
+  // get cluster metadata
+  std::unordered_map<std::string, absl::string_view> cluster_metadata;
+  Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
+  if (ci.get()) {
+    envoy::api::v2::core::Metadata meta = ci.get()->metadata();
+    for (auto& kv: meta.filter_metadata()) {
+      cluster_metadata[kv.first] = kv.second.SerializeAsString();
+    }
+  }
+
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_, cluster_metadata);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
