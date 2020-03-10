@@ -7,6 +7,7 @@
 #include "common/common/macros.h"
 #include "common/common/utility.h"
 #include "common/common/regex.h"
+#include "common/config/metadata.h"
 
 extern char **environ;
 
@@ -23,6 +24,12 @@ namespace Transformation {
 
 using TransformationTemplate =
     envoy::api::v2::filter::http::TransformationTemplate;
+
+struct BoolHeaderValues {
+  const std::string trueString = "true";
+  const std::string falseString = "false";
+};
+typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 
 // TODO: move to common
 namespace {
@@ -92,9 +99,9 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc& body,
-    const std::unordered_map<std::string, absl::string_view> &extractions,
+    const std::unordered_map<std::string, absl::string_view>& extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ,
-    const std::unordered_map<std::string, absl::string_view> &cluster_metadata)
+    const envoy::api::v2::core::Metadata* cluster_metadata)
     : header_map_(header_map), body_(body), extractions_(extractions),
       context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
@@ -137,9 +144,72 @@ json TransformerInstance::env(const inja::Arguments& args) const {
 
 json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args) const {
   const std::string& key = args.at(0)->get_ref<const std::string&>();
-  auto it = cluster_metadata_.find(key);
-  if (it != cluster_metadata_.end()) {
-    return it->second;
+  
+  if (!cluster_metadata_) {
+    return "";
+  }
+
+  const ProtobufWkt::Value& value = Envoy::Config::Metadata::metadataValue(*cluster_metadata_, "io.solo.transformation", key);
+
+  switch (value.kind_case()) {
+  case ProtobufWkt::Value::kStringValue: {
+    return value.string_value();
+    break;
+  }
+  case ProtobufWkt::Value::kNumberValue: {
+    return value.number_value();
+    break;
+  }
+  case ProtobufWkt::Value::kBoolValue: {
+    const std::string &stringval = value.bool_value()
+                                       ? BoolHeader::get().trueString
+                                       : BoolHeader::get().falseString;
+    return stringval;
+    break;
+  }
+  case ProtobufWkt::Value::kListValue: {
+    const auto &listval = value.list_value().values();
+    if (listval.size() == 0) {
+      break;
+    }
+
+    // size is not zero, so this will work
+    auto it = listval.begin();
+    std::stringstream ss;
+
+    auto addValue = [&ss, &it] {
+      const ProtobufWkt::Value &value = *it;
+
+      switch (value.kind_case()) {
+      case ProtobufWkt::Value::kStringValue: {
+        ss << value.string_value();
+        break;
+      }
+      case ProtobufWkt::Value::kNumberValue: {
+        ss << value.number_value();
+        break;
+      }
+      case ProtobufWkt::Value::kBoolValue: {
+        ss << (value.bool_value() ? BoolHeader::get().trueString
+                                  : BoolHeader::get().falseString);
+        break;
+      }
+      default:
+        break;
+      }
+    };
+
+    addValue();
+
+    for (it++; it != listval.end(); it++) {
+      ss << ",";
+      addValue();
+    }
+    return ss.str();
+  }
+  default: {
+    break;
+  }
   }
   return "";
 }
@@ -290,13 +360,10 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   }
 
   // get cluster metadata
-  std::unordered_map<std::string, absl::string_view> cluster_metadata;
+  const envoy::api::v2::core::Metadata* cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
   if (ci.get()) {
-    envoy::api::v2::core::Metadata meta = ci.get()->metadata();
-    for (auto& kv: meta.filter_metadata()) {
-      cluster_metadata[kv.first] = kv.second.SerializeAsString();
-    }
+    cluster_metadata = &ci.get()->metadata();
   }
 
   // start transforming!
