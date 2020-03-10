@@ -27,7 +27,7 @@ public:
       const Http::HeaderMap &header_map, GetBodyFunc& body,
       const std::unordered_map<std::string, absl::string_view>& extractions,
       const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ,
-      const envoy::api::v2::core::Metadata* cluster_metadata);
+      const envoy::config::core::v3::Metadata* cluster_metadata);
 
   std::string render(const inja::Template &input);
 
@@ -46,7 +46,7 @@ private:
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string>& environ_;
-  const envoy::api::v2::core::Metadata* cluster_metadata_;
+  const envoy::config::core::v3::Metadata* cluster_metadata_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {

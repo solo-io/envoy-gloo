@@ -101,7 +101,7 @@ TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view>& extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ,
-    const envoy::api::v2::core::Metadata* cluster_metadata)
+    const envoy::config::core::v3::Metadata* cluster_metadata)
     : header_map_(header_map), body_(body), extractions_(extractions),
       context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
@@ -149,7 +149,7 @@ json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args)
     return "";
   }
 
-  const ProtobufWkt::Value& value = Envoy::Config::Metadata::metadataValue(*cluster_metadata_, "io.solo.transformation", key);
+  const ProtobufWkt::Value& value = Envoy::Config::Metadata::metadataValue(cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
@@ -360,7 +360,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   }
 
   // get cluster metadata
-  const envoy::api::v2::core::Metadata* cluster_metadata{};
+  const envoy::config::core::v3::Metadata* cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
   if (ci.get()) {
     cluster_metadata = &ci.get()->metadata();

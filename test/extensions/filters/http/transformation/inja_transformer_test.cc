@@ -50,7 +50,7 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -69,7 +69,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
     };
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
 
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -88,7 +88,7 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {"x-custom-header", header}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
                                   
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -104,7 +104,7 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -119,7 +119,7 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -133,7 +133,7 @@ TEST(TransformerInstance, Environment) {
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   env["FOO"] = "BAR";
   
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
@@ -148,7 +148,7 @@ TEST(TransformerInstance, EmptyEnvironment) {
   Http::TestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
@@ -162,7 +162,7 @@ TEST(TransformerInstance, ClusterMetadata) {
   
   std::unordered_map<std::string, std::string> env;
 
-  envoy::api::v2::core::Metadata* cluster_metadata{new envoy::api::v2::core::Metadata};
+  envoy::config::core::v3::Metadata* cluster_metadata{new envoy::config::core::v3::Metadata};
   cluster_metadata->mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
@@ -177,7 +177,7 @@ TEST(TransformerInstance, EmptyClusterMetadata) {
   Http::TestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
-  envoy::api::v2::core::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata* cluster_metadata{};
 
   TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
@@ -613,7 +613,7 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
   Upstream::MockClusterInfo* cluster_info = new NiceMock<Upstream::MockClusterInfo>();
   Upstream::ClusterInfoConstSharedPtr cluster_info_ptr{cluster_info};
 
-  envoy::api::v2::core::Metadata meta;
+  envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("key", "val")});
   ON_CALL(*cluster_info, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
 
