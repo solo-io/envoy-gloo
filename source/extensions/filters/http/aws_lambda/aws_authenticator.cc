@@ -9,7 +9,7 @@
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
-#include "common/common/stack_array.h"
+#include "absl/container/fixed_array.h"
 #include "common/common/utility.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
@@ -26,6 +26,7 @@ public:
   const std::string Service{"lambda"};
   const std::string Newline{"\n"};
   const Http::LowerCaseString DateHeader{"x-amz-date"};
+  const Http::LowerCaseString Host{"host"};
 };
 
 typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
@@ -80,9 +81,15 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
 
   for (auto header = headers_to_sign.begin(), end = headers_to_sign.end();
        header != end; header++) {
-    const Http::HeaderEntry *headerEntry = request_headers_->get(*header);
-    if (headerEntry == nullptr) {
-      request_headers_->lookup(*header, &headerEntry);
+    
+    const Http::HeaderEntry *headerEntry;
+    if (*header == AwsAuthenticatorConsts::get().Host) {
+      headerEntry = request_headers_->Host();
+    } else {
+      headerEntry = request_headers_->get(*header);
+      if (headerEntry == nullptr) {
+        request_headers_->lookup(*header, &headerEntry);
+      }
     }
 
     auto headerName = header->get();
@@ -180,7 +187,7 @@ std::string AwsAuthenticator::computeSignature(
 
   HMACSha256 sighmac;
   unsigned int out_len = sighmac.length();
-  STACK_ARRAY(out, uint8_t, out_len);
+  absl::FixedArray<uint8_t> out(out_len);
 
   sighmac.init(first_key_);
   sighmac.update(credentials_scope_date);
@@ -255,7 +262,7 @@ AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
 
 void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  STACK_ARRAY(slices, Buffer::RawSlice, num_slices);
+  absl::FixedArray<Buffer::RawSlice> slices(num_slices);
   data.getRawSlices(slices.begin(), num_slices);
   for (const Buffer::RawSlice &slice : slices) {
     update(static_cast<const uint8_t *>(slice.mem_), slice.len_);

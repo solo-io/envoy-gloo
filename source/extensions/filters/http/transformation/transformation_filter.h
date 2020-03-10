@@ -28,9 +28,9 @@ public:
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  Http::FilterHeadersStatus decodeHeaders(Http::HeaderMap &, bool) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap &, bool) override;
   Http::FilterDataStatus decodeData(Buffer::Instance &, bool) override;
-  Http::FilterTrailersStatus decodeTrailers(Http::HeaderMap &) override;
+  Http::FilterTrailersStatus decodeTrailers(Http::RequestTrailerMap &) override;
 
   void setDecoderFilterCallbacks(
       Http::StreamDecoderFilterCallbacks &callbacks) override {
@@ -40,14 +40,14 @@ public:
 
   // Http::StreamEncoderFilter
   Http::FilterHeadersStatus
-  encode100ContinueHeaders(Http::HeaderMap &) override {
+  encode100ContinueHeaders(Http::ResponseHeaderMap &) override {
     return Http::FilterHeadersStatus::Continue;
   }
-  Http::FilterHeadersStatus encodeHeaders(Http::HeaderMap &headers,
+  Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap &headers,
                                           bool end_stream) override;
   Http::FilterDataStatus encodeData(Buffer::Instance &data,
                                     bool end_stream) override;
-  Http::FilterTrailersStatus encodeTrailers(Http::HeaderMap &trailers) override;
+  Http::FilterTrailersStatus encodeTrailers(Http::ResponseTrailerMap &trailers) override;
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }

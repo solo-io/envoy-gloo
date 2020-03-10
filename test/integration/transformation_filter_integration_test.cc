@@ -1,4 +1,5 @@
 #include "common/config/metadata.h"
+#include "common/config/metadata.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
@@ -9,7 +10,7 @@
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
-using ::envoy::config::filter::network::http_connection_manager::v2::HttpFilter;
+using ::envoy::extensions::filters::network::http_connection_manager::v3::HttpFilter;
 
 namespace Envoy {
 
@@ -139,15 +140,16 @@ public:
 
     if (transformation_string_ != "") {
       config_helper_.addConfigModifier(
-          [this](envoy::config::filter::network::http_connection_manager::v2::
+          [this](envoy::extensions::filters::network::http_connection_manager::v3::
                       HttpConnectionManager &hcm) {
             auto &perFilterConfig =
                 (*hcm.mutable_route_config()
                       ->mutable_virtual_hosts(0)
                       ->mutable_routes(0)
-                      ->mutable_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
-
-            TestUtility::loadFromYaml(transformation_string_, perFilterConfig);
+                      ->mutable_typed_per_filter_config())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
+            envoy::api::v2::filter::http::RouteTransformations transformations;
+            TestUtility::loadFromYaml(transformation_string_, transformations);
+            perFilterConfig.PackFrom(transformations);
           });
     }
 
@@ -162,7 +164,7 @@ public:
                       std::string body = "") {
     waitForNextUpstreamRequest();
     upstream_request_->encodeHeaders(
-        Http::TestHeaderMapImpl{{":status", "200"}}, body.empty());
+        Http::TestRequestHeaderMapImpl{{":status", "200"}}, body.empty());
 
     if (!body.empty()) {
       Buffer::OwnedImpl data(body);
@@ -185,7 +187,7 @@ private:
     envoy::api::v2::filter::http::RouteTransformations route_transformations;
     TestUtility::loadFromYaml(transformation_config_str, route_transformations);
 
-    envoy::api::v2::route::RouteMatch route_match;
+    envoy::config::route::v3::RouteMatch route_match;
     TestUtility::loadFromYaml(matcher_str, route_match);
 
     *transformation_rule.mutable_route_transformations() = route_transformations;
@@ -196,7 +198,7 @@ private:
 
     HttpFilter filter;
     filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
-    TestUtility::jsonConvert(filter_config, *filter.mutable_config());
+    filter.mutable_typed_config()->PackFrom(filter_config);
 
     return MessageUtil::getJsonStringFromMessage(filter);
   }
@@ -209,7 +211,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
@@ -228,7 +230,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
   transformation_string_ = PATH_TO_PATH_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/234"}};
 
@@ -244,7 +246,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformPathToOtherPath) {
 TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   transformation_string_ = BODY_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -262,7 +264,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   transformation_string_ = BODY_REQUEST_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -282,7 +284,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
 TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
   transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -302,7 +304,7 @@ TEST_P(TransformationFilterIntegrationTest, SkipTransformation) {
   filter_transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   matcher_string_ = INVALID_MATCHER;
   initialize();
-  Http::TestHeaderMapImpl request_headers{
+  Http::TestRequestHeaderMapImpl request_headers{
       {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
 
@@ -320,7 +322,7 @@ TEST_P(TransformationFilterIntegrationTest, SkipTransformation) {
 TEST_P(TransformationFilterIntegrationTest, RemoveBodyFromRequest) {
   transformation_string_ = EMPTY_BODY_REQUEST_RESPONSE_TRANSFORMATION;
   initialize();
-  Http::TestHeaderMapImpl request_headers{{":method", "POST"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/empty-body-test"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);
@@ -357,7 +359,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   transformation_string_ = PASSTHROUGH_TRANSFORMATION;
   initialize();
   std::string origBody = "{\"abc\":\"efg\"}";
-  Http::TestHeaderMapImpl request_headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                           {":authority", "www.solo.io"},
                                           {":path", "/users/12347"}};
   auto encoder_decoder = codec_client_->startRequest(request_headers);

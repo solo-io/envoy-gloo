@@ -2,7 +2,7 @@
 
 #include "envoy/nats/codec.h"
 
-#include "common/common/stack_array.h"
+#include "absl/container/fixed_array.h"
 
 namespace Envoy {
 namespace Nats {
@@ -17,7 +17,7 @@ const std::string &Message::asString() const { return string_; }
 
 void DecoderImpl::decode(Buffer::Instance &data) {
   uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  STACK_ARRAY(slices, Buffer::RawSlice, num_slices);
+  absl::FixedArray<Buffer::RawSlice> slices(num_slices);
   data.getRawSlices(slices.begin(), num_slices);
   for (const Buffer::RawSlice &slice : slices) {
     parseSlice(slice);

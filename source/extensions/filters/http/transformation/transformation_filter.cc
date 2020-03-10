@@ -27,7 +27,7 @@ TransformationFilter::~TransformationFilter() {}
 void TransformationFilter::onDestroy() { resetInternalState(); }
 
 Http::FilterHeadersStatus
-TransformationFilter::decodeHeaders(Http::HeaderMap &header_map,
+TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
                                     bool end_stream) {
 
   request_headers_ = &header_map;
@@ -78,7 +78,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 }
 
 Http::FilterTrailersStatus
-TransformationFilter::decodeTrailers(Http::HeaderMap &) {
+TransformationFilter::decodeTrailers(Http::RequestTrailerMap &) {
   if (requestActive()) {
     filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
@@ -88,7 +88,7 @@ TransformationFilter::decodeTrailers(Http::HeaderMap &) {
 }
 
 Http::FilterHeadersStatus
-TransformationFilter::encodeHeaders(Http::HeaderMap &header_map,
+TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
                                     bool end_stream) {
 
   response_headers_ = &header_map;
@@ -131,7 +131,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
 }
 
 Http::FilterTrailersStatus
-TransformationFilter::encodeTrailers(Http::HeaderMap &) {
+TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
   if (responseActive()) {
     filter_config_->stats().response_body_transformations_.inc();
     transformResponse();

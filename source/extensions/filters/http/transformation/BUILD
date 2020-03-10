@@ -116,7 +116,7 @@ envoy_cc_library(
     deps = [
         ":transformation_filter_lib",
         "@envoy//include/envoy/registry",
-        "@envoy//source/extensions/filters/http/common:empty_http_filter_config_lib",
+        "@envoy//source/extensions/filters/http/common:pass_through_filter_lib",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )

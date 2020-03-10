@@ -74,7 +74,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectHeaderOnlyRequest) {
   // `nats_streaming_client_->makeRequest()` should not be called.
   EXPECT_CALL(*nats_streaming_client_, makeRequest_(_, _, _, _, _)).Times(0);
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 }
@@ -85,7 +85,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithData) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, false));
 
@@ -108,7 +108,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithTrailers) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, false));
 
@@ -122,7 +122,7 @@ TEST_F(NatsStreamingFilterTest, NoSubjectRequestWithTrailers) {
   EXPECT_EQ(Http::FilterDataStatus::Continue,
             filter_->decodeData(data2, false));
 
-  Http::TestHeaderMapImpl trailers;
+  Http::TestRequestTrailerMapImpl trailers;
   EXPECT_EQ(Envoy::Http::FilterTrailersStatus::Continue,
             filter_->decodeTrailers(trailers));
 
@@ -143,7 +143,7 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
   ON_CALL(callbacks_.route_->route_entry_, perFilterConfig(name))
       .WillByDefault(Return(&config));
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
 
@@ -165,7 +165,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -201,7 +201,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithHeadersAndOneChunkOfData) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestHeaderMapImpl headers{{"some-header", "a"}, {"other-header", "b"}};
+  Http::TestRequestHeaderMapImpl headers{{"some-header", "a"}, {"other-header", "b"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -233,7 +233,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -247,7 +247,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
   EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer,
             filter_->decodeData(data2, false));
 
-  Http::TestHeaderMapImpl trailers;
+  Http::TestRequestTrailerMapImpl trailers;
   EXPECT_EQ(Envoy::Http::FilterTrailersStatus::StopIteration,
             filter_->decodeTrailers(trailers));
 
