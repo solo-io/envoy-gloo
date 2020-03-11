@@ -619,6 +619,23 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
+TEST(InjaTransformer, ParseFromNilClusterMetadata) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  envoy::config::core::v3::Metadata* meta{};
+
+  ON_CALL(*callbacks.cluster_info_, metadata()).WillByDefault(testing::ReturnRef(*meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
