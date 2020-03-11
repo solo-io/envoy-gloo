@@ -610,16 +610,10 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   
-  Upstream::MockClusterInfo* cluster_info = new NiceMock<Upstream::MockClusterInfo>();
-  Upstream::ClusterInfoConstSharedPtr cluster_info_ptr{cluster_info};
-
   envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("key", "val")});
-  ON_CALL(*cluster_info, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
+  ON_CALL(*callbacks.cluster_info_, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
 
-  EXPECT_CALL(callbacks, clusterInfo())
-      .Times(1)
-      .WillRepeatedly(Return(cluster_info_ptr));
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, callbacks);
   EXPECT_EQ(body.toString(), "val");
