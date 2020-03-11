@@ -363,7 +363,7 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
   const envoy::config::core::v3::Metadata* cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
   if (ci.get()) {
-    cluster_metadata = &ci.get()->metadata();
+    cluster_metadata = &ci->metadata();
   }
 
   // start transforming!
