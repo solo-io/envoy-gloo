@@ -627,6 +627,8 @@ TEST(InjaTransformer, ParseFromNilClusterInfo) {
   InjaTransformer transformer(transformation);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  callbacks.cluster_info_.reset();
+  callbacks.cluster_info_ = nullptr;
 
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, callbacks);
