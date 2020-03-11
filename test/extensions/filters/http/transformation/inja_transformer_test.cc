@@ -162,10 +162,10 @@ TEST(TransformerInstance, ClusterMetadata) {
   
   std::unordered_map<std::string, std::string> env;
 
-  envoy::config::core::v3::Metadata* cluster_metadata{new envoy::config::core::v3::Metadata};
-  cluster_metadata->mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
+  envoy::config::core::v3::Metadata cluster_metadata{};
+  cluster_metadata.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, &cluster_metadata);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
