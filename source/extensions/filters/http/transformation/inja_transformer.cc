@@ -7,6 +7,7 @@
 #include "common/common/macros.h"
 #include "common/common/utility.h"
 #include "common/common/regex.h"
+#include "common/config/metadata.h"
 
 extern char **environ;
 
@@ -24,6 +25,12 @@ namespace Transformation {
 using TransformationTemplate =
     envoy::api::v2::filter::http::TransformationTemplate;
 
+struct BoolHeaderValues {
+  const std::string trueString = "true";
+  const std::string falseString = "false";
+};
+typedef ConstSingleton<BoolHeaderValues> BoolHeader;
+
 // TODO: move to common
 namespace {
 const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
@@ -37,7 +44,7 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
 
 const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
                                    const std::string &key) {
-  // use explicit consturctor so string is lowered
+  // use explicit constuctor so string is lowered
   auto lowerkey = Http::LowerCaseString(key);
   return getHeader(header_map, lowerkey);
 }
@@ -92,10 +99,11 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 
 TransformerInstance::TransformerInstance(
     const Http::HeaderMap &header_map, GetBodyFunc& body,
-    const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context, const std::unordered_map<std::string, std::string>& environ)
+    const std::unordered_map<std::string, absl::string_view>& extractions,
+    const json &context, const std::unordered_map<std::string, std::string>& environ,
+    const envoy::config::core::v3::Metadata* cluster_metadata)
     : header_map_(header_map), body_(body), extractions_(extractions),
-      context_(context), environ_(environ) {
+      context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
@@ -104,6 +112,7 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("context", 0, [this](Arguments&) { return context_; });
   env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
   env_.add_callback("env", 1, [this](Arguments& args) { return env(args); });
+  env_.add_callback("clusterMetadata", 1, [this](Arguments& args) { return cluster_metadata_callback(args); });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments& args) const  {
@@ -123,11 +132,84 @@ json TransformerInstance::extracted_callback(const inja::Arguments& args) const 
   }
   return "";
 }
+
 json TransformerInstance::env(const inja::Arguments& args) const {
   const std::string& key = args.at(0)->get_ref<const std::string&>();
   auto it = environ_.find(key);
   if (it != environ_.end()) {
     return it->second;
+  }
+  return "";
+}
+
+json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args) const {
+  const std::string& key = args.at(0)->get_ref<const std::string&>();
+  
+  if (!cluster_metadata_) {
+    return "";
+  }
+
+  const ProtobufWkt::Value& value = Envoy::Config::Metadata::metadataValue(cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+
+  switch (value.kind_case()) {
+  case ProtobufWkt::Value::kStringValue: {
+    return value.string_value();
+    break;
+  }
+  case ProtobufWkt::Value::kNumberValue: {
+    return value.number_value();
+    break;
+  }
+  case ProtobufWkt::Value::kBoolValue: {
+    const std::string &stringval = value.bool_value()
+                                       ? BoolHeader::get().trueString
+                                       : BoolHeader::get().falseString;
+    return stringval;
+    break;
+  }
+  case ProtobufWkt::Value::kListValue: {
+    const auto &listval = value.list_value().values();
+    if (listval.size() == 0) {
+      break;
+    }
+
+    // size is not zero, so this will work
+    auto it = listval.begin();
+    std::stringstream ss;
+
+    auto addValue = [&ss, &it] {
+      const ProtobufWkt::Value &value = *it;
+
+      switch (value.kind_case()) {
+      case ProtobufWkt::Value::kStringValue: {
+        ss << value.string_value();
+        break;
+      }
+      case ProtobufWkt::Value::kNumberValue: {
+        ss << value.number_value();
+        break;
+      }
+      case ProtobufWkt::Value::kBoolValue: {
+        ss << (value.bool_value() ? BoolHeader::get().trueString
+                                  : BoolHeader::get().falseString);
+        break;
+      }
+      default:
+        break;
+      }
+    };
+
+    addValue();
+
+    for (it++; it != listval.end(); it++) {
+      ss << ",";
+      addValue();
+    }
+    return ss.str();
+  }
+  default: {
+    break;
+  }
   }
   return "";
 }
@@ -208,15 +290,15 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
   }
   }
 
-    // parse environment
-    for (char **env = environ; *env != 0; env++) {
-      std::string current_env(*env);
-      size_t equals = current_env.find("=");
-      if (equals > 0) {
-        std::string key = current_env.substr(0, equals);
-        std::string value = current_env.substr(equals + 1);
-        environ_[key] = value;
-      }
+  // parse environment
+  for (char **env = environ; *env != 0; env++) {
+    std::string current_env(*env);
+    size_t equals = current_env.find("=");
+    if (equals > 0) {
+      std::string key = current_env.substr(0, equals);
+      std::string value = current_env.substr(equals + 1);
+      environ_[key] = value;
+    }
   }
 }
 
@@ -276,8 +358,16 @@ void InjaTransformer::transform(Http::HeaderMap &header_map,
           named_extractor.second.extract(callbacks, header_map, get_body);
     }
   }
+
+  // get cluster metadata
+  const envoy::config::core::v3::Metadata* cluster_metadata{};
+  Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
+  if (ci.get()) {
+    cluster_metadata = &ci->metadata();
+  }
+
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_);
+  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_, cluster_metadata);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

@@ -25,19 +25,20 @@ class TransformerInstance {
 public:
   TransformerInstance(
       const Http::HeaderMap &header_map, GetBodyFunc& body,
-      const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ);
-  
+      const std::unordered_map<std::string, absl::string_view>& extractions,
+      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ,
+      const envoy::config::core::v3::Metadata* cluster_metadata);
 
   std::string render(const inja::Template &input);
 
 private:
-// header_value(name)
+  // header_value(name)
   nlohmann::json header_callback(const inja::Arguments& args) const;
   // extracted_value(name, index)
   nlohmann::json extracted_callback(const inja::Arguments& args) const;
   nlohmann::json dynamic_metadata(const inja::Arguments& args) const;
   nlohmann::json env(const inja::Arguments& args) const;
+  nlohmann::json cluster_metadata_callback(const inja::Arguments& args) const;
 
   inja::Environment env_;
   const Http::HeaderMap &header_map_;
@@ -45,6 +46,7 @@ private:
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string>& environ_;
+  const envoy::config::core::v3::Metadata* cluster_metadata_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {

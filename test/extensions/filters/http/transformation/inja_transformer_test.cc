@@ -1,4 +1,5 @@
 #include "extensions/filters/http/transformation/inja_transformer.h"
+#include "extensions/filters/http/solo_well_known_names.h"
 
 #include "test/test_common/environment.h"
 #include "test/mocks/common.h"
@@ -49,8 +50,9 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -67,8 +69,9 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
     };
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -85,8 +88,9 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
                                   {"x-custom-header", header}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
                                   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -100,8 +104,9 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -114,8 +119,9 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -127,9 +133,10 @@ TEST(TransformerInstance, Environment) {
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
   env["FOO"] = "BAR";
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -141,10 +148,40 @@ TEST(TransformerInstance, EmptyEnvironment) {
   Http::TestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
-
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env);
+  envoy::config::core::v3::Metadata* cluster_metadata{};
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
+  EXPECT_EQ("", res);
+}
+
+TEST(TransformerInstance, ClusterMetadata) {
+  json originalbody;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Http::TestHeaderMapImpl headers;
+  
+  std::unordered_map<std::string, std::string> env;
+
+  envoy::config::core::v3::Metadata cluster_metadata;
+  cluster_metadata.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
+
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, &cluster_metadata);
+
+  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
+  EXPECT_EQ("foo.example.com", res);
+}
+
+TEST(TransformerInstance, EmptyClusterMetadata) {
+  json originalbody;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Http::TestHeaderMapImpl headers;
+
+  std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
+
+  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+
+  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -485,7 +522,7 @@ TEST(InjaTransformer, UseDefaultNS) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(1)
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _)).Times(1)
       .WillOnce(Invoke([](const std::string&, const ProtobufWkt::Struct& value) {
         auto field = value.fields().at("foo");
         EXPECT_EQ(field.string_value(), "1");
@@ -529,7 +566,7 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("io.solo.transformation", _)).Times(2);
+  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _)).Times(2);
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, body, callbacks);
 }
@@ -538,7 +575,7 @@ TEST(InjaTransformer, UseEnvVar) {
   Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{env(\"FOO\")}}");
-  // set env before calling transforer
+  // set env before calling transformer
   TestEnvironment::setEnvVar("FOO", "BAR", 1);
   TestEnvironment::setEnvVar("EMPTY", "", 1);
 
@@ -551,7 +588,6 @@ TEST(InjaTransformer, UseEnvVar) {
   EXPECT_EQ(body.toString(), "BAR");
 }
 
-
 TEST(InjaTransformer, ParseBodyListUsingContext) {
   Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
@@ -563,6 +599,40 @@ TEST(InjaTransformer, ParseBodyListUsingContext) {
   Buffer::OwnedImpl body("[3,2,1]");
   transformer.transform(headers, body, callbacks);
   EXPECT_EQ(body.toString(), "321");
+}
+
+TEST(InjaTransformer, ParseFromClusterMetadata) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("key", "val")});
+  ON_CALL(*callbacks.cluster_info_, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "val");
+}
+
+TEST(InjaTransformer, ParseFromNilClusterInfo) {
+  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  callbacks.cluster_info_.reset();
+  callbacks.cluster_info_ = nullptr;
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
 }
 
 } // namespace Transformation
