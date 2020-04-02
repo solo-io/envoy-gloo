@@ -103,7 +103,7 @@ class TransormConfig {
 public:
   virtual ~TransormConfig() {}
 
-  virtual TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap& headers) const PURE;
+  virtual TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const PURE;
 };
 
 class FilterConfig : public TransormConfig {
@@ -118,7 +118,7 @@ public:
   virtual const std::vector<MatcherTransformerPair>& transformerPairs() const PURE;
 
     // Finds the matcher that matched the header
-  TransformerPairConstSharedPtr findTransformers(const Http::HeaderMap& headers) const override {
+  TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const override {
     for (const auto& pair : transformerPairs()) {
       if (pair.matcher()->matches(headers)) {
         return pair.transformer_pair();

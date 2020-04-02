@@ -114,7 +114,7 @@ public:
   }
 
   TransformerPairConstSharedPtr
-  findTransformers(const Http::HeaderMap &) const override {
+  findTransformers(const Http::RequestHeaderMap &) const override {
     return transformer_pair_;
   }
 
