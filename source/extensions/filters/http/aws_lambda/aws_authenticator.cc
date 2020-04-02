@@ -9,7 +9,6 @@
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
-#include "absl/container/fixed_array.h"
 #include "common/common/utility.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
@@ -207,7 +206,7 @@ std::string AwsAuthenticator::computeSignature(
   return Hex::encode(out.begin(), out_len);
 }
 
-void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
+void AwsAuthenticator::sign(Http::RequestHeaderMap *request_headers,
                             const HeaderList &headers_to_sign,
                             const std::string &region) {
 
@@ -221,7 +220,7 @@ void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
 }
 
 std::string AwsAuthenticator::signWithTime(
-    Http::HeaderMap *request_headers, const HeaderList &headers_to_sign,
+    Http::RequestHeaderMap *request_headers, const HeaderList &headers_to_sign,
     const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
   request_headers_ = request_headers;
@@ -261,10 +260,7 @@ std::string AwsAuthenticator::signWithTime(
 AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
 
 void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
-  uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  absl::FixedArray<Buffer::RawSlice> slices(num_slices);
-  data.getRawSlices(slices.begin(), num_slices);
-  for (const Buffer::RawSlice &slice : slices) {
+  for (const Buffer::RawSlice &slice : data.getRawSlices()) {
     update(static_cast<const uint8_t *>(slice.mem_), slice.len_);
   }
 }

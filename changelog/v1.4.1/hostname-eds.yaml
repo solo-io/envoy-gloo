@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to allow using hostname in EDS.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: c2628ffd1b4bca6b309d6397408430fd90a4e48f

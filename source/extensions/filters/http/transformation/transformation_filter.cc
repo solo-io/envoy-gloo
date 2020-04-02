@@ -186,7 +186,7 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 
 void TransformationFilter::transformSomething(
     Http::StreamFilterCallbacks &callbacks,
-    TransformerConstSharedPtr &transformation, Http::HeaderMap &header_map,
+    TransformerConstSharedPtr &transformation, Http::RequestOrResponseHeaderMap &header_map,
     Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 

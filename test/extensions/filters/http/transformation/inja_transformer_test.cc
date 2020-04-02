@@ -47,7 +47,7 @@ inja::Template parse(std::string s) {
 TEST(TransformerInstance, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
@@ -64,7 +64,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   originalbody["field1"] = "value1";
   std::string path = "/getsomething";
 
-  Http::TestHeaderMapImpl headers{
+  Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}
     };
   std::unordered_map<std::string, absl::string_view> extractions;
@@ -82,7 +82,7 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
   json originalbody;
   originalbody["field1"] = "value1";
   std::string header = "blah blah";
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/getsomething"},
                                   {"x-custom-header", header}};
@@ -102,7 +102,7 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   std::unordered_map<std::string, absl::string_view> extractions;
   absl::string_view field = "res";
   extractions["f"] = field;
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   
@@ -117,7 +117,7 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   
@@ -131,7 +131,7 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
 TEST(TransformerInstance, Environment) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   env["FOO"] = "BAR";
@@ -145,7 +145,7 @@ TEST(TransformerInstance, Environment) {
 TEST(TransformerInstance, EmptyEnvironment) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
@@ -158,7 +158,7 @@ TEST(TransformerInstance, EmptyEnvironment) {
 TEST(TransformerInstance, ClusterMetadata) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   
   std::unordered_map<std::string, std::string> env;
 
@@ -174,7 +174,7 @@ TEST(TransformerInstance, ClusterMetadata) {
 TEST(TransformerInstance, EmptyClusterMetadata) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
@@ -186,7 +186,7 @@ TEST(TransformerInstance, EmptyClusterMetadata) {
 }
 
 TEST(Extraction, ExtractIdFromHeader) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
@@ -201,7 +201,7 @@ TEST(Extraction, ExtractIdFromHeader) {
 }
 
 TEST(Extraction, ExtractorWorkWithNewlines) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
@@ -221,7 +221,7 @@ TEST(Extraction, ExtractorWorkWithNewlines) {
 }
 
 TEST(Extraction, ExtractorFail) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
@@ -233,7 +233,7 @@ TEST(Extraction, ExtractorFail) {
 }
 
 TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
@@ -245,7 +245,7 @@ TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
 }
 
 TEST(Transformer, transform) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -277,7 +277,7 @@ TEST(Transformer, transform) {
 }
 
 TEST(Transformer, transformSimple) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -309,7 +309,7 @@ TEST(Transformer, transformSimple) {
 }
 
 TEST(Transformer, transformSimpleNestedStructs) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -341,7 +341,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
 }
 
 TEST(Transformer, transformPassthrough) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -368,7 +368,7 @@ TEST(Transformer, transformPassthrough) {
 }
 
 TEST(Transformer, transformMergeExtractorsToBody) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -398,7 +398,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 }
 
 TEST(Transformer, transformBodyNotSet) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};
@@ -424,7 +424,7 @@ TEST(Transformer, transformBodyNotSet) {
 }
 
 TEST(InjaTransformer, transformWithHyphens) {
-  Http::TestHeaderMapImpl headers{
+  Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"},
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
   Buffer::OwnedImpl body("{}");
@@ -452,7 +452,7 @@ TEST(InjaTransformer, transformWithHyphens) {
 
 TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   const std::string content_type = "content-type";
-  Http::TestHeaderMapImpl headers{
+  Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
   Buffer::OwnedImpl body("{}");
 
@@ -470,7 +470,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
 }
 
 TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   Buffer::OwnedImpl body("not json body");
 
   TransformationTemplate transformation;
@@ -493,7 +493,7 @@ TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
 }
 
 TEST(InjaTransformer, UseBodyFunction) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -509,7 +509,7 @@ TEST(InjaTransformer, UseBodyFunction) {
 }
 
 TEST(InjaTransformer, UseDefaultNS) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -532,7 +532,7 @@ TEST(InjaTransformer, UseDefaultNS) {
 }
 
 TEST(InjaTransformer, UseCustomNS) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
@@ -552,7 +552,7 @@ TEST(InjaTransformer, UseCustomNS) {
 }
 
 TEST(InjaTransformer, UseDynamicMetaTwice) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   auto dynamic_meta = transformation.add_dynamic_metadata_values();
@@ -572,7 +572,7 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 }
 
 TEST(InjaTransformer, UseEnvVar) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{env(\"FOO\")}}");
   // set env before calling transformer
@@ -589,7 +589,7 @@ TEST(InjaTransformer, UseEnvVar) {
 }
 
 TEST(InjaTransformer, ParseBodyListUsingContext) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{% for i in context() %}{{ i }}{% endfor %}");
   InjaTransformer transformer(transformation);
@@ -602,7 +602,7 @@ TEST(InjaTransformer, ParseBodyListUsingContext) {
 }
 
 TEST(InjaTransformer, ParseFromClusterMetadata) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 
@@ -620,7 +620,7 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
 }
 
 TEST(InjaTransformer, ParseFromNilClusterInfo) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 

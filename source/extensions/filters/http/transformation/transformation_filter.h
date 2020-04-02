@@ -89,7 +89,7 @@ private:
   void
   transformSomething(Http::StreamFilterCallbacks &callbacks,
                      TransformerConstSharedPtr &transformation,
-                     Http::HeaderMap &header_map, Buffer::Instance &body,
+                     Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
                      void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
 
@@ -100,8 +100,8 @@ private:
   Router::RouteConstSharedPtr route_;
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
-  Http::HeaderMap *request_headers_{nullptr};
-  Http::HeaderMap *response_headers_{nullptr};
+  Http::RequestHeaderMap *request_headers_{nullptr};
+  Http::ResponseHeaderMap *response_headers_{nullptr};
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 

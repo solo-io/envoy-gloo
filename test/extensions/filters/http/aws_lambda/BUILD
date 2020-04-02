@@ -36,6 +36,7 @@ envoy_gloo_cc_test(
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
         "@envoy//test/test_common:utility_lib",
+        "@envoy//test/common/stats:stat_test_utility_lib",
     ],
 )
 

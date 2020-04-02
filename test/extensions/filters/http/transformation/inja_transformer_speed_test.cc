@@ -20,7 +20,7 @@ std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 }
 
 static void BM_ExrtactHeader(benchmark::State &state) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
