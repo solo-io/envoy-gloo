@@ -9,7 +9,6 @@
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
-#include "absl/container/fixed_array.h"
 #include "common/common/utility.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
@@ -261,10 +260,7 @@ std::string AwsAuthenticator::signWithTime(
 AwsAuthenticator::Sha256::Sha256() { SHA256_Init(&context_); }
 
 void AwsAuthenticator::Sha256::update(const Buffer::Instance &data) {
-  uint64_t num_slices = data.getRawSlices(nullptr, 0);
-  absl::FixedArray<Buffer::RawSlice> slices(num_slices);
-  data.getRawSlices(slices.begin(), num_slices);
-  for (const Buffer::RawSlice &slice : slices) {
+  for (const Buffer::RawSlice &slice : data.getRawSlices()) {
     update(static_cast<const uint8_t *>(slice.mem_), slice.len_);
   }
 }
