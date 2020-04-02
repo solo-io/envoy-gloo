@@ -336,7 +336,7 @@ TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
 
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
+      .WillOnce(Invoke([&](Http::ResponseHeaderMap &headers, bool) {
         status = std::string(headers.Status()->value().getStringView());
       }));
 
@@ -354,7 +354,7 @@ TEST_F(TransformationFilterTest, ErrorOnInvalidJsonBody) {
 
   std::string status;
   EXPECT_CALL(filter_callbacks_, encodeHeaders_(_, _))
-      .WillOnce(Invoke([&](Http::HeaderMap &headers, bool) {
+      .WillOnce(Invoke([&](Http::ResponseHeaderMap &headers, bool) {
         status = std::string(headers.Status()->value().getStringView());
       }));
 

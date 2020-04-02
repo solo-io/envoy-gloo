@@ -28,7 +28,7 @@ namespace HttpFilters {
 namespace Transformation {
 
 TEST(BodyHeaderTransformer, transform) {
-  Http::TestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                   {":authority", "www.solo.io"},
                                   {"x-test", "789"},
                                   {":path", "/users/123"}};

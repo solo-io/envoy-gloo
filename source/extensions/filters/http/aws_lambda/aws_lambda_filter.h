@@ -47,7 +47,7 @@ private:
   void lambdafy();
   void cleanup();
 
-  Http::HeaderMap *request_headers_{};
+  Http::RequestHeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;
 
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};

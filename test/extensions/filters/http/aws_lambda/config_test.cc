@@ -32,7 +32,7 @@ protected:
   void SetUp() override {}
 
   NiceMock<Server::Configuration::MockFactoryContext> context_;
-  Stats::IsolatedStoreImpl stats_;
+  Stats::TestUtil::TestStore stats_;
 
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig protoconfig;
 
@@ -69,13 +69,13 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   timer->invokeCallback();
   EXPECT_EQ(creds2, *config.getCredentials());
 
-  EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(1UL, stats_
-                     .gauge("prefix.aws_lambda.current_state",
+                     .gaugeFromString("prefix.aws_lambda.current_state",
                             Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(0UL, stats_.counter("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(0UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, FailingToRotate) {
@@ -102,13 +102,13 @@ TEST_F(ConfigTest, FailingToRotate) {
   // When we fail to rotate we latch to the last good credentials
   EXPECT_EQ(creds, *config.getCredentials());
 
-  EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(0UL, stats_
-                     .gauge("prefix.aws_lambda.current_state",
+                     .gaugeFromString("prefix.aws_lambda.current_state",
                             Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, SameCredsOnTimer) {
@@ -132,13 +132,13 @@ TEST_F(ConfigTest, SameCredsOnTimer) {
   timer->invokeCallback();
   EXPECT_EQ(creds, *config.getCredentials());
 
-  EXPECT_EQ(2UL, stats_.counter("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(1UL, stats_.counter("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(1UL, stats_
-                     .gauge("prefix.aws_lambda.current_state",
+                     .gaugeFromString("prefix.aws_lambda.current_state",
                             Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(0UL, stats_.counter("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(0UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, WithoutUseDefaultCreds) {

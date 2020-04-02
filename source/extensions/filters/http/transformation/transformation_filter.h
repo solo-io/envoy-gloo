@@ -89,7 +89,7 @@ private:
   void
   transformSomething(Http::StreamFilterCallbacks &callbacks,
                      TransformerConstSharedPtr &transformation,
-                     Http::HeaderMap &header_map, Buffer::Instance &body,
+                     Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
                      void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
 
