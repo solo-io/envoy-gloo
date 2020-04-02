@@ -30,7 +30,7 @@ public:
 
   void updatePayloadHash(const Buffer::Instance &data);
 
-  void sign(Http::HeaderMap *request_headers, const HeaderList &headers_to_sign,
+  void sign(Http::RequestHeaderMap *request_headers, const HeaderList &headers_to_sign,
             const std::string &region);
 
   /**
@@ -43,7 +43,7 @@ private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
 
-  std::string signWithTime(Http::HeaderMap *request_headers,
+  std::string signWithTime(Http::RequestHeaderMap *request_headers,
                            const HeaderList &headers_to_sign,
                            const std::string &region, SystemTime now);
 
@@ -124,7 +124,7 @@ private:
   absl::string_view query_string_{};
   absl::string_view url_base_{};
 
-  Http::HeaderMap *request_headers_{};
+  Http::RequestHeaderMap *request_headers_{};
 };
 
 } // namespace AwsLambda

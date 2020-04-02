@@ -51,7 +51,7 @@ public:
   }
 
   std::string
-  signWithTime(AwsAuthenticator &aws, Http::HeaderMap *request_headers,
+  signWithTime(AwsAuthenticator &aws, Http::RequestHeaderMap *request_headers,
                const HeaderList &headers, const std::string &region,
                std::chrono::time_point<std::chrono::system_clock> now) {
     return aws.signWithTime(request_headers, std::move(headers), region, now);
@@ -85,7 +85,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
-  Http::TestHeaderMapImpl headers;
+  Http::TestRequestTrailerMapImpl headers;
   headers.setPath(url + "?" + query);
   headers.setMethod(std::string("GET"));
   headers.setHost(std::string("www.solo.io"));

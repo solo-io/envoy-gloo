@@ -206,7 +206,7 @@ std::string AwsAuthenticator::computeSignature(
   return Hex::encode(out.begin(), out_len);
 }
 
-void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
+void AwsAuthenticator::sign(Http::RequestHeaderMap *request_headers,
                             const HeaderList &headers_to_sign,
                             const std::string &region) {
 
@@ -220,7 +220,7 @@ void AwsAuthenticator::sign(Http::HeaderMap *request_headers,
 }
 
 std::string AwsAuthenticator::signWithTime(
-    Http::HeaderMap *request_headers, const HeaderList &headers_to_sign,
+    Http::RequestHeaderMap *request_headers, const HeaderList &headers_to_sign,
     const std::string &region,
     std::chrono::time_point<std::chrono::system_clock> now) {
   request_headers_ = request_headers;
