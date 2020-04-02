@@ -100,8 +100,8 @@ private:
   Router::RouteConstSharedPtr route_;
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
-  Http::HeaderMap *request_headers_{nullptr};
-  Http::HeaderMap *response_headers_{nullptr};
+  Http::RequestHeaderMap *request_headers_{nullptr};
+  Http::ResponseHeaderMap *response_headers_{nullptr};
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
