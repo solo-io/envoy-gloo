@@ -33,7 +33,7 @@ typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 
 // TODO: move to common
 namespace {
-const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
+const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
                                    const Http::LowerCaseString &key) {
   const Http::HeaderEntry *header_entry = header_map.get(key);
   if (!header_entry) {
@@ -42,7 +42,7 @@ const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
   return header_entry;
 }
 
-const Http::HeaderEntry *getHeader(const Http::HeaderMap &header_map,
+const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
                                    const std::string &key) {
   // use explicit constuctor so string is lowered
   auto lowerkey = Http::LowerCaseString(key);
@@ -63,7 +63,7 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
         }
       }
 
-absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, const Http::HeaderMap &header_map,
+absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, const Http::RequestOrResponseHeaderMap &header_map,
                                      GetBodyFunc& body) const {
   if (body_) {
     const std::string& string_body = body();
@@ -98,7 +98,7 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 }
 
 TransformerInstance::TransformerInstance(
-    const Http::HeaderMap &header_map, GetBodyFunc& body,
+    const Http::RequestOrResponseHeaderMap &header_map, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view>& extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ,
     const envoy::config::core::v3::Metadata* cluster_metadata)
@@ -304,7 +304,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
 
 InjaTransformer::~InjaTransformer() {}
 
-void InjaTransformer::transform(Http::HeaderMap &header_map,
+void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
                                 Buffer::Instance &body,
                                 Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;

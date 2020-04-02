@@ -85,7 +85,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
-  Http::TestRequestTrailerMapImpl headers;
+  Http::TestRequestHeaderMapImpl headers;
   headers.setPath(url + "?" + query);
   headers.setMethod(std::string("GET"));
   headers.setHost(std::string("www.solo.io"));

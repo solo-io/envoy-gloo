@@ -45,7 +45,7 @@ public:
 
   virtual bool passthrough_body() const PURE;
 
-  virtual void transform(Http::HeaderMap &map,
+  virtual void transform(Http::RequestOrResponseHeaderMap &map,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
