@@ -1,0 +1,4 @@
+changelog:
+- type: NEW_FEATURE
+  description: Use ubuntu image for envoy. this is to allow using opentracing dynamic tracer.
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/56
