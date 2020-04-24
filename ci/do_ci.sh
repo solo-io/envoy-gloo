@@ -25,6 +25,7 @@ fi
 export ENVOY_SRCDIR=$SOURCE_DIR
 
 # google cloud build doesn't like ipv6
+export BAZEL_BUILD_EXTRA_OPTIONS="--jobs 20"
 export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors"
 
 echo Building
