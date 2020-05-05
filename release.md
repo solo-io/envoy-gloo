@@ -1,5 +1,7 @@
 # Release Policy
 
+goal: To ensure that we can update gloo-envoy with upstream security features, for older gloo releases, without running into deperecated features that will need a gloo updated.
+
 We aim to have gloo-envoy release match corresponding gloo releases.
 To make sure that we can backport security fixes without breaking changes, 
 we will follow to following release paradigm:
@@ -8,7 +10,7 @@ envoy-gloo release match gloo releases with the major/minor version number.
 i.e. envoy-gloo 1.4 is meant to work with gloo 1.4
 
 The current release may depend on envoy master. Once we release gloo, that release must not update to an envoy 
-newer than the next envoy release. Using a newer envoy runs the risk of having deperecated features
+newer than the next envoy release. Using a newer envoy runs the risk of having deprecated features
 removed, which will break behavior.
 
 Example:
