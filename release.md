@@ -6,7 +6,7 @@ We aim to have gloo-envoy release match corresponding gloo releases.
 To make sure that we can backport security fixes without breaking changes, 
 we will follow to following release paradigm:
 
-envoy-gloo release match gloo releases with the major/minor version number.
+envoy-gloo releases match gloo releases with the major/minor version number.
 i.e. envoy-gloo 1.4 is meant to work with gloo 1.4
 
 The current release may depend on envoy master. Once we release gloo, that release must not update to an envoy 
