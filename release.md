@@ -1,6 +1,6 @@
 # Release Policy
 
-goal: To ensure that we can update gloo-envoy with upstream security features, for older gloo releases, without running into deperecated features that will need a gloo updated.
+Goal: Ensure that we can update gloo-envoy with upstream security features, including older Gloo releases, without running into deprecated features requiring Gloo updates.
 
 We aim to have gloo-envoy release match corresponding gloo releases.
 To make sure that we can backport security fixes without breaking changes, 
