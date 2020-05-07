@@ -4,7 +4,7 @@ Goal: Ensure that we can update gloo-envoy with upstream security features, incl
 
 We aim to have gloo-envoy release match corresponding gloo releases.
 To make sure that we can backport security fixes without breaking changes, 
-we will follow to following release paradigm:
+we will follow the following release paradigm:
 
 envoy-gloo releases match gloo releases with the major/minor version number.
 i.e. envoy-gloo 1.4 is meant to work with gloo 1.4
