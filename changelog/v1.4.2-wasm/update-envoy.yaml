@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to pull in a crash fix.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy-wasm
+  dependencyTag: edc016b1fa5adca3ebd3d7020eaed0ad7b8814ca
