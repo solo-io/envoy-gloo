@@ -1,6 +1,6 @@
 changelog:
 - type: DEPENDENCY_BUMP
-  description: Update envoy to pull in a for transformation not working for AWS usptreams.
+  description: Update envoy to pull in a fix for transformation not working for AWS usptreams.
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
   dependencyTag: 8f4d759cb53493159bcba921d6109eace48cb6da
