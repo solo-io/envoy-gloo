@@ -3,4 +3,4 @@ changelog:
   description: Update envoy to pull in a for transformation not working for AWS usptreams.
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
-  dependencyTag: 77e436f9eb39863a4a425bbca9026c86740b36cd
+  dependencyTag: 8f4d759cb53493159bcba921d6109eace48cb6da
