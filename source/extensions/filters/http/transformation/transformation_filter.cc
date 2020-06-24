@@ -92,12 +92,11 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
                                     bool end_stream) {
   response_headers_ = &header_map;
 
-  if (!response_transformation_) {
-      if (route_config != nullptr) {
-        response_transformation_ = route_config->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
-      } else {
-        response_transformation_ = filter_config_->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
-      }
+  if (!response_transformation_ && route_config != nullptr) {
+    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage())
+    if (staged_config) {
+        response_transformation_ = staged_config->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
+    }
   }
 
   if (!responseActive()) {
@@ -149,15 +148,19 @@ TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 
-  const auto *route_config = Http::Utility::resolveMostSpecificPerFilterConfig<
+  route_config_ = Http::Utility::resolveMostSpecificPerFilterConfig<
     RouteFilterConfig>(filter_config_->name(), route_);
   TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard header_matching rules
+  const TransformConfig* config_to_use = filter_config_.get();
+
   if (route_config != nullptr) {
-    active_transformer_pair = route_config->findTransformers(*request_headers_);
-  } else {
-    active_transformer_pair = filter_config_->findTransformers(*request_headers_);
+    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage())
+    if (staged_config){
+      config_to_use = staged_config;
+    }
   }
+  active_transformer_pair = config_to_use->findTransformers(*request_headers_);
 
   if (active_transformer_pair != nullptr) {
     should_clear_cache_ = active_transformer_pair->shouldClearCache();

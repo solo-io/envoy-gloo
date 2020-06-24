@@ -11,29 +11,52 @@ import "google/protobuf/empty.proto";
 import "validate/validate.proto";
 
 import "envoy/config/route/v3/route_components.proto";
-import "envoy/type/matcher/string.proto";
+import "envoy/type/matcher/v3/string.proto";
 
 message FilterTransformations {
   // Specifies transformations based on the route matches. The first matched transformation will be
   // applied. If there are overlapped match conditions, please put the most specific match first.
   repeated TransformationRule transformations = 1;
 
-  // Only RouteTransformations with matching stage will be used
-  int32 stage = 2;
+  // Only RouteTransformations.Transformations with matching stage will be used with this filter.
+  int32 stage = 2 [(validate.rules).uint32 = {lte: 10}];
 }
 
 message RouteTransformations {
+  // deprecated
   Transformation request_transformation = 1;
-  // clear the route cache if the request transformation was applied
-  bool clear_route_cache = 3;
+  // deprecated
   Transformation response_transformation = 2;
+  // deprecated
+  bool clear_route_cache = 3;
 
-  // Stage number
-  int32 stage = 4;
+  message Transformations {
+    // Stage number
+    int32 stage = 1 [(validate.rules).uint32 = {lte: 10}];
 
-  // Transformations to apply on a reply. If htis field is set along with `response_transformation`,
-  // then this field will be ignored and repsonse_transformation will be used.
-  repeated ResponseTransformationRule response_transformation_rules = 5;
+    message RequestMatch {
+      // if match is not specified, we match
+      envoy.config.route.v3.RouteMatch match = 1;
+      // transformation to perform 
+      Transformation request_transformation = 2;
+      Transformation response_transformation = 3;
+      // clear the route cache if the request transformation was applied
+      bool clear_route_cache = 4;
+    }
+
+    message ResponseMatch {
+      ResponseMatcher match = 1;
+      // transformation to perform 
+      Transformation response_transformation = 2;
+    }
+
+    oneof transformation {
+      RequestMatch request_match = 2;
+      ResponseMatch response_match = 3;
+    }
+  }
+
+  repeated Transformations transformations = 4;
 }
 
 message TransformationRule {

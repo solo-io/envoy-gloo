@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 #include "envoy/buffer/buffer.h"
@@ -18,6 +19,10 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
+
+namespace {
+  constexpr uint64_t MAX_STAGE_NUMBER = 10UL;
+}
 
 
 /**
@@ -101,15 +106,21 @@ private:
 };
 
 
-class TransormConfig {
+class TransformConfig {
 public:
-  virtual ~TransormConfig() {}
+  virtual ~TransformConfig() {}
 
   virtual TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const PURE;
   virtual TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap& headers) const PURE;
 };
 
-class FilterConfig : public TransormConfig {
+class StagedTransformConfig {
+public:
+  virtual ~StagedTransformConfig() {}
+  const TransformConfig* transformConfigForStage(uint32_t stage) = PURE;
+};
+
+class FilterConfig : public TransformConfig {
 public:
   FilterConfig(const std::string& prefix, Stats::Scope& scope) : stats_(generateStats(prefix, scope)) {};
 
@@ -141,7 +152,19 @@ private:
   TransformationFilterStats stats_;
 };
 
-class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};
+class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public StagedTransformConfig {
+public:
+  RouteFilterConfig() : stages_(MAX_STAGE_NUMBER + 1) {
+
+  }
+  const TransformConfig* transformConfigForStage(uint32_t stage) {
+    ASSERT(stage < stages_.size());
+    return stages_[stage].get();
+  }
+
+protected:
+vector<std::shared_ptr<const TransformConfig>> stages_;
+};
 
 typedef std::shared_ptr<const RouteFilterConfig>
     RouteFilterConfigConstSharedPtr;
