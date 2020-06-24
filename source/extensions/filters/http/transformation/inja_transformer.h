@@ -24,7 +24,7 @@ using GetBodyFunc = std::function<const std::string &()>;
 class TransformerInstance {
 public:
   TransformerInstance(
-      const Http::RequestOrResponseHeaderMap &header_map, GetBodyFunc& body,
+      const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap &request_headers, GetBodyFunc& body,
       const std::unordered_map<std::string, absl::string_view>& extractions,
       const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ,
       const envoy::config::core::v3::Metadata* cluster_metadata);
@@ -34,6 +34,7 @@ public:
 private:
   // header_value(name)
   nlohmann::json header_callback(const inja::Arguments& args) const;
+  nlohmann::json request_header_callback(const inja::Arguments& args) const;
   // extracted_value(name, index)
   nlohmann::json extracted_callback(const inja::Arguments& args) const;
   nlohmann::json dynamic_metadata(const inja::Arguments& args) const;
@@ -42,6 +43,7 @@ private:
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;
+  const Http::RequestHeaderMap &request_headers_;
   GetBodyFunc& body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
@@ -70,7 +72,7 @@ public:
                       &transformation);
   ~InjaTransformer();
 
-  void transform(Http::RequestOrResponseHeaderMap &map, Buffer::Instance &body,
+  void transform(Http::RequestOrResponseHeaderMap &map, const Http::RequestHeaderMap &request_headers, Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return passthrough_body_; };
 

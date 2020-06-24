@@ -90,8 +90,15 @@ TransformationFilter::decodeTrailers(Http::RequestTrailerMap &) {
 Http::FilterHeadersStatus
 TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
                                     bool end_stream) {
-
   response_headers_ = &header_map;
+
+  if (!response_transformation_) {
+      if (route_config != nullptr) {
+        response_transformation_ = route_config->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
+      } else {
+        response_transformation_ = filter_config_->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
+      }
+  }
 
   if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
@@ -191,7 +198,7 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    transformation->transform(header_map, body, callbacks);
+    transformation->transform(header_map, *request_headers_ , body, callbacks);
 
     if (body.length() > 0) {
       (this->*addData)(body);

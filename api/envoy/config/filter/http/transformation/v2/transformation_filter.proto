@@ -11,11 +11,29 @@ import "google/protobuf/empty.proto";
 import "validate/validate.proto";
 
 import "envoy/config/route/v3/route_components.proto";
+import "envoy/type/matcher/string.proto";
 
 message FilterTransformations {
   // Specifies transformations based on the route matches. The first matched transformation will be
   // applied. If there are overlapped match conditions, please put the most specific match first.
   repeated TransformationRule transformations = 1;
+
+  // Only RouteTransformations with matching stage will be used
+  int32 stage = 2;
+}
+
+message RouteTransformations {
+  Transformation request_transformation = 1;
+  // clear the route cache if the request transformation was applied
+  bool clear_route_cache = 3;
+  Transformation response_transformation = 2;
+
+  // Stage number
+  int32 stage = 4;
+
+  // Transformations to apply on a reply. If htis field is set along with `response_transformation`,
+  // then this field will be ignored and repsonse_transformation will be used.
+  repeated ResponseTransformationRule response_transformation_rules = 5;
 }
 
 message TransformationRule {
@@ -34,11 +52,21 @@ message TransformationRule {
   RouteTransformations route_transformations = 2;
 }
 
+message ResponseMatcher {
+  // Specifies a set of headers that the route should match on. The router will
+  // check the request’s headers against all the specified headers in the route
+  // config. A match will happen if all the headers in the route are present in
+  // the request with the same values (or based on presence if the value field
+  // is not in the config).
+  repeated envoy.config.route.v3.HeaderMatcher headers = 1;
 
-message RouteTransformations {
-  Transformation request_transformation = 1;
-  // clear the route cache if the request transformation was applied
-  bool clear_route_cache = 3;
+  // Only match responses with non empty response code details (this usually implies a local reply).
+  envoy.type.matcher.v3.StringMatcher response_code_details = 2;
+}
+
+message ResponseTransformationRule {
+  ResponseMatcher match = 1;
+  // transformation to perform 
   Transformation response_transformation = 2;
 }
 

@@ -20,6 +20,22 @@ public:
       const envoy::api::v2::filter::http::Transformation &transformation);
 };
 
+class ResponseMatcher;
+using ResponseMatcherConstPtr = std::shared_ptr<const ResponseMatcher>;
+class ResponseMatcher {
+  public:
+  virtual bool matches(const Http::ResponseHeaderMap& headers, const Http::StreamInfo &stream_info) const PURE;
+
+  /**
+   * Factory method to create a shared instance of a matcher based on the rule defined.
+   *
+   * @param rule  the proto rule match message.
+   * @return the matcher instance.
+   */
+  static ResponseMatcherConstPtr
+    create(const envoy::api::v2::filter::http::ResponseMatcher& match);
+};
+
 using TransformationConfigProto =
     envoy::api::v2::filter::http::FilterTransformations;
 using RouteTransformationConfigProto =
@@ -120,6 +136,7 @@ public:
 
 private:
   TransformerPairConstSharedPtr transformer_pair_;
+  vector<ResponseMatcherTransformPair> response_transformations_;
 };
 
 } // namespace Transformation

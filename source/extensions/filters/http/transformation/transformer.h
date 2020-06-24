@@ -46,6 +46,8 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map even when transforming responses.
+                         const Http::RequestHeaderMap &request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
@@ -104,6 +106,7 @@ public:
   virtual ~TransormConfig() {}
 
   virtual TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const PURE;
+  virtual TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap& headers) const PURE;
 };
 
 class FilterConfig : public TransormConfig {
@@ -124,6 +127,9 @@ public:
         return pair.transformer_pair();
       }
     }
+    return nullptr;
+  };
+  TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap& headers) const override {
     return nullptr;
   };
 
