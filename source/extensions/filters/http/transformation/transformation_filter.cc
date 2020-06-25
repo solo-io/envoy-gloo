@@ -92,10 +92,10 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
                                     bool end_stream) {
   response_headers_ = &header_map;
 
-  if (!response_transformation_ && route_config != nullptr) {
-    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage())
+  if (!response_transformation_ && route_config_ != nullptr) {
+    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage());
     if (staged_config) {
-        response_transformation_ = staged_config->findResponseTransformation(*response_headers_, encoder_callbacks_->streamInfo());
+        response_transformation_ = staged_config->findResponseTransform(*response_headers_, encoder_callbacks_->streamInfo());
     }
   }
 
@@ -154,8 +154,8 @@ void TransformationFilter::setupTransformationPair() {
   // if there is a route level config present, automatically disregard header_matching rules
   const TransformConfig* config_to_use = filter_config_.get();
 
-  if (route_config != nullptr) {
-    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage())
+  if (route_config_ != nullptr) {
+    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage());
     if (staged_config){
       config_to_use = staged_config;
     }

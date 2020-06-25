@@ -97,6 +97,9 @@ envoy_cc_library(
     hdrs = [
         "transformer.h",
     ],
+    srcs = [
+        "transformer.cc",
+    ],
     repository = "@envoy",
     deps = [
         "//source/common/matcher:matchers_lib",

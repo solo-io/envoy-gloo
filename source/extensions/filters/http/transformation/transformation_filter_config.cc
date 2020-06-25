@@ -1,3 +1,4 @@
+#include "common/common/matchers.h"
 #include "extensions/filters/http/transformation/transformation_filter_config.h"
 
 #include "extensions/filters/http/transformation/body_header_transformer.h"
@@ -8,7 +9,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-TransformerSharedPtr Transformation::getTransformer(
+TransformerConstSharedPtr Transformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
@@ -24,14 +25,56 @@ TransformerSharedPtr Transformation::getTransformer(
   }
 }
 
+TransformationFilterConfig::TransformationFilterConfig(const TransformationConfigProto &proto_config,
+                             const std::string &prefix, Stats::Scope &scope)
+      : FilterConfig(prefix, scope, proto_config.stage()) {
+
+    for (const auto &rule : proto_config.transformations()) {
+      if (!rule.has_match()) {
+        continue;
+      }
+      TransformerConstSharedPtr request_transformation;
+      TransformerConstSharedPtr response_transformation;
+      bool clear_route_cache = false;
+      if (rule.has_route_transformations()) {
+        const auto &route_transformation = rule.route_transformations();
+        clear_route_cache = route_transformation.clear_route_cache();
+        if (route_transformation.has_request_transformation()) {
+          try {
+            request_transformation = Transformation::getTransformer(
+                route_transformation.request_transformation());
+          } catch (const std::exception &e) {
+            throw EnvoyException(
+                fmt::format("Failed to parse request template: {}", e.what()));
+          }
+        }
+        if (route_transformation.has_response_transformation()) {
+          try {
+            response_transformation = Transformation::getTransformer(
+                route_transformation.response_transformation());
+          } catch (const std::exception &e) {
+            throw EnvoyException(
+                fmt::format("Failed to parse response template: {}", e.what()));
+          }
+        }
+      }
+      TransformerPairConstSharedPtr transformer_pair =
+          std::make_unique<TransformerPair>(request_transformation,
+                                            response_transformation,
+                                            clear_route_cache);
+      transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
+                                      transformer_pair);
+    }
+  }
+
 class ResponseMatcherImpl : public ResponseMatcher {
 public:
   ResponseMatcherImpl(const envoy::api::v2::filter::http::ResponseMatcher& match);
-  bool matches(const Http::RequestHeaderMap& headers, const Http::StreamInfo &stream_info) const override;
+  bool matches(const Http::ResponseHeaderMap& headers, const StreamInfo::StreamInfo &stream_info) const override;
 
 private:
   std::vector<Http::HeaderUtility::HeaderDataPtr> headers_;
-  absl::optional<StringMatcher> response_code_details_match_;
+  absl::optional<Matchers::StringMatcherImpl> response_code_details_match_;
 };
 
 ResponseMatcherImpl::ResponseMatcherImpl(const envoy::api::v2::filter::http::ResponseMatcher& match) :
@@ -41,14 +84,14 @@ ResponseMatcherImpl::ResponseMatcherImpl(const envoy::api::v2::filter::http::Res
   }
 }
 
-bool ResponseMatcherImpl::matches(const Http::ResponseHeaderMap& headers, const Http::StreamInfo &stream_info) const {
+bool ResponseMatcherImpl::matches(const Http::ResponseHeaderMap& headers, const StreamInfo::StreamInfo &stream_info) const {
 
   if (response_code_details_match_.has_value()) {
     const auto& maybe_details = stream_info.responseCodeDetails();
     if (!maybe_details.has_value()) {
       return false;
     }
-    if (!response_code_details_match_.value().matches(maybe_details.value())) {
+    if (!response_code_details_match_.value().match(maybe_details.value())) {
       return false;
     }
   }
@@ -61,7 +104,116 @@ bool ResponseMatcherImpl::matches(const Http::ResponseHeaderMap& headers, const 
 }
 
 ResponseMatcherConstPtr ResponseMatcher::create(const envoy::api::v2::filter::http::ResponseMatcher& match) {
-  return make_shared<const ResponseMatcherImpl>(match);
+  return std::make_unique<const ResponseMatcherImpl>(match);
+}
+
+RouteTransformationFilterConfig::RouteTransformationFilterConfig(
+      RouteTransformationConfigProto proto_config) {
+
+  if (proto_config.transformations_size() == 0) {
+    // no new style config, convert the deprecated config:
+    auto* transformation = proto_config.add_transformations();
+    auto* request_match = transformation->mutable_request_match();
+    if (proto_config.has_request_transformation()) {
+      *request_match->mutable_request_transformation() = proto_config.request_transformation();
+    }
+    if (proto_config.has_response_transformation()) {
+      *request_match->mutable_response_transformation() = proto_config.response_transformation();
+    }
+    request_match->set_clear_route_cache(proto_config.clear_route_cache()); 
+  }
+
+  std::vector<std::unique_ptr<PerStageRouteTransformationFilterConfig>> temp_stages(stages_.size());
+
+  for (auto&& transformation : proto_config.transformations()){
+    ASSERT(transformation.stage() < stages_.size());
+    if (!temp_stages[transformation.stage()]) {
+      temp_stages[transformation.stage()].reset(new PerStageRouteTransformationFilterConfig());
+    }
+    temp_stages[transformation.stage()]->addTransformation(transformation);
+  }
+  for (uint32_t i = 0; i < stages_.size(); i++) {
+    stages_[i] = std::move(temp_stages[i]);
+  }
+}
+
+void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api::v2::filter::http::RouteTransformations_Transformations& transformation) {
+  using envoy::api::v2::filter::http::RouteTransformations_Transformations;
+  // create either request or response one.
+  switch (transformation.transformation_case()) {
+    case RouteTransformations_Transformations::kRequestMatch: {
+      auto&& request_match = transformation.request_match();
+      TransformerConstSharedPtr request_transformation;
+      TransformerConstSharedPtr response_transformation;
+      Matcher::MatcherConstPtr matcher;
+
+      if (request_match.has_match()){
+        matcher = Matcher::Matcher::create(request_match.match());
+      }
+
+      bool clear_route_cache = request_match.clear_route_cache();
+      if (request_match.has_request_transformation()) {
+        try {
+          request_transformation = Transformation::getTransformer(
+              request_match.request_transformation());
+        } catch (const std::exception &e) {
+          throw EnvoyException(
+              fmt::format("Failed to parse request template: {}", e.what()));
+        }
+      }
+      if (request_match.has_response_transformation()) {
+        try {
+          response_transformation = Transformation::getTransformer(
+              request_match.response_transformation());
+        } catch (const std::exception &e) {
+          throw EnvoyException(
+              fmt::format("Failed to parse response template: {}", e.what()));
+        }
+      }
+
+      if (request_transformation != nullptr || response_transformation != nullptr) {
+
+        TransformerPairConstSharedPtr transformer_pair =
+            std::make_unique<TransformerPair>(request_transformation,
+                                              response_transformation,
+                                              clear_route_cache);
+        transformer_pairs_.emplace_back(matcher, transformer_pair);
+      }
+      break;
+    }
+    case RouteTransformations_Transformations::kResponseMatch:{
+      auto&& response_match = transformation.response_match();
+      ResponseMatcherConstPtr matcher;
+      if (response_match.has_match()) {
+        matcher = std::move(ResponseMatcher::create(response_match.match()));
+      }
+      auto&& transformation = response_match.response_transformation();
+      std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(std::move(matcher), Transformation::getTransformer(transformation));
+      response_transformations_.emplace_back(std::move(pair));
+      break;
+    }
+    case RouteTransformations_Transformations::TRANSFORMATION_NOT_SET: {
+      // TODO: log warning?
+    }
+  }
+}
+
+TransformerPairConstSharedPtr PerStageRouteTransformationFilterConfig::findTransformers(const Http::RequestHeaderMap& headers) const {
+  for (const auto& pair : transformer_pairs_) {
+    if (pair.matcher() == nullptr || pair.matcher()->matches(headers)) {
+      return pair.transformer_pair();
+    }
+  }
+  return nullptr;
+}
+
+TransformerConstSharedPtr PerStageRouteTransformationFilterConfig::findResponseTransform(const Http::ResponseHeaderMap& headers, StreamInfo::StreamInfo& si) const {
+  for (const auto& pair : response_transformations_) {
+    if (pair.first == nullptr || pair.first->matches(headers, si)) {
+      return pair.second;
+    }
+  }
+  return nullptr;
 }
 
 } // namespace Transformation

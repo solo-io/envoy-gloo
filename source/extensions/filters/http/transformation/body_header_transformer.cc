@@ -13,7 +13,7 @@ namespace HttpFilters {
 namespace Transformation {
 
 void BodyHeaderTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
-                                      const Http::RequestHeaderMap &request_headers,
+                                      const Http::RequestHeaderMap &,
                                       Buffer::Instance &body,
                                       Http::StreamFilterCallbacks&) const {
   json json_body;
