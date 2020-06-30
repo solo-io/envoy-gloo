@@ -36,7 +36,7 @@ TEST(BodyHeaderTransformer, transform) {
 
   BodyHeaderTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, body, filter_callbacks_);
+  transformer.transform(headers, headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);

@@ -35,11 +35,7 @@ typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 namespace {
 const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
                                    const Http::LowerCaseString &key) {
-  const Http::HeaderEntry *header_entry = header_map.get(key);
-  if (!header_entry) {
-    header_map.lookup(key, &header_entry);
-  }
-  return header_entry;
+  return header_map.get(key);
 }
 
 const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,

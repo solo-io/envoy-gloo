@@ -96,6 +96,8 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
     const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage());
     if (staged_config) {
         response_transformation_ = staged_config->findResponseTransform(*response_headers_, encoder_callbacks_->streamInfo());
+    } else {
+        response_transformation_ = filter_config_->findResponseTransform(*response_headers_, encoder_callbacks_->streamInfo());
     }
   }
 
