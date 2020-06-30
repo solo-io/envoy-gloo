@@ -19,6 +19,9 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
+Http::RegisterCustomInlineHeader<Http::CustomInlineHeaderRegistry::Type::RequestHeaders>
+    authorization_handle(Http::CustomHeaders::get().Authorization);
+
 class AwsAuthenticatorValues {
 public:
   const std::string Algorithm{"AWS4-HMAC-SHA256"};
@@ -86,9 +89,6 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
       headerEntry = request_headers_->Host();
     } else {
       headerEntry = request_headers_->get(*header);
-      if (headerEntry == nullptr) {
-        request_headers_->lookup(*header, &headerEntry);
-      }
     }
 
     auto headerName = header->get();
@@ -216,7 +216,7 @@ void AwsAuthenticator::sign(Http::RequestHeaderMap *request_headers,
   auto now = time_source_.systemTime();
 
   std::string sig = signWithTime(request_headers, headers_to_sign, region, now);
-  request_headers->setAuthorization(sig);
+  request_headers->setInline(authorization_handle.handle(), sig);
 }
 
 std::string AwsAuthenticator::signWithTime(
