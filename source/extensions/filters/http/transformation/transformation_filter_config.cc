@@ -138,11 +138,11 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
   }
 }
 
-void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api::v2::filter::http::RouteTransformations_Transformations& transformation) {
-  using envoy::api::v2::filter::http::RouteTransformations_Transformations;
+void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api::v2::filter::http::RouteTransformations_RouteTransformation& transformation) {
+  using envoy::api::v2::filter::http::RouteTransformations_RouteTransformation;
   // create either request or response one.
-  switch (transformation.transformation_case()) {
-    case RouteTransformations_Transformations::kRequestMatch: {
+  switch (transformation.match_case()) {
+    case RouteTransformations_RouteTransformation::kRequestMatch: {
       auto&& request_match = transformation.request_match();
       TransformerConstSharedPtr request_transformation;
       TransformerConstSharedPtr response_transformation;
@@ -182,7 +182,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api
       }
       break;
     }
-    case RouteTransformations_Transformations::kResponseMatch:{
+    case RouteTransformations_RouteTransformation::kResponseMatch:{
       auto&& response_match = transformation.response_match();
       ResponseMatcherConstPtr matcher;
       if (response_match.has_match()) {
@@ -198,7 +198,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api
         }
       break;
     }
-    case RouteTransformations_Transformations::TRANSFORMATION_NOT_SET: {
+    case RouteTransformations_RouteTransformation::MATCH_NOT_SET: {
       // TODO: log warning?
     }
   }

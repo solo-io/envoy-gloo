@@ -60,7 +60,7 @@ private:
 class PerStageRouteTransformationFilterConfig : public TransformConfig {
 public:
   PerStageRouteTransformationFilterConfig() = default;
-  void addTransformation(const envoy::api::v2::filter::http::RouteTransformations_Transformations& transformations);
+  void addTransformation(const envoy::api::v2::filter::http::RouteTransformations_RouteTransformation& transformations);
 
   TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const override;
   TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap&, StreamInfo::StreamInfo&) const override;

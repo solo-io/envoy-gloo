@@ -22,6 +22,29 @@ message FilterTransformations {
   uint32 stage = 2 [(validate.rules).uint32 = {lte: 10}];
 }
 
+message TransformationRule {
+  // The route matching parameter. Only when the match is satisfied, the "requires" field will
+  // apply.
+  //
+  // For example: following match will match all requests.
+  //
+  // .. code-block:: yaml
+  //
+  //    match:
+  //      prefix: /
+  //
+  envoy.config.route.v3.RouteMatch match = 1 [(validate.rules).message = {required: true}];
+
+  message Transformations {
+    Transformation request_transformation = 1;
+    Transformation response_transformation = 2;
+     // clear the route cache if the request transformation was applied
+    bool clear_route_cache = 3;
+  }
+  // transformation to perform 
+  Transformations route_transformations = 2;
+}
+
 message RouteTransformations {
   // deprecated. Use transformations[].request_match.request_transformation instead.
   Transformation request_transformation = 1 [deprecated=true];
@@ -30,7 +53,7 @@ message RouteTransformations {
   // deprecated. Use transformations[].request_match.clear_route_cache instead.
   bool clear_route_cache = 3 [deprecated=true];
 
-  message Transformations {
+  message RouteTransformation {
     // Stage number
     uint32 stage = 1 [(validate.rules).uint32 = {lte: 10}];
 
@@ -50,30 +73,15 @@ message RouteTransformations {
       Transformation response_transformation = 2;
     }
 
-    oneof transformation {
+    oneof match {
       RequestMatch request_match = 2;
       ResponseMatch response_match = 3;
     }
   }
 
-  repeated Transformations transformations = 4;
+  repeated RouteTransformation transformations = 4;
 }
 
-message TransformationRule {
-  // The route matching parameter. Only when the match is satisfied, the "requires" field will
-  // apply.
-  //
-  // For example: following match will match all requests.
-  //
-  // .. code-block:: yaml
-  //
-  //    match:
-  //      prefix: /
-  //
-  envoy.config.route.v3.RouteMatch match = 1 [(validate.rules).message = {required: true}];
-  // transformation to perform 
-  RouteTransformations route_transformations = 2;
-}
 
 message ResponseMatcher {
   // Specifies a set of headers that the route should match on. The router will
