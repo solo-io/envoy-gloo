@@ -188,8 +188,13 @@ void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api
         matcher = std::move(ResponseMatcher::create(response_match.match()));
       }
       auto&& transformation = response_match.response_transformation();
-      std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(std::move(matcher), Transformation::getTransformer(transformation));
-      response_transformations_.emplace_back(std::move(pair));
+        try {
+          std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(std::move(matcher), Transformation::getTransformer(transformation));
+          response_transformations_.emplace_back(std::move(pair));
+        } catch (const std::exception &e) {
+          throw EnvoyException(
+              fmt::format("Failed to parse response template on response matcher: {}", e.what()));
+        }
       break;
     }
     case RouteTransformations_Transformations::TRANSFORMATION_NOT_SET: {
