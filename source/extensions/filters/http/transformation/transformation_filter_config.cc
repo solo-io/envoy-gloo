@@ -126,7 +126,7 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
   std::vector<std::unique_ptr<PerStageRouteTransformationFilterConfig>> temp_stages(stages_.size());
 
   for (auto&& transformation : proto_config.transformations()){
-    ASSERT(transformation.stage() < stages_.size());
+    RELEASE_ASSERT(transformation.stage() < stages_.size());
     if (!temp_stages[transformation.stage()]) {
       temp_stages[transformation.stage()].reset(new PerStageRouteTransformationFilterConfig());
     }
