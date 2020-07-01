@@ -35,7 +35,7 @@ message RouteTransformations {
     uint32 stage = 1 [(validate.rules).uint32 = {lte: 10}];
 
     message RequestMatch {
-      // if match is not specified, we match
+      // if no match is specified, will match all
       envoy.config.route.v3.RouteMatch match = 1;
       // transformation to perform 
       Transformation request_transformation = 2;
@@ -77,7 +77,7 @@ message TransformationRule {
 
 message ResponseMatcher {
   // Specifies a set of headers that the route should match on. The router will
-  // check the request’s headers against all the specified headers in the route
+  // check the response headers against all the specified headers in the route
   // config. A match will happen if all the headers in the route are present in
   // the request with the same values (or based on presence if the value field
   // is not in the config).
