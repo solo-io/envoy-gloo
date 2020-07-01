@@ -18,7 +18,8 @@ name: io.solo.aws_lambda
 const std::string USE_CHAIN_LAMBDA_FILTER =
     R"EOF(
 name: io.solo.aws_lambda
-config:
+typed_config:
+  "@type": type.googleapis.com/envoy.config.filter.http.aws_lambda.v2.AWSLambdaConfig
   use_default_credentials: true
 )EOF";
 
