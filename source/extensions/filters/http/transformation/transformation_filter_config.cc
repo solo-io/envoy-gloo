@@ -199,7 +199,8 @@ void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api
       break;
     }
     case RouteTransformations_RouteTransformation::MATCH_NOT_SET: {
-      // TODO: log warning?
+      // This should never happen due to validation
+      ASSERT(false, "match is not set")
     }
   }
 }

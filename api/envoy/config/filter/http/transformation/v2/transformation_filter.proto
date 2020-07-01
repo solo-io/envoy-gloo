@@ -74,6 +74,7 @@ message RouteTransformations {
     }
 
     oneof match {
+      option (validate.required) = true;
       RequestMatch request_match = 2;
       ResponseMatch response_match = 3;
     }
