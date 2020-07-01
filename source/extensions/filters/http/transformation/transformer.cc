@@ -32,7 +32,7 @@ TransformationFilterStats FilterConfig::generateStats(const std::string& prefix,
   }
 
 
-RouteFilterConfig::RouteFilterConfig() : stages_(MAX_STAGE_NUMBER) {}
+RouteFilterConfig::RouteFilterConfig() : stages_(MAX_STAGE_NUMBER + 1) {}
 
 const TransformConfig* RouteFilterConfig::transformConfigForStage(uint32_t stage) const {
     ASSERT(stage < stages_.size());
