@@ -24,11 +24,11 @@ message FilterTransformations {
 
 message RouteTransformations {
   // deprecated
-  Transformation request_transformation = 1;
+  Transformation request_transformation = 1 [deprecated=true];;
   // deprecated
-  Transformation response_transformation = 2;
+  Transformation response_transformation = 2 [deprecated=true];;
   // deprecated
-  bool clear_route_cache = 3;
+  bool clear_route_cache = 3 [deprecated=true];;
 
   message Transformations {
     // Stage number
