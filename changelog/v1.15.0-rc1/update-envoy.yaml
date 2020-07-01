@@ -1,0 +1,10 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to pull in the latest security fix.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 91905443ca743a22a347006e3e447a3d84e4b6e1
+- type: NEW_FEATURE
+  description: allow route level transformations that can match on responses.
+  issueLink: https://github.com/solo-io/gloo/issues/3028
+  resolvesIssue: false

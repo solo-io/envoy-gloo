@@ -35,11 +35,7 @@ typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 namespace {
 const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
                                    const Http::LowerCaseString &key) {
-  const Http::HeaderEntry *header_entry = header_map.get(key);
-  if (!header_entry) {
-    header_map.lookup(key, &header_entry);
-  }
-  return header_entry;
+  return header_map.get(key);
 }
 
 const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
@@ -98,14 +94,16 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 }
 
 TransformerInstance::TransformerInstance(
-    const Http::RequestOrResponseHeaderMap &header_map, GetBodyFunc& body,
+    const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap *request_headers, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view>& extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ,
     const envoy::config::core::v3::Metadata* cluster_metadata)
-    : header_map_(header_map), body_(body), extractions_(extractions),
+    : header_map_(header_map), request_headers_(request_headers), body_(body), extractions_(extractions),
       context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
                     [this](Arguments& args) { return header_callback(args); });
+  env_.add_callback("request_header", 1,
+                    [this](Arguments& args) { return request_header_callback(args); });
   env_.add_callback("extraction", 1, [this](Arguments& args) {
     return extracted_callback(args);
   });
@@ -115,9 +113,21 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("clusterMetadata", 1, [this](Arguments& args) { return cluster_metadata_callback(args); });
 }
 
-json TransformerInstance::header_callback(const inja::Arguments& args) const  {
+json TransformerInstance::header_callback(const inja::Arguments& args) const {
   const std::string& headername = args.at(0)->get_ref<const std::string&>();
   const Http::HeaderEntry *header_entry = getHeader(header_map_, headername);
+  if (!header_entry) {
+    return "";
+  }
+  return std::string(header_entry->value().getStringView());
+}
+
+json TransformerInstance::request_header_callback(const inja::Arguments& args) const {
+  if (request_headers_ == nullptr){
+    return "";
+  }
+  const std::string& headername = args.at(0)->get_ref<const std::string&>();
+  const Http::HeaderEntry *header_entry = getHeader(*request_headers_, headername);
   if (!header_entry) {
     return "";
   }
@@ -305,6 +315,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
 InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
+                                const Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
                                 Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;
@@ -367,7 +378,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
 
   // start transforming!
-  TransformerInstance instance(header_map, get_body, extractions, json_body, environ_, cluster_metadata);
+  TransformerInstance instance(header_map, request_headers, get_body, extractions, json_body, environ_, cluster_metadata);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

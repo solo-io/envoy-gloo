@@ -52,7 +52,7 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -71,7 +71,7 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -90,7 +90,7 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
                                   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -106,7 +106,7 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -121,7 +121,7 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -136,7 +136,7 @@ TEST(TransformerInstance, Environment) {
   envoy::config::core::v3::Metadata* cluster_metadata{};
   env["FOO"] = "BAR";
   
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -149,7 +149,7 @@ TEST(TransformerInstance, EmptyEnvironment) {
   
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
@@ -165,7 +165,7 @@ TEST(TransformerInstance, ClusterMetadata) {
   envoy::config::core::v3::Metadata cluster_metadata;
   cluster_metadata.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, &cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
@@ -179,10 +179,25 @@ TEST(TransformerInstance, EmptyClusterMetadata) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata* cluster_metadata{};
 
-  TransformerInstance t(headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
+}
+
+TEST(TransformerInstance, RequestHeaders) {
+  json originalbody;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"}};
+
+  std::unordered_map<std::string, std::string> env;
+  envoy::config::core::v3::Metadata* cluster_metadata{};
+
+  TransformerInstance t(response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata);
+
+  auto res = t.render(parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
+  EXPECT_EQ("200-GET", res);
 }
 
 TEST(Extraction, ExtractIdFromHeader) {
@@ -268,7 +283,7 @@ TEST(Transformer, transform) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -300,7 +315,7 @@ TEST(Transformer, transformSimple) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -332,7 +347,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -359,7 +374,7 @@ TEST(Transformer, transformPassthrough) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -390,7 +405,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -415,7 +430,7 @@ TEST(Transformer, transformBodyNotSet) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -443,7 +458,7 @@ TEST(InjaTransformer, transformWithHyphens) {
 
   InjaTransformer transformer(transformation);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 
   std::string res = body.toString();
 
@@ -465,7 +480,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
 
   EXPECT_TRUE(headers.has(content_type));
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_FALSE(headers.has(content_type));
 }
 
@@ -488,7 +503,7 @@ TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
   InjaTransformer transformer(transformation);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "json");
 }
 
@@ -504,7 +519,7 @@ TEST(InjaTransformer, UseBodyFunction) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "1 1");
 }
 
@@ -528,7 +543,7 @@ TEST(InjaTransformer, UseDefaultNS) {
         EXPECT_EQ(field.string_value(), "1");
       }));
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseCustomNS) {
@@ -548,7 +563,7 @@ TEST(InjaTransformer, UseCustomNS) {
 
   EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
   Buffer::OwnedImpl body;
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseDynamicMetaTwice) {
@@ -568,7 +583,7 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 
   EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _)).Times(2);
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
 }
 
 TEST(InjaTransformer, UseEnvVar) {
@@ -584,7 +599,7 @@ TEST(InjaTransformer, UseEnvVar) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "BAR");
 }
 
@@ -597,7 +612,7 @@ TEST(InjaTransformer, ParseBodyListUsingContext) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   Buffer::OwnedImpl body("[3,2,1]");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "321");
 }
 
@@ -615,7 +630,7 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
   ON_CALL(*callbacks.cluster_info_, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
 
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "val");
 }
 
@@ -631,7 +646,7 @@ TEST(InjaTransformer, ParseFromNilClusterInfo) {
   callbacks.cluster_info_ = nullptr;
 
   Buffer::OwnedImpl body("1");
-  transformer.transform(headers, body, callbacks);
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 }
 

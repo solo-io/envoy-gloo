@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <string>
 
 #include "envoy/buffer/buffer.h"
@@ -18,7 +19,6 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
-
 
 /**
  * All stats for the transformation filter. @see stats_macros.h
@@ -46,21 +46,19 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map even when transforming responses.
+                         const Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
 
-typedef std::shared_ptr<Transformer> TransformerSharedPtr;
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
 
 class TransformerPair {
 public:
   TransformerPair(TransformerConstSharedPtr request_transformer, 
                   TransformerConstSharedPtr response_transformer, 
-                  bool should_clear_cache):
-    clear_route_cache_(should_clear_cache),
-    request_transformation_(request_transformer), 
-    response_transformation_(response_transformer) {}
+                  bool should_clear_cache);
 
   TransformerConstSharedPtr getRequestTranformation() const {
     return request_transformation_;
@@ -77,8 +75,20 @@ private:
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
 };
-
 typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;
+
+class TransformConfig {
+public:
+  virtual ~TransformConfig() {}
+  virtual TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const PURE;
+  virtual TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap& headers, StreamInfo::StreamInfo&) const PURE;
+};
+
+class StagedTransformConfig {
+public:
+  virtual ~StagedTransformConfig() {}
+  virtual const TransformConfig* transformConfigForStage(uint32_t stage) const PURE;
+};
 
 class MatcherTransformerPair {
 public:
@@ -98,44 +108,41 @@ private:
   TransformerPairConstSharedPtr transformer_pair_;
 };
 
-
-class TransormConfig {
+class FilterConfig : public TransformConfig {
 public:
-  virtual ~TransormConfig() {}
+  FilterConfig(const std::string& prefix, Stats::Scope& scope, uint32_t stage) : stats_(generateStats(prefix, scope)), stage_(stage) {};
 
-  virtual TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const PURE;
-};
-
-class FilterConfig : public TransormConfig {
-public:
-  FilterConfig(const std::string& prefix, Stats::Scope& scope) : stats_(generateStats(prefix, scope)) {};
-
-  static TransformationFilterStats generateStats(const std::string& prefix, Stats::Scope& scope) {
-    const std::string final_prefix = prefix + "transformation.";
-    return {ALL_TRANSFORMATION_FILTER_STATS(POOL_COUNTER_PREFIX(scope, final_prefix))};
-  }
+  static TransformationFilterStats generateStats(const std::string& prefix, Stats::Scope& scope);
 
   virtual const std::vector<MatcherTransformerPair>& transformerPairs() const PURE;
 
     // Finds the matcher that matched the header
-  TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const override {
-    for (const auto& pair : transformerPairs()) {
-      if (pair.matcher()->matches(headers)) {
-        return pair.transformer_pair();
-      }
-    }
+  TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const override;
+
+  TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap&, StreamInfo::StreamInfo&) const override {
     return nullptr;
-  };
+  }
 
   TransformationFilterStats& stats() { return stats_; }
 
   virtual std::string name() const PURE;
 
+  uint32_t stage() const {return stage_;}
+
 private: 
   TransformationFilterStats stats_;
+  uint32_t stage_{};
 };
 
-class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public TransormConfig {};
+class RouteFilterConfig : public Router::RouteSpecificFilterConfig, public StagedTransformConfig {
+public:
+  RouteFilterConfig();
+
+  const TransformConfig* transformConfigForStage(uint32_t stage) const override;
+
+protected:
+  std::vector<std::unique_ptr<const TransformConfig>> stages_;
+};
 
 typedef std::shared_ptr<const RouteFilterConfig>
     RouteFilterConfigConstSharedPtr;

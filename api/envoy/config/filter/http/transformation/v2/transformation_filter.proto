@@ -11,11 +11,15 @@ import "google/protobuf/empty.proto";
 import "validate/validate.proto";
 
 import "envoy/config/route/v3/route_components.proto";
+import "envoy/type/matcher/v3/string.proto";
 
 message FilterTransformations {
   // Specifies transformations based on the route matches. The first matched transformation will be
   // applied. If there are overlapped match conditions, please put the most specific match first.
   repeated TransformationRule transformations = 1;
+
+  // Only RouteTransformations.Transformations with matching stage will be used with this filter.
+  uint32 stage = 2 [(validate.rules).uint32 = {lte: 10}];
 }
 
 message TransformationRule {
@@ -30,15 +34,71 @@ message TransformationRule {
   //      prefix: /
   //
   envoy.config.route.v3.RouteMatch match = 1 [(validate.rules).message = {required: true}];
+
+  message Transformations {
+    Transformation request_transformation = 1;
+    Transformation response_transformation = 2;
+     // clear the route cache if the request transformation was applied
+    bool clear_route_cache = 3;
+  }
   // transformation to perform 
-  RouteTransformations route_transformations = 2;
+  Transformations route_transformations = 2;
+}
+
+message RouteTransformations {
+  // deprecated. Use transformations[].request_match.request_transformation instead.
+  Transformation request_transformation = 1 [deprecated=true];
+  // deprecated. Use transformations[].request_match.response_transformation instead.
+  Transformation response_transformation = 2 [deprecated=true];
+  // deprecated. Use transformations[].request_match.clear_route_cache instead.
+  bool clear_route_cache = 3 [deprecated=true];
+
+  message RouteTransformation {
+    // Stage number
+    uint32 stage = 1 [(validate.rules).uint32 = {lte: 10}];
+
+    message RequestMatch {
+      // if no match is specified, will match all
+      envoy.config.route.v3.RouteMatch match = 1;
+      // transformation to perform 
+      Transformation request_transformation = 2;
+      Transformation response_transformation = 3;
+      // clear the route cache if the request transformation was applied
+      bool clear_route_cache = 4;
+    }
+
+    message ResponseMatch {
+      ResponseMatcher match = 1;
+      // transformation to perform 
+      Transformation response_transformation = 2;
+    }
+
+    oneof match {
+      option (validate.required) = true;
+      RequestMatch request_match = 2;
+      ResponseMatch response_match = 3;
+    }
+  }
+
+  repeated RouteTransformation transformations = 4;
 }
 
 
-message RouteTransformations {
-  Transformation request_transformation = 1;
-  // clear the route cache if the request transformation was applied
-  bool clear_route_cache = 3;
+message ResponseMatcher {
+  // Specifies a set of headers that the route should match on. The router will
+  // check the response headers against all the specified headers in the route
+  // config. A match will happen if all the headers in the route are present in
+  // the request with the same values (or based on presence if the value field
+  // is not in the config).
+  repeated envoy.config.route.v3.HeaderMatcher headers = 1;
+
+  // Only match responses with non empty response code details (this usually implies a local reply).
+  envoy.type.matcher.v3.StringMatcher response_code_details = 2;
+}
+
+message ResponseTransformationRule {
+  ResponseMatcher match = 1;
+  // transformation to perform 
   Transformation response_transformation = 2;
 }
 

@@ -98,6 +98,7 @@ private:
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
   Http::StreamEncoderFilterCallbacks *encoder_callbacks_{};
   Router::RouteConstSharedPtr route_;
+  const RouteFilterConfig* route_config_{};
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
   Http::RequestHeaderMap *request_headers_{nullptr};
