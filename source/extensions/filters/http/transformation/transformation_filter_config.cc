@@ -1,3 +1,4 @@
+#include "common/common/assert.h"
 #include "common/common/matchers.h"
 #include "extensions/filters/http/transformation/transformation_filter_config.h"
 
@@ -126,7 +127,7 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
   std::vector<std::unique_ptr<PerStageRouteTransformationFilterConfig>> temp_stages(stages_.size());
 
   for (auto&& transformation : proto_config.transformations()){
-    RELEASE_ASSERT(transformation.stage() < stages_.size());
+    RELEASE_ASSERT(transformation.stage() < stages_.size(), "");
     if (!temp_stages[transformation.stage()]) {
       temp_stages[transformation.stage()].reset(new PerStageRouteTransformationFilterConfig());
     }
@@ -185,7 +186,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(const envoy::api
       auto&& response_match = transformation.response_match();
       ResponseMatcherConstPtr matcher;
       if (response_match.has_match()) {
-        matcher = std::move(ResponseMatcher::create(response_match.match()));
+        matcher = ResponseMatcher::create(response_match.match());
       }
       auto&& transformation = response_match.response_transformation();
         try {
