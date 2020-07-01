@@ -23,12 +23,12 @@ message FilterTransformations {
 }
 
 message RouteTransformations {
-  // deprecated
-  Transformation request_transformation = 1 [deprecated=true];;
-  // deprecated
-  Transformation response_transformation = 2 [deprecated=true];;
-  // deprecated
-  bool clear_route_cache = 3 [deprecated=true];;
+  // deprecated. Use transformations[].request_match.request_transformation instead.
+  Transformation request_transformation = 1 [deprecated=true];
+  // deprecated. Use transformations[].request_match.response_transformation instead.
+  Transformation response_transformation = 2 [deprecated=true];
+  // deprecated. Use transformations[].request_match.clear_route_cache instead.
+  bool clear_route_cache = 3 [deprecated=true];
 
   message Transformations {
     // Stage number
