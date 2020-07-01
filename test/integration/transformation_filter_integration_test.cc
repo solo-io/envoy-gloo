@@ -184,7 +184,7 @@ private:
       const std::string& matcher_str) {
 
     envoy::api::v2::filter::http::TransformationRule transformation_rule;
-    envoy::api::v2::filter::http::RouteTransformations route_transformations;
+    envoy::api::v2::filter::http::TransformationRule_Transformations route_transformations;
     TestUtility::loadFromYaml(transformation_config_str, route_transformations);
 
     envoy::config::route::v3::RouteMatch route_match;
