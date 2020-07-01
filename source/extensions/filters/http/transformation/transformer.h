@@ -1,7 +1,6 @@
 #pragma once
 
-#include <bits/stdint-uintn.h>
-#include <cstdint>
+
 #include <string>
 
 #include "envoy/buffer/buffer.h"
