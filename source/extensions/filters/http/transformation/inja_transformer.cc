@@ -94,7 +94,7 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
 }
 
 TransformerInstance::TransformerInstance(
-    const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap &request_headers, GetBodyFunc& body,
+    const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap *request_headers, GetBodyFunc& body,
     const std::unordered_map<std::string, absl::string_view>& extractions,
     const json &context, const std::unordered_map<std::string, std::string>& environ,
     const envoy::config::core::v3::Metadata* cluster_metadata)
@@ -123,8 +123,11 @@ json TransformerInstance::header_callback(const inja::Arguments& args) const {
 }
 
 json TransformerInstance::request_header_callback(const inja::Arguments& args) const {
+  if (request_headers_ == nullptr){
+    return "";
+  }
   const std::string& headername = args.at(0)->get_ref<const std::string&>();
-  const Http::HeaderEntry *header_entry = getHeader(request_headers_, headername);
+  const Http::HeaderEntry *header_entry = getHeader(*request_headers_, headername);
   if (!header_entry) {
     return "";
   }
@@ -312,7 +315,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
 InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
-                                const Http::RequestHeaderMap &request_headers,
+                                const Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
                                 Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;

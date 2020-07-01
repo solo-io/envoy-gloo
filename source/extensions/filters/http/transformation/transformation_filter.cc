@@ -203,7 +203,7 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    transformation->transform(header_map, *request_headers_ , body, callbacks);
+    transformation->transform(header_map, request_headers_ , body, callbacks);
 
     if (body.length() > 0) {
       (this->*addData)(body);

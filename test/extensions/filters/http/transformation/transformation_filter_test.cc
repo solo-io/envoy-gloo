@@ -331,6 +331,219 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
   EXPECT_EQ(0U, config_->stats().response_header_transformations_.value());
 }
 
+TEST_F(TransformationFilterTest, TransformLocalResponse) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/"}};
+  Http::TestResponseHeaderMapImpl response_headers{{"content-type", "test"},
+                                  {":status", "429"}};
+  const std::string match_string = R"EOF(
+  transformations:
+  - response_match:
+      match:
+        headers:
+        - name: ":status"
+          exact_match: "200"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            ":status": {text: "401"}
+  - response_match:
+      match:
+        headers:
+        - name: ":status"
+          exact_match: "429"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            ":status": {text: "400"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(response_headers.get_(":status"), "400");
+}
+
+TEST_F(TransformationFilterTest, StagedFilterResponseConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/"}};
+  Http::TestResponseHeaderMapImpl response_headers{{"content-type", "test"},
+                                  {":status", "200"}};
+  listener_config_.set_stage(1);
+  const std::string match_string = R"EOF(
+  transformations:
+  - stage: 0
+    response_match:
+      match:
+        headers:
+        - name: ":status"
+          exact_match: "200"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "stage0"}
+  - stage: 1
+    response_match:
+      match:
+        headers:
+        - name: ":status"
+          exact_match: "200"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "stage1"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(response_headers.get_("x-foo"), "stage1");
+}
+
+TEST_F(TransformationFilterTest, StagedFilterRequestConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/"}};
+  listener_config_.set_stage(1);
+  const std::string match_string = R"EOF(
+  transformations:
+  - stage: 0
+    request_match:
+      match:
+        prefix: /
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "stage0"}
+  - stage: 1
+    request_match:
+      match:
+        prefix: /
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "stage1"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "stage1");
+}
+
+TEST_F(TransformationFilterTest, RequestMatchInOrder) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/foo"}};
+  const std::string match_string = R"EOF(
+  transformations:
+  - request_match:
+      match:
+        prefix: /foo
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "foo"}
+  - request_match:
+      match:
+        prefix: /
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "notfoo"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "foo");
+}
+
+TEST_F(TransformationFilterTest, RequestMissingMatchWins) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/foo"}};
+  const std::string match_string = R"EOF(
+  transformations:
+  - request_match:
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "foo"}
+  - request_match:
+      match:
+        prefix: /
+      request_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            "x-foo": {text: "notfoo"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "foo");
+}
+
+TEST_F(TransformationFilterTest, ResponseMatchesResponseCode) {
+  Http::TestRequestHeaderMapImpl request_headers{{"content-type", "test"},
+                                  {":method", "GET"}, {":path","/"}};
+  Http::TestResponseHeaderMapImpl response_headers{{"content-type", "test"},
+                                  {":status", "429"}};
+  encoder_filter_callbacks_.stream_info_.response_code_details_ = "ratelimit";
+  const std::string match_string = R"EOF(
+  transformations:
+  - response_match:
+      match:
+        response_code_details:
+          exact: "auth"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            ":status": {text: "401"}
+  - response_match:
+      match:
+        response_code_details:
+          exact: "ratelimit"
+      response_transformation:
+        transformation_template:
+          passthrough: {}
+          headers:
+            ":status": {text: "400"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(response_headers.get_(":status"), "400");
+}
+
 TEST_F(TransformationFilterTest, ErrorOnBadTemplate) {
   initFilterWithBodyTemplate(TransformationFilterTest::ConfigType::Both, "{{nonexistentvar}}");
 

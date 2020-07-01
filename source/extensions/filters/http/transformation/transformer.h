@@ -48,7 +48,7 @@ public:
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
                          // request header map. this has the request header map even when transforming responses.
-                         const Http::RequestHeaderMap &request_headers,
+                         const Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
