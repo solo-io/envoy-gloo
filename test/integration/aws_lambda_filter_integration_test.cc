@@ -68,7 +68,7 @@ public:
       auto &cluster_any =
           (*lambda_cluster.mutable_typed_extension_protocol_options())
               [Extensions::HttpFilters::SoloHttpFilterNames::get().AwsLambda];
-        cluster_any.PackFrom(protoextconfig);
+      cluster_any.PackFrom(protoextconfig);
     });
 
     config_helper_.addConfigModifier(
@@ -126,9 +126,17 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithChain) {
                    .get(Http::LowerCaseString("authorization"))
                    ->value()
                    .size());
-  EXPECT_EQ(1UL, test_server_->gauge("http.config_test.aws_lambda.current_state")->value());
-  EXPECT_EQ(1UL, test_server_->counter("http.config_test.aws_lambda.creds_rotated")->value());
-  EXPECT_EQ(1UL, test_server_->counter("http.config_test.aws_lambda.creds_rotated")->value());
-  EXPECT_EQ(0UL, test_server_->counter("http.config_test.aws_lambda.fetch_failed")->value());
+  EXPECT_EQ(1UL,
+            test_server_->gauge("http.config_test.aws_lambda.current_state")
+                ->value());
+  EXPECT_EQ(1UL,
+            test_server_->counter("http.config_test.aws_lambda.creds_rotated")
+                ->value());
+  EXPECT_EQ(1UL,
+            test_server_->counter("http.config_test.aws_lambda.creds_rotated")
+                ->value());
+  EXPECT_EQ(0UL,
+            test_server_->counter("http.config_test.aws_lambda.fetch_failed")
+                ->value());
 }
 } // namespace Envoy

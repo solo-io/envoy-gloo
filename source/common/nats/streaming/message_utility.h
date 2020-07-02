@@ -3,9 +3,8 @@
 #include <string>
 #include <utility>
 
-#include "api/envoy/type/streaming/protocol.pb.h"
-
 #include "absl/types/optional.h"
+#include "api/envoy/type/streaming/protocol.pb.h"
 
 namespace Envoy {
 namespace Nats {

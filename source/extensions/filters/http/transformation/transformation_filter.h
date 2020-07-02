@@ -28,7 +28,8 @@ public:
   void onDestroy() override;
 
   // Http::StreamDecoderFilter
-  Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap &, bool) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap &,
+                                          bool) override;
   Http::FilterDataStatus decodeData(Buffer::Instance &, bool) override;
   Http::FilterTrailersStatus decodeTrailers(Http::RequestTrailerMap &) override;
 
@@ -47,7 +48,8 @@ public:
                                           bool end_stream) override;
   Http::FilterDataStatus encodeData(Buffer::Instance &data,
                                     bool end_stream) override;
-  Http::FilterTrailersStatus encodeTrailers(Http::ResponseTrailerMap &trailers) override;
+  Http::FilterTrailersStatus
+  encodeTrailers(Http::ResponseTrailerMap &trailers) override;
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
@@ -89,7 +91,8 @@ private:
   void
   transformSomething(Http::StreamFilterCallbacks &callbacks,
                      TransformerConstSharedPtr &transformation,
-                     Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
+                     Http::RequestOrResponseHeaderMap &header_map,
+                     Buffer::Instance &body,
                      void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
 
@@ -98,7 +101,7 @@ private:
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
   Http::StreamEncoderFilterCallbacks *encoder_callbacks_{};
   Router::RouteConstSharedPtr route_;
-  const RouteFilterConfig* route_config_{};
+  const RouteFilterConfig *route_config_{};
   uint32_t decoder_buffer_limit_{};
   uint32_t encoder_buffer_limit_{};
   Http::RequestHeaderMap *request_headers_{nullptr};

@@ -2,8 +2,8 @@
 
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
-#include "test/test_common/utility.h"
 #include "test/mocks/http/mocks.h"
+#include "test/test_common/utility.h"
 
 #include "benchmark/benchmark.h"
 #include "fmt/format.h"
@@ -21,8 +21,8 @@ std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 
 static void BM_ExrtactHeader(benchmark::State &state) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");

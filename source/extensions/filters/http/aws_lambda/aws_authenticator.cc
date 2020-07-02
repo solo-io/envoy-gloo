@@ -19,7 +19,8 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-Http::RegisterCustomInlineHeader<Http::CustomInlineHeaderRegistry::Type::RequestHeaders>
+Http::RegisterCustomInlineHeader<
+    Http::CustomInlineHeaderRegistry::Type::RequestHeaders>
     authorization_handle(Http::CustomHeaders::get().Authorization);
 
 class AwsAuthenticatorValues {
@@ -83,7 +84,7 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
 
   for (auto header = headers_to_sign.begin(), end = headers_to_sign.end();
        header != end; header++) {
-    
+
     const Http::HeaderEntry *headerEntry;
     if (*header == AwsAuthenticatorConsts::get().Host) {
       headerEntry = request_headers_->Host();

@@ -25,7 +25,7 @@ public:
 
   Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message &config,
-                              ProtobufMessage::ValidationVisitor&) override;
+                              ProtobufMessage::ValidationVisitor &) override;
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;
 
 private:
@@ -38,7 +38,8 @@ private:
   Router::RouteSpecificFilterConfigConstSharedPtr
   createRouteSpecificFilterConfigTyped(
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &,
-      Server::Configuration::ServerFactoryContext &, ProtobufMessage::ValidationVisitor&) override;
+      Server::Configuration::ServerFactoryContext &,
+      ProtobufMessage::ValidationVisitor &) override;
 };
 
 } // namespace AwsLambda

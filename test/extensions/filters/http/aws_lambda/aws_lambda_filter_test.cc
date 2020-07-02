@@ -59,9 +59,9 @@ protected:
       protoextconfig.set_secret_key("secret key");
     } else if (fetchCredentials) {
       filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
-      filter_config_->credentials_ = std::make_shared<
-          Envoy::Extensions::Common::Aws::Credentials>(
-          "access key", "secret key");
+      filter_config_->credentials_ =
+          std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
+              "access key", "secret key");
     }
 
     ON_CALL(
@@ -100,8 +100,8 @@ protected:
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
@@ -113,8 +113,8 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
   setupRoute(false, true);
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
 
@@ -125,12 +125,13 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
 
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
   setupRoute(false, true);
-  filter_config_->credentials_ = std::make_shared<
-      Envoy::Extensions::Common::Aws::Credentials>("access key");
+  filter_config_->credentials_ =
+      std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
+          "access key");
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
 
@@ -142,8 +143,8 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {
 TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
@@ -158,8 +159,8 @@ TEST_F(AWSLambdaFilterTest, SignsOnDataEndStream) {
 // see: https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html
 TEST_F(AWSLambdaFilterTest, CorrectFuncCalled) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
@@ -175,8 +176,8 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
   setup_func();
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
@@ -187,8 +188,8 @@ TEST_F(AWSLambdaFilterTest, FuncWithEmptyQualifierCalled) {
 
 TEST_F(AWSLambdaFilterTest, AsyncCalled) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
   routeconfig_.set_async(true);
   setup_func();
 
@@ -199,8 +200,8 @@ TEST_F(AWSLambdaFilterTest, AsyncCalled) {
 
 TEST_F(AWSLambdaFilterTest, SyncCalled) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   routeconfig_.set_async(false);
   setup_func();
@@ -212,8 +213,8 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
 
 TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
@@ -237,8 +238,8 @@ TEST_F(AWSLambdaFilterTest, InvalidFunction) {
       .WillRepeatedly(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
 }
@@ -248,8 +249,8 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyGetsOverriden) {
   setup_func();
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, _))
       .Times(1)
@@ -268,8 +269,8 @@ TEST_F(AWSLambdaFilterTest, NonEmptyBodyDoesNotGetsOverriden) {
   setup_func();
 
   Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   // Expect the no added data
   EXPECT_CALL(filter_callbacks_, addDecodedData(_, _)).Times(0);
@@ -285,8 +286,8 @@ TEST_F(AWSLambdaFilterTest, EmptyDecodedDataBufferGetsOverriden) {
   setup_func();
 
   Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   filter_->decodeHeaders(headers, false);
 
@@ -305,8 +306,8 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
   setup_func();
 
   Http::TestRequestHeaderMapImpl headers{{":method", "POST"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   filter_->decodeHeaders(headers, false);
 
@@ -317,8 +318,8 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
       }));
 
   Http::TestRequestTrailerMapImpl trailers{{":method", "POST"},
-                                {":authority", "www.solo.io"},
-                                {":path", "/getsomething"}};
+                                           {":authority", "www.solo.io"},
+                                           {":path", "/getsomething"}};
 
   filter_->decodeTrailers(trailers);
 }
@@ -329,8 +330,8 @@ TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
       .WillByDefault(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_CALL(filter_callbacks_,
               sendLocalReply(Http::Code::InternalServerError, _, _, _, _))
@@ -344,8 +345,8 @@ TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
   setupRoute(false, false);
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
 
   EXPECT_CALL(filter_callbacks_,
               sendLocalReply(Http::Code::InternalServerError, _, _, _, _))

@@ -24,41 +24,45 @@ using GetBodyFunc = std::function<const std::string &()>;
 class TransformerInstance {
 public:
   TransformerInstance(
-      const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap *request_headers, GetBodyFunc& body,
-      const std::unordered_map<std::string, absl::string_view>& extractions,
-      const nlohmann::json &context, const std::unordered_map<std::string, std::string>& environ,
-      const envoy::config::core::v3::Metadata* cluster_metadata);
+      const Http::RequestOrResponseHeaderMap &header_map,
+      const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
+      const nlohmann::json &context,
+      const std::unordered_map<std::string, std::string> &environ,
+      const envoy::config::core::v3::Metadata *cluster_metadata);
 
   std::string render(const inja::Template &input);
 
 private:
   // header_value(name)
-  nlohmann::json header_callback(const inja::Arguments& args) const;
-  nlohmann::json request_header_callback(const inja::Arguments& args) const;
+  nlohmann::json header_callback(const inja::Arguments &args) const;
+  nlohmann::json request_header_callback(const inja::Arguments &args) const;
   // extracted_value(name, index)
-  nlohmann::json extracted_callback(const inja::Arguments& args) const;
-  nlohmann::json dynamic_metadata(const inja::Arguments& args) const;
-  nlohmann::json env(const inja::Arguments& args) const;
-  nlohmann::json cluster_metadata_callback(const inja::Arguments& args) const;
+  nlohmann::json extracted_callback(const inja::Arguments &args) const;
+  nlohmann::json dynamic_metadata(const inja::Arguments &args) const;
+  nlohmann::json env(const inja::Arguments &args) const;
+  nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;
   const Http::RequestHeaderMap *request_headers_;
-  GetBodyFunc& body_;
+  GetBodyFunc &body_;
   const std::unordered_map<std::string, absl::string_view> &extractions_;
   const nlohmann::json &context_;
-  const std::unordered_map<std::string, std::string>& environ_;
-  const envoy::config::core::v3::Metadata* cluster_metadata_;
+  const std::unordered_map<std::string, std::string> &environ_;
+  const envoy::config::core::v3::Metadata *cluster_metadata_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
-  absl::string_view extract(Http::StreamFilterCallbacks &callbacks, const Http::RequestOrResponseHeaderMap &header_map,
-                            GetBodyFunc& body) const;
+  absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
+                            const Http::RequestOrResponseHeaderMap &header_map,
+                            GetBodyFunc &body) const;
 
 private:
-  absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks, absl::string_view value) const;
+  absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
+                                 absl::string_view value) const;
 
   const Http::LowerCaseString headername_;
   const bool body_;
@@ -72,7 +76,9 @@ public:
                       &transformation);
   ~InjaTransformer();
 
-  void transform(Http::RequestOrResponseHeaderMap &map, const Http::RequestHeaderMap *request_headers, Buffer::Instance &body,
+  void transform(Http::RequestOrResponseHeaderMap &map,
+                 const Http::RequestHeaderMap *request_headers,
+                 Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return passthrough_body_; };
 

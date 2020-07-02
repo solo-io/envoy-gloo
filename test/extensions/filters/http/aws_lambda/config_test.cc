@@ -48,14 +48,14 @@ protected:
 TEST_F(ConfigTest, WithUseDefaultCreds) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::Common::Aws::Credentials creds(
-      "access_key", "secret_key");
+  const Envoy::Extensions::Common::Aws::Credentials creds("access_key",
+                                                          "secret_key");
 
-  const Envoy::Extensions::Common::Aws::Credentials creds2(
-      "access_key2", "secret_key2");
+  const Envoy::Extensions::Common::Aws::Credentials creds2("access_key2",
+                                                           "secret_key2");
 
-  auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  auto cred_provider = std::make_unique<
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
@@ -69,27 +69,29 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   timer->invokeCallback();
   EXPECT_EQ(creds2, *config.getCredentials());
 
-  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(
+      2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(
+      2UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(1UL, stats_
                      .gaugeFromString("prefix.aws_lambda.current_state",
-                            Stats::Gauge::ImportMode::NeverImport)
+                                      Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(0UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(0UL,
+            stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, FailingToRotate) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::Common::Aws::Credentials creds(
-      "access_key", "secret_key");
+  const Envoy::Extensions::Common::Aws::Credentials creds("access_key",
+                                                          "secret_key");
 
-  auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  auto cred_provider = std::make_unique<
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
-      .WillOnce(
-          Return(Envoy::Extensions::Common::Aws::Credentials()));
+      .WillOnce(Return(Envoy::Extensions::Common::Aws::Credentials()));
 
   AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
                              context_.thread_local_, "prefix.", stats_,
@@ -102,23 +104,26 @@ TEST_F(ConfigTest, FailingToRotate) {
   // When we fail to rotate we latch to the last good credentials
   EXPECT_EQ(creds, *config.getCredentials());
 
-  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(
+      1UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(
+      1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(0UL, stats_
                      .gaugeFromString("prefix.aws_lambda.current_state",
-                            Stats::Gauge::ImportMode::NeverImport)
+                                      Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(1UL,
+            stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, SameCredsOnTimer) {
   auto timer = prpareTimer();
 
-  const Envoy::Extensions::Common::Aws::Credentials creds(
-      "access_key", "secret_key");
+  const Envoy::Extensions::Common::Aws::Credentials creds("access_key",
+                                                          "secret_key");
 
-  auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  auto cred_provider = std::make_unique<
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds));
@@ -132,13 +137,16 @@ TEST_F(ConfigTest, SameCredsOnTimer) {
   timer->invokeCallback();
   EXPECT_EQ(creds, *config.getCredentials());
 
-  EXPECT_EQ(2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
-  EXPECT_EQ(1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
+  EXPECT_EQ(
+      2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
+  EXPECT_EQ(
+      1UL, stats_.counterFromString("prefix.aws_lambda.creds_rotated").value());
   EXPECT_EQ(1UL, stats_
                      .gaugeFromString("prefix.aws_lambda.current_state",
-                            Stats::Gauge::ImportMode::NeverImport)
+                                      Stats::Gauge::ImportMode::NeverImport)
                      .value());
-  EXPECT_EQ(0UL, stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
+  EXPECT_EQ(0UL,
+            stats_.counterFromString("prefix.aws_lambda.fetch_failed").value());
 }
 
 TEST_F(ConfigTest, WithoutUseDefaultCreds) {
@@ -146,8 +154,8 @@ TEST_F(ConfigTest, WithoutUseDefaultCreds) {
   EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(0);
   EXPECT_CALL(context_.dispatcher_, createTimer_(_)).Times(0);
 
-  auto cred_provider = std::make_unique<NiceMock<
-      Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  auto cred_provider = std::make_unique<
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
   EXPECT_CALL(*cred_provider, getCredentials()).Times(0);
 
   AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,

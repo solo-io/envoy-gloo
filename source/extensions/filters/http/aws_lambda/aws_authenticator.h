@@ -30,8 +30,8 @@ public:
 
   void updatePayloadHash(const Buffer::Instance &data);
 
-  void sign(Http::RequestHeaderMap *request_headers, const HeaderList &headers_to_sign,
-            const std::string &region);
+  void sign(Http::RequestHeaderMap *request_headers,
+            const HeaderList &headers_to_sign, const std::string &region);
 
   /**
    * This creates a a list of headers to sign to be used by sign.

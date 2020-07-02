@@ -2,9 +2,9 @@
 
 #include "envoy/registry/registry.h"
 
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 #include "extensions/common/aws/credentials_provider_impl.h"
 #include "extensions/common/aws/utility.h"
+#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -19,7 +19,8 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
 
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
+      std::make_unique<
+          Extensions::Common::Aws::DefaultCredentialsProviderChain>(
           context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
       context.dispatcher(), context.threadLocal(), stats_prefix,
       context.scope(), proto_config);
@@ -33,7 +34,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 Upstream::ProtocolOptionsConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
-    const Protobuf::Message &config, ProtobufMessage::ValidationVisitor&) {
+    const Protobuf::Message &config, ProtobufMessage::ValidationVisitor &) {
   const auto &proto_config =
       dynamic_cast<const envoy::config::filter::http::aws_lambda::v2::
                        AWSLambdaProtocolExtension &>(config);
@@ -50,7 +51,8 @@ Router::RouteSpecificFilterConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
         &proto_config,
-    Server::Configuration::ServerFactoryContext &, ProtobufMessage::ValidationVisitor&) {
+    Server::Configuration::ServerFactoryContext &,
+    ProtobufMessage::ValidationVisitor &) {
   return std::make_shared<const AWSLambdaRouteConfig>(proto_config);
 }
 

@@ -2,9 +2,9 @@
 
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 
-#include "test/test_common/utility.h"
-#include "test/mocks/server/mocks.h"
 #include "test/mocks/http/mocks.h"
+#include "test/mocks/server/mocks.h"
+#include "test/test_common/utility.h"
 
 #include "fmt/format.h"
 #include "nlohmann/json.hpp"
@@ -29,9 +29,9 @@ namespace Transformation {
 
 TEST(BodyHeaderTransformer, transform) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
   BodyHeaderTransformer transformer;

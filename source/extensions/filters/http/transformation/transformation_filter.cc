@@ -3,8 +3,8 @@
 #include "common/common/empty_string.h"
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
-#include "common/http/utility.h"
 #include "common/http/header_utility.h"
+#include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformer.h"
@@ -20,7 +20,8 @@ struct RcDetailsValues {
 };
 typedef ConstSingleton<RcDetailsValues> RcDetails;
 
-TransformationFilter::TransformationFilter(FilterConfigSharedPtr config) : filter_config_(config) {}
+TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
+    : filter_config_(config) {}
 
 TransformationFilter::~TransformationFilter() {}
 
@@ -93,11 +94,14 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
   response_headers_ = &header_map;
 
   if (!response_transformation_ && route_config_ != nullptr) {
-    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage());
+    const TransformConfig *staged_config =
+        route_config_->transformConfigForStage(filter_config_->stage());
     if (staged_config) {
-        response_transformation_ = staged_config->findResponseTransform(*response_headers_, encoder_callbacks_->streamInfo());
+      response_transformation_ = staged_config->findResponseTransform(
+          *response_headers_, encoder_callbacks_->streamInfo());
     } else {
-        response_transformation_ = filter_config_->findResponseTransform(*response_headers_, encoder_callbacks_->streamInfo());
+      response_transformation_ = filter_config_->findResponseTransform(
+          *response_headers_, encoder_callbacks_->streamInfo());
     }
   }
 
@@ -150,15 +154,18 @@ TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 
-  route_config_ = Http::Utility::resolveMostSpecificPerFilterConfig<
-    RouteFilterConfig>(filter_config_->name(), route_);
+  route_config_ =
+      Http::Utility::resolveMostSpecificPerFilterConfig<RouteFilterConfig>(
+          filter_config_->name(), route_);
   TransformerPairConstSharedPtr active_transformer_pair;
-  // if there is a route level config present, automatically disregard header_matching rules
-  const TransformConfig* config_to_use = filter_config_.get();
+  // if there is a route level config present, automatically disregard
+  // header_matching rules
+  const TransformConfig *config_to_use = filter_config_.get();
 
   if (route_config_ != nullptr) {
-    const TransformConfig* staged_config = route_config_->transformConfigForStage(filter_config_->stage());
-    if (staged_config){
+    const TransformConfig *staged_config =
+        route_config_->transformConfigForStage(filter_config_->stage());
+    if (staged_config) {
       config_to_use = staged_config;
     }
   }
@@ -166,8 +173,10 @@ void TransformationFilter::setupTransformationPair() {
 
   if (active_transformer_pair != nullptr) {
     should_clear_cache_ = active_transformer_pair->shouldClearCache();
-    request_transformation_ = active_transformer_pair->getRequestTranformation();
-    response_transformation_ = active_transformer_pair->getResponseTranformation();
+    request_transformation_ =
+        active_transformer_pair->getRequestTranformation();
+    response_transformation_ =
+        active_transformer_pair->getResponseTranformation();
   }
 }
 
@@ -198,12 +207,13 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 
 void TransformationFilter::transformSomething(
     Http::StreamFilterCallbacks &callbacks,
-    TransformerConstSharedPtr &transformation, Http::RequestOrResponseHeaderMap &header_map,
-    Buffer::Instance &body, void (TransformationFilter::*responeWithError)(),
+    TransformerConstSharedPtr &transformation,
+    Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
+    void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    transformation->transform(header_map, request_headers_ , body, callbacks);
+    transformation->transform(header_map, request_headers_, body, callbacks);
 
     if (body.length() > 0) {
       (this->*addData)(body);
