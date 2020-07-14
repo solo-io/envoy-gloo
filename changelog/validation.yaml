@@ -2,3 +2,4 @@ relaxSemverValidation: true
 allowedLabels:
   - rc
   - beta 
+  - wasm
