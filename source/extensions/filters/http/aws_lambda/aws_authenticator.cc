@@ -19,6 +19,9 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
+// TODO: Uncomment when envoy-wasm gets latest from upstream envoy
+// This was a change in the latest envoy-gloo, but envoy-wasm hasn't pulled in the required
+// upstream changes to use this yet.
 // Http::RegisterCustomInlineHeader<Http::CustomInlineHeaderRegistry::Type::RequestHeaders>
 //     authorization_handle(Http::CustomHeaders::get().Authorization);
 
