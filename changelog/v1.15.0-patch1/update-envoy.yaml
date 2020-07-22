@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to pull in the latest security fix.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 50ef0945fa2c5da4bff7627c3abf41fdd3b7cffd
