@@ -34,17 +34,15 @@ struct AwsLambdaFilterStats {
   ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
 };
 
-typedef std::shared_ptr<
-    Envoy::Extensions::Common::Aws::Credentials>
+typedef std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>
     CredentialsSharedPtr;
-typedef std::shared_ptr<
-    const Envoy::Extensions::Common::Aws::Credentials>
+typedef std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
     CredentialsConstSharedPtr;
 
 class AWSLambdaConfig {
 public:
   virtual CredentialsConstSharedPtr getCredentials() const PURE;
-  virtual ~AWSLambdaConfig() = default; 
+  virtual ~AWSLambdaConfig() = default;
 };
 
 class AWSLambdaConfigImpl
@@ -52,8 +50,7 @@ class AWSLambdaConfigImpl
       public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   AWSLambdaConfigImpl(
-      std::unique_ptr<
-          Envoy::Extensions::Common::Aws::CredentialsProvider>
+      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
       Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
       const std::string &stats_prefix, Stats::Scope &scope,
@@ -69,7 +66,8 @@ private:
 
   void timerCallback();
 
-  std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider> provider_;
+  std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+      provider_;
 
   ThreadLocal::SlotPtr tls_slot_;
 

@@ -201,7 +201,8 @@ TEST_F(NatsStreamingFilterTest, RequestWithHeadersAndOneChunkOfData) {
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
 
-  Http::TestRequestHeaderMapImpl headers{{"some-header", "a"}, {"other-header", "b"}};
+  Http::TestRequestHeaderMapImpl headers{{"some-header", "a"},
+                                         {"other-header", "b"}};
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 

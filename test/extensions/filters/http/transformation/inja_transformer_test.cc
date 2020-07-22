@@ -1,11 +1,11 @@
-#include "extensions/filters/http/transformation/inja_transformer.h"
 #include "extensions/filters/http/solo_well_known_names.h"
+#include "extensions/filters/http/transformation/inja_transformer.h"
 
-#include "test/test_common/environment.h"
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
+#include "test/test_common/environment.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -50,9 +50,10 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
-  
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  envoy::config::core::v3::Metadata *cluster_metadata{};
+
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{field1}}"));
 
@@ -65,13 +66,13 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   std::string path = "/getsomething";
 
   Http::TestRequestHeaderMapImpl headers{
-      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}
-    };
+      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
@@ -83,14 +84,15 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
   originalbody["field1"] = "value1";
   std::string header = "blah blah";
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/getsomething"},
-                                  {"x-custom-header", header}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"},
+                                         {"x-custom-header", header}};
   std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
-                                  
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  envoy::config::core::v3::Metadata *cluster_metadata{};
+
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
@@ -104,9 +106,10 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   extractions["f"] = field;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
-  
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  envoy::config::core::v3::Metadata *cluster_metadata{};
+
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
@@ -119,9 +122,10 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   extractions["foo"] = absl::string_view("bar");
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
-  
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  envoy::config::core::v3::Metadata *cluster_metadata{};
+
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -133,10 +137,11 @@ TEST(TransformerInstance, Environment) {
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata *cluster_metadata{};
   env["FOO"] = "BAR";
-  
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -146,10 +151,11 @@ TEST(TransformerInstance, EmptyEnvironment) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
-  
+
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  envoy::config::core::v3::Metadata *cluster_metadata{};
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
@@ -159,13 +165,16 @@ TEST(TransformerInstance, ClusterMetadata) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
-  
+
   std::unordered_map<std::string, std::string> env;
 
   envoy::config::core::v3::Metadata cluster_metadata;
-  cluster_metadata.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
+  cluster_metadata.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, &cluster_metadata);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
@@ -177,9 +186,10 @@ TEST(TransformerInstance, EmptyClusterMetadata) {
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(headers, &headers, empty_body, extractions,
+                        originalbody, env, cluster_metadata);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
@@ -192,18 +202,20 @@ TEST(TransformerInstance, RequestHeaders) {
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"}};
 
   std::unordered_map<std::string, std::string> env;
-  envoy::config::core::v3::Metadata* cluster_metadata{};
+  envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(response_headers, &request_headers, empty_body,
+                        extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
+  auto res = t.render(
+      parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
   EXPECT_EQ("200-GET", res);
 }
 
 TEST(Extraction, ExtractIdFromHeader) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
@@ -217,8 +229,8 @@ TEST(Extraction, ExtractIdFromHeader) {
 
 TEST(Extraction, ExtractorWorkWithNewlines) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
   extractor.set_regex("[\\S\\s]*");
@@ -226,9 +238,7 @@ TEST(Extraction, ExtractorWorkWithNewlines) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   std::string body("1\n2\n3");
-  GetBodyFunc bodyfunc = [&body]() -> const std::string & {
-    return body;
-  };
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
   std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
 
@@ -237,33 +247,34 @@ TEST(Extraction, ExtractorWorkWithNewlines) {
 
 TEST(Extraction, ExtractorFail) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("ILLEGAL REGEX \\ \\ \\ \\ a\\ \\a\\ a\\  \\d+)");
   extractor.set_subgroup(1);
   EXPECT_THAT_THROWS_MESSAGE(Extractor a(extractor), EnvoyException,
-                            HasSubstr("Invalid regex"));
+                             HasSubstr("Invalid regex"));
 }
 
 TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/users/123"}};
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("(\\d+)");
   extractor.set_subgroup(123);
-  EXPECT_THROW_WITH_MESSAGE(Extractor a(extractor), EnvoyException,
-                            "group 123 requested for regex with only 1 sub groups");
+  EXPECT_THROW_WITH_MESSAGE(
+      Extractor a(extractor), EnvoyException,
+      "group 123 requested for regex with only 1 sub groups");
 }
 
 TEST(Transformer, transform) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -293,9 +304,9 @@ TEST(Transformer, transform) {
 
 TEST(Transformer, transformSimple) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -325,9 +336,9 @@ TEST(Transformer, transformSimple) {
 
 TEST(Transformer, transformSimpleNestedStructs) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
   envoy::api::v2::filter::http::Extraction extractor;
@@ -357,9 +368,9 @@ TEST(Transformer, transformSimpleNestedStructs) {
 
 TEST(Transformer, transformPassthrough) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   // in passthrough mode the filter gives us an empty body
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
@@ -384,9 +395,9 @@ TEST(Transformer, transformPassthrough) {
 
 TEST(Transformer, transformMergeExtractorsToBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   // in passthrough mode the filter gives us an empty body
   std::string emptyBody = "";
   Buffer::OwnedImpl body(emptyBody);
@@ -414,9 +425,9 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 
 TEST(Transformer, transformBodyNotSet) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                  {":authority", "www.solo.io"},
-                                  {"x-test", "789"},
-                                  {":path", "/users/123"}};
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   std::string originalBody = "{\"a\":\"456\"}";
   Buffer::OwnedImpl body(originalBody);
 
@@ -537,11 +548,14 @@ TEST(InjaTransformer, UseDefaultNS) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _)).Times(1)
-      .WillOnce(Invoke([](const std::string&, const ProtobufWkt::Struct& value) {
-        auto field = value.fields().at("foo");
-        EXPECT_EQ(field.string_value(), "1");
-      }));
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.string_value(), "1");
+          }));
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);
 }
@@ -581,7 +595,9 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _)).Times(2);
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
+      .Times(2);
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);
 }
@@ -606,7 +622,8 @@ TEST(InjaTransformer, UseEnvVar) {
 TEST(InjaTransformer, ParseBodyListUsingContext) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
-  transformation.mutable_body()->set_text("{% for i in context() %}{{ i }}{% endfor %}");
+  transformation.mutable_body()->set_text(
+      "{% for i in context() %}{{ i }}{% endfor %}");
   InjaTransformer transformer(transformation);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -624,10 +641,13 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
   InjaTransformer transformer(transformation);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  
+
   envoy::config::core::v3::Metadata meta;
-  meta.mutable_filter_metadata()->insert({SoloHttpFilterNames::get().Transformation, MessageUtil::keyValueStruct("key", "val")});
-  ON_CALL(*callbacks.cluster_info_, metadata()).WillByDefault(testing::ReturnRefOfCopy(meta));
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       MessageUtil::keyValueStruct("key", "val")});
+  ON_CALL(*callbacks.cluster_info_, metadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
 
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);

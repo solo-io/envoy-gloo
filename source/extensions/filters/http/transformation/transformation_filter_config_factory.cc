@@ -15,14 +15,14 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-
-Http::FilterFactoryCb 
+Http::FilterFactoryCb
 TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
-  const TransformationConfigProto &proto_config, const std::string &stats_prefix,
-  Server::Configuration::FactoryContext &context) {
+    const TransformationConfigProto &proto_config,
+    const std::string &stats_prefix,
+    Server::Configuration::FactoryContext &context) {
 
-  FilterConfigSharedPtr config =
-    std::make_shared<TransformationFilterConfig>(proto_config, stats_prefix, context.scope());
+  FilterConfigSharedPtr config = std::make_shared<TransformationFilterConfig>(
+      proto_config, stats_prefix, context.scope());
 
   return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new TransformationFilter(config);
@@ -31,9 +31,11 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
 }
 
 Router::RouteSpecificFilterConfigConstSharedPtr
-TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto& proto_config,
-  Server::Configuration::ServerFactoryContext&, ProtobufMessage::ValidationVisitor&) {
-    return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
+TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(
+    const RouteTransformationConfigProto &proto_config,
+    Server::Configuration::ServerFactoryContext &,
+    ProtobufMessage::ValidationVisitor &) {
+  return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
 }
 
 /**

@@ -1,13 +1,14 @@
-#include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
 #include <iterator>
 
 #include "common/buffer/buffer_impl.h"
 #include "common/common/macros.h"
-#include "common/common/utility.h"
 #include "common/common/regex.h"
+#include "common/common/utility.h"
 #include "common/config/metadata.h"
+
+#include "extensions/filters/http/solo_well_known_names.h"
 
 extern char **environ;
 
@@ -33,13 +34,15 @@ typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 
 // TODO: move to common
 namespace {
-const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
-                                   const Http::LowerCaseString &key) {
+const Http::HeaderEntry *
+getHeader(const Http::RequestOrResponseHeaderMap &header_map,
+          const Http::LowerCaseString &key) {
   return header_map.get(key);
 }
 
-const Http::HeaderEntry *getHeader(const Http::RequestOrResponseHeaderMap &header_map,
-                                   const std::string &key) {
+const Http::HeaderEntry *
+getHeader(const Http::RequestOrResponseHeaderMap &header_map,
+          const std::string &key) {
   // use explicit constuctor so string is lowered
   auto lowerkey = Http::LowerCaseString(key);
   return getHeader(header_map, lowerkey);
@@ -51,18 +54,22 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
       extract_regex_(Regex::Utility::parseStdRegex(extractor.regex())) {
-        // mark count == number of sub groups, and we need to add one for match number 0
-        // so we test for < instead of <=
-        // see: http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
-        if (extract_regex_.mark_count() < group_) {
-          throw EnvoyException(fmt::format("group {} requested for regex with only {} sub groups", group_, extract_regex_.mark_count()));
-        }
-      }
+  // mark count == number of sub groups, and we need to add one for match number
+  // 0 so we test for < instead of <= see:
+  // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
+  if (extract_regex_.mark_count() < group_) {
+    throw EnvoyException(
+        fmt::format("group {} requested for regex with only {} sub groups",
+                    group_, extract_regex_.mark_count()));
+  }
+}
 
-absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, const Http::RequestOrResponseHeaderMap &header_map,
-                                     GetBodyFunc& body) const {
+absl::string_view
+Extractor::extract(Http::StreamFilterCallbacks &callbacks,
+                   const Http::RequestOrResponseHeaderMap &header_map,
+                   GetBodyFunc &body) const {
   if (body_) {
-    const std::string& string_body = body();
+    const std::string &string_body = body();
     absl::string_view sv(string_body);
     return extractValue(callbacks, sv);
   } else {
@@ -74,7 +81,9 @@ absl::string_view Extractor::extract(Http::StreamFilterCallbacks &callbacks, con
   }
 }
 
-absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks, absl::string_view value) const {
+absl::string_view
+Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
+                        absl::string_view value) const {
   // get and regex
   std::match_results<absl::string_view::const_iterator> regex_result;
   if (std::regex_match(value.begin(), value.end(), regex_result,
@@ -88,33 +97,39 @@ absl::string_view Extractor::extractValue(Http::StreamFilterCallbacks &callbacks
     const auto &sub_match = regex_result[group_];
     return absl::string_view(sub_match.first, sub_match.length());
   } else {
-      ENVOY_STREAM_LOG(debug, "extractor regex did not match input", callbacks);
+    ENVOY_STREAM_LOG(debug, "extractor regex did not match input", callbacks);
   }
   return "";
 }
 
 TransformerInstance::TransformerInstance(
-    const Http::RequestOrResponseHeaderMap &header_map, const Http::RequestHeaderMap *request_headers, GetBodyFunc& body,
-    const std::unordered_map<std::string, absl::string_view>& extractions,
-    const json &context, const std::unordered_map<std::string, std::string>& environ,
-    const envoy::config::core::v3::Metadata* cluster_metadata)
-    : header_map_(header_map), request_headers_(request_headers), body_(body), extractions_(extractions),
-      context_(context), environ_(environ), cluster_metadata_(cluster_metadata) {
+    const Http::RequestOrResponseHeaderMap &header_map,
+    const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
+    const std::unordered_map<std::string, absl::string_view> &extractions,
+    const json &context,
+    const std::unordered_map<std::string, std::string> &environ,
+    const envoy::config::core::v3::Metadata *cluster_metadata)
+    : header_map_(header_map), request_headers_(request_headers), body_(body),
+      extractions_(extractions), context_(context), environ_(environ),
+      cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
-                    [this](Arguments& args) { return header_callback(args); });
-  env_.add_callback("request_header", 1,
-                    [this](Arguments& args) { return request_header_callback(args); });
-  env_.add_callback("extraction", 1, [this](Arguments& args) {
+                    [this](Arguments &args) { return header_callback(args); });
+  env_.add_callback("request_header", 1, [this](Arguments &args) {
+    return request_header_callback(args);
+  });
+  env_.add_callback("extraction", 1, [this](Arguments &args) {
     return extracted_callback(args);
   });
-  env_.add_callback("context", 0, [this](Arguments&) { return context_; });
-  env_.add_callback("body", 0, [this](Arguments&) { return body_(); });
-  env_.add_callback("env", 1, [this](Arguments& args) { return env(args); });
-  env_.add_callback("clusterMetadata", 1, [this](Arguments& args) { return cluster_metadata_callback(args); });
+  env_.add_callback("context", 0, [this](Arguments &) { return context_; });
+  env_.add_callback("body", 0, [this](Arguments &) { return body_(); });
+  env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
+  env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
+    return cluster_metadata_callback(args);
+  });
 }
 
-json TransformerInstance::header_callback(const inja::Arguments& args) const {
-  const std::string& headername = args.at(0)->get_ref<const std::string&>();
+json TransformerInstance::header_callback(const inja::Arguments &args) const {
+  const std::string &headername = args.at(0)->get_ref<const std::string &>();
   const Http::HeaderEntry *header_entry = getHeader(header_map_, headername);
   if (!header_entry) {
     return "";
@@ -122,20 +137,23 @@ json TransformerInstance::header_callback(const inja::Arguments& args) const {
   return std::string(header_entry->value().getStringView());
 }
 
-json TransformerInstance::request_header_callback(const inja::Arguments& args) const {
-  if (request_headers_ == nullptr){
+json TransformerInstance::request_header_callback(
+    const inja::Arguments &args) const {
+  if (request_headers_ == nullptr) {
     return "";
   }
-  const std::string& headername = args.at(0)->get_ref<const std::string&>();
-  const Http::HeaderEntry *header_entry = getHeader(*request_headers_, headername);
+  const std::string &headername = args.at(0)->get_ref<const std::string &>();
+  const Http::HeaderEntry *header_entry =
+      getHeader(*request_headers_, headername);
   if (!header_entry) {
     return "";
   }
   return std::string(header_entry->value().getStringView());
 }
 
-json TransformerInstance::extracted_callback(const inja::Arguments& args) const  {
-  const std::string& name = args.at(0)->get_ref<const std::string&>();
+json TransformerInstance::extracted_callback(
+    const inja::Arguments &args) const {
+  const std::string &name = args.at(0)->get_ref<const std::string &>();
   const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
     return value_it->second;
@@ -143,8 +161,8 @@ json TransformerInstance::extracted_callback(const inja::Arguments& args) const 
   return "";
 }
 
-json TransformerInstance::env(const inja::Arguments& args) const {
-  const std::string& key = args.at(0)->get_ref<const std::string&>();
+json TransformerInstance::env(const inja::Arguments &args) const {
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
   auto it = environ_.find(key);
   if (it != environ_.end()) {
     return it->second;
@@ -152,14 +170,16 @@ json TransformerInstance::env(const inja::Arguments& args) const {
   return "";
 }
 
-json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args) const {
-  const std::string& key = args.at(0)->get_ref<const std::string&>();
-  
+json TransformerInstance::cluster_metadata_callback(
+    const inja::Arguments &args) const {
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
+
   if (!cluster_metadata_) {
     return "";
   }
 
-  const ProtobufWkt::Value& value = Envoy::Config::Metadata::metadataValue(cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+  const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
+      cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
@@ -225,7 +245,8 @@ json TransformerInstance::cluster_metadata_callback(const inja::Arguments& args)
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {
-  // inja can't handle context that are not objects correctly, so we give it an empty object in that case
+  // inja can't handle context that are not objects correctly, so we give it an
+  // empty object in that case
   if (context_.is_object()) {
     return env_.render(input, context_);
   } else {
@@ -262,13 +283,16 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
   }
-  const auto &dynamic_metadata_values = transformation.dynamic_metadata_values();
-  for (auto it = dynamic_metadata_values.begin(); it != dynamic_metadata_values.end(); it++) {
+  const auto &dynamic_metadata_values =
+      transformation.dynamic_metadata_values();
+  for (auto it = dynamic_metadata_values.begin();
+       it != dynamic_metadata_values.end(); it++) {
     try {
       DynamicMetadataValue dynamicMetadataValue;
       dynamicMetadataValue.namespace_ = it->metadata_namespace();
-      if (dynamicMetadataValue.namespace_.empty()){
-        dynamicMetadataValue.namespace_ = SoloHttpFilterNames::get().Transformation;
+      if (dynamicMetadataValue.namespace_.empty()) {
+        dynamicMetadataValue.namespace_ =
+            SoloHttpFilterNames::get().Transformation;
       }
       dynamicMetadataValue.key_ = it->key();
       dynamicMetadataValue.template_ = parser.parse(it->value().text());
@@ -355,7 +379,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
     if (advanced_templates_) {
-      extractions[name] = named_extractor.second.extract(callbacks, header_map, get_body);
+      extractions[name] =
+          named_extractor.second.extract(callbacks, header_map, get_body);
     } else {
       absl::string_view name_to_split = name;
       json *current = &json_body;
@@ -371,14 +396,16 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
 
   // get cluster metadata
-  const envoy::config::core::v3::Metadata* cluster_metadata{};
+  const envoy::config::core::v3::Metadata *cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
   if (ci.get()) {
     cluster_metadata = &ci->metadata();
   }
 
   // start transforming!
-  TransformerInstance instance(header_map, request_headers, get_body, extractions, json_body, environ_, cluster_metadata);
+  TransformerInstance instance(header_map, request_headers, get_body,
+                               extractions, json_body, environ_,
+                               cluster_metadata);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
@@ -395,11 +422,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
     std::string output = instance.render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
-      ProtobufWkt::Struct strct(MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
-      callbacks.streamInfo().setDynamicMetadata(templated_dynamic_metadata.namespace_, strct);
+      ProtobufWkt::Struct strct(
+          MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+      callbacks.streamInfo().setDynamicMetadata(
+          templated_dynamic_metadata.namespace_, strct);
     }
   }
-  
+
   // Headers transform:
   for (const auto &templated_header : headers_) {
     std::string output = instance.render(templated_header.second);
@@ -413,7 +442,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
 
-  // replace body. we do it here so that headers and dynamic metadata have the original body.
+  // replace body. we do it here so that headers and dynamic metadata have the
+  // original body.
   if (maybe_body.has_value()) {
     // remove content length, as we have new body.
     header_map.removeContentLength();
@@ -423,7 +453,6 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     body.prepend(maybe_body.value());
     header_map.setContentLength(body.length());
   }
-
 }
 
 } // namespace Transformation

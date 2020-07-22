@@ -62,7 +62,8 @@ AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
 Http::FilterHeadersStatus
-AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers, bool end_stream) {
+AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
+                               bool end_stream) {
 
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
@@ -149,7 +150,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   return Http::FilterDataStatus::StopIterationAndBuffer;
 }
 
-Http::FilterTrailersStatus AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
+Http::FilterTrailersStatus
+AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
   if (function_on_route_ != nullptr) {
     lambdafy();
   }
@@ -180,7 +182,8 @@ void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
 
-    request_headers_->setReferenceContentType(Http::Headers::get().ContentTypeValues.Json);
+    request_headers_->setReferenceContentType(
+        Http::Headers::get().ContentTypeValues.Json);
     request_headers_->setContentLength(data.length());
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);

@@ -12,10 +12,10 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-void BodyHeaderTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
-                                      const Http::RequestHeaderMap *,
-                                      Buffer::Instance &body,
-                                      Http::StreamFilterCallbacks&) const {
+void BodyHeaderTransformer::transform(
+    Http::RequestOrResponseHeaderMap &header_map,
+    const Http::RequestHeaderMap *, Buffer::Instance &body,
+    Http::StreamFilterCallbacks &) const {
   json json_body;
   if (body.length() > 0) {
     json_body["body"] = body.toString();
@@ -37,7 +37,8 @@ void BodyHeaderTransformer::transform(Http::RequestOrResponseHeaderMap &header_m
   header_map.removeContentLength();
   // we know that the new content type is json:
   header_map.removeContentType();
-  header_map.setReferenceContentType(Http::Headers::get().ContentTypeValues.Json);
+  header_map.setReferenceContentType(
+      Http::Headers::get().ContentTypeValues.Json);
 
   // replace body
   body.drain(body.length());

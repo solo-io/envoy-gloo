@@ -23,15 +23,17 @@ public:
 class ResponseMatcher;
 using ResponseMatcherConstPtr = std::unique_ptr<const ResponseMatcher>;
 class ResponseMatcher {
-  public:
+public:
   virtual ~ResponseMatcher() = default;
-  virtual bool matches(const Http::ResponseHeaderMap& headers, const StreamInfo::StreamInfo &stream_info) const PURE;
+  virtual bool matches(const Http::ResponseHeaderMap &headers,
+                       const StreamInfo::StreamInfo &stream_info) const PURE;
 
   /**
-   * Factory method to create a shared instance of a matcher based on the rule defined.
+   * Factory method to create a shared instance of a matcher based on the rule
+   * defined.
    */
   static ResponseMatcherConstPtr
-    create(const envoy::api::v2::filter::http::ResponseMatcher& match);
+  create(const envoy::api::v2::filter::http::ResponseMatcher &match);
 };
 
 using TransformationConfigProto =
@@ -60,20 +62,25 @@ private:
 class PerStageRouteTransformationFilterConfig : public TransformConfig {
 public:
   PerStageRouteTransformationFilterConfig() = default;
-  void addTransformation(const envoy::api::v2::filter::http::RouteTransformations_RouteTransformation& transformations);
+  void addTransformation(
+      const envoy::api::v2::filter::http::
+          RouteTransformations_RouteTransformation &transformations);
 
-  TransformerPairConstSharedPtr findTransformers(const Http::RequestHeaderMap& headers) const override;
-  TransformerConstSharedPtr findResponseTransform(const Http::ResponseHeaderMap&, StreamInfo::StreamInfo&) const override;
+  TransformerPairConstSharedPtr
+  findTransformers(const Http::RequestHeaderMap &headers) const override;
+  TransformerConstSharedPtr
+  findResponseTransform(const Http::ResponseHeaderMap &,
+                        StreamInfo::StreamInfo &) const override;
+
 private:
   std::vector<MatcherTransformerPair> transformer_pairs_;
-  std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> > response_transformations_;
+  std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr>>
+      response_transformations_;
 };
 
 class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
-  RouteTransformationFilterConfig(
-      RouteTransformationConfigProto proto_config);
-
+  RouteTransformationFilterConfig(RouteTransformationConfigProto proto_config);
 };
 
 } // namespace Transformation

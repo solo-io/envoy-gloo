@@ -48,7 +48,8 @@ Router::RouteSpecificFilterConfigConstSharedPtr
 NatsStreamingFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::nats::streaming::v2::
         NatsStreamingPerRoute &proto_config,
-    Server::Configuration::ServerFactoryContext &, ProtobufMessage::ValidationVisitor& ) {
+    Server::Configuration::ServerFactoryContext &,
+    ProtobufMessage::ValidationVisitor &) {
   return std::make_shared<const NatsStreamingRouteSpecificFilterConfig>(
       proto_config);
 }

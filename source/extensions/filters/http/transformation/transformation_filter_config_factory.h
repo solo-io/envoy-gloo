@@ -17,20 +17,24 @@ namespace Transformation {
 
 using Extensions::HttpFilters::Common::FactoryBase;
 
-class TransformationFilterConfigFactory : public Common::FactoryBase<TransformationConfigProto, RouteTransformationConfigProto> {
+class TransformationFilterConfigFactory
+    : public Common::FactoryBase<TransformationConfigProto,
+                                 RouteTransformationConfigProto> {
 public:
   TransformationFilterConfigFactory()
       : FactoryBase(SoloHttpFilterNames::get().Transformation) {}
 
 private:
-
   Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-      const TransformationConfigProto &proto_config, const std::string &stats_prefix,
+      const TransformationConfigProto &proto_config,
+      const std::string &stats_prefix,
       Server::Configuration::FactoryContext &context) override;
 
-Router::RouteSpecificFilterConfigConstSharedPtr
-    createRouteSpecificFilterConfigTyped(const RouteTransformationConfigProto&,
-                                       Server::Configuration::ServerFactoryContext& ,ProtobufMessage::ValidationVisitor&) override;
+  Router::RouteSpecificFilterConfigConstSharedPtr
+  createRouteSpecificFilterConfigTyped(
+      const RouteTransformationConfigProto &,
+      Server::Configuration::ServerFactoryContext &,
+      ProtobufMessage::ValidationVisitor &) override;
 };
 
 } // namespace Transformation
