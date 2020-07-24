@@ -29,6 +29,7 @@ public:
   const std::string Service{"lambda"};
   const std::string Newline{"\n"};
   const Http::LowerCaseString DateHeader{"x-amz-date"};
+  const Http::LowerCaseString SecurityTokenHeader{"x-amz-security-token"};
   const Http::LowerCaseString Host{"host"};
 };
 
@@ -42,8 +43,10 @@ AwsAuthenticator::AwsAuthenticator(TimeSource &time_source)
 }
 
 void AwsAuthenticator::init(const std::string *access_key,
-                            const std::string *secret_key) {
+                            const std::string *secret_key,
+                            const std::string *session_token) {
   access_key_ = access_key;
+  session_token_ = session_token;
   const std::string &secret_key_ref = *secret_key;
   first_key_ = "AWS4" + secret_key_ref;
 }
@@ -227,6 +230,11 @@ std::string AwsAuthenticator::signWithTime(
   request_headers_ = request_headers;
 
   std::string request_date_time = addDate(now);
+
+  // Add session token header if present
+  if (session_token_ != nullptr) {
+    request_headers->addCopy(AwsAuthenticatorConsts::get().SecurityTokenHeader, (*session_token_));
+  }
 
   auto &&preparedHeaders = prepareHeaders(headers_to_sign);
   std::string canonical_headers = std::move(preparedHeaders.first);

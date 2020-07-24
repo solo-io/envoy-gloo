@@ -26,7 +26,8 @@ public:
 
   ~AwsAuthenticator();
 
-  void init(const std::string *access_key, const std::string *secret_key);
+  void init(const std::string *access_key, const std::string *secret_key,
+            const std::string *session_token);
 
   void updatePayloadHash(const Buffer::Instance &data);
 
@@ -118,6 +119,7 @@ private:
 
   TimeSource &time_source_;
   const std::string *access_key_{};
+  const std::string *session_token_{};
   std::string first_key_;
   const std::string *service_{};
   const std::string *method_{};

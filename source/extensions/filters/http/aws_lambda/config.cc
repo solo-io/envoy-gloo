@@ -145,6 +145,9 @@ AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
   if (!protoconfig.secret_key().empty()) {
     secret_key_ = protoconfig.secret_key();
   }
+  if (!protoconfig.session_token().empty()) {
+    session_token_ = protoconfig.session_token();
+  }
 }
 
 } // namespace AwsLambda

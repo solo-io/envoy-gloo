@@ -67,7 +67,7 @@ TEST_F(AwsAuthenticatorTest, BodyHash) {
 
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
-  aws.init(&accesskey, &secretkey);
+  aws.init(&accesskey, &secretkey, nullptr);
 
   updatePayloadHash(aws, "\"abc\"");
   std::string hexsha = getBodyHexSha(aws);
@@ -81,7 +81,7 @@ TEST_F(AwsAuthenticatorTest, UrlQuery) {
 
   std::string secretkey = "secretkey";
   std::string accesskey = "accesskey";
-  aws.init(&accesskey, &secretkey);
+  aws.init(&accesskey, &secretkey, nullptr);
 
   std::string url = "/this-us-a-url-with-no-query";
   std::string query = "q=query";
@@ -106,7 +106,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   std::string secretkey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
   std::string accesskey = "AKIDEXAMPLE";
-  aws.init(&accesskey, &secretkey);
+  aws.init(&accesskey, &secretkey, nullptr);
 
   std::string url = "/?Param1=value1&Param2=value2";
   Http::TestRequestHeaderMapImpl headers;
