@@ -106,7 +106,8 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   std::string secretkey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
   std::string accesskey = "AKIDEXAMPLE";
-  aws.init(&accesskey, &secretkey, nullptr);
+  std::string sessiontoken = "session_token";
+  aws.init(&accesskey, &secretkey, &sessiontoken);
 
   std::string url = "/?Param1=value1&Param2=value2";
   Http::TestRequestHeaderMapImpl headers;
@@ -145,6 +146,10 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
                          "ec94cdf2500";
 
   EXPECT_EQ(expected, sig);
+
+  // CHeck that the session_token header is set correctly
+  auto session_header = headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value().getStringView();
+  EXPECT_EQ(session_header, sessiontoken);
 }
 
 } // namespace AwsLambda

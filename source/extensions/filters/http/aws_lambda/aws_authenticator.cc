@@ -4,12 +4,11 @@
 #include <list>
 #include <string>
 
-#include "envoy/http/header_map.h"
-
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
+#include "envoy/http/header_map.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
 #include "common/singleton/const_singleton.h"
@@ -22,18 +21,6 @@ namespace AwsLambda {
 Http::RegisterCustomInlineHeader<
     Http::CustomInlineHeaderRegistry::Type::RequestHeaders>
     authorization_handle(Http::CustomHeaders::get().Authorization);
-
-class AwsAuthenticatorValues {
-public:
-  const std::string Algorithm{"AWS4-HMAC-SHA256"};
-  const std::string Service{"lambda"};
-  const std::string Newline{"\n"};
-  const Http::LowerCaseString DateHeader{"x-amz-date"};
-  const Http::LowerCaseString SecurityTokenHeader{"x-amz-security-token"};
-  const Http::LowerCaseString Host{"host"};
-};
-
-typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
 
 AwsAuthenticator::AwsAuthenticator(TimeSource &time_source)
     : time_source_(time_source) {

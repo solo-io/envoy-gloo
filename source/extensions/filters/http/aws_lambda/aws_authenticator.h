@@ -5,6 +5,7 @@
 #include "envoy/buffer/buffer.h"
 #include "envoy/common/time.h"
 #include "envoy/http/header_map.h"
+#include "common/singleton/const_singleton.h"
 
 #include "openssl/digest.h"
 #include "openssl/hmac.h"
@@ -14,6 +15,18 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
+
+class AwsAuthenticatorValues {
+public:
+  const std::string Algorithm{"AWS4-HMAC-SHA256"};
+  const std::string Service{"lambda"};
+  const std::string Newline{"\n"};
+  const Http::LowerCaseString DateHeader{"x-amz-date"};
+  const Http::LowerCaseString SecurityTokenHeader{"x-amz-security-token"};
+  const Http::LowerCaseString Host{"host"};
+};
+
+typedef ConstSingleton<AwsAuthenticatorValues> AwsAuthenticatorConsts;
 
 typedef bool (*LowerCaseStringCompareFunc)(const Http::LowerCaseString &,
                                            const Http::LowerCaseString &);
