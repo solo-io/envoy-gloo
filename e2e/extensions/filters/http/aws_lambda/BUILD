@@ -17,5 +17,6 @@ sh_test(
         "//:envoy",
         "//e2e/extensions/filters/http/aws_lambda:create_config.sh",
         "//e2e/extensions/filters/http/aws_lambda:create_config_env.sh",
+        "//e2e/extensions/filters/http/aws_lambda:create_config_env_token.sh",
     ],
 )

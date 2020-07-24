@@ -1,0 +1,5 @@
+changelog:
+- type: FIX
+  description: Support temporary credentials in aws lambda requests using the session_token.
+  issueLink: https://github.com/solo-io/gloo/issues/2373
+  resolvesIssue: false
