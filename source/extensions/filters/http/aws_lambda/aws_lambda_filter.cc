@@ -83,7 +83,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     secret_key = &protocol_options_->secretKey().value();
     // attempt to set session_token, ok if nil
     if (protocol_options_->sessionToken().has_value()) {
-      session_token = &protocol_options_->secretKey().value();
+      session_token = &protocol_options_->sessionToken().value();
     }
   } else if (filter_config_) {
     credentials_ = filter_config_->getCredentials();
