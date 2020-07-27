@@ -38,6 +38,8 @@ message AWSLambdaProtocolExtension {
   string secret_key = 4;
   // The session_token for AWS this cluster
   string session_token = 5;
+  // The role_arn to use when generating credentials for the mounted projected SA token
+  string role_arn = 6;
 }
 
 message AWSLambdaConfig {

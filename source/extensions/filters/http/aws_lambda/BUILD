@@ -79,3 +79,15 @@ envoy_cc_library(
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )
+
+envoy_cc_library(
+    name = "credentials_provider_lib",
+    srcs = ["credentials_provider.cc"],
+    hdrs = ["credentials_provider.h"],
+    repository = "@envoy",
+    deps = [
+        "@envoy//source/extensions/common/aws:credentials_provider_impl_lib",
+        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "@envoy//source/extensions/common/aws:utility_lib",
+    ],
+)
