@@ -7,8 +7,9 @@
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
-
+#include "envoy/server/transport_socket_config.h"
 #include "extensions/common/aws/credentials_provider.h"
+#include "extensions/filters/http/aws_lambda/stats.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -18,21 +19,6 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-/**
- * All stats for the aws filter. @see stats_macros.h
- */
-#define ALL_AWS_LAMBDA_FILTER_STATS(COUNTER, GAUGE)                            \
-  COUNTER(fetch_failed)                                                        \
-  COUNTER(fetch_success)                                                       \
-  COUNTER(creds_rotated)                                                       \
-  GAUGE(current_state, NeverImport)
-
-/**
- * Wrapper struct for aws filter stats. @see stats_macros.h
- */
-struct AwsLambdaFilterStats {
-  ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
-};
 
 typedef std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>
     CredentialsSharedPtr;
@@ -99,12 +85,28 @@ private:
                                      const std::string &qualifier);
 };
 
+namespace {
+  constexpr char AWS_ROLE_ARN[] = "AWS_ROLE_ARN";
+  constexpr char AWS_WEB_IDENTITY_TOKEN_FILE[] = "AWS_WEB_IDENTITY_TOKEN_FILE";
+  constexpr char AWS_ROLE_SESSION_NAME[] = "AWS_ROLE_SESSION_NAME";
+  constexpr char AWS_STS_REGIONAL_ENDPOINTS[] = "AWS_STS_REGIONAL_ENDPOINTS";
+}
+
+class StsConstantValues {
+public:
+  const std::string RegionalEndpoint{"https://sts.{}.amazonaws.com."};
+  const std::string GlobalEndpoint{"https://sts.amazonaws.com."};
+};
+
+using StsConstants = ConstSingleton<StsConstantValues>;
+
 class AWSLambdaProtocolExtensionConfig
-    : public Upstream::ProtocolOptionsConfig {
+    : public Upstream::ProtocolOptionsConfig,
+      public Envoy::Logger::Loggable<Envoy::Logger::Id::aws> {
 public:
   AWSLambdaProtocolExtensionConfig(
-      const envoy::config::filter::http::aws_lambda::v2::
-          AWSLambdaProtocolExtension &protoconfig);
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension &protoconfig,
+      Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tlsLocal, Api::Api& api);
 
   const std::string &host() const { return host_; }
   const std::string &region() const { return region_; }
@@ -113,11 +115,22 @@ public:
   const absl::optional<std::string> &sessionToken() const { return session_token_; }
 
 private:
+  void timerCallback();
+  Envoy::Extensions::Common::Aws::Credentials getCredentials();
+  absl::optional<std::string> fetchCredentials(
+    const std::string& region, const std::string& jwt, const std::string& arn);
+
   std::string host_;
   std::string region_;
   absl::optional<std::string> access_key_;
   absl::optional<std::string> secret_key_;
   absl::optional<std::string> session_token_;
+  absl::optional<std::string> role_arn_;
+
+  ThreadLocal::SlotPtr tls_slot_;
+  Event::TimerPtr timer_;
+  Api::Api& api_;
+
 };
 
 } // namespace AwsLambda
