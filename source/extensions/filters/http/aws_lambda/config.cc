@@ -1,9 +1,7 @@
 #include "extensions/filters/http/aws_lambda/config.h"
 
-#include "curl/curl.h"
 #include "common/common/regex.h"
 #include "envoy/thread_local/thread_local.h"
-#include "extensions/filters/http/aws_lambda/stats.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -40,9 +38,10 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 struct ThreadLocalStsProvider : public Envoy::ThreadLocal::ThreadLocalObject {
   ThreadLocalStsProvider(StsCredentialsProviderPtr sts_provider)
-      : sts_provider_(sts_provider) {}
+      : sts_provider_(sts_provider) {};
   StsCredentialsProviderPtr sts_provider_;
 };
+
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
@@ -55,7 +54,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     : context_factory_(ContextFactory(cluster_manager, api)), stats_(generateStats(stats_prefix, scope)) {
 
   switch (protoconfig.credentials_fetcher_case()) {
-  case envoy::config::filter::http::aws_lambda::v2::CredentialsCase::kUseDefaultCredentials:
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kUseDefaultCredentials:
     provider_ = std::move(provider);
 
     tls_slot_ = tls.allocateSlot();
@@ -69,7 +68,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     // this will also re-trigger the timer.
     timerCallback();
     break;
-  case envoy::config::filter::http::aws_lambda::v2::CredentialsCase::kServiceAccountCredentials:
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:
     // use service account credentials provider
     tls_slot_ = tls.allocateSlot();
 
@@ -84,7 +83,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
 
 
-ContextSharedPtr AWSLambdaConfigImpl::getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const {
+ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const {
   // Always check extension config first, as it overrides
   if (ext_cfg->accessKey().has_value() &&
       ext_cfg->secretKey().has_value()) {

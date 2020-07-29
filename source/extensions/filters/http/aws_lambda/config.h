@@ -35,14 +35,38 @@ struct AwsLambdaFilterStats {
   ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
 };
 
-typedef std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>
-    CredentialsSharedPtr;
-typedef std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
-    CredentialsConstSharedPtr;
+using CredentialsSharedPtr = std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>;
+using CredentialsConstSharedPtr = std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>;
+
+
+class AWSLambdaProtocolExtensionConfig
+    : public Upstream::ProtocolOptionsConfig {
+public:
+  AWSLambdaProtocolExtensionConfig(
+      const envoy::config::filter::http::aws_lambda::v2::
+          AWSLambdaProtocolExtension &protoconfig);
+
+  const std::string &host() const { return host_; }
+  const std::string &region() const { return region_; }
+  const absl::optional<std::string> &accessKey() const { return access_key_; }
+  const absl::optional<std::string> &secretKey() const { return secret_key_; }
+  const absl::optional<std::string> &sessionToken() const { return session_token_; }
+  const absl::optional<std::string> &roleArn() const { return role_arn_; }
+
+private:
+  std::string host_;
+  std::string region_;
+  absl::optional<std::string> access_key_;
+  absl::optional<std::string> secret_key_;
+  absl::optional<std::string> session_token_;
+  absl::optional<std::string> role_arn_;
+};
+
+using SharedAWSLambdaProtocolExtensionConfig = std::shared_ptr<const AWSLambdaProtocolExtensionConfig>;
 
 class AWSLambdaConfig {
 public:
-  virtual ContextSharedPtr getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const PURE;
+  virtual ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -59,7 +83,7 @@ public:
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  ContextSharedPtr getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const override;
+  ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const override;
 
 private:
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
@@ -104,28 +128,6 @@ private:
                                      const std::string &qualifier);
 };
 
-class AWSLambdaProtocolExtensionConfig
-    : public Upstream::ProtocolOptionsConfig {
-public:
-  AWSLambdaProtocolExtensionConfig(
-      const envoy::config::filter::http::aws_lambda::v2::
-          AWSLambdaProtocolExtension &protoconfig);
-
-  const std::string &host() const { return host_; }
-  const std::string &region() const { return region_; }
-  const absl::optional<std::string> &accessKey() const { return access_key_; }
-  const absl::optional<std::string> &secretKey() const { return secret_key_; }
-  const absl::optional<std::string> &sessionToken() const { return session_token_; }
-  const absl::optional<std::string> &roleArn() const { return role_arn_; }
-
-private:
-  std::string host_;
-  std::string region_;
-  absl::optional<std::string> access_key_;
-  absl::optional<std::string> secret_key_;
-  absl::optional<std::string> session_token_;
-  absl::optional<std::string> role_arn_;
-};
 
 } // namespace AwsLambda
 } // namespace HttpFilters
