@@ -29,7 +29,12 @@ public:
   ~AWSLambdaFilter();
 
   // Http::StreamFilterBase
-  void onDestroy() override {}
+  void onDestroy() override {
+    // If context is still around, make sure to cancel it
+    if (context_ != nullptr) {
+      context_->cancel();
+    }
+  }
 
   // Http::StreamDecoderFilter
   Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap &,
@@ -40,6 +45,9 @@ public:
       Http::StreamDecoderFilterCallbacks &decoder_callbacks) override {
     decoder_callbacks_ = &decoder_callbacks;
   }
+
+  void onSuccess(const Extensions::Common::Aws::Credentials& credential) override;
+  void onFailure(CredentialsFailureStatus status) override;
 
 private:
   static const HeaderList HeadersToSign;
@@ -66,6 +74,10 @@ private:
   CredentialsConstSharedPtr credentials_;
 
   ContextSharedPtr context_;
+  // The state of the request
+  enum State { Init, Calling, Responded, Complete };
+  State state_ = Init;
+  bool stopped_ = true
 };
 
 } // namespace AwsLambda

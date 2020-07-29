@@ -79,7 +79,14 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   const std::string *session_token{};
 
 
-  context_ = filter_config_->getCredentials(protocol_options_, this);
+  // If the state is still the initial, attempt to get credentials
+  if (state_ == State::Init) {
+    state_ = State::Calling;
+    stopped_ = true;
+    context_ = filter_config_->getCredentials(protocol_options_, this);
+  }
+
+  
   // context will be nullptr in the case that the credentials are synchronously available, and can be checked now.
   if (context_ == nullptr) {
     // Should never happen as onSuccess callback should set credentials_
@@ -97,7 +104,14 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     }
   } else {
     // context exists, we're in async land
+    // If the callback has not been procesed, stop iteration
+    if (state_ != State::Complete) {
+      stopped_ = true;
+      return Http::FilterHeadersStatus::StopIteration;
+    }
   }
+
+
 
   if ((access_key == nullptr) || (secret_key == nullptr)) {
     decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
@@ -135,14 +149,37 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-void AwsLambdaFilter::onSuccess(const Extensions::Common::Aws::Credentials& credentials) override {
+void AWSLambdaFilter::onSuccess(const Extensions::Common::Aws::Credentials& credentials) {
+  state_ = State::Responded;
+  credentials_ = credentials;
 
-};
+  context_ = nullptr;
+  state_ = Complete;
+  if (stopped_) {
+    decoder_callbacks_->continueDecoding();
+  }
+}
 
-void AwsLambdaFilter::onFailure(CredentialsFailureStatus status) override {};
+void AWSLambdaFilter::onFailure(CredentialsFailureStatus status) {
+  if (state_ = State::Responded) {
+    return;
+  }
+
+  state_ = State::Responded;
+
+  decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
+                                      RcDetails::get().CredentialsNotFoundBody,
+                                      nullptr, absl::nullopt,
+                                      RcDetails::get().CredentialsNotFound);
+
+}
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
+  if (state_ == Calling) {
+    return Http::FilterDataStatus::StopIterationAndWatermark;
+  }
+
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
   }
@@ -163,6 +200,10 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
+  if (state_ == State::Calling) {
+    return Http::FilterTrailersStatus::StopIteration;
+  }
+
   if (function_on_route_ != nullptr) {
     lambdafy();
   }
