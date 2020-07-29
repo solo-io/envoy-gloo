@@ -1,7 +1,5 @@
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
 
-#include "envoy/config/core/v3/http_uri.pb.h"
-
 #include "common/common/enum_to_int.h"
 #include "common/common/regex.h"
 #include "common/http/headers.h"
@@ -45,12 +43,14 @@ public:
   void fetch(const envoy::config::core::v3::HttpUri& uri,
               const std::string& role_arn,
               const std::string& web_token,
-              StsFetcher::StsReceiver& receiver) override {
+              SuccessCallback success, FailureCallback failure) override {
     ENVOY_LOG(trace, "{}", __func__);
-    ASSERT(!receiver_);
+    ASSERT(!success_callback_);
+    ASSERT(!failure_callback_);
 
     complete_ = false;
-    receiver_ = &receiver;
+    success_callback_ = success;
+    failure_callback_ = failure;
     uri_ = &uri;
 
     // Check if cluster is configured, fail the request if not.
@@ -59,7 +59,7 @@ public:
       ENVOY_LOG(error, "{}: assume role with token [uri = {}] failed: [cluster = {}] is not configured",
                 __func__, uri.uri(), uri.cluster());
       complete_ = true;
-      receiver_->onStsError(StsFetcher::StsReceiver::Failure::Network);
+      failure_callback_(StsFetcher::Failure::Network);
       reset();
       return;
     }
@@ -96,28 +96,28 @@ public:
         std::regex_search(body, matched_access_key, access_key_regex);
         if (!(matched_access_key.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain access_key");
-          receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
+          failure_callback_(StsFetcher::Failure::InvalidSts);
         }
 
         std::smatch matched_secret_key;
         std::regex_search(body, matched_secret_key, secret_key_regex);
         if (!(matched_secret_key.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain secret_key");
-          receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
+          failure_callback_(StsFetcher::Failure::InvalidSts);
         }
         
         std::smatch matched_session_token;
         std::regex_search(body, matched_session_token, session_token_regex);
         if (!(matched_session_token.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain session_token");
-          receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
+          failure_callback_(StsFetcher::Failure::InvalidSts);
         }
         
         std::smatch matched_expiration;
         std::regex_search(body, matched_expiration, expiration_regex);
         if (!(matched_expiration.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain expiration");
-          receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
+          failure_callback_(StsFetcher::Failure::InvalidSts);
         }
 
         SystemTime expiration_time;
@@ -130,25 +130,17 @@ public:
           ENVOY_LOG(trace, "Unable to determine expiration time from STS credentials result, using default");
         }
 
-        Envoy::Extensions::Common::Aws::Credentials result(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str());
-        receiver_->onStsSuccess(std::move(result), expiration_time);
-        // auto jwks =
-        //     google::jwt_verify::Sts::createFrom(body, google::jwt_verify::Sts::Type::JWKS);
-        // if (jwks->getStatus() == google::jwt_verify::Status::Ok) {
-        //   ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: succeeded", __func__, uri_->uri());
-        //   receiver_->onStsSuccess(std::move(jwks));
-        // } else {
-        //   ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: invalid jwks", __func__, uri_->uri());
-        //   receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
-        // }
+        StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str(), expiration_time);
+        success_callback_(result);
+
       } else {
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty", __func__, uri_->uri());
-        receiver_->onStsError(StsFetcher::StsReceiver::Failure::Network);
+        failure_callback_(StsFetcher::Failure::Network);
       }
     } else {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
-      receiver_->onStsError(StsFetcher::StsReceiver::Failure::Network);
+      failure_callback_(StsFetcher::Failure::Network);
     }
     reset();
   }
@@ -158,7 +150,7 @@ public:
     ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: network error {}", __func__, uri_->uri(),
               enumToInt(reason));
     complete_ = true;
-    receiver_->onStsError(StsFetcher::StsReceiver::Failure::Network);
+    failure_callback_(StsFetcher::Failure::Network);
     reset();
   }
 
@@ -168,17 +160,23 @@ private:
   Upstream::ClusterManager& cm_;
   Api::Api& api_;
   bool complete_{};
-  StsFetcher::StsReceiver* receiver_{};
+  StsFetcher::SuccessCallback success_callback_;
+  StsFetcher::FailureCallback failure_callback_;
   const envoy::config::core::v3::HttpUri* uri_{};
   Http::AsyncClient::Request* request_{};
 
   void reset() {
     request_ = nullptr;
-    receiver_ = nullptr;
+    success_callback_ = nullptr;
+    failure_callback_ = nullptr;
     uri_ = nullptr;
   }
 };
 } // namespace
+
+StsFetcherPtr StsFetcherFactory::create(){
+  return std::make_unique<StsFetcherImpl>(cm_, api_);
+}
 
 StsFetcherPtr StsFetcher::create(Upstream::ClusterManager& cm, Api::Api& api) {
   return std::make_unique<StsFetcherImpl>(cm, api);

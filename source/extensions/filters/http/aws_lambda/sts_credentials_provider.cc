@@ -15,21 +15,20 @@ namespace AwsLambda {
 
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
-  ContextImpl(Http::RequestHeaderMap& headers, StsCredentialsProvider::Callbacks* callback)
-      : headers_(headers), callback_(callback) {}
+  ContextImpl(StsCredentialsProvider::Callbacks* callback)
+      : callbacks_(callback) {
 
-  Http::RequestHeaderMap& headers() const override { return headers_; }
+      }
 
-  StsCredentialsProvider::Callbacks* callback() const override { return callback_; }
+  StsCredentialsProvider::Callbacks* callbacks() const override { return callbacks_; }
+  StsFetcherPtr& fetcher() override { return fetcher_; }
 
   void cancel() override {
     fetcher_->cancel();
   }
 
-
 private:
-  Http::RequestHeaderMap& headers_;
-  StsCredentialsProvider::Callbacks* callback_;
+  StsCredentialsProvider::Callbacks* callbacks_;
   StsFetcherPtr fetcher_;
 };
 
@@ -39,16 +38,71 @@ public:
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
     Api::Api& api) : api_(api), config_(config) {};
 
-  ContextSharedPtr find(const std::string&){return nullptr;};
+  void find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context){
+    auto& ctximpl = static_cast<ContextImpl&>(*context);
+
+    std::string role_arn{}; 
+    // If role_arn_arg is present, use that, otherwise use env
+    if (role_arn_arg.has_value()) {
+      role_arn = std::string(role_arn_arg.value());
+    }  else {
+      role_arn = absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN));
+    }
+
+    const auto it = credentials_cache_.find(ctximpl.roleArn());
+    if (it != credentials_cache_.end()) {
+      // thing  exists
+      // check for expired
+
+      // if not expired, send back, otherwise don't return
+      ctximpl.callbacks()->onComplete(it->second);
+      return;
+      // return nullptr;
+    }
+
+    const auto token_file  = absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
+    ASSERT(!token_file.empty());
+    // File must exist on system
+    ASSERT(api_.fileSystem().fileExists(std::string(token_file)));
+
+    const auto web_token = api_.fileSystem().fileReadToEnd(std::string(token_file));
+
+    envoy::config::core::v3::HttpUri uri;
+    uri.set_cluster(config_.cluster());
+    uri.set_uri(config_.uri());
+    // TODO: Figure out how to get this to compile, timeout is not all that important right now
+    // uri.set_allocated_timeout(config_.mutable_timeout())
+    ctximpl.fetcher()->fetch(
+      uri, 
+      role_arn, 
+      web_token, 
+      [this, &ctximpl, role_arn](StsCredentialsConstSharedPtr& sts_credentials) {
+        // Success callback, save back to cache
+        credentials_cache_.emplace(role_arn, sts_credentials);
+        // TODO: Figure out way to reuse credentials object. Cast as parent?
+        ctximpl.callbacks()->onComplete(sts_credentials);
+      },
+      [this, &ctximpl](StsFetcher::Failure reason) {
+        // unsuccessful, send back empty creds?
+        ctximpl.callbacks()->onComplete(Envoy::Extensions::Common::Aws::Credentials());
+      }
+    );
+  };
+
+
 private:
 
   Api::Api& api_;
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config_;
+  // Credentials storage map, keyed by arn
+  std::unordered_map<std::string, StsCredentialsSharedPtr> credentials_cache_;
 };
 
+ContextSharedPtr StsCredentialsProvider::createContext(StsCredentialsProvider::Callbacks* callbacks) {
+  return std::make_shared<ContextImpl>(callbacks);
+}
 
-StsCredentialsProviderPtr
-StsCredentialsProvider::create(
+StsCredentialsProviderPtr StsCredentialsProvider::create(
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api) {
 
   return std::make_unique<StsCredentialsProviderImpl>(config, api);

@@ -30,24 +30,6 @@ using StsConstants = ConstSingleton<StsConstantValues>;
 class StsCredentialsProvider;
 using StsCredentialsProviderPtr = std::unique_ptr<StsCredentialsProvider>;
 
-/**
- * Interface to access all configured Jwt rules and their cached Jwks objects.
- * It only caches Jwks specified in the config.
- * Its usage:
- *     auto jwks_cache = StsCredentialsProvider::create(Config);
- *
- *     // for a given jwt
- *     auto jwks_data = jwks_cache->findByIssuer(jwt->getIssuer());
- *     if (!jwks_data->areAudiencesAllowed(jwt->getAudiences())) reject;
- *
- *     if (jwks_data->getJwksObj() == nullptr || jwks_data->isExpired()) {
- *        // Fetch remote Jwks.
- *        jwks_data->setRemoteJwks(remote_jwks_str);
- *     }
- *
- *     verifyJwt(jwks_data->getJwksObj(), jwt);
- */
-
 class StsCredentialsProvider {
 public:
   virtual ~StsCredentialsProvider() = default;
@@ -74,14 +56,22 @@ public:
      *
      * @return the request headers.
      */
-    virtual Http::HeaderMap& headers() const PURE;
+    virtual const std::string& roleArn() const PURE;
 
     /**
      * Returns the request callback wrapped in this context.
      *
      * @returns the request callback.
      */
-    virtual Callbacks* callback() const PURE;
+    virtual Callbacks* callbacks() const PURE;
+
+
+    /**
+     * Returns the request callback wrapped in this context.
+     *
+     * @returns the fetcher.
+     */
+    virtual StsFetcherPtr& fetcher() PURE;
 
     /**
      * Cancel any pending requests for this context.
@@ -93,10 +83,10 @@ public:
 
 
   // Lookup credentials cache map. The cache only stores Jwks specified in the config.
-  virtual ContextSharedPtr find(const std::string& arn) PURE;
+  virtual void find(absl::optional<std::string> role_arn, ContextSharedPtr context) PURE;
 
     // Factory method for creating verifier contexts.
-  static ContextSharedPtr createContext(Http::RequestHeaderMap& headers, Callbacks* callback);
+  static ContextSharedPtr createContext(Callbacks* callbacks);
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
