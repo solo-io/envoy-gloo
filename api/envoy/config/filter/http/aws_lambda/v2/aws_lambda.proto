@@ -45,7 +45,7 @@ message AWSLambdaProtocolExtension {
 
 message AWSLambdaConfig {
 
-  oneof Credentials {
+  oneof credentials_fetcher {
     // Use AWS default credentials chain to get credentials.
     // This will search environment variables, ECS metadata and instance metadata
     // to get the credentials. credentials will be rotated automatically.

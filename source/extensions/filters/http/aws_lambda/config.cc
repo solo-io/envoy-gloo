@@ -42,18 +42,15 @@ struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
+    Upstream::ClusterManager &cluster_manager,
     Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
-    const std::string &stats_prefix, Stats::Scope &scope,
+    const std::string &stats_prefix, Stats::Scope &scope, Api::Api& api,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : stats_(generateStats(stats_prefix, scope)) {
-  bool use_default_credentials = false;
+    : context_factory_(ContextFactory(cluster_manager, api)), stats_(generateStats(stats_prefix, scope)) {
 
-  if (protoconfig.has_use_default_credentials()) {
-    use_default_credentials = protoconfig.use_default_credentials().value();
-  }
-
-  if (use_default_credentials) {
+  switch (protoconfig.credentials_fetcher_case()) {
+  case envoy::config::filter::http::aws_lambda::v2::CredentialsCase::kUseDefaultCredentials:
     provider_ = std::move(provider);
 
     tls_slot_ = tls.allocateSlot();
@@ -66,16 +63,36 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     // call the time callback to fetch credentials now.
     // this will also re-trigger the timer.
     timerCallback();
+    break;
+  case envoy::config::filter::http::aws_lambda::v2::CredentialsCase::kServiceAccountCredentials:
+    // use service account credentials provider
+    tls_slot_ = tls.allocateSlot();
+
+    tls_slot_->set([](Event::Dispatcher &) {
+      StsCredentialsProviderPtr provider = StsCredentialsProvider::create(protoconfig.service_account_credentials(), api);
+      return std::make_shared<ThreadLocalState>(provider);
+    });
+    sts_enabled_ = true
+    break;
   }
 }
 
-CredentialsConstSharedPtr AWSLambdaConfigImpl::getCredentials() const {
-  if (!provider_) {
-    return {};
-  }
 
-  // tls_slot_ != nil IFF provider_ != nil
-  return tls_slot_->getTyped<ThreadLocalState>().credentials_;
+
+ContextSharedPtr AWSLambdaConfigImpl::getCredentials(StsCredentialsProvider::Callbacks* callbacks) const {
+  // default credentials 
+
+  if (provider_) {
+    callbacks->onComplete(tls_slot_->getTyped<ThreadLocalState>().credentials_);
+    // no context necessary as these credentials are available immediately
+    return nullptr;
+  } else if (!sts_enabled_) {
+    callbacks->onComplete(Envoy::Extensions::Common::Aws::Credentials());
+    // neither default, nor sts
+    return nullptr
+  }
+  // return the context directly to the filter, as no direct credentials can be sent
+  return context_factory_(callbacks);
 }
 
 void AWSLambdaConfigImpl::timerCallback() {

@@ -86,7 +86,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
       session_token = &protocol_options_->secretKey().value();
     }
   } else if (filter_config_) {
-    credentials_ = filter_config_->getCredentials();
+    credentials_ = filter_config_->getCredentials(this);
     if (credentials_) {
       const absl::optional<std::string> &maybeAccessKeyId =
           credentials_->accessKeyId();
@@ -138,7 +138,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-void AwsLambdaFilter::onComplete(const Extensions::Common::Aws::Credentials& credentials) {}
+void AwsLambdaFilter::onComplete(const Extensions::Common::Aws::Credentials& credentials) {};
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {

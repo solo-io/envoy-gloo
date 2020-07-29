@@ -37,7 +37,7 @@ public:
     Api::Api& api) : api_(api), config_(config) {};
 
   void find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context){
-    auto& ctximpl = static_cast<ContextImpl&>(*context);
+    auto& ctximpl = static_cast<Context&>(*context);
 
     std::string role_arn{}; 
     // If role_arn_arg is present, use that, otherwise use env

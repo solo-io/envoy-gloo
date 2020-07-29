@@ -7,8 +7,9 @@
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
-
 #include "extensions/common/aws/credentials_provider.h"
+
+#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -41,7 +42,7 @@ typedef std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
 
 class AWSLambdaConfig {
 public:
-  virtual CredentialsConstSharedPtr getCredentials() const PURE;
+  virtual ContextSharedPtr getCredentials(StsCredentialsProvider::Callbacks* callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -50,15 +51,15 @@ class AWSLambdaConfigImpl
       public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   AWSLambdaConfigImpl(
-      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
-          &&provider,
+      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider> &&provider,
+      Upstream::ClusterManager &cluster_manager,
       Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
-      const std::string &stats_prefix, Stats::Scope &scope,
+      const std::string &stats_prefix, Stats::Scope &scope, Api::Api& api,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  CredentialsConstSharedPtr getCredentials() const override;
+  ContextSharedPtr getCredentials(StsCredentialsProvider::Callbacks* callbacks) const override;
 
 private:
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
@@ -66,8 +67,12 @@ private:
 
   void timerCallback();
 
+  ContextFactory context_factory_;
+
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
+  
+  bool sts_enabled_{};
 
   ThreadLocal::SlotPtr tls_slot_;
 
