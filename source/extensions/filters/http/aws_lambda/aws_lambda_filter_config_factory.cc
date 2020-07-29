@@ -34,11 +34,11 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 Upstream::ProtocolOptionsConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
-    const Protobuf::Message &config, Server::Configuration::TransportSocketFactoryContext& factory_context) {
+    const Protobuf::Message &config, ProtobufMessage::ValidationVisitor &) {
   const auto &proto_config =
       dynamic_cast<const envoy::config::filter::http::aws_lambda::v2::
                        AWSLambdaProtocolExtension &>(config);
-  return std::make_shared<const AWSLambdaProtocolExtensionConfig>(proto_config, factory_context.dispatcher(), factory_context.threadLocal(), factory_context.api());
+  return std::make_shared<const AWSLambdaProtocolExtensionConfig>(proto_config);
 }
 
 ProtobufTypes::MessagePtr

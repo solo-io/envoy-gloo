@@ -53,7 +53,6 @@ envoy_cc_library(
     ],
     hdrs = [
         "config.h",
-        "stats.h",
     ],
     repository = "@envoy",
     deps = [
@@ -81,18 +80,31 @@ envoy_cc_library(
     ],
 )
 
+
 envoy_cc_library(
     name = "sts_credentials_provider_lib",
     srcs = ["sts_credentials_provider.cc"],
-    hdrs = ["sts_credentials_provider.h", "stats.h"],
-    external_deps = ["curl"],
+    hdrs = ["sts_credentials_provider.h"],
     repository = "@envoy",
     deps = [
-        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
-        "@envoy//source/common/common:assert_lib",
-        "@envoy//source/common/http:headers_lib",
-        "@envoy//source/common/http:utility_lib",
-        "@envoy//include/envoy/server:transport_socket_config_interface",
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/config:datasource_lib",
+        "@envoy//source/common/protobuf:utility_lib",
         "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
+    ],
+)
+
+envoy_cc_library(
+    name = "sts_fetcher_lib",
+    srcs = ["sts_fetcher.cc"],
+    hdrs = ["sts_fetcher.h"],
+    repository = "@envoy",
+    deps = [
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/config:datasource_lib",
+        "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
     ],
 )

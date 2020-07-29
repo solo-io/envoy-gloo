@@ -1,22 +1,16 @@
 #pragma once
 
-#include <map>
-#include <string>
-
-#include "envoy/stats/scope.h"
-#include "envoy/stats/stats_macros.h"
-#include "common/singleton/const_singleton.h"
-#include "envoy/server/transport_socket_config.h"
-#include "extensions/filters/http/aws_lambda/stats.h"
+#include "envoy/api/api.h"
+#include "envoy/common/pure.h"
+#include "envoy/common/time.h"
 #include "extensions/common/aws/credentials_provider.h"
-
-#include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
+
   
 namespace {
   constexpr char AWS_ROLE_ARN[] = "AWS_ROLE_ARN";
@@ -33,26 +27,78 @@ public:
 
 using StsConstants = ConstSingleton<StsConstantValues>;
 
-class StsCredentialsProvider : public Envoy::Logger::Loggable<Envoy::Logger::Id::aws> {
+class StsCredentialsProvider;
+using StsCredentialsProviderPtr = std::unique_ptr<StsCredentialsProvider>;
+
+/**
+ * Interface to access all configured Jwt rules and their cached Jwks objects.
+ * It only caches Jwks specified in the config.
+ * Its usage:
+ *     auto jwks_cache = StsCredentialsProvider::create(Config);
+ *
+ *     // for a given jwt
+ *     auto jwks_data = jwks_cache->findByIssuer(jwt->getIssuer());
+ *     if (!jwks_data->areAudiencesAllowed(jwt->getAudiences())) reject;
+ *
+ *     if (jwks_data->getJwksObj() == nullptr || jwks_data->isExpired()) {
+ *        // Fetch remote Jwks.
+ *        jwks_data->setRemoteJwks(remote_jwks_str);
+ *     }
+ *
+ *     verifyJwt(jwks_data->getJwksObj(), jwt);
+ */
+
+class StsCredentialsProvider {
 public:
-  StsCredentialsProvider(Api::Api& api, Stats::Scope &scope): api_(api), stats_(generateStats(scope)) {};
+  virtual ~StsCredentialsProvider() = default;
 
-  const Envoy::Extensions::Common::Aws::Credentials getCredentials(const std::string* role_arn);
+  class Callbacks {
+  public:
+    virtual ~Callbacks() = default;
 
-private:
-  static AwsLambdaFilterStats generateStats(Stats::Scope &scope);
+    /**
+     * Called on completion of request.
+     *
+     * @param status the status of the request.
+     */
+    virtual void onComplete(const Extensions::Common::Aws::Credentials& credentials) PURE;
+  };
 
-  absl::optional<std::string> fetchCredentials(
-    const std::string& jwt, const std::string& arn);
+  // Context object to hold data needed for verifier.
+  class Context {
+  public:
+    virtual ~Context() = default;
 
-  
-  Api::Api& api_;
-  AwsLambdaFilterStats stats_;
+    /**
+     * Returns the request headers wrapped in this context.
+     *
+     * @return the request headers.
+     */
+    virtual Http::HeaderMap& headers() const PURE;
 
-  SystemTime last_updated_;
-  SystemTime expiration_time_;
-  Envoy::Extensions::Common::Aws::Credentials cached_credentials_;
+    /**
+     * Returns the request callback wrapped in this context.
+     *
+     * @returns the request callback.
+     */
+    virtual Callbacks* callback() const PURE;
 
+    /**
+     * Cancel any pending requests for this context.
+     */
+    virtual void cancel() PURE;
+  };
+
+  using ContextSharedPtr = std::shared_ptr<Context>;
+
+
+  // Lookup credentials cache map. The cache only stores Jwks specified in the config.
+  virtual ContextSharedPtr find(const std::string& arn) PURE;
+
+  // Factory function to create an instance.
+  static StsCredentialsProviderPtr
+  create(const envoy::extensions::filters::http::jwt_authn::v3::JwtAuthentication& config,
+         TimeSource& time_source, Api::Api& api);
 };
 
 } // namespace AwsLambda

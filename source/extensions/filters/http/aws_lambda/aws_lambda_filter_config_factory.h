@@ -25,7 +25,7 @@ public:
 
   Upstream::ProtocolOptionsConfigConstSharedPtr
   createProtocolOptionsConfig(const Protobuf::Message &config,
-                              Server::Configuration::TransportSocketFactoryContext& factory_context) override;
+                              ProtobufMessage::ValidationVisitor &) override;
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;
 
 private:
