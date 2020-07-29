@@ -95,11 +95,15 @@ public:
   // Lookup credentials cache map. The cache only stores Jwks specified in the config.
   virtual ContextSharedPtr find(const std::string& arn) PURE;
 
+    // Factory method for creating verifier contexts.
+  static ContextSharedPtr createContext(Http::RequestHeaderMap& headers, Callbacks* callback);
+
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
-  create(const envoy::extensions::filters::http::jwt_authn::v3::JwtAuthentication& config,
-         TimeSource& time_source, Api::Api& api);
+  create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api);
 };
+
+using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;
 
 } // namespace AwsLambda
 } // namespace HttpFilters

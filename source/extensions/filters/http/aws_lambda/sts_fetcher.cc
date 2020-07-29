@@ -14,6 +14,18 @@ namespace HttpFilters {
 namespace AwsLambda {
 namespace {
 
+/*
+  * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum lifespan of 15 minutes.
+  * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
+  * 
+  * In order to ensure that credentials never expire, we default to slightly less than half of the lifecycle.
+  * 
+*/
+constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
+    std::chrono::minutes(7);
+
+constexpr char EXPIRATION_FORMAT[] = "%E4Y%m%dT%H%M%S%z";
+
 class StsFetcherImpl :  public StsFetcher,
                         public Logger::Loggable<Logger::Id::aws>,
                         public Http::AsyncClient::Callbacks {
@@ -82,23 +94,44 @@ public:
 
         std::smatch matched_access_key;
         std::regex_search(body, matched_access_key, access_key_regex);
-        if (!matched_access_key.size() > 1) {
+        if (!(matched_access_key.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain access_key");
           receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
         }
 
         std::smatch matched_secret_key;
         std::regex_search(body, matched_secret_key, secret_key_regex);
-        if (!matched_secret_key.size() > 1) {
+        if (!(matched_secret_key.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain secret_key");
           receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
         }
+        
         std::smatch matched_session_token;
         std::regex_search(body, matched_session_token, session_token_regex);
-        if (!matched_session_token.size() > 1) {
+        if (!(matched_session_token.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain session_token");
+          receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
+        }
+        
+        std::smatch matched_expiration;
+        std::regex_search(body, matched_expiration, expiration_regex);
+        if (!(matched_expiration.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain expiration");
           receiver_->onStsError(StsFetcher::StsReceiver::Failure::InvalidSts);
         }
 
+        SystemTime expiration_time;
+        absl::Time absl_expiration_time;
+        if (absl::ParseTime(EXPIRATION_FORMAT, matched_expiration[1].str(), &absl_expiration_time, nullptr)) {
+          ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
+          expiration_time = absl::ToChronoTime(absl_expiration_time);
+        } else {
+          expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
+          ENVOY_LOG(trace, "Unable to determine expiration time from STS credentials result, using default");
+        }
+
         Envoy::Extensions::Common::Aws::Credentials result(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str());
-        receiver_->onStsSuccess(std::move(result), SystemTime());
+        receiver_->onStsSuccess(std::move(result), expiration_time);
         // auto jwks =
         //     google::jwt_verify::Sts::createFrom(body, google::jwt_verify::Sts::Type::JWKS);
         // if (jwks->getStatus() == google::jwt_verify::Status::Ok) {

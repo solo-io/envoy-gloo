@@ -87,6 +87,7 @@ envoy_cc_library(
     hdrs = ["sts_credentials_provider.h"],
     repository = "@envoy",
     deps = [
+        ":sts_fetcher_lib",
         "@envoy//source/common/common:minimal_logger_lib",
         "@envoy//source/common/config:datasource_lib",
         "@envoy//source/common/protobuf:utility_lib",
