@@ -149,7 +149,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-void AWSLambdaFilter::onSuccess(const Extensions::Common::Aws::Credentials& credentials) {
+void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credentials) {
   state_ = State::Responded;
   credentials_ = credentials;
 
@@ -161,10 +161,6 @@ void AWSLambdaFilter::onSuccess(const Extensions::Common::Aws::Credentials& cred
 }
 
 void AWSLambdaFilter::onFailure(CredentialsFailureStatus status) {
-  if (state_ = State::Responded) {
-    return;
-  }
-
   state_ = State::Responded;
 
   decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,

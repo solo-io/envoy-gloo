@@ -90,9 +90,9 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(std::shared_ptr<const AWSLa
       ext_cfg->secretKey().has_value()) {
     // attempt to set session_token, ok if nil
     if (ext_cfg->sessionToken().has_value()) {
-      callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value(), ext_cfg->sessionToken().value()));
+      callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value(), ext_cfg->sessionToken().value()));
     } else {
-      callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
+      callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
     }
       return;    
   }

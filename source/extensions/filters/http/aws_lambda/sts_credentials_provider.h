@@ -45,7 +45,7 @@ public:
      *
      * @param credential the credentials
      */
-    virtual void onSuccess(const Extensions::Common::Aws::Credentials& credential) PURE;
+    virtual void onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>) PURE;
 
     /**
      * Called on completion of request.

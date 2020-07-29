@@ -46,7 +46,7 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  void onSuccess(const Extensions::Common::Aws::Credentials& credential) override;
+  void onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credential) override;
   void onFailure(CredentialsFailureStatus status) override;
 
 private:
@@ -77,7 +77,7 @@ private:
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
   State state_ = Init;
-  bool stopped_ = true
+  bool stopped_ = true;
 };
 
 } // namespace AwsLambda
