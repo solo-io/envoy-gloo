@@ -39,6 +39,7 @@ envoy_cc_library(
     deps = [
         ":aws_authenticator_lib",
         ":config_lib",
+        ":sts_credentials_provider_lib",
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",

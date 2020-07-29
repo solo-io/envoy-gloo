@@ -54,9 +54,9 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 TimeSource &time_source,
-                                 AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(time_source), cluster_manager_(cluster_manager),
+                                Api::Api& api,
+                                AWSLambdaConfigConstSharedPtr filter_config)
+    : aws_authenticator_(api.timeSource()), context_factory_(cm, api), cluster_manager_(cluster_manager),
       filter_config_(filter_config) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
@@ -137,6 +137,8 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
   return Http::FilterHeadersStatus::StopIteration;
 }
+
+void AwsLambdaFilter::onComplete(const Extensions::Common::Aws::Credentials& credentials) {}
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {

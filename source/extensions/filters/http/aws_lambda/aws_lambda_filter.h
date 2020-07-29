@@ -7,6 +7,7 @@
 #include "envoy/upstream/cluster_manager.h"
 
 #include "extensions/filters/http/aws_lambda/aws_authenticator.h"
+#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/config.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -20,10 +21,10 @@ namespace AwsLambda {
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class AWSLambdaFilter : public Http::StreamDecoderFilter {
+class AWSLambdaFilter : public Http::StreamDecoderFilter, StsCredentialsProvider::Callbacks {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                  TimeSource &time_source,
+                  Api::Api& api,
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -50,6 +51,7 @@ private:
 
   Http::RequestHeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;
+  ContextFactory context_factory_;
 
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
 

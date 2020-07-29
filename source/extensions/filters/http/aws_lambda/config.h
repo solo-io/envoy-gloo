@@ -111,6 +111,7 @@ public:
   const absl::optional<std::string> &accessKey() const { return access_key_; }
   const absl::optional<std::string> &secretKey() const { return secret_key_; }
   const absl::optional<std::string> &sessionToken() const { return session_token_; }
+  const absl::optional<std::string> &roleArn() const { return role_arn_; }
 
 private:
   std::string host_;
@@ -118,6 +119,7 @@ private:
   absl::optional<std::string> access_key_;
   absl::optional<std::string> secret_key_;
   absl::optional<std::string> session_token_;
+  absl::optional<std::string> role_arn_;
 };
 
 } // namespace AwsLambda
