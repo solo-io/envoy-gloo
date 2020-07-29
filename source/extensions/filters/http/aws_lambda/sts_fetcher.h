@@ -5,6 +5,7 @@
 #include "envoy/config/core/v3/http_uri.pb.h"
 #include "envoy/upstream/cluster_manager.h"
 #include "extensions/common/aws/credentials_provider.h"
+#include "extensions/filters/http/aws_lambda/sts_status.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -41,16 +42,9 @@ public:
 
   virtual ~StsFetcher() = default;
 
-  enum class Failure {
-    /* A network error occurred causing STS credentials retrieval failure. */
-    Network,
-    /* A failure occurred when trying to parse the retrieved STS credential data. */
-    InvalidSts,
-  };
-
   using SuccessCallback = std::function<void(StsCredentialsConstSharedPtr& sts_credentials)>;
 
-  using FailureCallback = std::function<void(Failure reason)>;
+  using FailureCallback = std::function<void(CredentialsFailureStatus status)>;
 
   /*
    * Cancel any in-flight request.

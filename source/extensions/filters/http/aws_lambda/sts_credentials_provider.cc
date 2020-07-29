@@ -78,11 +78,11 @@ public:
         // Success callback, save back to cache
         credentials_cache_.emplace(role_arn, sts_credentials);
         // TODO: Figure out way to reuse credentials object. Cast as parent?
-        ctximpl.callbacks()->onComplete(sts_credentials);
+        ctximpl.callbacks()->onSuccess(sts_credentials);
       },
       [this, &ctximpl](StsFetcher::Failure reason) {
         // unsuccessful, send back empty creds?
-        ctximpl.callbacks()->onComplete(Envoy::Extensions::Common::Aws::Credentials());
+        ctximpl.callbacks()->onFailure(Envoy::Extensions::Common::Aws::Credentials());
       }
     );
   };

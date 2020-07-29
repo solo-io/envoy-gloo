@@ -100,7 +100,7 @@ envoy_cc_library(
 envoy_cc_library(
     name = "sts_fetcher_lib",
     srcs = ["sts_fetcher.cc"],
-    hdrs = ["sts_fetcher.h"],
+    hdrs = ["sts_fetcher.h", "sts_status.h"],
     repository = "@envoy",
     deps = [
         "@envoy//source/common/common:minimal_logger_lib",

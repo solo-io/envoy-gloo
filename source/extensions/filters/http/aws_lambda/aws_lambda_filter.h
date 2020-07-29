@@ -51,7 +51,6 @@ private:
 
   Http::RequestHeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;
-  ContextFactory context_factory_;
 
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
 

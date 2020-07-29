@@ -41,11 +41,18 @@ public:
     virtual ~Callbacks() = default;
 
     /**
+     * Called on successful request
+     *
+     * @param credential the credentials
+     */
+    virtual void onSuccess(const Extensions::Common::Aws::Credentials& credential) PURE;
+
+    /**
      * Called on completion of request.
      *
      * @param status the status of the request.
      */
-    virtual void onComplete(const Extensions::Common::Aws::Credentials& credentials) PURE;
+    virtual void onFailure(CredentialsFailureStatus status) PURE;
   };
 
   // Context object to hold data needed for verifier.
