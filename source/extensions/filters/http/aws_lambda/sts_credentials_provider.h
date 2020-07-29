@@ -61,13 +61,6 @@ public:
     virtual ~Context() = default;
 
     /**
-     * Returns the request headers wrapped in this context.
-     *
-     * @return the request headers.
-     */
-    virtual const std::string& roleArn() const PURE;
-
-    /**
      * Returns the request callback wrapped in this context.
      *
      * @returns the request callback.

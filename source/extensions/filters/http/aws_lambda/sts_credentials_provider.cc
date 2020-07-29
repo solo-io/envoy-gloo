@@ -44,16 +44,16 @@ public:
     if (role_arn_arg.has_value()) {
       role_arn = std::string(role_arn_arg.value());
     }  else {
-      role_arn = absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN));
+      role_arn = std::string(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN)));
     }
 
-    const auto it = credentials_cache_.find(ctximpl.roleArn());
+    const auto it = credentials_cache_.find(role_arn);
     if (it != credentials_cache_.end()) {
       // thing  exists
       // check for expired
 
-      // if not expired, send back, otherwise don't return
-      ctximpl.callbacks()->onComplete(it->second);
+      // TODO: if not expired, send back, otherwise don't return
+      ctximpl.callbacks()->onSuccess(it->second);
       return;
       // return nullptr;
     }
@@ -80,9 +80,9 @@ public:
         // TODO: Figure out way to reuse credentials object. Cast as parent?
         ctximpl.callbacks()->onSuccess(sts_credentials);
       },
-      [this, &ctximpl](StsFetcher::Failure reason) {
+      [this, &ctximpl](CredentialsFailureStatus reason) {
         // unsuccessful, send back empty creds?
-        ctximpl.callbacks()->onFailure(Envoy::Extensions::Common::Aws::Credentials());
+        ctximpl.callbacks()->onFailure(reason);
       }
     );
   };
@@ -93,7 +93,7 @@ private:
   Api::Api& api_;
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config_;
   // Credentials storage map, keyed by arn
-  std::unordered_map<std::string, StsCredentialsSharedPtr> credentials_cache_;
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
 };
 
 ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) {
