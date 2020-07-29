@@ -64,6 +64,8 @@ private:
   AWSLambdaConfigConstSharedPtr filter_config_;
 
   CredentialsConstSharedPtr credentials_;
+
+  ContextSharedPtr context_;
 };
 
 } // namespace AwsLambda

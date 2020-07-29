@@ -32,12 +32,17 @@ namespace {
 constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
     std::chrono::minutes(14);
 
-struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
-  ThreadLocalState(CredentialsConstSharedPtr credentials)
+struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
+  ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
       : credentials_(credentials) {}
   CredentialsConstSharedPtr credentials_;
 };
 
+struct ThreadLocalStsProvider : public Envoy::ThreadLocal::ThreadLocalObject {
+  ThreadLocalStsProvider(StsCredentialsProviderPtr sts_provider)
+      : sts_provider_(sts_provider) {}
+  StsCredentialsProviderPtr sts_provider_;
+};
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
@@ -56,7 +61,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     tls_slot_ = tls.allocateSlot();
     auto empty_creds = std::make_shared<const CommonAws::Credentials>();
     tls_slot_->set([empty_creds](Event::Dispatcher &) {
-      return std::make_shared<ThreadLocalState>(empty_creds);
+      return std::make_shared<ThreadLocalCredentials>(empty_creds);
     });
 
     timer_ = dispatcher.createTimer([this] { timerCallback(); });
@@ -70,7 +75,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
     tls_slot_->set([](Event::Dispatcher &) {
       StsCredentialsProviderPtr provider = StsCredentialsProvider::create(protoconfig.service_account_credentials(), api);
-      return std::make_shared<ThreadLocalState>(provider);
+      return std::make_shared<ThreadLocalStsProvider>(provider);
     });
     sts_enabled_ = true
     break;
@@ -79,20 +84,35 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
 
 
-ContextSharedPtr AWSLambdaConfigImpl::getCredentials(StsCredentialsProvider::Callbacks* callbacks) const {
-  // default credentials 
+ContextSharedPtr AWSLambdaConfigImpl::getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const {
+  // Always check extension config first, as it overrides
+  if (ext_cfg->accessKey().has_value() &&
+      ext_cfg->secretKey().has_value()) {
+    // attempt to set session_token, ok if nil
+    if (ext_cfg->sessionToken().has_value()) {
+      callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value(), ext_cfg->sessionToken().value()));
+    } else {
+      callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
+    }
+      return;    
+  }
+
 
   if (provider_) {
-    callbacks->onComplete(tls_slot_->getTyped<ThreadLocalState>().credentials_);
+    callbacks->onSuccess(tls_slot_->getTyped<ThreadLocalCredentials>().credentials_);
     // no context necessary as these credentials are available immediately
     return nullptr;
   } else if (!sts_enabled_) {
-    callbacks->onComplete(Envoy::Extensions::Common::Aws::Credentials());
+    // send back empty credentials
+    callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>());
     // neither default, nor sts
     return nullptr
   }
   // return the context directly to the filter, as no direct credentials can be sent
-  return context_factory_(callbacks);
+  auto context = context_factory_(callbacks);
+  auto tls_sts_provider = tls_slot_->getTyped<ThreadLocalStsProvider>().sts_provider_;
+  tls_slot_provider->find(role_arn, context)
+  return context;
 }
 
 void AWSLambdaConfigImpl::timerCallback() {
@@ -113,7 +133,7 @@ void AWSLambdaConfigImpl::timerCallback() {
       auto shared_new_creds =
           std::make_shared<const CommonAws::Credentials>(new_creds);
       tls_slot_->set([shared_new_creds](Event::Dispatcher &) {
-        return std::make_shared<ThreadLocalState>(shared_new_creds);
+        return std::make_shared<ThreadLocalCredentials>(shared_new_creds);
       });
     }
   }

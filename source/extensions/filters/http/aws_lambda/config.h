@@ -42,7 +42,7 @@ typedef std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
 
 class AWSLambdaConfig {
 public:
-  virtual ContextSharedPtr getCredentials(StsCredentialsProvider::Callbacks* callbacks) const PURE;
+  virtual ContextSharedPtr getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -59,7 +59,7 @@ public:
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  ContextSharedPtr getCredentials(StsCredentialsProvider::Callbacks* callbacks) const override;
+  ContextSharedPtr getCredentials(std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const override;
 
 private:
   static AwsLambdaFilterStats generateStats(const std::string &prefix,

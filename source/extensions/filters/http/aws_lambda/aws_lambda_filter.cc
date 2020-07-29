@@ -77,29 +77,26 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   const std::string *access_key{};
   const std::string *secret_key{};
   const std::string *session_token{};
-  if (protocol_options_->accessKey().has_value() &&
-      protocol_options_->secretKey().has_value()) {
-    access_key = &protocol_options_->accessKey().value();
-    secret_key = &protocol_options_->secretKey().value();
-    // attempt to set session_token, ok if nil
-    if (protocol_options_->sessionToken().has_value()) {
-      session_token = &protocol_options_->secretKey().value();
+
+
+  context_ = filter_config_->getCredentials(protocol_options_, this);
+  // context will be nullptr in the case that the credentials are synchronously available, and can be checked now.
+  if (context_ == nullptr) {
+    // Should never happen as onSuccess callback should set credentials_
+    ASSERT(credentials_ != nullptr);
+    const absl::optional<std::string> &maybeAccessKeyId =
+        credentials_->accessKeyId();
+    const absl::optional<std::string> &maybeSecretAccessKey =
+        credentials_->secretAccessKey();
+    if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
+      access_key = &maybeAccessKeyId.value();
+      secret_key = &maybeSecretAccessKey.value();
     }
-  } else if (filter_config_) {
-    credentials_ = filter_config_->getCredentials(this);
-    if (credentials_) {
-      const absl::optional<std::string> &maybeAccessKeyId =
-          credentials_->accessKeyId();
-      const absl::optional<std::string> &maybeSecretAccessKey =
-          credentials_->secretAccessKey();
-      if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
-        access_key = &maybeAccessKeyId.value();
-        secret_key = &maybeSecretAccessKey.value();
-      }
-      if (credentials_->sessionToken().has_value()) {
-        session_token = &credentials_->sessionToken().value();
-      }
+    if (credentials_->sessionToken().has_value()) {
+      session_token = &credentials_->sessionToken().value();
     }
+  } else {
+    // context exists, we're in async land
   }
 
   if ((access_key == nullptr) || (secret_key == nullptr)) {
@@ -138,7 +135,11 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-void AwsLambdaFilter::onComplete(const Extensions::Common::Aws::Credentials& credentials) {};
+void AwsLambdaFilter::onSuccess(const Extensions::Common::Aws::Credentials& credentials) override {
+
+};
+
+void AwsLambdaFilter::onFailure(CredentialsFailureStatus status) override {};
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
