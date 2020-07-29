@@ -27,7 +27,7 @@ private:
 };
 
 class StsFetcher;
-using StsFetcherPtr = std::unique_ptr<StsFetcher>;
+using StsFetcherPtr = std::shared_ptr<StsFetcher>;
 
 using StsCredentialsSharedPtr = std::shared_ptr<StsCredentials>;
 using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;

@@ -86,7 +86,7 @@ public:
   virtual void find(absl::optional<std::string> role_arn, ContextSharedPtr context) PURE;
 
     // Factory method for creating verifier contexts.
-  static ContextSharedPtr createContext(Callbacks* callbacks);
+  static ContextSharedPtr createContext(StsFetcherPtr fetcher, Callbacks* callbacks);
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr

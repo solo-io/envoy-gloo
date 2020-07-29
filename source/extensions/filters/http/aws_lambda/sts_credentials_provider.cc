@@ -15,8 +15,8 @@ namespace AwsLambda {
 
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
-  ContextImpl(StsCredentialsProvider::Callbacks* callback)
-      : callbacks_(callback) {
+  ContextImpl(StsFetcherPtr fetcher, StsCredentialsProvider::Callbacks* callback)
+      : fetcher_(fetcher), callbacks_(callback) {
 
       }
 
@@ -28,8 +28,8 @@ public:
   }
 
 private:
-  StsCredentialsProvider::Callbacks* callbacks_;
   StsFetcherPtr fetcher_;
+  StsCredentialsProvider::Callbacks* callbacks_;
 };
 
 class StsCredentialsProviderImpl: public StsCredentialsProvider {
@@ -98,8 +98,8 @@ private:
   std::unordered_map<std::string, StsCredentialsSharedPtr> credentials_cache_;
 };
 
-ContextSharedPtr StsCredentialsProvider::createContext(StsCredentialsProvider::Callbacks* callbacks) {
-  return std::make_shared<ContextImpl>(callbacks);
+ContextSharedPtr StsCredentialsProvider::createContext(StsFetcherPtr fetcher, StsCredentialsProvider::Callbacks* callbacks) {
+  return std::make_shared<ContextImpl>(fetcher, callbacks);
 }
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
