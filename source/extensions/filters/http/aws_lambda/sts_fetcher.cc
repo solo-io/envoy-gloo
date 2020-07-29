@@ -174,9 +174,6 @@ private:
 };
 } // namespace
 
-StsFetcherPtr StsFetcherFactory::create(){
-  return std::make_unique<StsFetcherImpl>(cm_, api_);
-}
 
 StsFetcherPtr StsFetcher::create(Upstream::ClusterManager& cm, Api::Api& api) {
   return std::make_unique<StsFetcherImpl>(cm, api);

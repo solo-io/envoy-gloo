@@ -79,14 +79,13 @@ public:
     virtual void cancel() PURE;
   };
 
+
+
   using ContextSharedPtr = std::shared_ptr<Context>;
 
 
   // Lookup credentials cache map. The cache only stores Jwks specified in the config.
   virtual void find(absl::optional<std::string> role_arn, ContextSharedPtr context) PURE;
-
-    // Factory method for creating verifier contexts.
-  static ContextSharedPtr createContext(StsFetcherPtr fetcher, Callbacks* callbacks);
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
@@ -94,6 +93,19 @@ public:
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;
+
+class ContextFactory {
+public:
+  ContextFactory(Upstream::ClusterManager& cm, Api::Api& api) : cm_(cm), api_(api) {};
+
+  virtual ~ContextFactory() = default;
+
+  virtual ContextSharedPtr create(StsCredentialsProvider::Callbacks* callbacks);
+
+private:
+  Upstream::ClusterManager& cm_;
+  Api::Api& api_;
+};
 
 } // namespace AwsLambda
 } // namespace HttpFilters

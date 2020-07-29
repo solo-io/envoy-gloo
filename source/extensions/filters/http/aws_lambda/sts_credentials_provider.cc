@@ -15,10 +15,8 @@ namespace AwsLambda {
 
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
-  ContextImpl(StsFetcherPtr fetcher, StsCredentialsProvider::Callbacks* callback)
-      : fetcher_(fetcher), callbacks_(callback) {
-
-      }
+  ContextImpl(Upstream::ClusterManager& cm, Api::Api& api, StsCredentialsProvider::Callbacks* callback)
+      : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback) {}
 
   StsCredentialsProvider::Callbacks* callbacks() const override { return callbacks_; }
   StsFetcherPtr& fetcher() override { return fetcher_; }
@@ -98,9 +96,9 @@ private:
   std::unordered_map<std::string, StsCredentialsSharedPtr> credentials_cache_;
 };
 
-ContextSharedPtr StsCredentialsProvider::createContext(StsFetcherPtr fetcher, StsCredentialsProvider::Callbacks* callbacks) {
-  return std::make_shared<ContextImpl>(fetcher, callbacks);
-}
+ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) {
+  return std::make_shared<ContextImpl>(cm_, api_, callbacks);
+};
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api) {

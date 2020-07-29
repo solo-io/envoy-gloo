@@ -27,7 +27,7 @@ private:
 };
 
 class StsFetcher;
-using StsFetcherPtr = std::shared_ptr<StsFetcher>;
+using StsFetcherPtr = std::unique_ptr<StsFetcher>;
 
 using StsCredentialsSharedPtr = std::shared_ptr<StsCredentials>;
 using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;
@@ -77,19 +77,6 @@ public:
    * @return a StsFetcher instance
    */
   static StsFetcherPtr create(Upstream::ClusterManager& cm, Api::Api& api);
-};
-
-class StsFetcherFactory {
-public:
-  StsFetcherFactory(Upstream::ClusterManager& cm, Api::Api& api) : cm_(cm), api_(api) {};
-
-  virtual ~StsFetcherFactory() = default;
-
-  StsFetcherPtr create();
-
-private:
-  Upstream::ClusterManager& cm_;
-  Api::Api& api_;
 };
 
 } // namespace AwsLambda
