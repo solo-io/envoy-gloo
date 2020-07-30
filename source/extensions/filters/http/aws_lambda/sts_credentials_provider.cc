@@ -124,7 +124,7 @@ public:
 
   }
 
-  void find(absl::optional<absl::string_view> role_arn_arg, ContextSharedPtr context){
+  void find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context) override {
     auto& ctximpl = static_cast<Context&>(*context);
 
     std::string role_arn = default_role_arn_;
@@ -143,7 +143,6 @@ public:
       const auto now = api_.timeSource().systemTime();
       // If the expiration time is more than a minute away, return it immediately
       if (it->second->expirationTime() - now > REFRESH_GRACE_PERIOD) {
-        // TODO: if not expired, send back, otherwise don't return
         ctximpl.callbacks()->onSuccess(it->second);
         return;        
       }
