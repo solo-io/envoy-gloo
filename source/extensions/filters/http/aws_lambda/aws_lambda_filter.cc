@@ -82,7 +82,6 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   // If the state is still the initial, attempt to get credentials
   if (state_ == State::Init) {
     state_ = State::Calling;
-    stopped_ = true;
     context_ = filter_config_->getCredentials(protocol_options_, this);
   }
 
@@ -148,11 +147,9 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 }
 
 void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credentials) {
-  state_ = State::Responded;
   credentials_ = credentials;
-
   context_ = nullptr;
-  state_ = Complete;
+  state_ = State::Complete;
   if (stopped_) {
     decoder_callbacks_->continueDecoding();
   }
@@ -171,7 +168,7 @@ void AWSLambdaFilter::onFailure(CredentialsFailureStatus status) {
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
   if (state_ == Calling) {
-    return Http::FilterDataStatus::StopIterationAndWatermark;
+    return Http::FilterDataStatus::StopIterationAndBuffer;
   }
 
   if (!function_on_route_) {
