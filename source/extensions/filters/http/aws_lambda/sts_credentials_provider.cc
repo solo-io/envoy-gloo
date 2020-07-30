@@ -110,10 +110,12 @@ public:
 
     // Add file watcher for token file
     file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [this](uint32_t) {
-      auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
       const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
-      // TODO: stats here
-      tls_cache->setWebToken(web_token);
+      tls_slot_->runOnAllThreads([tls_slot_, web_token](){
+        auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
+        // TODO: stats here
+        tls_cache->setWebToken(web_token);
+      });
     });
 
     // Initialize regex strings, should never fail
