@@ -60,8 +60,8 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
 
-  AWSLambdaConfigImpl config(std::move(cred_provider), context_.dispatcher_,
-                             context_.thread_local_, "prefix.", stats_,
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.cluster_manager_, context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_, context_.api_,
                              protoconfig);
 
   EXPECT_EQ(creds, *config.getCredentials());

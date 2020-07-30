@@ -12,7 +12,7 @@ set -e
 
 ENVOY=${ENVOY:-envoy}
 
-$ENVOY --disable-hot-restart -c ./envoy.yaml --log-level debug & 
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy.yaml --log-level debug & 
 sleep 5
 
 
@@ -38,7 +38,7 @@ echo testing with env credentials
 echo
 
 . ./e2e/extensions/filters/http/aws_lambda/create_config_env.sh
-$ENVOY --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
 sleep 5
 
 curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
@@ -52,9 +52,25 @@ echo testing with env credentials + token
 echo
 
 . ./e2e/extensions/filters/http/aws_lambda/create_config_env_token.sh
-$ENVOY --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
 sleep 5
 
 curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
 
 echo PASS
+
+
+# ####################### part 4 with STS
+
+# # Sanity with web token:
+# echo
+# echo testing with env credentials + token
+# echo
+
+# . ./e2e/extensions/filters/http/aws_lambda/create_config_web_token.sh
+# $ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level trace & 
+# sleep 5
+
+# curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
+
+# echo PASS

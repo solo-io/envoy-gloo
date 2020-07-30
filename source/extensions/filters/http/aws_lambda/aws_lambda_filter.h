@@ -77,7 +77,7 @@ private:
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
   State state_ = Init;
-  bool stopped_ = true;
+  bool stopped_ = false;
 };
 
 } // namespace AwsLambda

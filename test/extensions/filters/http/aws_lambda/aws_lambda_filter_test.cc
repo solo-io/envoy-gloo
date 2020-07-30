@@ -28,9 +28,14 @@ namespace AwsLambda {
 
 class AWSLambdaConfigTestImpl : public AWSLambdaConfig {
 public:
-  CredentialsConstSharedPtr getCredentials() const override {
+  ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig, StsCredentialsProvider::Callbacks* callbacks) const override {
     called_ = true;
-    return credentials_;
+    if (credentials_ == nullptr) {
+      callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>());  
+    } else {
+      callbacks->onSuccess(credentials_);
+    }
+    return nullptr;
   }
 
   CredentialsConstSharedPtr credentials_;
@@ -56,6 +61,7 @@ protected:
         protoextconfig;
     protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
     protoextconfig.set_region("us-east-1");
+    filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
     if (credsOnCluster) {
       protoextconfig.set_access_key("access key");
       protoextconfig.set_secret_key("secret key");
@@ -63,8 +69,6 @@ protected:
         protoextconfig.set_session_token("session token");
       }
     } else if (fetchCredentials) {
-      filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
-
       if (sessionToken) {
         filter_config_->credentials_ =
             std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
@@ -85,7 +89,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_,
-        factory_context_.dispatcher().timeSource(), filter_config_);
+        factory_context_.api_, filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
