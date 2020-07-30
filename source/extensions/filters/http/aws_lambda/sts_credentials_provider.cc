@@ -34,18 +34,31 @@ class StsCredentialsProviderImpl: public StsCredentialsProvider {
 public:
   StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
-    Api::Api& api) : api_(api), config_(config) {};
+    Api::Api& api) : api_(api), config_(config), default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
+    token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))) {
 
-  void find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context){
+    uri_.set_cluster(config_.cluster());
+    uri_.set_uri(config_.uri());
+
+
+    // File must exist on system
+    if (!api_.fileSystem().fileExists(token_file_)) {
+      throw EnvoyException("")
+    }
+
+    const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
+    }
+
+  void find(absl::optional<absl::string_view> role_arn_arg, ContextSharedPtr context){
     auto& ctximpl = static_cast<Context&>(*context);
 
-    std::string role_arn{}; 
+    absl::string_view role_arn = default_role_arn_;
     // If role_arn_arg is present, use that, otherwise use env
     if (role_arn_arg.has_value()) {
-      role_arn = std::string(role_arn_arg.value());
-    }  else {
-      role_arn = std::string(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN)));
+      role_arn = role_arn_arg.value();
     }
+
+    ASSERT(!role_arn.empty());
 
     const auto it = credentials_cache_.find(role_arn);
     if (it != credentials_cache_.end()) {
@@ -58,20 +71,14 @@ public:
       // return nullptr;
     }
 
-    const auto token_file  = absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
-    ASSERT(!token_file.empty());
-    // File must exist on system
-    ASSERT(api_.fileSystem().fileExists(std::string(token_file)));
-
-    const auto web_token = api_.fileSystem().fileReadToEnd(std::string(token_file));
-
-    envoy::config::core::v3::HttpUri uri;
+    ASSERT(!token_file_.empty());
+  
     uri.set_cluster(config_.cluster());
     uri.set_uri(config_.uri());
     // TODO: Figure out how to get this to compile, timeout is not all that important right now
     // uri.set_allocated_timeout(config_.mutable_timeout())
     ctximpl.fetcher()->fetch(
-      uri, 
+      uri_, 
       role_arn, 
       web_token, 
       [this, &ctximpl, role_arn](StsCredentialsConstSharedPtr& sts_credentials) {
@@ -93,6 +100,10 @@ private:
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config_;
   // Credentials storage map, keyed by arn
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
+
+  std::string default_role_arn_;
+  std::string token_file_;
+  envoy::config::core::v3::HttpUri uri_;
 };
 
 ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) const {
