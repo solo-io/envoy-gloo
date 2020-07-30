@@ -89,7 +89,8 @@ public:
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
-  create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api, ThreadLocal::SlotAllocator& tls);
+  create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, 
+    Api::Api& api, ThreadLocal::SlotAllocator& tls, Event::Dispatcher &dispatcher);
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;

@@ -93,6 +93,7 @@ envoy_cc_library(
         "@envoy//source/common/common:minimal_logger_lib",
         "@envoy//source/common/config:datasource_lib",
         "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/common/filesystem:watcher_lib",
         "@envoy//source/extensions/common/aws:credentials_provider_interface",
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
     ],

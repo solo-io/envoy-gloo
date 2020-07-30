@@ -67,7 +67,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:{
       // use service account credentials provider
       auto service_account_creds = protoconfig.service_account_credentials();
-      sts_credentials_provider_ = StsCredentialsProvider::create(service_account_creds, api, tls);
+      sts_credentials_provider_ = StsCredentialsProvider::create(service_account_creds, api, tls, dispatcher);
       break;
     }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {

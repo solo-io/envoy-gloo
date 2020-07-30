@@ -100,7 +100,7 @@ private:
 
   ThreadLocal::SlotPtr tls_slot_;
 
-  StsCredentialsProviderPtr sts_credential_provider_;
+  StsCredentialsProviderPtr sts_credentials_provider_;
 
   Event::TimerPtr timer_;
 

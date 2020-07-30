@@ -31,6 +31,8 @@ public:
   ThreadLocalStsCache(absl::string_view web_token): web_token_(web_token) {};
 
   const absl::string_view webToken() const {return web_token_;};
+
+  void setWebToken(absl::string_view web_token)  { web_token_ = web_token; };
   
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentialsCache() {return credentials_cache_;};
 
@@ -67,8 +69,10 @@ class StsCredentialsProviderImpl: public StsCredentialsProvider, Logger::Loggabl
 public:
   StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
-    Api::Api& api, ThreadLocal::SlotAllocator& tls) : api_(api), config_(config), default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
-    token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))), tls_slot_(tls.allocateSlot()) {
+    Api::Api& api, ThreadLocal::SlotAllocator& tls, Event::Dispatcher &dispatcher) : api_(api), config_(config), 
+    default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
+    token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))), tls_slot_(tls.allocateSlot()),
+    file_watcher_(dispatcher.createFilesystemWatcher()) {
 
     uri_.set_cluster(config_.cluster());
     uri_.set_uri(config_.uri());
@@ -97,6 +101,14 @@ public:
     tls_slot_->set([&web_token](Event::Dispatcher &) {
       ThreadLocalStsCache cache(web_token);
       return std::make_shared<ThreadLocalStsCache>(std::move(cache));
+    });
+
+    // Add file watcher for token file
+    file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [this](uint32_t) {
+      auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
+      const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
+      // TODO: stats here
+      tls_cache->setWebToken(web_token);
     });
 
     // Initialize regex strings, should never fail
@@ -137,7 +149,7 @@ public:
       tls_cache->webToken(), 
       [this, &ctximpl, role_arn, &tls_cache](const std::string* body) {
         ASSERT(body != nullptr);
-        
+
         //TODO: (yuval): create utility function for this regex search
         std::smatch matched_access_key;
         std::regex_search(*body, matched_access_key, access_key_regex_);
@@ -205,6 +217,8 @@ private:
   std::regex secret_key_regex_;
   std::regex session_token_regex_;
   std::regex expiration_regex_;
+
+  Envoy::Filesystem::WatcherPtr file_watcher_;
 };
 
 ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) const {
@@ -212,9 +226,10 @@ ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callb
 };
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
-  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api, ThreadLocal::SlotAllocator& tls) {
+  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
+   Api::Api& api, ThreadLocal::SlotAllocator& tls, Event::Dispatcher &dispatcher) {
 
-  return std::make_unique<StsCredentialsProviderImpl>(config, api, tls);
+  return std::make_unique<StsCredentialsProviderImpl>(config, api, tls, dispatcher);
 };
 
 } // namespace AwsLambda
