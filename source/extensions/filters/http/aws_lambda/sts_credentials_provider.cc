@@ -58,7 +58,7 @@ public:
       : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback) {}
 
   StsCredentialsProvider::Callbacks* callbacks() const override { return callbacks_; }
-  StsFetcherPtr& fetcher() override { return fetcher_; }
+  StsFetcher& fetcher() override { return *fetcher_; }
 
   void cancel() override {
     fetcher_->cancel();
@@ -156,7 +156,7 @@ public:
       // token is considered expired, fallthrough to create a new one
     }
   
-    ctximpl.fetcher()->fetch(
+    ctximpl.fetcher().fetch(
       uri_, 
       role_arn, 
       tls_cache->webToken(), 
