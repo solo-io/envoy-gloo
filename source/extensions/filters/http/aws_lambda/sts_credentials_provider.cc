@@ -105,7 +105,7 @@ public:
     }
 
     // create a thread local cache for the provider
-    tls_slot_->set([&web_token](Event::Dispatcher &) {
+    tls_slot_->set([web_token](Event::Dispatcher &) {
       ThreadLocalStsCache cache(web_token);
       return std::make_shared<ThreadLocalStsCache>(std::move(cache));
     });
@@ -113,19 +113,21 @@ public:
     // Add file watcher for token file
     auto shared_this = shared_from_this();
     file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
+      // TODO: we probably need to catch and handle an exception here.
       const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
+      // TODO: check if web_token is valid
+      // TODO: stats here
       shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
         auto tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
-        // TODO: stats here
         tls_cache->setWebToken(web_token);
       });
     });
 
     // Initialize regex strings, should never fail
-    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>.*?</AccessKeyId>");
-    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>.*?</SecretAccessKey>");
-    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>.*?</SessionToken>");
-    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>.*?</Expiration>");
+    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
+    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
+    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
+    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
 
   }
 
@@ -158,7 +160,7 @@ public:
       uri_, 
       role_arn, 
       tls_cache->webToken(), 
-      [this, &ctximpl, role_arn, &tls_cache](const std::string* body) {
+      [this, context, role_arn, &tls_cache](const std::string* body) {
         ASSERT(body != nullptr);
 
         //TODO: (yuval): create utility function for this regex search
@@ -166,28 +168,28 @@ public:
         std::regex_search(*body, matched_access_key, access_key_regex_);
         if (!(matched_access_key.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain access_key");
-          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+          context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
         }
 
         std::smatch matched_secret_key;
         std::regex_search(*body, matched_secret_key, secret_key_regex_);
         if (!(matched_secret_key.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain secret_key");
-          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+          context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
         }
         
         std::smatch matched_session_token;
         std::regex_search(*body, matched_session_token, session_token_regex_);
         if (!(matched_session_token.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain session_token");
-          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+          context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
         }
         
         std::smatch matched_expiration;
         std::regex_search(*body, matched_expiration, expiration_regex_);
         if (!(matched_expiration.size() > 1)) {
           ENVOY_LOG(trace, "response body did not contain expiration");
-          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+          context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
         }
 
         SystemTime expiration_time;
@@ -204,11 +206,11 @@ public:
         
         // Success callback, save back to cache
         tls_cache->credentialsCache().emplace(role_arn, result);
-        ctximpl.callbacks()->onSuccess(result);
+        context->callbacks()->onSuccess(result);
       },
-      [this, &ctximpl](CredentialsFailureStatus reason) {
+      [this, context](CredentialsFailureStatus reason) {
         // unsuccessful, send back empty creds?
-        ctximpl.callbacks()->onFailure(reason);
+        context->callbacks()->onFailure(reason);
       }
     );
   };
