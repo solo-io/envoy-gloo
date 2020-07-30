@@ -24,6 +24,8 @@ namespace AwsLambda {
 constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
     std::chrono::minutes(7);
 
+constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
+
 constexpr char EXPIRATION_FORMAT[] = "%E4Y%m%dT%H%M%S%z";
   
 class ThreadLocalStsCache : public Envoy::ThreadLocal::ThreadLocalObject {
@@ -135,12 +137,14 @@ public:
     const auto it = tls_cache->credentialsCache().find(role_arn);
     if (it != tls_cache->credentialsCache().end()) {
       // thing  exists
-      // check for expired
-
-      // TODO: if not expired, send back, otherwise don't return
-      ctximpl.callbacks()->onSuccess(it->second);
-      return;
-      // return nullptr;
+      const auto now = api_.timeSource().systemTime();
+      // If the expiration time is more than a minute away, return it immediately
+      if (it->second->expirationTime() - now > REFRESH_GRACE_PERIOD) {
+        // TODO: if not expired, send back, otherwise don't return
+        ctximpl.callbacks()->onSuccess(it->second);
+        return;        
+      }
+      // token is considered expired, fallthrough to create a new one
     }
   
     ctximpl.fetcher()->fetch(
