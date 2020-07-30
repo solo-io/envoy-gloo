@@ -81,8 +81,6 @@ public:
     virtual void cancel() PURE;
   };
 
-
-
   using ContextSharedPtr = std::shared_ptr<Context>;
 
 
@@ -91,7 +89,7 @@ public:
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
-  create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api);
+  create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api, ThreadLocal::SlotAllocator& tls);
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;

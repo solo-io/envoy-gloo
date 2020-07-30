@@ -42,7 +42,7 @@ public:
 
   virtual ~StsFetcher() = default;
 
-  using SuccessCallback = std::function<void(StsCredentialsConstSharedPtr& sts_credentials)>;
+  using SuccessCallback = std::function<void(const std::string* body)>;
 
   using FailureCallback = std::function<void(CredentialsFailureStatus status)>;
 
@@ -61,8 +61,8 @@ public:
    * @param receiver the receiver of the fetched JWKS or error.
    */
   virtual void fetch(const envoy::config::core::v3::HttpUri& uri,
-                      const std::string& role_arn,
-                      const std::string& web_token,
+                      const absl::string_view role_arn,
+                      const absl::string_view web_token,
                       SuccessCallback success, FailureCallback failure) PURE;
 
   /*

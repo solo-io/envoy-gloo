@@ -97,10 +97,10 @@ private:
 
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
-  
-  bool sts_enabled_{};
 
   ThreadLocal::SlotPtr tls_slot_;
+
+  StsCredentialsProviderPtr sts_credential_provider_;
 
   Event::TimerPtr timer_;
 

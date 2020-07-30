@@ -3,6 +3,7 @@
 #include "envoy/api/api.h"
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
+#include "common/common/regex.h"
 #include "extensions/common/aws/credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
 
@@ -12,6 +13,37 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
+  
+/*
+  * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum lifespan of 15 minutes.
+  * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
+  * 
+  * In order to ensure that credentials never expire, we default to slightly less than half of the lifecycle.
+  * 
+*/
+constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
+    std::chrono::minutes(7);
+
+constexpr char EXPIRATION_FORMAT[] = "%E4Y%m%dT%H%M%S%z";
+  
+class ThreadLocalStsCache : public Envoy::ThreadLocal::ThreadLocalObject {
+public:
+  ThreadLocalStsCache(absl::string_view web_token): web_token_(web_token) {};
+
+  const absl::string_view webToken() const {return web_token_;};
+  
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentialsCache() {return credentials_cache_;};
+
+private:
+  // web_token set by AWS, will be auto-updated by StsCredentialsProvider
+  // TODO: udpate this file, inotify or timer
+  absl::string_view web_token_;
+  // Credentials storage map, keyed by arn
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
+};
+
+using ThreadLocalStsCacheSharedPtr = std::shared_ptr<ThreadLocalStsCache>;
+
 
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
@@ -30,38 +62,66 @@ private:
   StsCredentialsProvider::Callbacks* callbacks_;
 };
 
-class StsCredentialsProviderImpl: public StsCredentialsProvider {
+
+class StsCredentialsProviderImpl: public StsCredentialsProvider, Logger::Loggable<Logger::Id::aws> {
 public:
   StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
-    Api::Api& api) : api_(api), config_(config), default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
-    token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))) {
+    Api::Api& api, ThreadLocal::SlotAllocator& tls) : api_(api), config_(config), default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
+    token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))), tls_slot_(tls.allocateSlot()) {
 
     uri_.set_cluster(config_.cluster());
     uri_.set_uri(config_.uri());
+    // TODO: Figure out how to get this to compile, timeout is not all that important right now
+    // uri_.set_allocated_timeout(config_.mutable_timeout())
 
-
+    // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS credentials to be enabled
+    if (token_file_ == "") {
+      throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_WEB_IDENTITY_TOKEN_FILE));
+    }
+    if (default_role_arn_ == "") {
+      throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
+    }
     // File must exist on system
     if (!api_.fileSystem().fileExists(token_file_)) {
-      throw EnvoyException("")
+      throw EnvoyException(fmt::format("Web token file {} does not exist", token_file_));
     }
 
     const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
+    // File should not be empty
+    if (web_token == "") {
+      throw EnvoyException(fmt::format("Web token file {} exists but is empty", token_file_));
     }
+
+    // create a thread local cache for the provider
+    tls_slot_->set([&web_token](Event::Dispatcher &) {
+      ThreadLocalStsCache cache(web_token);
+      return std::make_shared<ThreadLocalStsCache>(std::move(cache));
+    });
+
+    // Initialize regex strings, should never fail
+    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>.*?<\\/AccessKeyId>");
+    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>.*?<\\/SecretAccessKey>");
+    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>.*?<\\/SessionToken>");
+    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>.*?<\\/Expiration>");
+
+  }
 
   void find(absl::optional<absl::string_view> role_arn_arg, ContextSharedPtr context){
     auto& ctximpl = static_cast<Context&>(*context);
 
-    absl::string_view role_arn = default_role_arn_;
+    std::string role_arn = default_role_arn_;
     // If role_arn_arg is present, use that, otherwise use env
     if (role_arn_arg.has_value()) {
-      role_arn = role_arn_arg.value();
+      role_arn = std::string(role_arn_arg.value());
     }
 
     ASSERT(!role_arn.empty());
 
-    const auto it = credentials_cache_.find(role_arn);
-    if (it != credentials_cache_.end()) {
+    auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
+
+    const auto it = tls_cache->credentialsCache().find(role_arn);
+    if (it != tls_cache->credentialsCache().end()) {
       // thing  exists
       // check for expired
 
@@ -70,21 +130,58 @@ public:
       return;
       // return nullptr;
     }
-
-    ASSERT(!token_file_.empty());
   
-    uri.set_cluster(config_.cluster());
-    uri.set_uri(config_.uri());
-    // TODO: Figure out how to get this to compile, timeout is not all that important right now
-    // uri.set_allocated_timeout(config_.mutable_timeout())
     ctximpl.fetcher()->fetch(
       uri_, 
       role_arn, 
-      web_token, 
-      [this, &ctximpl, role_arn](StsCredentialsConstSharedPtr& sts_credentials) {
+      tls_cache->webToken(), 
+      [this, &ctximpl, role_arn, &tls_cache](const std::string* body) {
+        ASSERT(body != nullptr);
+        
+        //TODO: (yuval): create utility function for this regex search
+        std::smatch matched_access_key;
+        std::regex_search(*body, matched_access_key, access_key_regex_);
+        if (!(matched_access_key.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain access_key");
+          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+        }
+
+        std::smatch matched_secret_key;
+        std::regex_search(*body, matched_secret_key, secret_key_regex_);
+        if (!(matched_secret_key.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain secret_key");
+          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+        }
+        
+        std::smatch matched_session_token;
+        std::regex_search(*body, matched_session_token, session_token_regex_);
+        if (!(matched_session_token.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain session_token");
+          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+        }
+        
+        std::smatch matched_expiration;
+        std::regex_search(*body, matched_expiration, expiration_regex_);
+        if (!(matched_expiration.size() > 1)) {
+          ENVOY_LOG(trace, "response body did not contain expiration");
+          ctximpl.callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+        }
+
+        SystemTime expiration_time;
+        absl::Time absl_expiration_time;
+        if (absl::ParseTime(EXPIRATION_FORMAT, matched_expiration[1].str(), &absl_expiration_time, nullptr)) {
+          ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
+          expiration_time = absl::ToChronoTime(absl_expiration_time);
+        } else {
+          expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
+          ENVOY_LOG(trace, "Unable to determine expiration time from STS credentials result, using default");
+        }
+
+        StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str(), expiration_time);
+        
         // Success callback, save back to cache
-        credentials_cache_.emplace(role_arn, sts_credentials);
-        ctximpl.callbacks()->onSuccess(sts_credentials);
+        tls_cache->credentialsCache().emplace(role_arn, result);
+        ctximpl.callbacks()->onSuccess(result);
       },
       [this, &ctximpl](CredentialsFailureStatus reason) {
         // unsuccessful, send back empty creds?
@@ -98,12 +195,16 @@ private:
 
   Api::Api& api_;
   const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config_;
-  // Credentials storage map, keyed by arn
-  std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
 
   std::string default_role_arn_;
   std::string token_file_;
   envoy::config::core::v3::HttpUri uri_;
+  ThreadLocal::SlotPtr tls_slot_;
+
+  std::regex access_key_regex_;
+  std::regex secret_key_regex_;
+  std::regex session_token_regex_;
+  std::regex expiration_regex_;
 };
 
 ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) const {
@@ -111,9 +212,9 @@ ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callb
 };
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
-  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api) {
+  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config, Api::Api& api, ThreadLocal::SlotAllocator& tls) {
 
-  return std::make_unique<StsCredentialsProviderImpl>(config, api);
+  return std::make_unique<StsCredentialsProviderImpl>(config, api, tls);
 };
 
 } // namespace AwsLambda

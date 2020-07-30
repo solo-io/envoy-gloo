@@ -36,12 +36,6 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
   CredentialsConstSharedPtr credentials_;
 };
 
-struct ThreadLocalStsProvider : public Envoy::ThreadLocal::ThreadLocalObject {
-  ThreadLocalStsProvider(StsCredentialsProviderPtr&& sts_provider)
-      : sts_provider_(std::move(sts_provider)) {};
-  StsCredentialsProviderPtr sts_provider_;
-};
-
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
@@ -56,42 +50,26 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
   // Initialize Credential fetcher, if none exists do nothing. Filter will implicitly use protocol options data
   switch (protoconfig.credentials_fetcher_case()) {
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kUseDefaultCredentials: {
-        provider_ = std::move(provider);
+      provider_ = std::move(provider);
 
-        tls_slot_ = tls.allocateSlot();
-        auto empty_creds = std::make_shared<const CommonAws::Credentials>();
-        tls_slot_->set([empty_creds](Event::Dispatcher &) {
-          return std::make_shared<ThreadLocalCredentials>(empty_creds);
-        });
+      tls_slot_ = tls.allocateSlot();
+      auto empty_creds = std::make_shared<const CommonAws::Credentials>();
+      tls_slot_->set([empty_creds](Event::Dispatcher &) {
+        return std::make_shared<ThreadLocalCredentials>(empty_creds);
+      });
 
-        timer_ = dispatcher.createTimer([this] { timerCallback(); });
-        // call the time callback to fetch credentials now.
-        // this will also re-trigger the timer.
-        timerCallback();
-        break;
-      }
+      timer_ = dispatcher.createTimer([this] { timerCallback(); });
+      // call the time callback to fetch credentials now.
+      // this will also re-trigger the timer.
+      timerCallback();
+      break;
+    }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:{
-        // check necessary env variables, if not present panic and send NACK
-        const auto token_file  = absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
-        if (token_file.empty()) {
-          throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_WEB_IDENTITY_TOKEN_FILE));
-        }
-        const auto env_arn  = absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN));
-        if (env_arn.empty()) {
-          throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
-        }
-        // use service account credentials provider
-        tls_slot_ = tls.allocateSlot();
-
-        auto service_account_creds = protoconfig.service_account_credentials();
-
-        tls_slot_->set([service_account_creds, &api](Event::Dispatcher &) {
-          StsCredentialsProviderPtr provider = StsCredentialsProvider::create(service_account_creds, api);
-          return std::make_shared<ThreadLocalStsProvider>(std::move(provider));
-        });
-        sts_enabled_ = true;
-        break;
-      }
+      // use service account credentials provider
+      auto service_account_creds = protoconfig.service_account_credentials();
+      sts_credentials_provider_ = StsCredentialsProvider::create(service_account_creds, api, tls);
+      break;
+    }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
       break;
     }
@@ -125,28 +103,16 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
     return nullptr;
   } 
 
-  if (sts_enabled_ == true) {
+  if (sts_credentials_provider_) {
     // return the context directly to the filter, as no direct credentials can be sent
     auto context = context_factory_.create(callbacks);
-    auto& tls_sts_provider = tls_slot_->getTyped<ThreadLocalStsProvider>().sts_provider_;
     std:: string role_arn = "TODO"; // this can come either from filter config or protocol extension.
-    tls_sts_provider->find(role_arn, context);
+    sts_credentials_provider_->find(role_arn, context);
     return context;
   }
   
   callbacks->onFailure(CredentialsFailureStatus::InvalidSts);
   return nullptr;
-}
-
-CredentialsConstSharedPtr AWSLambdaConfigImpl::getProviderCredentials() const {
-  if (!provider_) {
-    return {};
-  }
-
-// TODO(yuval-k): to prevent abiguity here, merge ThreadLocalCredentials and ThreadLocalCredentials
-// to one class. also check if comment below is s till true
-  // tls_slot_ != nil IFF provider_ != nil
-  return tls_slot_->getTyped<ThreadLocalCredentials>().credentials_;
 }
 
 void AWSLambdaConfigImpl::timerCallback() {
