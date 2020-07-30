@@ -96,7 +96,7 @@ private:
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
 };
 
-ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) {
+ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callbacks) const {
   return std::make_shared<ContextImpl>(cm_, api_, callbacks);
 };
 

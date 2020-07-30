@@ -102,7 +102,7 @@ public:
 
   virtual ~ContextFactory() = default;
 
-  virtual ContextSharedPtr create(StsCredentialsProvider::Callbacks* callbacks);
+  virtual ContextSharedPtr create(StsCredentialsProvider::Callbacks* callbacks) const;
 
 private:
   Upstream::ClusterManager& cm_;

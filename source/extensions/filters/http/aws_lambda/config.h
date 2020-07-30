@@ -54,6 +54,7 @@ public:
   const absl::optional<std::string> &roleArn() const { return role_arn_; }
 
 private:
+  
   std::string host_;
   std::string region_;
   absl::optional<std::string> access_key_;
@@ -86,6 +87,7 @@ public:
   ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg, StsCredentialsProvider::Callbacks* callbacks) const override;
 
 private:
+  CredentialsConstSharedPtr getProviderCredentials() const;
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
                                             Stats::Scope &scope);
 

@@ -51,33 +51,41 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const std::string &stats_prefix, Stats::Scope &scope, Api::Api& api,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : context_factory_(ContextFactory(cluster_manager, api)), stats_(generateStats(stats_prefix, scope)) {
+    : context_factory_(cluster_manager, api), stats_(generateStats(stats_prefix, scope)) {
 
   switch (protoconfig.credentials_fetcher_case()) {
-  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kUseDefaultCredentials:
-    provider_ = std::move(provider);
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kUseDefaultCredentials: {
+      provider_ = std::move(provider);
 
-    tls_slot_ = tls.allocateSlot();
-    auto empty_creds = std::make_shared<const CommonAws::Credentials>();
-    tls_slot_->set([empty_creds](Event::Dispatcher &) {
-      return std::make_shared<ThreadLocalCredentials>(empty_creds);
-    });
+      tls_slot_ = tls.allocateSlot();
+      auto empty_creds = std::make_shared<const CommonAws::Credentials>();
+      tls_slot_->set([empty_creds](Event::Dispatcher &) {
+        return std::make_shared<ThreadLocalCredentials>(empty_creds);
+      });
 
-    timer_ = dispatcher.createTimer([this] { timerCallback(); });
-    // call the time callback to fetch credentials now.
-    // this will also re-trigger the timer.
-    timerCallback();
+      timer_ = dispatcher.createTimer([this] { timerCallback(); });
+      // call the time callback to fetch credentials now.
+      // this will also re-trigger the timer.
+      timerCallback();
+      break;
+    }
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:{
+      // use service account credentials provider
+      tls_slot_ = tls.allocateSlot();
+
+      auto service_account_creds = protoconfig.service_account_credentials();
+
+      tls_slot_->set([service_account_creds, &api](Event::Dispatcher &) {
+        StsCredentialsProviderPtr provider = StsCredentialsProvider::create(service_account_creds, api);
+        return std::make_shared<ThreadLocalStsProvider>(std::move(provider));
+      });
+      sts_enabled_ = true;
+      break;
+    }
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
     break;
-  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:
-    // use service account credentials provider
-    tls_slot_ = tls.allocateSlot();
-
-    tls_slot_->set([](Event::Dispatcher &) {
-      StsCredentialsProviderPtr provider = StsCredentialsProvider::create(protoconfig.service_account_credentials(), api);
-      return std::make_shared<ThreadLocalStsProvider>(std::move(provider));
-    });
-    sts_enabled_ = true
-    break;
+  }
+    // TODO: ??
   }
 }
 
@@ -93,7 +101,7 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
     } else {
       callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
     }
-      return;    
+      return nullptr;
   }
 
 
@@ -105,13 +113,25 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
     // send back empty credentials
     callbacks->onSuccess(std::make_shared<Envoy::Extensions::Common::Aws::Credentials>());
     // neither default, nor sts
-    return nullptr
+    return nullptr;
   }
   // return the context directly to the filter, as no direct credentials can be sent
-  auto context = context_factory_(callbacks);
-  auto tls_sts_provider = tls_slot_->getTyped<ThreadLocalStsProvider>().sts_provider_;
-  tls_slot_provider->find(role_arn, context)
+  auto context = context_factory_.create(callbacks);
+  auto& tls_sts_provider = tls_slot_->getTyped<ThreadLocalStsProvider>().sts_provider_;
+  std:: string role_arn = "TODO"; // this can come either from filter config or protocol extension.
+  tls_sts_provider->find(role_arn, context);
   return context;
+}
+
+CredentialsConstSharedPtr AWSLambdaConfigImpl::getProviderCredentials() const {
+  if (!provider_) {
+    return {};
+  }
+
+// TODO(yuval-k): to prevent abiguity here, merge ThreadLocalCredentials and ThreadLocalCredentials
+// to one class. also check if comment below is s till true
+  // tls_slot_ != nil IFF provider_ != nil
+  return tls_slot_->getTyped<ThreadLocalCredentials>().credentials_;
 }
 
 void AWSLambdaConfigImpl::timerCallback() {
@@ -125,7 +145,7 @@ void AWSLambdaConfigImpl::timerCallback() {
   } else {
     stats_.fetch_success_.inc();
     stats_.current_state_.set(1);
-    auto currentCreds = getCredentials();
+    auto currentCreds = getProviderCredentials();
     if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
       stats_.creds_rotated_.inc();
       ENVOY_LOG(debug, "refreshing AWS credentials");
@@ -175,9 +195,8 @@ AWSLambdaRouteConfig::functionUrlPath(const std::string &name,
 }
 
 AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
-    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension &protoconfig,
-    Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls, Api::Api& api)
-    : host_(protoconfig.host()), region_(protoconfig.region()), api_(api) {
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaProtocolExtension &protoconfig)
+    : host_(protoconfig.host()), region_(protoconfig.region()) {
   if (!protoconfig.access_key().empty()) {
     access_key_ = protoconfig.access_key();
   }
