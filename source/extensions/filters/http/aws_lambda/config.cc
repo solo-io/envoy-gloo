@@ -37,7 +37,7 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 };
 
 struct ThreadLocalStsProvider : public Envoy::ThreadLocal::ThreadLocalObject {
-  ThreadLocalStsProvider(StsCredentialsProviderPtr sts_provider)
+  ThreadLocalStsProvider(StsCredentialsProviderPtr&& sts_provider)
       : sts_provider_(sts_provider) {};
   StsCredentialsProviderPtr sts_provider_;
 };
@@ -74,7 +74,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
     tls_slot_->set([](Event::Dispatcher &) {
       StsCredentialsProviderPtr provider = StsCredentialsProvider::create(protoconfig.service_account_credentials(), api);
-      return std::make_shared<ThreadLocalStsProvider>(provider);
+      return std::make_shared<ThreadLocalStsProvider>(std::move(provider));
     });
     sts_enabled_ = true
     break;
