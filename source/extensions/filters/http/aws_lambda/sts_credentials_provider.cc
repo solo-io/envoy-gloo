@@ -70,7 +70,9 @@ private:
 };
 
 
-class StsCredentialsProviderImpl: public StsCredentialsProvider, Logger::Loggable<Logger::Id::aws> {
+class StsCredentialsProviderImpl: public StsCredentialsProvider,
+                                  public Logger::Loggable<Logger::Id::aws>,
+                                  public std::enable_shared_from_this<StsCredentialsProviderImpl> {
 public:
   StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
@@ -109,20 +111,21 @@ public:
     });
 
     // Add file watcher for token file
-    file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [this](uint32_t) {
-      const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
-      tls_slot_->runOnAllThreads([tls_slot_, web_token](){
-        auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
+    auto shared_this = shared_from_this();
+    file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
+      const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
+      shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
+        auto tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
         // TODO: stats here
         tls_cache->setWebToken(web_token);
       });
     });
 
     // Initialize regex strings, should never fail
-    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>.*?<\\/AccessKeyId>");
-    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>.*?<\\/SecretAccessKey>");
-    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>.*?<\\/SessionToken>");
-    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>.*?<\\/Expiration>");
+    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>.*?</AccessKeyId>");
+    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>.*?</SecretAccessKey>");
+    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>.*?</SessionToken>");
+    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>.*?</Expiration>");
 
   }
 
