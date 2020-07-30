@@ -111,8 +111,6 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     }
   }
 
-
-
   if ((access_key == nullptr) || (secret_key == nullptr)) {
     decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
                                        RcDetails::get().CredentialsNotFoundBody,

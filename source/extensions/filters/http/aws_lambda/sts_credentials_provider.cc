@@ -77,7 +77,6 @@ public:
       [this, &ctximpl, role_arn](StsCredentialsConstSharedPtr& sts_credentials) {
         // Success callback, save back to cache
         credentials_cache_.emplace(role_arn, sts_credentials);
-        // TODO: Figure out way to reuse credentials object. Cast as parent?
         ctximpl.callbacks()->onSuccess(sts_credentials);
       },
       [this, &ctximpl](CredentialsFailureStatus reason) {
