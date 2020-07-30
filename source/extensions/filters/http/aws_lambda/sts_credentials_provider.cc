@@ -18,11 +18,14 @@ namespace AwsLambda {
   * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum lifespan of 15 minutes.
   * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
   * 
-  * In order to ensure that credentials never expire, we default to slightly less than half of the lifecycle.
+  * In order to ensure that credentials never expire, we default to 2/3.
   * 
+  * This in combination with the very generous grace period which makes sure the tokens are 
+  * refreshed if they have < 5 minutes left on their lifetime. Whether that lifetime is 
+  * our prescribed, or from the response itself.
 */
 constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
-    std::chrono::minutes(7);
+    std::chrono::minutes(10);
 
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 
