@@ -87,11 +87,13 @@ public:
       if (response->body()) {
         const auto len = response->body()->length();
         const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
+        // TODO: (yuval): initialize outside of request path
         const auto access_key_regex = Regex::Utility::parseStdRegex("<AccessKeyId>.*?<\\/AccessKeyId>");
         const auto secret_key_regex = Regex::Utility::parseStdRegex("<SecretAccessKey>.*?<\\/SecretAccessKey>");
         const auto session_token_regex = Regex::Utility::parseStdRegex("<SessionToken>.*?<\\/SessionToken>");
         const auto expiration_regex = Regex::Utility::parseStdRegex("<Expiration>.*?<\\/Expiration>");
 
+        //TODO: (yuval): create utility function for this regex search
         std::smatch matched_access_key;
         std::regex_search(body, matched_access_key, access_key_regex);
         if (!(matched_access_key.size() > 1)) {
