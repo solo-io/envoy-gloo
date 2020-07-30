@@ -83,6 +83,9 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   if (state_ == State::Init) {
     state_ = State::Calling;
     context_ = filter_config_->getCredentials(protocol_options_, this);
+  } else if (state_ == State::Responded) {
+    // An error was found, and a direct reply was set, make sure to stop iteration
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   
@@ -155,7 +158,8 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
   }
 }
 
-void AWSLambdaFilter::onFailure(CredentialsFailureStatus status) {
+//TODO: Use the failure status in the local reply
+void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
   state_ = State::Responded;
 
   decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,

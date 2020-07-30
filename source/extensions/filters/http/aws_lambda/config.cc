@@ -126,7 +126,7 @@ void AWSLambdaConfigImpl::timerCallback() {
   } else {
     stats_.fetch_success_.inc();
     stats_.current_state_.set(1);
-    auto currentCreds = getProviderCredentials();
+    auto currentCreds = tls_slot_->getTyped<ThreadLocalCredentials>().credentials_;
     if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
       stats_.creds_rotated_.inc();
       ENVOY_LOG(debug, "refreshing AWS credentials");
