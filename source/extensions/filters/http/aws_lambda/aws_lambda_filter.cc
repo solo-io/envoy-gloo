@@ -74,11 +74,6 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     return Http::FilterHeadersStatus::Continue;
   }
 
-  const std::string *access_key{};
-  const std::string *secret_key{};
-  const std::string *session_token{};
-
-
   // If the state is still the initial, attempt to get credentials
   if (state_ == State::Init) {
     state_ = State::Calling;
@@ -88,7 +83,10 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  
+  const std::string *access_key{};
+  const std::string *secret_key{};
+  const std::string *session_token{};
+
   // context will be nullptr in the case that the credentials are synchronously available, and can be checked now.
   if (context_ == nullptr) {
     // Should never happen as onSuccess callback should set credentials_
