@@ -38,7 +38,7 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 struct ThreadLocalStsProvider : public Envoy::ThreadLocal::ThreadLocalObject {
   ThreadLocalStsProvider(StsCredentialsProviderPtr&& sts_provider)
-      : sts_provider_(sts_provider) {};
+      : sts_provider_(std::move(sts_provider)) {};
   StsCredentialsProviderPtr sts_provider_;
 };
 
