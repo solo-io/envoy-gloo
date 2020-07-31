@@ -21,7 +21,7 @@ namespace AwsLambda {
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class AWSLambdaFilter : public Http::StreamDecoderFilter, StsCredentialsProvider::Callbacks {
+class AWSLambdaFilter : public Http::StreamDecoderFilter, StsCredentialsProvider::Callbacks, Logger::Loggable<Logger::Id::filter> {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
                   Api::Api& api,

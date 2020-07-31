@@ -76,7 +76,9 @@ static_resources:
           http_filters:
           - name: io.solo.aws_lambda
             config:
-              use_default_credentials: true
+              service_account_credentials:
+                cluster: aws-sts
+                uri: sts.amazonaws.com
           - name: envoy.router
   clusters:
   - connect_timeout: 5.000s
@@ -85,6 +87,14 @@ static_resources:
         address: postman-echo.com
         port_value: 443
     name: postman-echo
+    type: LOGICAL_DNS
+    tls_context: {}
+  - connect_timeout: 5.000s
+    hosts:
+    - socket_address:
+        address: sts.amazonaws.com
+        port_value: 443
+    name: aws-sts
     type: LOGICAL_DNS
     tls_context: {}
   - connect_timeout: 5.000s
@@ -104,12 +114,8 @@ EOF
 
 TEMP_FILE=$(mktemp)
 
-cleanup() {
-    echo ">> Removing ${TEMP_FILE}"
-    rm ${TEMP_FILE}
-}
+echo $AWS_WEB_TOKEN > $TEMP_FILE
 
-aws sts get-session-token > ${TEMP_FILE}
-export AWS_ACCESS_KEY_ID=$(cat ${TEMP_FILE} | jq -r '.Credentials.AccessKeyId')
-export AWS_SECRET_ACCESS_KEY=$(cat ${TEMP_FILE} | jq -r '.Credentials.SecretAccessKey')
-export AWS_SESSION_TOKEN=$(cat ${TEMP_FILE} | jq -r '.Credentials.SessionToken')
+
+export AWS_WEB_IDENTITY_TOKEN_FILE=$TEMP_FILE
+export AWS_ROLE_ARN=$AWS_ROLE_ARN

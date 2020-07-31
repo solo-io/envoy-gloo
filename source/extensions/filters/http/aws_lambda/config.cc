@@ -50,6 +50,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
   // Initialize Credential fetcher, if none exists do nothing. Filter will implicitly use protocol options data
   switch (protoconfig.credentials_fetcher_case()) {
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kUseDefaultCredentials: {
+      ENVOY_LOG(debug, "{}: Using default credentials source", __func__);
       provider_ = std::move(provider);
 
       tls_slot_ = tls.allocateSlot();
@@ -65,9 +66,10 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       break;
     }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::kServiceAccountCredentials:{
+      ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
       // use service account credentials provider
       auto service_account_creds = protoconfig.service_account_credentials();
-      sts_credentials_provider_ = StsCredentialsProvider::create(service_account_creds, api, tls, dispatcher);
+      sts_credentials_provider_ = StsCredentialsProviderImpl::create(service_account_creds, api, tls, dispatcher);
       break;
     }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
@@ -87,6 +89,7 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
   // Always check extension config first, as it overrides
   if (ext_cfg->accessKey().has_value() &&
       ext_cfg->secretKey().has_value()) {
+    ENVOY_LOG(trace, "{}: Credentials found from protocol options", __func__);
     // attempt to set session_token, ok if nil
     if (ext_cfg->sessionToken().has_value()) {
       callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value(), ext_cfg->sessionToken().value()));
@@ -98,19 +101,21 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
 
 
   if (provider_) {
+    ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
     callbacks->onSuccess(tls_slot_->getTyped<ThreadLocalCredentials>().credentials_);
     // no context necessary as these credentials are available immediately
     return nullptr;
   } 
 
   if (sts_credentials_provider_) {
+    ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider", __func__);
     // return the context directly to the filter, as no direct credentials can be sent
     auto context = context_factory_.create(callbacks);
-    std:: string role_arn = "TODO"; // this can come either from filter config or protocol extension.
-    sts_credentials_provider_->find(role_arn, context);
+    sts_credentials_provider_->find(ext_cfg->roleArn(), context);
     return context;
   }
   
+  ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
   callbacks->onFailure(CredentialsFailureStatus::InvalidSts);
   return nullptr;
 }

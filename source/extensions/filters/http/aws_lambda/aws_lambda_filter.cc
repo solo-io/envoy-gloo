@@ -106,6 +106,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     // context exists, we're in async land
     // If the callback has not been procesed, stop iteration
     if (state_ != State::Complete) {
+      ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
       stopped_ = true;
       return Http::FilterHeadersStatus::StopIteration;
     }

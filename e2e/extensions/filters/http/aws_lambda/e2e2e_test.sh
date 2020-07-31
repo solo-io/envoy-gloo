@@ -12,7 +12,10 @@ set -e
 
 ENVOY=${ENVOY:-envoy}
 
-$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy.yaml --log-level debug & 
+echo $ENVOY
+pwd
+
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy.yaml --log-level trace & 
 sleep 5
 
 
@@ -38,10 +41,12 @@ echo testing with env credentials
 echo
 
 . ./e2e/extensions/filters/http/aws_lambda/create_config_env.sh
-$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level trace & 
 sleep 5
 
 curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
+
+curl localhost:19000/quitquitquit -XPOST
 
 
 ####################### part 3 with env + token
@@ -52,25 +57,30 @@ echo testing with env credentials + token
 echo
 
 . ./e2e/extensions/filters/http/aws_lambda/create_config_env_token.sh
-$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level trace & 
 sleep 5
 
 curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
 
+curl localhost:19000/quitquitquit -XPOST
+
 echo PASS
 
 
-# ####################### part 4 with STS
+####################### part 4 with STS
 
-# # Sanity with web token:
-# echo
-# echo testing with env credentials + token
-# echo
+# Sanity with web token:
+echo
+echo testing with STS credentials
+echo
 
-# . ./e2e/extensions/filters/http/aws_lambda/create_config_web_token.sh
-# $ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level trace & 
-# sleep 5
+. ./e2e/extensions/filters/http/aws_lambda/create_config_web_token.sh
+$ENVOY --concurrency 2 --disable-hot-restart -c ./envoy_env.yaml --log-level trace & 
+sleep 10
 
-# curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
+curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
 
-# echo PASS
+curl localhost:19000/quitquitquit -XPOST
+
+echo PASS
+
