@@ -96,7 +96,7 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(SharedAWSLambdaProtocolExte
     } else {
       callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
     }
-      return nullptr;
+    return nullptr;
   }
 
 

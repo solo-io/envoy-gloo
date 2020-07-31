@@ -173,7 +173,7 @@ private:
   void init();
 
   Api::Api& api_;
-  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config_;
+  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials config_;
 
   std::string default_role_arn_;
   std::string token_file_;

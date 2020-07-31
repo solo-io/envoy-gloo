@@ -96,7 +96,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
     uri_, 
     role_arn, 
     tls_cache.webToken(), 
-    [this, context, role_arn, &tls_cache](const std::string* body) {
+    [this, context, role_arn](const std::string* body) {
       ASSERT(body != nullptr);
 
       //TODO: (yuval): create utility function for this regex search
@@ -141,6 +141,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str(), expiration_time);
       
       // Success callback, save back to cache
+      auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
       tls_cache.credentialsCache().emplace(role_arn, result);
       context->callbacks()->onSuccess(result);
     },
