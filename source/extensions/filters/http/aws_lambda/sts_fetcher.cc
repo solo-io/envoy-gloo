@@ -55,10 +55,12 @@ public:
 
     Http::RequestMessagePtr message = Http::Utility::prepareHeaders(uri);
     message->headers().setReferenceMethod(Http::Headers::get().MethodValues.Post);
+    message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
     const absl::string_view body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
+    message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
     auto options = Http::AsyncClient::RequestOptions()
                        .setTimeout(std::chrono::milliseconds(
