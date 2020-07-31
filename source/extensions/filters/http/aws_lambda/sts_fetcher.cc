@@ -58,7 +58,7 @@ public:
     message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
-    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&Version=2011-06-15&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
+    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&Version=2011-06-15&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", Http::Utility::PercentEncoding::encode(role_arn), now, Http::Utility::PercentEncoding::encode(web_token));
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
@@ -88,7 +88,7 @@ public:
       if ((status_code % 400) < 3 && response->body()) {
         const auto len = response->body()->length();
         const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
-        ENVOY_LOG(debug, "{}: StatusCode: {}, Body: {}", __func__, status_code, body);
+        ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__, status_code, body);
       // TODO: parse the error string. Example:
       /*
         <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
