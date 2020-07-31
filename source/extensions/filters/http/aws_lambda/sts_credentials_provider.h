@@ -96,14 +96,14 @@ public:
 
   const absl::string_view webToken() const {return web_token_;};
 
-  void setWebToken(absl::string_view web_token)  { web_token_ = web_token; };
+  void setWebToken(absl::string_view web_token)  { web_token_ = std::string(web_token); };
   
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentialsCache() {return credentials_cache_;};
 
 private:
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
   // TODO: udpate this file, inotify or timer
-  absl::string_view web_token_;
+  std::string web_token_;
   // Credentials storage map, keyed by arn
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
 };

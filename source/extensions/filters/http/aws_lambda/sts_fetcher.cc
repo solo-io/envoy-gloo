@@ -58,7 +58,7 @@ public:
     message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
-    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&Version=2011-06-15&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", Http::Utility::PercentEncoding::encode(role_arn), now, Http::Utility::PercentEncoding::encode(web_token));
+    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}&Version=2011-06-15", role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
@@ -69,7 +69,7 @@ public:
         cm_.httpAsyncClientForCluster(uri.cluster()).send(std::move(message), *this, options);
   }
 
-  // HTTP async receive methods
+  // HTTP async receive methods 
   void onSuccess(const Http::AsyncClient::Request&, Http::ResponseMessagePtr&& response) override {
     complete_ = true;
     const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
