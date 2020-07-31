@@ -1,12 +1,13 @@
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
+
 #include "gmock/gmock.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
-using ::testing::ReturnRef;
 using ::testing::Return;
+using ::testing::ReturnRef;
 
 MockStsContext::MockStsContext() {
   ON_CALL(*this, fetcher()).WillByDefault(ReturnRef(fetcher_));
