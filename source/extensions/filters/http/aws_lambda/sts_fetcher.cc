@@ -85,9 +85,11 @@ public:
         failure_callback_(CredentialsFailureStatus::Network);
       }
     } else {
-      if ((status_code % 400) < 3) {
-
-      // TODO: parse the error string example
+      if ((status_code % 400) < 3 && response->body()) {
+        const auto len = response->body()->length();
+        const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
+        ENVOY_LOG(debug, "{}: StatusCode: {}, Body: {}", __func__, status_code, body);
+      // TODO: parse the error string. Example:
       /*
         <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
           <Error>
@@ -99,10 +101,6 @@ public:
         </ErrorResponse>
       */
       }
-      ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
-                uri_->uri(), status_code);
-      ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
-      failure_callback_(CredentialsFailureStatus::Network);
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
       ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
