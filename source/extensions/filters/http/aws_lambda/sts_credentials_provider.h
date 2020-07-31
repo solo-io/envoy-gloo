@@ -108,8 +108,6 @@ private:
   std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentials_cache_;
 };
 
-using ThreadLocalStsCacheSharedPtr = std::shared_ptr<ThreadLocalStsCache>;
-
 class StsCredentialsProviderImpl: public StsCredentialsProvider,
                                   public Logger::Loggable<Logger::Id::aws>,
                                   public std::enable_shared_from_this<StsCredentialsProviderImpl> {
@@ -162,8 +160,7 @@ private:
 
     // create a thread local cache for the provider
     tls_slot_->set([web_token](Event::Dispatcher &) {
-      ThreadLocalStsCache cache(web_token);
-      return std::make_shared<ThreadLocalStsCache>(std::move(cache));
+      return std::make_shared<ThreadLocalStsCache>(web_token);
     });
 
     // Initialize regex strings, should never fail

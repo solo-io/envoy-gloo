@@ -58,8 +58,8 @@ void StsCredentialsProviderImpl::init() {
     // TODO: check if web_token is valid
     // TODO: stats here
     shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
-      auto tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
-      tls_cache->setWebToken(web_token);
+      auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
+      tls_cache.setWebToken(web_token);
     });
   });
 
@@ -78,10 +78,10 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
-  auto tls_cache = tls_slot_->getTyped<ThreadLocalStsCacheSharedPtr>();
+  auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
 
-  const auto it = tls_cache->credentialsCache().find(role_arn);
-  if (it != tls_cache->credentialsCache().end()) {
+  const auto it = tls_cache.credentialsCache().find(role_arn);
+  if (it != tls_cache.credentialsCache().end()) {
     // thing  exists
     const auto now = api_.timeSource().systemTime();
     // If the expiration time is more than a minute away, return it immediately
@@ -95,7 +95,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
   ctximpl.fetcher().fetch(
     uri_, 
     role_arn, 
-    tls_cache->webToken(), 
+    tls_cache.webToken(), 
     [this, context, role_arn, &tls_cache](const std::string* body) {
       ASSERT(body != nullptr);
 
@@ -141,7 +141,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str(), expiration_time);
       
       // Success callback, save back to cache
-      tls_cache->credentialsCache().emplace(role_arn, result);
+      tls_cache.credentialsCache().emplace(role_arn, result);
       context->callbacks()->onSuccess(result);
     },
     [this, context](CredentialsFailureStatus reason) {
