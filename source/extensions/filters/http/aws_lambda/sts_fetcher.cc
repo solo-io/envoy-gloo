@@ -58,7 +58,7 @@ public:
     message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
-    const absl::string_view body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
+    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&Version=2011-06-15&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
@@ -84,6 +84,22 @@ public:
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty", __func__, uri_->uri());
         failure_callback_(CredentialsFailureStatus::Network);
       }
+    } else if ((status_code % 400) < 3) {
+      // TODO: parse the error string example
+      /*
+        <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
+          <Error>
+            <Type>Sender</Type>
+            <Code>InvalidAction</Code>
+            <Message>Could not find operation AssumeRoleWithWebIdentity for version NO_VERSION_SPECIFIED</Message>
+          </Error>
+          <RequestId>72168399-bcdd-4248-bf57-bf5d4a6dc07d</RequestId>
+        </ErrorResponse>
+      */
+      ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
+                uri_->uri(), status_code);
+      ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
+      failure_callback_(CredentialsFailureStatus::Network);
     } else {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
