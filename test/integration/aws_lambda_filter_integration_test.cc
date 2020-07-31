@@ -44,6 +44,7 @@ public:
       // set env vars for test
       TestEnvironment::setEnvVar("AWS_ACCESS_KEY_ID", "access key", 1);
       TestEnvironment::setEnvVar("AWS_SECRET_ACCESS_KEY", "access key", 1);
+      TestEnvironment::setEnvVar("AWS_SESSION_TOKEN", "session token", 1);
       config_helper_.addFilter(USE_CHAIN_LAMBDA_FILTER);
     } else {
       config_helper_.addFilter(DEFAULT_LAMBDA_FILTER);
@@ -59,6 +60,7 @@ public:
       if (!use_chain_) {
         protoextconfig.set_access_key("access key");
         protoextconfig.set_secret_key("secret key");
+        protoextconfig.set_session_token("session token");
       }
       ProtobufWkt::Struct functionstruct;
 

@@ -110,12 +110,14 @@ public:
   const std::string &region() const { return region_; }
   const absl::optional<std::string> &accessKey() const { return access_key_; }
   const absl::optional<std::string> &secretKey() const { return secret_key_; }
+  const absl::optional<std::string> &sessionToken() const { return session_token_; }
 
 private:
   std::string host_;
   std::string region_;
   absl::optional<std::string> access_key_;
   absl::optional<std::string> secret_key_;
+  absl::optional<std::string> session_token_;
 };
 
 } // namespace AwsLambda

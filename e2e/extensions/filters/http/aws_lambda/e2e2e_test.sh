@@ -43,4 +43,18 @@ sleep 5
 
 curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
 
+
+####################### part 3 with env + token
+
+# Sanity with env:
+echo
+echo testing with env credentials + token
+echo
+
+. ./e2e/extensions/filters/http/aws_lambda/create_config_env_token.sh
+$ENVOY --disable-hot-restart -c ./envoy_env.yaml --log-level debug & 
+sleep 5
+
+curl localhost:10001/lambda --data '"abc"' --request POST -H"content-type: application/json"|grep ABC
+
 echo PASS

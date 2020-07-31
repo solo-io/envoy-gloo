@@ -1,6 +1,8 @@
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
 
+#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
+
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
@@ -42,7 +44,7 @@ public:
 protected:
   void SetUp() override { setupRoute(true, false); }
 
-  void setupRoute(bool credsOnCluster, bool fetchCredentials) {
+  void setupRoute(bool credsOnCluster, bool fetchCredentials, bool sessionToken = false) {
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -57,11 +59,21 @@ protected:
     if (credsOnCluster) {
       protoextconfig.set_access_key("access key");
       protoextconfig.set_secret_key("secret key");
+      if (sessionToken) {
+        protoextconfig.set_session_token("session token");
+      }
     } else if (fetchCredentials) {
       filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
-      filter_config_->credentials_ =
-          std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
-              "access key", "secret key");
+
+      if (sessionToken) {
+        filter_config_->credentials_ =
+            std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
+                "access key", "secret key", "session token");
+      } else {
+        filter_config_->credentials_ =
+            std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
+                "access key", "secret key");
+      }
     }
 
     ON_CALL(
@@ -109,6 +121,19 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStream) {
   EXPECT_TRUE(headers.has("Authorization"));
 }
 
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithToken) {
+  setupRoute(true, false, true);
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+
+  // Check aws headers.
+  EXPECT_TRUE(headers.has("Authorization"));
+  EXPECT_EQ(headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(), "session token");
+}
+
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
   setupRoute(false, true);
 
@@ -121,6 +146,21 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
   EXPECT_TRUE(filter_config_->called_);
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
+}
+
+TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfigWithToken) {
+  setupRoute(false, true, true);
+
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+
+  EXPECT_TRUE(filter_config_->called_);
+  // Check aws headers.
+  EXPECT_TRUE(headers.has("Authorization"));
+  EXPECT_EQ(headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(), "session token");
 }
 
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {

@@ -76,10 +76,15 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
   const std::string *access_key{};
   const std::string *secret_key{};
+  const std::string *session_token{};
   if (protocol_options_->accessKey().has_value() &&
       protocol_options_->secretKey().has_value()) {
     access_key = &protocol_options_->accessKey().value();
     secret_key = &protocol_options_->secretKey().value();
+    // attempt to set session_token, ok if nil
+    if (protocol_options_->sessionToken().has_value()) {
+      session_token = &protocol_options_->sessionToken().value();
+    }
   } else if (filter_config_) {
     credentials_ = filter_config_->getCredentials();
     if (credentials_) {
@@ -90,6 +95,9 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
       if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
         access_key = &maybeAccessKeyId.value();
         secret_key = &maybeSecretAccessKey.value();
+      }
+      if (credentials_->sessionToken().has_value()) {
+        session_token = &credentials_->sessionToken().value();
       }
     }
   }
@@ -115,7 +123,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  aws_authenticator_.init(access_key, secret_key);
+  aws_authenticator_.init(access_key, secret_key, session_token);
   request_headers_ = &headers;
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
