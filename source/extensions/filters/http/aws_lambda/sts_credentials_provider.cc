@@ -37,7 +37,7 @@ public:
       : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback) {}
 
   StsCredentialsProvider::Callbacks* callbacks() const override { return callbacks_; }
-  StsFetcherPtr& fetcher() override { return fetcher_; }
+  StsFetcher& fetcher() override { return *fetcher_; }
 
   void cancel() override {
     fetcher_->cancel();
@@ -89,7 +89,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       ctximpl.callbacks()->onSuccess(it->second);
       return;        
     }
-    // token is considered expired, fallthrough to create a new one
+    // token is expired, fallthrough to create a new one
   }
 
   ctximpl.fetcher()->fetch(

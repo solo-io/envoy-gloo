@@ -74,7 +74,7 @@ public:
      *
      * @returns the fetcher.
      */
-    virtual StsFetcherPtr& fetcher() PURE;
+    virtual StsFetcher& fetcher() PURE;
 
     /**
      * Cancel any pending requests for this context.
