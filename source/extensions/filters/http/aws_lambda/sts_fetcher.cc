@@ -69,7 +69,6 @@ public:
 
   // HTTP async receive methods
   void onSuccess(const Http::AsyncClient::Request&, Http::ResponseMessagePtr&& response) override {
-    ENVOY_LOG(trace, "{}", __func__);
     complete_ = true;
     const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
     if (status_code == enumToInt(Http::Code::OK)) {
@@ -86,6 +85,7 @@ public:
     } else {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
+      ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
       failure_callback_(CredentialsFailureStatus::Network);
     }
     reset();
