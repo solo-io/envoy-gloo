@@ -51,17 +51,17 @@ private:
 
 void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
-  auto shared_this = shared_from_this();
-  file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
-    // TODO: we probably need to catch and handle an exception here.
-    const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
-    // TODO: check if web_token is valid
-    // TODO: stats here
-    shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
-      auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
-      tls_cache.setWebToken(web_token);
-    });
-  });
+  // auto shared_this = shared_from_this();
+  // file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
+  //   // TODO: we probably need to catch and handle an exception here.
+  //   const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
+  //   // TODO: check if web_token is valid
+  //   // TODO: stats here
+  //   shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
+  //     auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
+  //     tls_cache.setWebToken(web_token);
+  //   });
+  // });
 
 }
 
@@ -79,9 +79,9 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
   auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-
-  const auto it = tls_cache.credentialsCache().find(role_arn);
-  if (it != tls_cache.credentialsCache().end()) {
+  const auto& credential_cache = tls_cache.credentialsCache();
+  const auto it = credential_cache.find(role_arn);
+  if (it != credential_cache.end()) {
     // thing  exists
     const auto now = api_.timeSource().systemTime();
     // If the expiration time is more than a minute away, return it immediately
@@ -142,7 +142,8 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       
       // Success callback, save back to cache
       auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-      tls_cache.credentialsCache().emplace(role_arn, result);
+      const auto& credential_cache = tls_cache.credentialsCache();
+      credential_cache.emplace(role_arn, result);
       context->callbacks()->onSuccess(result);
     },
     [context](CredentialsFailureStatus reason) {

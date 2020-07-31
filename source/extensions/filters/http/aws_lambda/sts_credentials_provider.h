@@ -98,7 +98,7 @@ public:
 
   void setWebToken(absl::string_view web_token)  { web_token_ = std::string(web_token); };
   
-  std::unordered_map<std::string, StsCredentialsConstSharedPtr> credentialsCache() {return credentials_cache_;};
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr>& credentialsCache() {return credentials_cache_;};
 
 private:
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
@@ -109,8 +109,8 @@ private:
 };
 
 class StsCredentialsProviderImpl: public StsCredentialsProvider,
-                                  public Logger::Loggable<Logger::Id::aws>,
-                                  public std::enable_shared_from_this<StsCredentialsProviderImpl> {
+                                  public Logger::Loggable<Logger::Id::aws> {
+                                  // public std::enable_shared_from_this<StsCredentialsProviderImpl> {
 
 public:
 
