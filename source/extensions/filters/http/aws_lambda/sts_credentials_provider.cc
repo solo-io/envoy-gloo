@@ -79,7 +79,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
   auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-  const auto& credential_cache = tls_cache.credentialsCache();
+  auto& credential_cache = tls_cache.credentialsCache();
   const auto it = credential_cache.find(role_arn);
   if (it != credential_cache.end()) {
     // thing  exists
@@ -142,7 +142,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       
       // Success callback, save back to cache
       auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-      const auto& credential_cache = tls_cache.credentialsCache();
+      auto& credential_cache = tls_cache.credentialsCache();
       credential_cache.emplace(role_arn, result);
       context->callbacks()->onSuccess(result);
     },

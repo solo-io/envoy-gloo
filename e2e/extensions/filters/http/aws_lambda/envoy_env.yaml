@@ -98,7 +98,3 @@ static_resources:
       io.solo.aws_lambda:
         host: lambda.us-east-1.amazonaws.com
         region: us-east-1
-
-
-# (head=0x55555af7d100, N=23, start=0x7ffff47ffce8, end=0x7ffff47ffce0)
-# (head=0x55555af7d100, N=23, start=0x7ffff47ffce8, end=0x7ffff47ffce0)

@@ -65,6 +65,7 @@ Http::FilterHeadersStatus
 AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
                                bool end_stream) {
 
+  request_headers_ = &headers;
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
       SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
@@ -78,31 +79,14 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   if (state_ == State::Init) {
     state_ = State::Calling;
     context_ = filter_config_->getCredentials(protocol_options_, this);
-  } else if (state_ == State::Responded) {
+  } 
+
+  if (state_ == State::Responded) {
     // An error was found, and a direct reply was set, make sure to stop iteration
     return Http::FilterHeadersStatus::StopIteration;
-  }
+  } 
 
-  const std::string *access_key{};
-  const std::string *secret_key{};
-  const std::string *session_token{};
-
-  // context will be nullptr in the case that the credentials are synchronously available, and can be checked now.
-  if (context_ == nullptr) {
-    // Should never happen as onSuccess callback should set credentials_
-    ASSERT(credentials_ != nullptr);
-    const absl::optional<std::string> &maybeAccessKeyId =
-        credentials_->accessKeyId();
-    const absl::optional<std::string> &maybeSecretAccessKey =
-        credentials_->secretAccessKey();
-    if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
-      access_key = &maybeAccessKeyId.value();
-      secret_key = &maybeSecretAccessKey.value();
-    }
-    if (credentials_->sessionToken().has_value()) {
-      session_token = &credentials_->sessionToken().value();
-    }
-  } else {
+  if (context_ != nullptr) {
     // context exists, we're in async land
     // If the callback has not been procesed, stop iteration
     if (state_ != State::Complete) {
@@ -111,34 +95,6 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
       return Http::FilterHeadersStatus::StopIteration;
     }
   }
-
-  if ((access_key == nullptr) || (secret_key == nullptr)) {
-    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
-                                       RcDetails::get().CredentialsNotFoundBody,
-                                       nullptr, absl::nullopt,
-                                       RcDetails::get().CredentialsNotFound);
-    return Http::FilterHeadersStatus::StopIteration;
-  }
-
-  route_ = decoder_callbacks_->route();
-  // great! this is an aws cluster. get the function information:
-  function_on_route_ =
-      Http::Utility::resolveMostSpecificPerFilterConfig<AWSLambdaRouteConfig>(
-          SoloHttpFilterNames::get().AwsLambda, route_);
-
-  if (!function_on_route_) {
-    decoder_callbacks_->sendLocalReply(
-        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
-        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
-    return Http::FilterHeadersStatus::StopIteration;
-  }
-
-  aws_authenticator_.init(access_key, secret_key, session_token);
-  request_headers_ = &headers;
-
-  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
-
-  request_headers_->setReferencePath(function_on_route_->path());
 
   if (end_stream) {
     lambdafy();
@@ -150,11 +106,56 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
 void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credentials) {
   credentials_ = credentials;
-  context_ = nullptr;
   state_ = State::Complete;
   if (stopped_) {
     decoder_callbacks_->continueDecoding();
   }
+
+  const std::string *access_key{};
+  const std::string *secret_key{};
+  const std::string *session_token{};
+
+  const absl::optional<std::string> &maybeAccessKeyId =
+      credentials_->accessKeyId();
+  const absl::optional<std::string> &maybeSecretAccessKey =
+      credentials_->secretAccessKey();
+  if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
+    access_key = &maybeAccessKeyId.value();
+    secret_key = &maybeSecretAccessKey.value();
+  }
+  if (credentials_->sessionToken().has_value()) {
+    session_token = &credentials_->sessionToken().value();
+  }
+
+  if ((access_key == nullptr) || (secret_key == nullptr)) {
+    state_ = State::Responded;
+    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
+                                       RcDetails::get().CredentialsNotFoundBody,
+                                       nullptr, absl::nullopt,
+                                       RcDetails::get().CredentialsNotFound);
+    return;
+  }
+
+  route_ = decoder_callbacks_->route();
+  // great! this is an aws cluster. get the function information:
+  function_on_route_ =
+      Http::Utility::resolveMostSpecificPerFilterConfig<AWSLambdaRouteConfig>(
+          SoloHttpFilterNames::get().AwsLambda, route_);
+
+  if (!function_on_route_) {
+    state_ = State::Responded;
+    decoder_callbacks_->sendLocalReply(
+        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
+        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
+    
+    return;
+  }
+
+  aws_authenticator_.init(access_key, secret_key, session_token);
+
+  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
+
+  request_headers_->setReferencePath(function_on_route_->path());
 }
 
 //TODO: Use the failure status in the local reply
@@ -172,6 +173,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
   if (state_ == Calling) {
     return Http::FilterDataStatus::StopIterationAndBuffer;
+  } else if (state_ == Responded) {
+    return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
   if (!function_on_route_) {
@@ -195,6 +198,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 Http::FilterTrailersStatus
 AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
   if (state_ == State::Calling) {
+    return Http::FilterTrailersStatus::StopIteration;
+  } else if (state_ == Responded) {
     return Http::FilterTrailersStatus::StopIteration;
   }
 
