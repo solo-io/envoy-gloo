@@ -64,7 +64,7 @@ static_resources:
             config:
               service_account_credentials:
                 cluster: aws-sts
-                uri: sts.amazonaws.com
+                uri: https://sts.amazonaws.com
           - name: envoy.router
   clusters:
   - connect_timeout: 5.000s

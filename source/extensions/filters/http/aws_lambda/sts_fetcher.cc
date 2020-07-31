@@ -4,7 +4,8 @@
 #include "common/common/regex.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
-
+#include "common/http/utility.h"
+#include "common/buffer/buffer_impl.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -57,7 +58,7 @@ public:
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
     const absl::string_view body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
-    message->body()->add(body);
+    message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
     auto options = Http::AsyncClient::RequestOptions()
                        .setTimeout(std::chrono::milliseconds(
