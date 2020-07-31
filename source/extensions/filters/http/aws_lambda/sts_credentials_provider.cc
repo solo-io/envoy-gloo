@@ -145,7 +145,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
       tls_cache.credentialsCache().emplace(role_arn, result);
       context->callbacks()->onSuccess(result);
     },
-    [this, context](CredentialsFailureStatus reason) {
+    [context](CredentialsFailureStatus reason) {
       // unsuccessful, send back empty creds?
       context->callbacks()->onFailure(reason);
     }
