@@ -55,10 +55,12 @@ public:
 
     Http::RequestMessagePtr message = Http::Utility::prepareHeaders(uri);
     message->headers().setReferenceMethod(Http::Headers::get().MethodValues.Post);
+    message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
     const absl::string_view body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}", role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
+    message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
     auto options = Http::AsyncClient::RequestOptions()
                        .setTimeout(std::chrono::milliseconds(
@@ -69,7 +71,6 @@ public:
 
   // HTTP async receive methods
   void onSuccess(const Http::AsyncClient::Request&, Http::ResponseMessagePtr&& response) override {
-    ENVOY_LOG(trace, "{}", __func__);
     complete_ = true;
     const uint64_t status_code = Http::Utility::getResponseStatus(response->headers());
     if (status_code == enumToInt(Http::Code::OK)) {
@@ -86,6 +87,7 @@ public:
     } else {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
+      ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
       failure_callback_(CredentialsFailureStatus::Network);
     }
     reset();
