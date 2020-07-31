@@ -8,8 +8,8 @@
 
 #include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
-#include "test/extensions/filters/http/common/mock.h"
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
+#include "test/extensions/filters/http/common/mock.h"
 #include "test/mocks/http/mocks.h"
 #include "test/test_common/utility.h"
 
@@ -35,7 +35,7 @@ const std::string validResponse = R"(
     <Credentials>
       <AccessKeyId>some_access_key</AccessKeyId>
       <SecretAccessKey>some_secret_key</SecretAccessKey>
-      <SessionToken>some_web_token</SessionToken>
+      <SessionToken>some_session_token</SessionToken>
       <Expiration>2020-07-28T21:20:25Z</Expiration>
     </Credentials>
   </AssumeRoleWithWebIdentityResult>
@@ -55,18 +55,30 @@ public:
   }
 
   void init() {
-    EXPECT_CALL(api_.file_system_, fileExists(_)).Times(1).WillOnce(Return(true));
-    EXPECT_CALL(api_.file_system_, fileReadToEnd(_)).Times(1).WillOnce(Return("web_token"));
+    EXPECT_CALL(api_.file_system_, fileExists(_))
+        .Times(1)
+        .WillOnce(Return(true));
+    EXPECT_CALL(api_.file_system_, fileReadToEnd(_))
+        .Times(1)
+        .WillOnce(Return("web_token"));
+
+    watcher_ = new Filesystem::MockWatcher();
+    EXPECT_CALL(dispatcher_, createFilesystemWatcher_())
+        .WillOnce(Return(watcher_));
+    EXPECT_CALL(*watcher_, addWatch("test", _, _)).Times(1);
 
     setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
     setenv("AWS_ROLE_ARN", "test", 1);
-    sts_provider_ = StsCredentialsProviderImpl::create(config_, api_, thread_local_, dispatcher_);
+    sts_provider_ = StsCredentialsProviderImpl::create(
+        config_, api_, thread_local_, dispatcher_);
   }
 
-  envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials config_;
+  envoy::config::filter::http::aws_lambda::v2::
+      AWSLambdaConfig_ServiceAccountCredentials config_;
   testing::NiceMock<ThreadLocal::MockInstance> thread_local_;
   testing::NiceMock<Api::MockApi> api_;
   testing::NiceMock<Event::MockDispatcher> dispatcher_;
+  Filesystem::MockWatcher *watcher_;
   std::shared_ptr<StsCredentialsProvider> sts_provider_;
 };
 
@@ -79,8 +91,32 @@ TEST_F(StsCredentialsProviderTest, InitWithoutCrashing) {
 TEST_F(StsCredentialsProviderTest, TestSuccess2) {
   // Setup
   init();
-  absl::optional<std::string> role_arn = "yuval";
+  absl::optional<std::string> role_arn = "test";
   std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context, fetcher()).Times(1);
+
+  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback success,
+                           StsFetcher::FailureCallback) -> void {
+        EXPECT_CALL(*context, callbacks()).Times(1);
+
+        EXPECT_CALL(context->callbacks_, onSuccess(_))
+            .WillOnce(
+                Invoke([&](std::shared_ptr<
+                           const Envoy::Extensions::Common::Aws::Credentials>
+                               result) -> void {
+                  EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
+                  EXPECT_EQ(result->secretAccessKey().value(),
+                            "some_secret_key");
+                  EXPECT_EQ(result->sessionToken().value(),
+                            "some_session_token");
+                }));
+
+        success(&validResponse);
+      }));
+
   sts_provider_->find(role_arn, context);
 }
 
