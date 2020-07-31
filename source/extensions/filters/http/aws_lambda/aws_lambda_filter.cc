@@ -106,6 +106,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
 void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credentials) {
   credentials_ = credentials;
+  // Do not null context here; all hell will break loose.
   state_ = State::Complete;
   if (stopped_) {
     decoder_callbacks_->continueDecoding();
