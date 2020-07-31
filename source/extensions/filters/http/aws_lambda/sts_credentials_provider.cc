@@ -92,7 +92,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
     // token is expired, fallthrough to create a new one
   }
 
-  ctximpl.fetcher()->fetch(
+  ctximpl.fetcher().fetch(
     uri_, 
     role_arn, 
     tls_cache->webToken(), 

@@ -58,14 +58,16 @@ public:
     EXPECT_CALL(api_.file_system_, fileExists(_)).Times(1).WillOnce(Return(true));
     EXPECT_CALL(api_.file_system_, fileReadToEnd(_)).Times(1).WillOnce(Return("web_token"));
 
-    sts_provider_ = StsCredentialsProvider::create(config_, api_, thread_local_, dispatcher_);
+    setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
+    setenv("AWS_ROLE_ARN", "test", 1);
+    sts_provider_ = StsCredentialsProviderImpl::create(config_, api_, thread_local_, dispatcher_);
   }
 
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials config_;
   testing::NiceMock<ThreadLocal::MockInstance> thread_local_;
   testing::NiceMock<Api::MockApi> api_;
   testing::NiceMock<Event::MockDispatcher> dispatcher_;
-  std::unique_ptr<StsCredentialsProvider> sts_provider_;
+  std::shared_ptr<StsCredentialsProvider> sts_provider_;
 };
 
 // Test findByIssuer
