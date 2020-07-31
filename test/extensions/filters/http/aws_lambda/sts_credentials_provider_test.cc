@@ -69,7 +69,7 @@ public:
 };
 
 // Test findByIssuer
-TEST_F(StsCredentialsProviderTest, TestSuccess) {
+TEST_F(StsCredentialsProviderTest, InitWithoutCrashing) {
   // Setup
   init();
 }
