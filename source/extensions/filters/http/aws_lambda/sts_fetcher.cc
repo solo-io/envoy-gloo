@@ -84,7 +84,9 @@ public:
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty", __func__, uri_->uri());
         failure_callback_(CredentialsFailureStatus::Network);
       }
-    } else if ((status_code % 400) < 3) {
+    } else {
+      if ((status_code % 400) < 3) {
+
       // TODO: parse the error string example
       /*
         <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
@@ -96,11 +98,11 @@ public:
           <RequestId>72168399-bcdd-4248-bf57-bf5d4a6dc07d</RequestId>
         </ErrorResponse>
       */
+      }
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
       ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
       failure_callback_(CredentialsFailureStatus::Network);
-    } else {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
                 uri_->uri(), status_code);
       ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
