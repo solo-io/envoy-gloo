@@ -28,9 +28,6 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 
-constexpr char EXPIRATION_FORMAT[] = "%E4Y%m%dT%H%M%S%z";
-
-
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
   ContextImpl(Upstream::ClusterManager& cm, Api::Api& api, StsCredentialsProvider::Callbacks* callback)
@@ -130,7 +127,7 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
 
       SystemTime expiration_time;
       absl::Time absl_expiration_time;
-      if (absl::ParseTime(EXPIRATION_FORMAT, matched_expiration[1].str(), &absl_expiration_time, nullptr)) {
+      if (absl::ParseTime(absl::RFC3339_sec, matched_expiration[1].str(), &absl_expiration_time, nullptr)) {
         ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
         expiration_time = absl::ToChronoTime(absl_expiration_time);
       } else {

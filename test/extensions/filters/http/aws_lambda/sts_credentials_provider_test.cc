@@ -36,7 +36,20 @@ const std::string validResponse = R"(
       <AccessKeyId>some_access_key</AccessKeyId>
       <SecretAccessKey>some_secret_key</SecretAccessKey>
       <SessionToken>some_session_token</SessionToken>
-      <Expiration>2020-07-28T21:20:25Z</Expiration>
+      <Expiration>3000-07-28T21:20:25Z</Expiration>
+    </Credentials>
+  </AssumeRoleWithWebIdentityResult>
+</AssumeRoleWithWebIdentityResponse>
+)";
+
+const std::string validExpiredResponse = R"(
+<AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleWithWebIdentityResult>
+    <Credentials>
+      <AccessKeyId>some_access_key</AccessKeyId>
+      <SecretAccessKey>some_secret_key</SecretAccessKey>
+      <SessionToken>some_session_token</SessionToken>
+      <Expiration>2000-07-28T21:20:25Z</Expiration>
     </Credentials>
   </AssumeRoleWithWebIdentityResult>
 </AssumeRoleWithWebIdentityResponse>
@@ -82,27 +95,22 @@ public:
   std::shared_ptr<StsCredentialsProvider> sts_provider_;
 };
 
-// Test findByIssuer
-TEST_F(StsCredentialsProviderTest, InitWithoutCrashing) {
-  // Setup
-  init();
-}
-
-TEST_F(StsCredentialsProviderTest, TestSuccessCallback) {
+TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
   // Setup
   init();
   absl::optional<std::string> role_arn = "test";
-  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
-  EXPECT_CALL(*context, fetcher()).Times(1);
+  std::shared_ptr<MockStsContext> context_1 = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context_1, fetcher()).Times(1);
 
-  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+  // Fetch credentials first call as they are not in the cache
+  EXPECT_CALL(context_1->fetcher_, fetch(_, _, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
                            const absl::string_view, const absl::string_view,
                            StsFetcher::SuccessCallback success,
                            StsFetcher::FailureCallback) -> void {
-        EXPECT_CALL(*context, callbacks()).Times(1);
+        EXPECT_CALL(*context_1, callbacks()).Times(1);
 
-        EXPECT_CALL(context->callbacks_, onSuccess(_))
+        EXPECT_CALL(context_1->callbacks_, onSuccess(_))
             .WillOnce(
                 Invoke([&](std::shared_ptr<
                            const Envoy::Extensions::Common::Aws::Credentials>
@@ -117,24 +125,42 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallback) {
         success(&validResponse);
       }));
 
-  sts_provider_->find(role_arn, context);
+  sts_provider_->find(role_arn, context_1);
+
+  std::shared_ptr<MockStsContext> context_2 = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context_2, callbacks()).Times(1);
+
+  // Credentials are in cache, and not expired so return them
+  EXPECT_CALL(context_2->callbacks_, onSuccess(_))
+    .WillOnce(
+        Invoke([&](std::shared_ptr<
+                    const Envoy::Extensions::Common::Aws::Credentials>
+                        result) -> void {
+          EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
+          EXPECT_EQ(result->secretAccessKey().value(),
+                    "some_secret_key");
+          EXPECT_EQ(result->sessionToken().value(),
+                    "some_session_token");
+        }));
+  sts_provider_->find(role_arn, context_2);
 }
 
-TEST_F(StsCredentialsProviderTest, TestSuccessCache) {
+TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
   // Setup
   init();
   absl::optional<std::string> role_arn = "test";
-  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
-  EXPECT_CALL(*context, fetcher()).Times(1);
+  std::shared_ptr<MockStsContext> context_1 = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context_1, fetcher()).Times(1);
 
-  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+  // Fetch credentials first call as they are not in the cache
+  EXPECT_CALL(context_1->fetcher_, fetch(_, _, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
                            const absl::string_view, const absl::string_view,
                            StsFetcher::SuccessCallback success,
                            StsFetcher::FailureCallback) -> void {
-        EXPECT_CALL(*context, callbacks()).Times(1);
+        EXPECT_CALL(*context_1, callbacks()).Times(1);
 
-        EXPECT_CALL(context->callbacks_, onSuccess(_))
+        EXPECT_CALL(context_1->callbacks_, onSuccess(_))
             .WillOnce(
                 Invoke([&](std::shared_ptr<
                            const Envoy::Extensions::Common::Aws::Credentials>
@@ -146,12 +172,39 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCache) {
                             "some_session_token");
                 }));
 
-        success(&validResponse);
+        success(&validExpiredResponse);
       }));
 
-  sts_provider_->find(role_arn, context);
-}
+  sts_provider_->find(role_arn, context_1);
 
+  std::shared_ptr<MockStsContext> context_2 = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context_2, fetcher()).Times(1);
+
+  // Credentials are in the cache, but expired, so refetch
+  EXPECT_CALL(context_2->fetcher_, fetch(_, _, _, _, _))
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback success,
+                           StsFetcher::FailureCallback) -> void {
+        EXPECT_CALL(*context_2, callbacks()).Times(1);
+
+        EXPECT_CALL(context_2->callbacks_, onSuccess(_))
+            .WillOnce(
+                Invoke([&](std::shared_ptr<
+                           const Envoy::Extensions::Common::Aws::Credentials>
+                               result) -> void {
+                  EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
+                  EXPECT_EQ(result->secretAccessKey().value(),
+                            "some_secret_key");
+                  EXPECT_EQ(result->sessionToken().value(),
+                            "some_session_token");
+                }));
+
+        success(&validExpiredResponse);
+      }));
+
+  sts_provider_->find(role_arn, context_2);
+}
 
 TEST_F(StsCredentialsProviderTest, TestFailure) {
   // Setup
