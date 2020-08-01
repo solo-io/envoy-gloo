@@ -10,6 +10,8 @@ enum class CredentialsFailureStatus {
   Network,
   /* A failure occurred when trying to parse the retrieved STS credential data. */
   InvalidSts,
+  /* Token is expired. */
+  ExpiredToken,
 };
 
 } // namespace AwsLambda

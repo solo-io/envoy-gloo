@@ -92,7 +92,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     if (state_ != State::Complete) {
       ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
       stopped_ = true;
-      return Http::FilterHeadersStatus::StopIteration;
+      return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
     }
   }
 
@@ -108,9 +108,6 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
   credentials_ = credentials;
   // Do not null context here; all hell will break loose.
   state_ = State::Complete;
-  if (stopped_) {
-    decoder_callbacks_->continueDecoding();
-  }
 
   const std::string *access_key{};
   const std::string *secret_key{};
@@ -157,6 +154,11 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
 
   request_headers_->setReferencePath(function_on_route_->path());
+
+  if (stopped_) {
+    stopped_ = false;
+    decoder_callbacks_->continueDecoding();
+  }
 }
 
 //TODO: Use the failure status in the local reply

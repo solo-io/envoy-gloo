@@ -51,17 +51,17 @@ private:
 
 void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
-  // auto shared_this = shared_from_this();
-  // file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
-  //   // TODO: we probably need to catch and handle an exception here.
-  //   const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
-  //   // TODO: check if web_token is valid
-  //   // TODO: stats here
-  //   shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
-  //     auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
-  //     tls_cache.setWebToken(web_token);
-  //   });
-  // });
+  auto shared_this = shared_from_this();
+  file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
+    // TODO: we probably need to catch and handle an exception here.
+    const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
+    // TODO: check if web_token is valid
+    // TODO: stats here
+    shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
+      auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
+      tls_cache.setWebToken(web_token);
+    });
+  });
 
 }
 

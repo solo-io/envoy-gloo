@@ -109,8 +109,8 @@ private:
 };
 
 class StsCredentialsProviderImpl: public StsCredentialsProvider,
-                                  public Logger::Loggable<Logger::Id::aws> {
-                                  // public std::enable_shared_from_this<StsCredentialsProviderImpl> {
+                                  public Logger::Loggable<Logger::Id::aws>,
+                                  public std::enable_shared_from_this<StsCredentialsProviderImpl> {
 
 public:
 

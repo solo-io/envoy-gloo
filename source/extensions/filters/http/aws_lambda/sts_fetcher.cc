@@ -11,7 +11,10 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
+
 namespace {
+
+constexpr char ExpiredTokenError[] = "ExpiredTokenException";
 
 class StsFetcherImpl :  public StsFetcher,
                         public Logger::Loggable<Logger::Id::aws>,
@@ -89,22 +92,29 @@ public:
         const auto len = response->body()->length();
         const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
         ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__, status_code, body);
-      // TODO: parse the error string. Example:
-      /*
-        <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
-          <Error>
-            <Type>Sender</Type>
-            <Code>InvalidAction</Code>
-            <Message>Could not find operation AssumeRoleWithWebIdentity for version NO_VERSION_SPECIFIED</Message>
-          </Error>
-          <RequestId>72168399-bcdd-4248-bf57-bf5d4a6dc07d</RequestId>
-        </ErrorResponse>
-      */
+        // TODO: cover more AWS error cases
+        if (body.find(ExpiredTokenError) != std::string::npos) {
+          failure_callback_(CredentialsFailureStatus::Network);
+        } else {
+          failure_callback_(CredentialsFailureStatus::Network);
+        }
+        // TODO: parse the error string. Example:
+        /*
+          <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
+            <Error>
+              <Type>Sender</Type>
+              <Code>InvalidAction</Code>
+              <Message>Could not find operation AssumeRoleWithWebIdentity for version NO_VERSION_SPECIFIED</Message>
+            </Error>
+            <RequestId>72168399-bcdd-4248-bf57-bf5d4a6dc07d</RequestId>
+          </ErrorResponse>
+        */
+      } else {
+        ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
+                  uri_->uri(), status_code);
+        ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
+        failure_callback_(CredentialsFailureStatus::Network);
       }
-      ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: response status code {}", __func__,
-                uri_->uri(), status_code);
-      ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
-      failure_callback_(CredentialsFailureStatus::Network);
     }
     reset();
   }

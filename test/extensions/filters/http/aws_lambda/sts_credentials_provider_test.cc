@@ -88,7 +88,7 @@ TEST_F(StsCredentialsProviderTest, InitWithoutCrashing) {
   init();
 }
 
-TEST_F(StsCredentialsProviderTest, TestSuccess2) {
+TEST_F(StsCredentialsProviderTest, TestSuccessCallback) {
   // Setup
   init();
   absl::optional<std::string> role_arn = "test";
@@ -115,6 +115,65 @@ TEST_F(StsCredentialsProviderTest, TestSuccess2) {
                 }));
 
         success(&validResponse);
+      }));
+
+  sts_provider_->find(role_arn, context);
+}
+
+TEST_F(StsCredentialsProviderTest, TestSuccessCache) {
+  // Setup
+  init();
+  absl::optional<std::string> role_arn = "test";
+  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context, fetcher()).Times(1);
+
+  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback success,
+                           StsFetcher::FailureCallback) -> void {
+        EXPECT_CALL(*context, callbacks()).Times(1);
+
+        EXPECT_CALL(context->callbacks_, onSuccess(_))
+            .WillOnce(
+                Invoke([&](std::shared_ptr<
+                           const Envoy::Extensions::Common::Aws::Credentials>
+                               result) -> void {
+                  EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
+                  EXPECT_EQ(result->secretAccessKey().value(),
+                            "some_secret_key");
+                  EXPECT_EQ(result->sessionToken().value(),
+                            "some_session_token");
+                }));
+
+        success(&validResponse);
+      }));
+
+  sts_provider_->find(role_arn, context);
+}
+
+
+TEST_F(StsCredentialsProviderTest, TestFailure) {
+  // Setup
+  init();
+  absl::optional<std::string> role_arn = "test";
+  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
+  EXPECT_CALL(*context, fetcher()).Times(1);
+
+  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback,
+                           StsFetcher::FailureCallback failure) -> void {
+        EXPECT_CALL(*context, callbacks()).Times(1);
+
+        EXPECT_CALL(context->callbacks_, onFailure(_))
+            .WillOnce(
+                Invoke([&](CredentialsFailureStatus reason) -> void {
+                  EXPECT_EQ(reason, CredentialsFailureStatus::InvalidSts);
+                }));
+
+        failure(CredentialsFailureStatus::InvalidSts);
       }));
 
   sts_provider_->find(role_arn, context);
