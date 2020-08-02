@@ -40,7 +40,7 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
-    Upstream::ClusterManager &cluster_manager,
+    Upstream::ClusterManager &cluster_manager, StsCredentialsProviderFactory& sts_factory,
     Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
     const std::string &stats_prefix, Stats::Scope &scope, Api::Api& api,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
@@ -69,7 +69,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
       // use service account credentials provider
       auto service_account_creds = protoconfig.service_account_credentials();
-      sts_credentials_provider_ = StsCredentialsProviderImpl::create(service_account_creds, api, tls, dispatcher);
+      sts_credentials_provider_ = sts_factory.create(service_account_creds);
       break;
     }
     case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {

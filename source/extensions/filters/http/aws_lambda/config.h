@@ -77,8 +77,8 @@ class AWSLambdaConfigImpl
 public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider> &&provider,
-      Upstream::ClusterManager &cluster_manager,
-      Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
+      Upstream::ClusterManager &cluster_manager, StsCredentialsProviderFactory& sts_factory,
+      Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
       const std::string &stats_prefix, Stats::Scope &scope, Api::Api& api,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);

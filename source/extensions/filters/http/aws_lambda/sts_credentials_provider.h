@@ -203,6 +203,28 @@ private:
   Api::Api& api_;
 };
 
+
+class StsCredentialsProviderFactory {
+public:
+
+  virtual ~StsCredentialsProviderFactory() = default;
+
+  virtual StsCredentialsProviderPtr create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config) const PURE;
+
+};
+
+class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
+public:
+  StsCredentialsProviderFactoryImpl(Api::Api& api, ThreadLocal::SlotAllocator& tls, Event::Dispatcher &dispatcher) : api_(api), tls_(tls), dispatcher_(dispatcher) {};
+
+  StsCredentialsProviderPtr create(const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config) const override;
+
+private:
+  Api::Api& api_;
+  ThreadLocal::SlotAllocator& tls_;
+  Event::Dispatcher& dispatcher_;
+};
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions

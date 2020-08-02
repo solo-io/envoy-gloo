@@ -14,6 +14,12 @@ MockStsContext::MockStsContext() {
   ON_CALL(*this, callbacks()).WillByDefault(Return(&callbacks_));
 }
 
+MockStsCredentialsProviderFactory::MockStsCredentialsProviderFactory() = default;
+MockStsCredentialsProviderFactory::~MockStsCredentialsProviderFactory() = default;
+
+MockStsCredentialsProvider::MockStsCredentialsProvider() = default;
+MockStsCredentialsProvider::~MockStsCredentialsProvider() = default;
+
 MockUpstream::MockUpstream(Upstream::MockClusterManager& mock_cm, const std::string& status,
                            const std::string& response_body)
     : request_(&mock_cm.async_client_), status_(status), response_body_(response_body) {

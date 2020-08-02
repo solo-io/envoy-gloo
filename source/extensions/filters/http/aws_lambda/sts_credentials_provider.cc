@@ -154,6 +154,11 @@ ContextSharedPtr ContextFactory::create(StsCredentialsProvider::Callbacks* callb
   return std::make_shared<ContextImpl>(cm_, api_, callbacks);
 };
 
+StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::create(
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config) const {
+
+  return StsCredentialsProviderImpl::create(config, api_, tls_, dispatcher_);
+};
 
 } // namespace AwsLambda
 } // namespace HttpFilters

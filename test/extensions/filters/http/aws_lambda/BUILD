@@ -30,6 +30,7 @@ envoy_gloo_cc_test(
     srcs = ["config_test.cc"],
     repository = "@envoy",
     deps = [
+        ":aws_mocks",
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "@envoy//test/extensions/common/aws:aws_mocks",
         "@envoy//test/mocks/http:http_mocks",

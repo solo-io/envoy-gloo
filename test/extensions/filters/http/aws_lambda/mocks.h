@@ -32,6 +32,26 @@ public:
   MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status));
 };
 
+class MockStsCredentialsProviderFactory : public StsCredentialsProviderFactory {
+public:
+  MockStsCredentialsProviderFactory();
+  ~MockStsCredentialsProviderFactory() override;
+
+  MOCK_METHOD(
+      StsCredentialsProviderPtr, create,
+      (const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config), (const, override));
+};
+
+class MockStsCredentialsProvider : public StsCredentialsProvider {
+public:
+  MockStsCredentialsProvider();
+  ~MockStsCredentialsProvider() override;
+
+  MOCK_METHOD(
+      void, find,
+      (absl::optional<std::string> role_arn, ContextSharedPtr context));
+};
+
 class MockStsContext : public StsCredentialsProvider::Context {
 public:
   MockStsContext();
