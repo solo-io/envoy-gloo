@@ -82,9 +82,10 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
     // thing  exists
     const auto now = api_.timeSource().systemTime();
     // If the expiration time is more than a minute away, return it immediately
-    if (it->second->expirationTime() - now > REFRESH_GRACE_PERIOD) {
+    auto time_left = it->second->expirationTime() - now;
+    if (time_left > REFRESH_GRACE_PERIOD) {
       ctximpl.callbacks()->onSuccess(it->second);
-      return;        
+      return;
     }
     // token is expired, fallthrough to create a new one
   }

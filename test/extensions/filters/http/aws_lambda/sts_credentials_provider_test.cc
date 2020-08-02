@@ -12,6 +12,7 @@
 #include "test/extensions/filters/http/common/mock.h"
 #include "test/mocks/http/mocks.h"
 #include "test/test_common/utility.h"
+#include "test/test_common/simulated_time_system.h"
 
 using testing::_;
 using testing::AtLeast;
@@ -36,11 +37,21 @@ const std::string valid_response = R"(
       <AccessKeyId>some_access_key</AccessKeyId>
       <SecretAccessKey>some_secret_key</SecretAccessKey>
       <SessionToken>some_session_token</SessionToken>
-      <Expiration>3000-07-28T21:20:25Z</Expiration>
+      <Expiration>2100-07-28T21:20:25Z</Expiration>
     </Credentials>
   </AssumeRoleWithWebIdentityResult>
 </AssumeRoleWithWebIdentityResponse>
 )";
+
+/*
+time since epoch. to change it, do this in python:
+
+from datetime import datetime, timezone
+d = datetime.strptime('2100-07-28T21:20:25Z', '%Y-%m-%dT%H:%M:%SZ')
+d = d.replace(tzinfo=timezone.utc)
+d.timestamp()
+*/
+std::chrono::seconds expiry_time(4120492825);
 
 const std::string valid_expired_response = R"(
 <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
@@ -55,13 +66,14 @@ const std::string valid_expired_response = R"(
 </AssumeRoleWithWebIdentityResponse>
 )";
 
+
 const std::string service_account_credentials_config = R"(
 cluster: test
 uri: https://foo.com
 timeout: 1s
 )";
 
-class StsCredentialsProviderTest : public testing::Test {
+class StsCredentialsProviderTest : public testing::Test, public Event::TestUsingSimulatedTime {
 public:
   void SetUp() override {
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
@@ -228,7 +240,54 @@ TEST_F(StsCredentialsProviderTest, TestFailure) {
 
         failure(CredentialsFailureStatus::InvalidSts);
       }));
+  sts_provider_->find(role_arn, context);
+}
 
+TEST_F(StsCredentialsProviderTest, TestFullFlow) {
+  // Setup
+  init();
+  absl::optional<std::string> role_arn = "test";
+  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
+
+  // first fetch
+  EXPECT_CALL(*context, fetcher()).Times(1);
+  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback success,
+                           StsFetcher::FailureCallback) -> void {
+        EXPECT_CALL(*context, callbacks()).Times(1);
+        EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
+        success(&valid_response);
+      }));
+
+  sts_provider_->find(role_arn, context);
+
+  // make sure cache is engaged before refresh time
+  EXPECT_CALL(*context, fetcher()).Times(0);
+  EXPECT_CALL(*context, callbacks()).Times(1);
+  EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
+  // set time to just before expiry minus margin
+  auto just_before_expiry = expiry_time - std::chrono::minutes(5) - std::chrono::milliseconds(1);
+  // this converts duration to nanoseconds, so can't go too far into the future.
+  // specifically, not after 2262
+  std::chrono::system_clock::time_point sys_time(just_before_expiry);
+  simTime().setSystemTime(sys_time);
+  sts_provider_->find(role_arn, context);
+
+  // check that the check expiry works:
+  // set time to exactly expiry minus margin
+  simTime().setSystemTime(SystemTime(expiry_time - std::chrono::minutes(5)));
+  EXPECT_CALL(*context, fetcher()).Times(1);
+  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
+    .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                          const absl::string_view, const absl::string_view,
+                          StsFetcher::SuccessCallback success,
+                          StsFetcher::FailureCallback) -> void {
+      EXPECT_CALL(*context, callbacks()).Times(1);
+      EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
+      success(&valid_response);
+    }));
   sts_provider_->find(role_arn, context);
 }
 
