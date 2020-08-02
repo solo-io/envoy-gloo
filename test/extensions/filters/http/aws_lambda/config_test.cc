@@ -229,17 +229,17 @@ TEST_F(ConfigTest, WithStsCreds) {
   auto cred_provider = std::make_unique<
       NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
 
-  AWSLambdaConfigImpl config(std::move(cred_provider), context_.cluster_manager_,  sts_factory_, context_.dispatcher_,
-                             context_.thread_local_, "prefix.", stats_, context_.api_,
-                             protoconfig);
-
-  NiceMock<MockStsCallbacks> callbacks;
-
   auto sts_cred_provider = std::make_shared<
       NiceMock<MockStsCredentialsProvider>>();
 
   EXPECT_CALL(sts_factory_, create(_)).
     WillOnce(Return(sts_cred_provider));
+
+  AWSLambdaConfigImpl config(std::move(cred_provider), context_.cluster_manager_,  sts_factory_, context_.dispatcher_,
+                             context_.thread_local_, "prefix.", stats_, context_.api_,
+                             protoconfig);
+
+  NiceMock<MockStsCallbacks> callbacks;
 
 
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config = std::make_shared<const AWSLambdaProtocolExtensionConfig>(protoextconfig);
@@ -248,8 +248,8 @@ TEST_F(ConfigTest, WithStsCreds) {
     WillOnce(Invoke([&](absl::optional<std::string> role_arn_arg, ContextSharedPtr) -> void {
       EXPECT_EQ(ext_config->roleArn().value(), role_arn_arg);
     }));
-    
-  EXPECT_NE(nullptr, config.getCredentials(ext_config, &callbacks));
+  auto ptr = config.getCredentials(ext_config, &callbacks);
+  EXPECT_NE(nullptr, ptr.get());
 }
 
 } // namespace AwsLambda
