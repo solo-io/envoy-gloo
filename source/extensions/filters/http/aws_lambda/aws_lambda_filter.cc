@@ -88,13 +88,18 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
   if (context_ != nullptr) {
     // context exists, we're in async land
-    // If the callback has not been procesed, stop iteration
+    // If the callback has not been processed, stop iteration
     if (state_ != State::Complete) {
       ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
       stopped_ = true;
       end_stream_ = end_stream;
       return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
     }
+  }
+  
+  if (state_ == State::Responded) {
+    // if we already responded with local reply, stop iteration.
+    return Http::FilterHeadersStatus::StopIteration;
   }
 
   if (end_stream) {
@@ -156,12 +161,11 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
 
   request_headers_->setReferencePath(function_on_route_->path());
 
-  if (end_stream_) {
-    // edge case where header only request was stopped, but now needs to be lambdafied.
-    lambdafy();
-  }
-
   if (stopped_) {
+    if (end_stream_) {
+      // edge case where header only request was stopped, but now needs to be lambdafied.
+      lambdafy();
+    }
     stopped_ = false;
     decoder_callbacks_->continueDecoding();
   }

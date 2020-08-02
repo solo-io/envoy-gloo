@@ -31,7 +31,7 @@ public:
   ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig, StsCredentialsProvider::Callbacks* callbacks) const override {
     called_ = true;
     if (credentials_ == nullptr) {
-      callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>());  
+      callbacks->onFailure(CredentialsFailureStatus::Network);
     } else {
       callbacks->onSuccess(credentials_);
     }
