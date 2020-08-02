@@ -92,6 +92,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     if (state_ != State::Complete) {
       ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
       stopped_ = true;
+      end_stream_ = end_stream;
       return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
     }
   }
@@ -154,6 +155,11 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
 
   request_headers_->setReferencePath(function_on_route_->path());
+
+  if (end_stream_) {
+    // edge case where header only request was stopped, but now needs to be lambdafied.
+    lambdafy();
+  }
 
   if (stopped_) {
     stopped_ = false;

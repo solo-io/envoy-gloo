@@ -86,7 +86,7 @@ public:
         failure_callback_(CredentialsFailureStatus::Network);
       }
     } else {
-      if ((status_code % 400) < 3 && response->body()) {
+      if ((status_code % 400) <= 3 && response->body()) {
         const auto len = response->body()->length();
         const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
         ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__, status_code, body);
