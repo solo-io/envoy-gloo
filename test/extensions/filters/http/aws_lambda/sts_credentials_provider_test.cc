@@ -29,7 +29,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-const std::string validResponse = R"(
+const std::string valid_response = R"(
 <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <AssumeRoleWithWebIdentityResult>
     <Credentials>
@@ -42,7 +42,7 @@ const std::string validResponse = R"(
 </AssumeRoleWithWebIdentityResponse>
 )";
 
-const std::string validExpiredResponse = R"(
+const std::string valid_expired_response = R"(
 <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <AssumeRoleWithWebIdentityResult>
     <Credentials>
@@ -122,7 +122,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
                             "some_session_token");
                 }));
 
-        success(&validResponse);
+        success(&valid_response);
       }));
 
   sts_provider_->find(role_arn, context_1);
@@ -172,7 +172,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
                             "some_session_token");
                 }));
 
-        success(&validExpiredResponse);
+        success(&valid_expired_response);
       }));
 
   sts_provider_->find(role_arn, context_1);
@@ -200,7 +200,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
                             "some_session_token");
                 }));
 
-        success(&validExpiredResponse);
+        success(&valid_expired_response);
       }));
 
   sts_provider_->find(role_arn, context_2);

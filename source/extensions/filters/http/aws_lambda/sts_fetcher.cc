@@ -14,8 +14,6 @@ namespace AwsLambda {
 
 namespace {
 
-constexpr char ExpiredTokenError[] = "ExpiredTokenException";
-
 class StsFetcherImpl :  public StsFetcher,
                         public Logger::Loggable<Logger::Id::aws>,
                         public Http::AsyncClient::Callbacks {
@@ -51,7 +49,7 @@ public:
       ENVOY_LOG(error, "{}: assume role with token [uri = {}] failed: [cluster = {}] is not configured",
                 __func__, uri.uri(), uri.cluster());
       complete_ = true;
-      failure_callback_(CredentialsFailureStatus::Network);
+      failure_callback_(CredentialsFailureStatus::ClusterNotFound);
       reset();
       return;
     }
@@ -61,7 +59,7 @@ public:
     message->headers().setContentType(Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(api_.timeSource().systemTime().time_since_epoch()).count();
     // TODO: url-encode the body
-    const std::string body = fmt::format("Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}&Version=2011-06-15", role_arn, now, web_token);
+    const std::string body = fmt::format(StsFormatString, role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     message->headers().setContentLength(body.length());
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start", uri_->uri());
@@ -94,7 +92,7 @@ public:
         ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__, status_code, body);
         // TODO: cover more AWS error cases
         if (body.find(ExpiredTokenError) != std::string::npos) {
-          failure_callback_(CredentialsFailureStatus::Network);
+          failure_callback_(CredentialsFailureStatus::ExpiredToken);
         } else {
           failure_callback_(CredentialsFailureStatus::Network);
         }

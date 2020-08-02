@@ -12,6 +12,8 @@ enum class CredentialsFailureStatus {
   InvalidSts,
   /* Token is expired. */
   ExpiredToken,
+  /* Token is expired. */
+  ClusterNotFound,
 };
 
 } // namespace AwsLambda

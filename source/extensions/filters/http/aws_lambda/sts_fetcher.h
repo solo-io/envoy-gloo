@@ -12,7 +12,11 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-
+namespace {
+  constexpr char StsFormatString[] = "Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}&Version=2011-06-15";
+  
+  constexpr char ExpiredTokenError[] = "ExpiredTokenException";
+}
 
 class StsCredentials : public Extensions::Common::Aws::Credentials {
 public:
