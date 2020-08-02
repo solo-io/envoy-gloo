@@ -1,4 +1,5 @@
 bazel-*
+ci/envoy.stripped
 generated
 .vscode/
 compile_commands.json

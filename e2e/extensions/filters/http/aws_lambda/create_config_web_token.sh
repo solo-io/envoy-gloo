@@ -96,7 +96,8 @@ static_resources:
         port_value: 443
     name: aws-sts
     type: LOGICAL_DNS
-    tls_context: {}
+    tls_context:
+      sni: sts.amazonaws.com
   - connect_timeout: 5.000s
     hosts:
     - socket_address:

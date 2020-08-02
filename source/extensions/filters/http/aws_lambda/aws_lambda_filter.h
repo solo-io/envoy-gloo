@@ -76,8 +76,13 @@ private:
   ContextSharedPtr context_;
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
+  // The state of the get credentials request. 
   State state_ = Init;
+  // Whether or not iteration has been stopped to wait for the credentials request
   bool stopped_ = false;
+
+  // if end_stream_is true before stopping iteration
+  bool end_stream_;
 };
 
 } // namespace AwsLambda
