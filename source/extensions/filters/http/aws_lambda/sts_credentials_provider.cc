@@ -12,7 +12,12 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
-  
+
+
+namespace {
+  constexpr char AWS_ROLE_ARN[] = "AWS_ROLE_ARN";
+  constexpr char AWS_WEB_IDENTITY_TOKEN_FILE[] = "AWS_WEB_IDENTITY_TOKEN_FILE";
+
 /*
   * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum lifespan of 15 minutes.
   * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
@@ -27,6 +32,8 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
     std::chrono::minutes(10);
 
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
+}
+
 
 class ContextImpl : public StsCredentialsProvider::Context {
 public:
@@ -46,6 +53,47 @@ private:
 };
 
 
+StsCredentialsProviderImpl::StsCredentialsProviderImpl(
+  const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config,
+  Api::Api& api, ThreadLocal::SlotAllocator& tls, Event::Dispatcher &dispatcher) : api_(api), config_(config), 
+  default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
+  token_file_(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))), tls_slot_(tls.allocateSlot()),
+  file_watcher_(dispatcher.createFilesystemWatcher()) {
+
+  uri_.set_cluster(config_.cluster());
+  uri_.set_uri(config_.uri());
+  // TODO: Figure out how to get this to compile, timeout is not all that important right now
+  // uri_.set_allocated_timeout(config_.mutable_timeout())
+
+  // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS credentials to be enabled
+  if (token_file_ == "") {
+    throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_WEB_IDENTITY_TOKEN_FILE));
+  }
+  if (default_role_arn_ == "") {
+    throw EnvoyException(fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
+  }
+  // File must exist on system
+  if (!api_.fileSystem().fileExists(token_file_)) {
+    throw EnvoyException(fmt::format("Web token file {} does not exist", token_file_));
+  }
+
+  const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
+  // File should not be empty
+  if (web_token == "") {
+    throw EnvoyException(fmt::format("Web token file {} exists but is empty", token_file_));
+  }
+
+  // create a thread local cache for the provider
+  tls_slot_->set([web_token](Event::Dispatcher &) {
+    return std::make_shared<ThreadLocalStsCache>(web_token);
+  });
+
+  // Initialize regex strings, should never fail
+  regex_access_key_ = Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
+  regex_secret_key_ = Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
+  regex_session_token_ = Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
+  regex_expiration_ = Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
+}
 void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
   auto shared_this = shared_from_this();
