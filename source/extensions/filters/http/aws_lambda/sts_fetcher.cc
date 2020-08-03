@@ -99,7 +99,7 @@ public:
         failure_callback_(CredentialsFailureStatus::Network);
       }
     } else {
-      if ((status_code % 400) <= 3 && response->body()) {
+      if ((status_code >= 400) && (status_code <= 403) && response->body()) {
         const auto len = response->body()->length();
         const auto body = absl::string_view(
             static_cast<char *>(response->body()->linearize(len)), len);
