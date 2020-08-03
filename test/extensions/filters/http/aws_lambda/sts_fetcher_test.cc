@@ -78,8 +78,8 @@ TEST_F(StsFetcherTest, TestGetSuccess) {
     uri_, 
     role_arn, 
     web_token, 
-    [&](const std::string* body){
-      EXPECT_EQ(*body, valid_response);
+    [&](const absl::string_view body){
+      EXPECT_EQ(body, valid_response);
     }, 
     [&](CredentialsFailureStatus){}
   );
@@ -96,7 +96,7 @@ TEST_F(StsFetcherTest, TestGet503) {
     uri_, 
     role_arn, 
     web_token, 
-    [&](const std::string*){}, 
+    [&](const absl::string_view){}, 
     [&](CredentialsFailureStatus status){
       EXPECT_EQ(status, CredentialsFailureStatus::Network);
     }
@@ -114,7 +114,7 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
     uri_, 
     role_arn, 
     web_token, 
-    [&](const std::string*){}, 
+    [&](const absl::string_view){}, 
     [&](CredentialsFailureStatus status){
       EXPECT_EQ(status, CredentialsFailureStatus::ExpiredToken);
     }
@@ -132,7 +132,7 @@ TEST_F(StsFetcherTest, TestHttpFailure) {
     uri_, 
     role_arn, 
     web_token, 
-    [&](const std::string*){}, 
+    [&](const absl::string_view){}, 
     [&](CredentialsFailureStatus status){
       EXPECT_EQ(status, CredentialsFailureStatus::Network);
     }
@@ -152,7 +152,7 @@ TEST_F(StsFetcherTest, TestCancel) {
     uri_, 
     role_arn, 
     web_token, 
-    [&](const std::string* ){},
+    [&](const absl::string_view ){},
     [&](CredentialsFailureStatus ){}
   );
   // Proper cancel

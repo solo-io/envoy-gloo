@@ -164,10 +164,10 @@ private:
     });
 
     // Initialize regex strings, should never fail
-    access_key_regex_ = Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-    secret_key_regex_ = Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
-    session_token_regex_ = Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
-    expiration_regex_ = Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
+    regex_access_key_ = Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
+    regex_secret_key_ = Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
+    regex_session_token_ = Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
+    regex_expiration_ = Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
   };
   
   void init();
@@ -180,10 +180,10 @@ private:
   envoy::config::core::v3::HttpUri uri_;
   ThreadLocal::SlotPtr tls_slot_;
 
-  std::regex access_key_regex_;
-  std::regex secret_key_regex_;
-  std::regex session_token_regex_;
-  std::regex expiration_regex_;
+  std::regex regex_access_key_;
+  std::regex regex_secret_key_;
+  std::regex regex_session_token_;
+  std::regex regex_expiration_;
 
   Envoy::Filesystem::WatcherPtr file_watcher_;
 };

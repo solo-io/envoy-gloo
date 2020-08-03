@@ -50,16 +50,18 @@ void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
   auto shared_this = shared_from_this();
   file_watcher_->addWatch(token_file_, Filesystem::Watcher::Events::Modified, [shared_this](uint32_t) {
-    // TODO: we probably need to catch and handle an exception here.
-    const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
-    // TODO: check if web_token is valid
-    // TODO: stats here
-    shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
-      auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
-      tls_cache.setWebToken(web_token);
-    });
+    try {
+      const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(shared_this->token_file_);
+      // TODO: check if web_token is valid
+      // TODO: stats here
+      shared_this->tls_slot_->runOnAllThreads([shared_this, web_token](){
+        auto& tls_cache = shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
+        tls_cache.setWebToken(web_token);
+      });
+  } catch (const EnvoyException& e) {
+      ENVOY_LOG_TO_LOGGER(Envoy::Logger::Registry::getLog(Logger::Id::aws), warn, "{}: Exception while reading file during watch ({}): {}", __func__, shared_this->token_file_, e.what());
+  }
   });
-
 }
 
 void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context) {
@@ -94,49 +96,42 @@ void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, 
     uri_, 
     role_arn, 
     tls_cache.webToken(), 
-    [this, context, role_arn](const std::string* body) {
+    [this, context, role_arn](const absl::string_view body) {
       ASSERT(body != nullptr);
 
-      //TODO: (yuval): create utility function for this regex search
-      std::smatch matched_access_key;
-      std::regex_search(*body, matched_access_key, access_key_regex_);
-      if (!(matched_access_key.size() > 1)) {
-        ENVOY_LOG(trace, "response body did not contain access_key");
-        context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
+      // using a macro as we need to return on error
+      // TODO(yuval-k): we can use string_view instead of string when we upgrade to newer absl.
+      #define GET_PARAM(X) std::string X; \
+      { \
+      std::match_results<absl::string_view::const_iterator> matched; \
+      bool result = std::regex_search(body.begin(), body.end(), matched, regex_##X##_); \
+      if (!result || !(matched.size() != 1)) { \
+        ENVOY_LOG(trace, "response body did not contain " #X); \
+        context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts); \
+        return; \
+      } \
+      const auto &sub_match = matched[1]; \
+      decltype(X) matched_sv(sub_match.first, sub_match.length()); \
+      X = std::move(matched_sv); \
       }
 
-      std::smatch matched_secret_key;
-      std::regex_search(*body, matched_secret_key, secret_key_regex_);
-      if (!(matched_secret_key.size() > 1)) {
-        ENVOY_LOG(trace, "response body did not contain secret_key");
-        context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
-      }
-      
-      std::smatch matched_session_token;
-      std::regex_search(*body, matched_session_token, session_token_regex_);
-      if (!(matched_session_token.size() > 1)) {
-        ENVOY_LOG(trace, "response body did not contain session_token");
-        context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
-      }
-      
-      std::smatch matched_expiration;
-      std::regex_search(*body, matched_expiration, expiration_regex_);
-      if (!(matched_expiration.size() > 1)) {
-        ENVOY_LOG(trace, "response body did not contain expiration");
-        context->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);
-      }
+      GET_PARAM(access_key);
+      GET_PARAM(secret_key);
+      GET_PARAM(session_token);
+      GET_PARAM(expiration);
 
       SystemTime expiration_time;
       absl::Time absl_expiration_time;
-      if (absl::ParseTime(absl::RFC3339_sec, matched_expiration[1].str(), &absl_expiration_time, nullptr)) {
+      std::string error;
+      if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time, &error)) {
         ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
         expiration_time = absl::ToChronoTime(absl_expiration_time);
       } else {
         expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
-        ENVOY_LOG(trace, "Unable to determine expiration time from STS credentials result, using default");
+        ENVOY_LOG(trace, "Unable to determine expiration time from STS credentials result (error: {}), using default", error);
       }
 
-      StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(matched_access_key[1].str(), matched_secret_key[1].str(), matched_session_token[1].str(), expiration_time);
+      StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(access_key, secret_key, session_token, expiration_time);
       
       // Success callback, save back to cache
       auto& tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
