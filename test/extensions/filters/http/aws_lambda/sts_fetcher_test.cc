@@ -121,25 +121,6 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
   );
 }
 
-// TEST_F(StsFetcherTest, TestGetInvalidJwks) {
-//   // Setup
-//   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200", "invalid");
-//   MockJwksReceiver receiver;
-//   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_));
-//   EXPECT_TRUE(fetcher != nullptr);
-//   EXPECT_CALL(receiver, onJwksSuccessImpl(testing::_)).Times(0);
-//   EXPECT_CALL(receiver, onJwksError(StsFetcher::JwksReceiver::Failure::InvalidJwks)).Times(1);
-
-//   // Act
-//   fetcher->fetch(
-//     uri_, 
-//     role_arn, 
-//     web_token, 
-//     [&](const std::string* body){}, 
-//     [&](CredentialsFailureStatus status){},
-//   );
-// }
-
 TEST_F(StsFetcherTest, TestHttpFailure) {
   // Setup
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_,

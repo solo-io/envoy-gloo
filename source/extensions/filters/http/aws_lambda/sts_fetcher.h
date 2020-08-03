@@ -61,8 +61,10 @@ public:
    * a callback or `cancel()` is invoked, no
    * additional `fetch()` may be issued.
    * @param uri the uri to retrieve the jwks from.
-   * @param parent_span the active span to create children under
-   * @param receiver the receiver of the fetched JWKS or error.
+   * @param role_arn the role_arn which of the role to assume
+   * @param web_token the token to authenticate with
+   * @param success the cb called on successful role assumption
+   * @param failure the cb called on failed role assumption
    */
   virtual void fetch(const envoy::config::core::v3::HttpUri& uri,
                       const absl::string_view role_arn,
@@ -72,6 +74,7 @@ public:
   /*
    * Factory method for creating a StsFetcher.
    * @param cm the cluster manager to use during Sts retrieval
+   * @param api the api instance
    * @return a StsFetcher instance
    */
   static StsFetcherPtr create(Upstream::ClusterManager& cm, Api::Api& api);
