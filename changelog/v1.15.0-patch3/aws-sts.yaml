@@ -1,0 +1,5 @@
+changelog:
+- type: FIX
+  description: Support assuming IAM Role using STS for AWS injected pods using AWS_ROLE_ARN and AWS_WEB_IDENTITY_TOKEN_FILE environment variables.
+  issueLink: https://github.com/solo-io/gloo/issues/3309
+  resolvesIssue: false

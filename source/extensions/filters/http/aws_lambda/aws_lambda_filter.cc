@@ -54,9 +54,9 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 TimeSource &time_source,
+                                 Api::Api &api,
                                  AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(time_source), cluster_manager_(cluster_manager),
+    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),
       filter_config_(filter_config) {}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
@@ -64,7 +64,6 @@ AWSLambdaFilter::~AWSLambdaFilter() {}
 Http::FilterHeadersStatus
 AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
                                bool end_stream) {
-
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
       SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
@@ -74,41 +73,8 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     return Http::FilterHeadersStatus::Continue;
   }
 
-  const std::string *access_key{};
-  const std::string *secret_key{};
-  const std::string *session_token{};
-  if (protocol_options_->accessKey().has_value() &&
-      protocol_options_->secretKey().has_value()) {
-    access_key = &protocol_options_->accessKey().value();
-    secret_key = &protocol_options_->secretKey().value();
-    // attempt to set session_token, ok if nil
-    if (protocol_options_->sessionToken().has_value()) {
-      session_token = &protocol_options_->sessionToken().value();
-    }
-  } else if (filter_config_) {
-    credentials_ = filter_config_->getCredentials();
-    if (credentials_) {
-      const absl::optional<std::string> &maybeAccessKeyId =
-          credentials_->accessKeyId();
-      const absl::optional<std::string> &maybeSecretAccessKey =
-          credentials_->secretAccessKey();
-      if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
-        access_key = &maybeAccessKeyId.value();
-        secret_key = &maybeSecretAccessKey.value();
-      }
-      if (credentials_->sessionToken().has_value()) {
-        session_token = &credentials_->sessionToken().value();
-      }
-    }
-  }
-
-  if ((access_key == nullptr) || (secret_key == nullptr)) {
-    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
-                                       RcDetails::get().CredentialsNotFoundBody,
-                                       nullptr, absl::nullopt,
-                                       RcDetails::get().CredentialsNotFound);
-    return Http::FilterHeadersStatus::StopIteration;
-  }
+  request_headers_ = &headers;
+  end_stream_ = end_stream;
 
   route_ = decoder_callbacks_->route();
   // great! this is an aws cluster. get the function information:
@@ -117,18 +83,34 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
           SoloHttpFilterNames::get().AwsLambda, route_);
 
   if (!function_on_route_) {
+    state_ = State::Responded;
     decoder_callbacks_->sendLocalReply(
         Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
         nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  aws_authenticator_.init(access_key, secret_key, session_token);
-  request_headers_ = &headers;
+  // If the state is still the initial, attempt to get credentials
+  ASSERT(state_ == State::Init);
+  state_ = State::Calling;
+  context_ = filter_config_->getCredentials(protocol_options_, this);
 
-  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
+  if (state_ == State::Responded) {
+    // An error was found, and a direct reply was set, make sure to stop
+    // iteration
+    return Http::FilterHeadersStatus::StopIteration;
+  }
 
-  request_headers_->setReferencePath(function_on_route_->path());
+  if (context_ != nullptr) {
+    // context exists, we're in async land
+    // If the callback has not been processed, stop iteration
+    if (state_ != State::Complete) {
+      ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials",
+                __func__);
+      stopped_ = true;
+      return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
+    }
+  }
 
   if (end_stream) {
     lambdafy();
@@ -138,17 +120,81 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
+void AWSLambdaFilter::onSuccess(
+    std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+        credentials) {
+  credentials_ = credentials;
+  // Do not null context here; all hell will break loose.
+  state_ = State::Complete;
+
+  const std::string *access_key{};
+  const std::string *secret_key{};
+  const std::string *session_token{};
+
+  const absl::optional<std::string> &maybeAccessKeyId =
+      credentials_->accessKeyId();
+  const absl::optional<std::string> &maybeSecretAccessKey =
+      credentials_->secretAccessKey();
+  if (maybeAccessKeyId.has_value() && maybeSecretAccessKey.has_value()) {
+    access_key = &maybeAccessKeyId.value();
+    secret_key = &maybeSecretAccessKey.value();
+  }
+  if (credentials_->sessionToken().has_value()) {
+    session_token = &credentials_->sessionToken().value();
+  }
+
+  if ((access_key == nullptr) || (secret_key == nullptr)) {
+    state_ = State::Responded;
+    decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
+                                       RcDetails::get().CredentialsNotFoundBody,
+                                       nullptr, absl::nullopt,
+                                       RcDetails::get().CredentialsNotFound);
+    return;
+  }
+
+  aws_authenticator_.init(access_key, secret_key, session_token);
+
+  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
+
+  request_headers_->setReferencePath(function_on_route_->path());
+
+  if (stopped_) {
+    if (end_stream_) {
+      // edge case where header only request was stopped, but now needs to be
+      // lambdafied.
+      lambdafy();
+    }
+    stopped_ = false;
+    decoder_callbacks_->continueDecoding();
+  }
+}
+
+// TODO: Use the failure status in the local reply
+void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
+  state_ = State::Responded;
+  decoder_callbacks_->sendLocalReply(
+      Http::Code::InternalServerError, RcDetails::get().CredentialsNotFoundBody,
+      nullptr, absl::nullopt, RcDetails::get().CredentialsNotFound);
+}
+
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
   }
+  end_stream_ = end_stream;
 
   if (data.length() != 0) {
     has_body_ = true;
   }
 
   aws_authenticator_.updatePayloadHash(data);
+
+  if (state_ == Calling) {
+    return Http::FilterDataStatus::StopIterationAndBuffer;
+  } else if (state_ == Responded) {
+    return Http::FilterDataStatus::StopIterationNoBuffer;
+  }
 
   if (end_stream) {
     lambdafy();
@@ -160,6 +206,13 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
+  end_stream_ = true;
+  if (state_ == State::Calling) {
+    return Http::FilterTrailersStatus::StopIteration;
+  } else if (state_ == Responded) {
+    return Http::FilterTrailersStatus::StopIteration;
+  }
+
   if (function_on_route_ != nullptr) {
     lambdafy();
   }
@@ -183,7 +236,6 @@ void AWSLambdaFilter::lambdafy() {
 
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
-  cleanup();
 }
 
 void AWSLambdaFilter::handleDefaultBody() {
@@ -196,12 +248,6 @@ void AWSLambdaFilter::handleDefaultBody() {
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }
-}
-
-void AWSLambdaFilter::cleanup() {
-  request_headers_ = nullptr;
-  function_on_route_ = nullptr;
-  protocol_options_.reset();
 }
 
 } // namespace AwsLambda

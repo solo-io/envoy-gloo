@@ -18,18 +18,21 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     const std::string &stats_prefix,
     Server::Configuration::FactoryContext &context) {
 
+  auto sts_factory = StsCredentialsProviderFactoryImpl(
+      context.api(), context.threadLocal(), context.dispatcher());
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::make_unique<
           Extensions::Common::Aws::DefaultCredentialsProviderChain>(
           context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
-      context.dispatcher(), context.threadLocal(), stats_prefix,
-      context.scope(), proto_config);
+      context.clusterManager(), sts_factory, context.dispatcher(),
+      context.threadLocal(), stats_prefix, context.scope(), context.api(),
+      proto_config);
 
-  return [&context,
-          config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-    callbacks.addStreamDecoderFilter(std::make_shared<AWSLambdaFilter>(
-        context.clusterManager(), context.dispatcher().timeSource(), config));
-  };
+  return
+      [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
+        callbacks.addStreamDecoderFilter(std::make_shared<AWSLambdaFilter>(
+            context.clusterManager(), context.api(), config));
+      };
 }
 
 Upstream::ProtocolOptionsConfigConstSharedPtr

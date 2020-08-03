@@ -2,6 +2,8 @@
 
 #include "envoy/thread_local/thread_local.h"
 
+#include "common/common/regex.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -29,8 +31,8 @@ namespace {
 constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
     std::chrono::minutes(14);
 
-struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
-  ThreadLocalState(CredentialsConstSharedPtr credentials)
+struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
+  ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
       : credentials_(credentials) {}
   CredentialsConstSharedPtr credentials_;
 };
@@ -39,40 +41,97 @@ struct ThreadLocalState : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
-    Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &tls,
-    const std::string &stats_prefix, Stats::Scope &scope,
+    Upstream::ClusterManager &cluster_manager,
+    StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
+    Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
+    Stats::Scope &scope, Api::Api &api,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : stats_(generateStats(stats_prefix, scope)) {
-  bool use_default_credentials = false;
+    : context_factory_(cluster_manager, api),
+      stats_(generateStats(stats_prefix, scope)) {
 
-  if (protoconfig.has_use_default_credentials()) {
-    use_default_credentials = protoconfig.use_default_credentials().value();
-  }
-
-  if (use_default_credentials) {
+  // Initialize Credential fetcher, if none exists do nothing. Filter will
+  // implicitly use protocol options data
+  switch (protoconfig.credentials_fetcher_case()) {
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
+      CredentialsFetcherCase::kUseDefaultCredentials: {
+    ENVOY_LOG(debug, "{}: Using default credentials source", __func__);
     provider_ = std::move(provider);
 
     tls_slot_ = tls.allocateSlot();
     auto empty_creds = std::make_shared<const CommonAws::Credentials>();
     tls_slot_->set([empty_creds](Event::Dispatcher &) {
-      return std::make_shared<ThreadLocalState>(empty_creds);
+      return std::make_shared<ThreadLocalCredentials>(empty_creds);
     });
 
     timer_ = dispatcher.createTimer([this] { timerCallback(); });
     // call the time callback to fetch credentials now.
     // this will also re-trigger the timer.
     timerCallback();
+    break;
+  }
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
+      CredentialsFetcherCase::kServiceAccountCredentials: {
+    ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
+    // use service account credentials provider
+    auto service_account_creds = protoconfig.service_account_credentials();
+    sts_credentials_provider_ = sts_factory.create(service_account_creds);
+    break;
+  }
+  case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
+      CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
+    break;
+  }
   }
 }
 
-CredentialsConstSharedPtr AWSLambdaConfigImpl::getCredentials() const {
-  if (!provider_) {
-    return {};
+/*
+ * Three options, in order of precedence
+ *   1. Protocol Options
+ *   2. Default Provider
+ *   3. STS
+ */
+ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
+    SharedAWSLambdaProtocolExtensionConfig ext_cfg,
+    StsCredentialsProvider::Callbacks *callbacks) const {
+  // Always check extension config first, as it overrides
+  if (ext_cfg->accessKey().has_value() && ext_cfg->secretKey().has_value()) {
+    ENVOY_LOG(trace, "{}: Credentials found from protocol options", __func__);
+    // attempt to set session_token, ok if nil
+    if (ext_cfg->sessionToken().has_value()) {
+      callbacks->onSuccess(
+          std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(
+              ext_cfg->accessKey().value(), ext_cfg->secretKey().value(),
+              ext_cfg->sessionToken().value()));
+    } else {
+      callbacks->onSuccess(
+          std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(
+              ext_cfg->accessKey().value(), ext_cfg->secretKey().value()));
+    }
+    return nullptr;
   }
 
-  // tls_slot_ != nil IFF provider_ != nil
-  return tls_slot_->getTyped<ThreadLocalState>().credentials_;
+  if (provider_) {
+    ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
+    callbacks->onSuccess(
+        tls_slot_->getTyped<ThreadLocalCredentials>().credentials_);
+    // no context necessary as these credentials are available immediately
+    return nullptr;
+  }
+
+  if (sts_credentials_provider_) {
+    ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
+              __func__);
+    // return the context directly to the filter, as no direct credentials can
+    // be sent
+    auto context = context_factory_.create(callbacks);
+    sts_credentials_provider_->find(ext_cfg->roleArn(), context);
+    return context;
+  }
+
+  ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
+  callbacks->onFailure(CredentialsFailureStatus::InvalidSts);
+  return nullptr;
 }
 
 void AWSLambdaConfigImpl::timerCallback() {
@@ -86,14 +145,15 @@ void AWSLambdaConfigImpl::timerCallback() {
   } else {
     stats_.fetch_success_.inc();
     stats_.current_state_.set(1);
-    auto currentCreds = getCredentials();
+    auto currentCreds =
+        tls_slot_->getTyped<ThreadLocalCredentials>().credentials_;
     if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
       stats_.creds_rotated_.inc();
       ENVOY_LOG(debug, "refreshing AWS credentials");
       auto shared_new_creds =
           std::make_shared<const CommonAws::Credentials>(new_creds);
       tls_slot_->set([shared_new_creds](Event::Dispatcher &) {
-        return std::make_shared<ThreadLocalState>(shared_new_creds);
+        return std::make_shared<ThreadLocalCredentials>(shared_new_creds);
       });
     }
   }
@@ -147,6 +207,9 @@ AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
   }
   if (!protoconfig.session_token().empty()) {
     session_token_ = protoconfig.session_token();
+  }
+  if (!protoconfig.role_arn().empty()) {
+    role_arn_ = protoconfig.role_arn();
   }
 }
 

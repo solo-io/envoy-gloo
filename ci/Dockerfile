@@ -14,4 +14,4 @@ RUN mkdir -p /etc/envoy
 ADD envoy.stripped /usr/local/bin/envoy
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/envoy"]
-CMD ["--v2-config-only", "-c", "/etc/envoy/envoy.yaml"]
+CMD ["-c", "/etc/envoy/envoy.yaml"]

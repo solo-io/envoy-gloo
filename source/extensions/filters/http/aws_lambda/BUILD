@@ -39,6 +39,7 @@ envoy_cc_library(
     deps = [
         ":aws_authenticator_lib",
         ":config_lib",
+        ":sts_credentials_provider_lib",
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
@@ -57,6 +58,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_authenticator_lib",
+        ":sts_credentials_provider_lib",
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
@@ -77,5 +79,36 @@ envoy_cc_library(
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:filter_config_interface",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
+    ],
+)
+
+
+envoy_cc_library(
+    name = "sts_credentials_provider_lib",
+    srcs = ["sts_credentials_provider.cc"],
+    hdrs = ["sts_credentials_provider.h"],
+    repository = "@envoy",
+    deps = [
+        ":sts_fetcher_lib",
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/config:datasource_lib",
+        "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/common/filesystem:watcher_lib",
+        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
+    ],
+)
+
+envoy_cc_library(
+    name = "sts_fetcher_lib",
+    srcs = ["sts_fetcher.cc"],
+    hdrs = ["sts_fetcher.h", "sts_status.h"],
+    repository = "@envoy",
+    deps = [
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/config:datasource_lib",
+        "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
     ],
 )

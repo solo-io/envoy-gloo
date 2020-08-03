@@ -9,6 +9,7 @@
 #include "envoy/upstream/cluster_manager.h"
 
 #include "extensions/common/aws/credentials_provider.h"
+#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -34,14 +35,44 @@ struct AwsLambdaFilterStats {
   ALL_AWS_LAMBDA_FILTER_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
 };
 
-typedef std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>
-    CredentialsSharedPtr;
-typedef std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
-    CredentialsConstSharedPtr;
+using CredentialsSharedPtr =
+    std::shared_ptr<Envoy::Extensions::Common::Aws::Credentials>;
+using CredentialsConstSharedPtr =
+    std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>;
+
+class AWSLambdaProtocolExtensionConfig
+    : public Upstream::ProtocolOptionsConfig {
+public:
+  AWSLambdaProtocolExtensionConfig(
+      const envoy::config::filter::http::aws_lambda::v2::
+          AWSLambdaProtocolExtension &protoconfig);
+
+  const std::string &host() const { return host_; }
+  const std::string &region() const { return region_; }
+  const absl::optional<std::string> &accessKey() const { return access_key_; }
+  const absl::optional<std::string> &secretKey() const { return secret_key_; }
+  const absl::optional<std::string> &sessionToken() const {
+    return session_token_;
+  }
+  const absl::optional<std::string> &roleArn() const { return role_arn_; }
+
+private:
+  std::string host_;
+  std::string region_;
+  absl::optional<std::string> access_key_;
+  absl::optional<std::string> secret_key_;
+  absl::optional<std::string> session_token_;
+  absl::optional<std::string> role_arn_;
+};
+
+using SharedAWSLambdaProtocolExtensionConfig =
+    std::shared_ptr<const AWSLambdaProtocolExtensionConfig>;
 
 class AWSLambdaConfig {
 public:
-  virtual CredentialsConstSharedPtr getCredentials() const PURE;
+  virtual ContextSharedPtr
+  getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
+                 StsCredentialsProvider::Callbacks *callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -52,24 +83,33 @@ public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      Event::Dispatcher &dispatcher, Envoy::ThreadLocal::SlotAllocator &,
-      const std::string &stats_prefix, Stats::Scope &scope,
+      Upstream::ClusterManager &cluster_manager,
+      StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
+      Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
+      Stats::Scope &scope, Api::Api &api,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  CredentialsConstSharedPtr getCredentials() const override;
+  ContextSharedPtr
+  getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
+                 StsCredentialsProvider::Callbacks *callbacks) const override;
 
 private:
+  CredentialsConstSharedPtr getProviderCredentials() const;
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
                                             Stats::Scope &scope);
 
   void timerCallback();
 
+  ContextFactory context_factory_;
+
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
 
   ThreadLocal::SlotPtr tls_slot_;
+
+  StsCredentialsProviderPtr sts_credentials_provider_;
 
   Event::TimerPtr timer_;
 
@@ -97,27 +137,6 @@ private:
 
   static std::string functionUrlPath(const std::string &name,
                                      const std::string &qualifier);
-};
-
-class AWSLambdaProtocolExtensionConfig
-    : public Upstream::ProtocolOptionsConfig {
-public:
-  AWSLambdaProtocolExtensionConfig(
-      const envoy::config::filter::http::aws_lambda::v2::
-          AWSLambdaProtocolExtension &protoconfig);
-
-  const std::string &host() const { return host_; }
-  const std::string &region() const { return region_; }
-  const absl::optional<std::string> &accessKey() const { return access_key_; }
-  const absl::optional<std::string> &secretKey() const { return secret_key_; }
-  const absl::optional<std::string> &sessionToken() const { return session_token_; }
-
-private:
-  std::string host_;
-  std::string region_;
-  absl::optional<std::string> access_key_;
-  absl::optional<std::string> secret_key_;
-  absl::optional<std::string> session_token_;
 };
 
 } // namespace AwsLambda

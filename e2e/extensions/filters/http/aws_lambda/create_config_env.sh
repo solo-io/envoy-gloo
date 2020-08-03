@@ -17,7 +17,7 @@ admin:
   address:
     socket_address:
       address: 127.0.0.1
-      port_value: 19001
+      port_value: 19000
 static_resources:
   listeners:
   - name: listener_0
