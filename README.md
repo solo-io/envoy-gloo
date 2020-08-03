@@ -62,3 +62,26 @@ BUILDIFIER=$GOPATH/bin/buildifier CLANG_FORMAT=clang-format /path/to/envoy/tools
 gcloud builds submit --project=solo-public --config=cloudbuild.yaml \
    --substitutions=COMMIT_SHA=$(git rev-parse HEAD) .
 ```
+
+# ARM Support (Experimental)
+Support to target arm64 architectures, such as the Raspberry Pi 2 (v1.2) 3 & 4, is **HIGLY EXPERIMENTAL**
+These builds need to be executed on a machine with the same target architecture to produce the desired outcome.
+(**WARNING**: If building on Raspberry Pi 4 or other equivalent SBC, using the 8GB version is recommended. To produce gloo-envoy builds, 4GB might not be enough, especially when including tests)
+
+## Fastbuild
+This method is intended to produce a gloo-envoy binary without performing tests (Might take approx. 12h to complete on a Raspberry Pi)
+```bash
+make fast-build-arm
+```
+
+## Build release version
+Produces and tests a gloo-envoy build.
+```bash
+make build-arm
+```
+
+## Docker Release for ARM
+You can optionally set your own registry to push gloo-envoy images by setting the REGISTRY environment variable or passing it as input. It defaults to `quay.io/solo-io`.
+```bash
+make docker-release-arm
+```
