@@ -54,8 +54,8 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                Api::Api& api,
-                                AWSLambdaConfigConstSharedPtr filter_config)
+                                 Api::Api &api,
+                                 AWSLambdaConfigConstSharedPtr filter_config)
     : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),
       filter_config_(filter_config) {}
 
@@ -96,15 +96,17 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   context_ = filter_config_->getCredentials(protocol_options_, this);
 
   if (state_ == State::Responded) {
-    // An error was found, and a direct reply was set, make sure to stop iteration
+    // An error was found, and a direct reply was set, make sure to stop
+    // iteration
     return Http::FilterHeadersStatus::StopIteration;
-  } 
+  }
 
   if (context_ != nullptr) {
     // context exists, we're in async land
     // If the callback has not been processed, stop iteration
     if (state_ != State::Complete) {
-      ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
+      ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials",
+                __func__);
       stopped_ = true;
       return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
     }
@@ -118,7 +120,9 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credentials) {
+void AWSLambdaFilter::onSuccess(
+    std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+        credentials) {
   credentials_ = credentials;
   // Do not null context here; all hell will break loose.
   state_ = State::Complete;
@@ -156,7 +160,8 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
 
   if (stopped_) {
     if (end_stream_) {
-      // edge case where header only request was stopped, but now needs to be lambdafied.
+      // edge case where header only request was stopped, but now needs to be
+      // lambdafied.
       lambdafy();
     }
     stopped_ = false;
@@ -164,14 +169,12 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
   }
 }
 
-//TODO: Use the failure status in the local reply
+// TODO: Use the failure status in the local reply
 void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
   state_ = State::Responded;
-  decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
-                                      RcDetails::get().CredentialsNotFoundBody,
-                                      nullptr, absl::nullopt,
-                                      RcDetails::get().CredentialsNotFound);
-
+  decoder_callbacks_->sendLocalReply(
+      Http::Code::InternalServerError, RcDetails::get().CredentialsNotFoundBody,
+      nullptr, absl::nullopt, RcDetails::get().CredentialsNotFound);
 }
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,

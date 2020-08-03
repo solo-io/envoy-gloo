@@ -7,8 +7,8 @@
 #include "envoy/upstream/cluster_manager.h"
 
 #include "extensions/filters/http/aws_lambda/aws_authenticator.h"
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/config.h"
+#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
@@ -21,10 +21,11 @@ namespace AwsLambda {
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class AWSLambdaFilter : public Http::StreamDecoderFilter, StsCredentialsProvider::Callbacks, Logger::Loggable<Logger::Id::filter> {
+class AWSLambdaFilter : public Http::StreamDecoderFilter,
+                        StsCredentialsProvider::Callbacks,
+                        Logger::Loggable<Logger::Id::filter> {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                  Api::Api& api,
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -46,7 +47,9 @@ public:
     decoder_callbacks_ = &decoder_callbacks;
   }
 
-  void onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials> credential) override;
+  void
+  onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+                credential) override;
   void onFailure(CredentialsFailureStatus status) override;
 
 private:
@@ -75,9 +78,10 @@ private:
   ContextSharedPtr context_;
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
-  // The state of the get credentials request. 
+  // The state of the get credentials request.
   State state_ = Init;
-  // Whether or not iteration has been stopped to wait for the credentials request
+  // Whether or not iteration has been stopped to wait for the credentials
+  // request
   bool stopped_{};
 
   // if end_stream_is true before stopping iteration

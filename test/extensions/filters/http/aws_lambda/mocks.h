@@ -1,10 +1,11 @@
 #pragma once
 
 #include "envoy/config/core/v3/http_uri.pb.h"
-#include "test/mocks/upstream/mocks.h"
 
 #include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+
+#include "test/mocks/upstream/mocks.h"
 
 #include "gmock/gmock.h"
 
@@ -37,9 +38,10 @@ public:
   MockStsCredentialsProviderFactory();
   ~MockStsCredentialsProviderFactory() override;
 
-  MOCK_METHOD(
-      StsCredentialsProviderPtr, create,
-      (const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials& config), (const, override));
+  MOCK_METHOD(StsCredentialsProviderPtr, create,
+              (const envoy::config::filter::http::aws_lambda::v2::
+                   AWSLambdaConfig_ServiceAccountCredentials &config),
+              (const, override));
 };
 
 class MockStsCredentialsProvider : public StsCredentialsProvider {
@@ -47,9 +49,9 @@ public:
   MockStsCredentialsProvider();
   ~MockStsCredentialsProvider() override;
 
-  MOCK_METHOD(
-      void, find,
-      (const absl::optional<std::string>& role_arn, ContextSharedPtr context));
+  MOCK_METHOD(void, find,
+              (const absl::optional<std::string> &role_arn,
+               ContextSharedPtr context));
 };
 
 class MockStsContext : public StsCredentialsProvider::Context {
@@ -70,17 +72,19 @@ public:
   /**
    * Mock upstream which returns a given response body.
    */
-  MockUpstream(Upstream::MockClusterManager& mock_cm, const std::string& status,
-               const std::string& response_body);
+  MockUpstream(Upstream::MockClusterManager &mock_cm, const std::string &status,
+               const std::string &response_body);
   /**
    * Mock upstream which returns a given failure.
    */
-  MockUpstream(Upstream::MockClusterManager& mock_cm, Http::AsyncClient::FailureReason reason);
+  MockUpstream(Upstream::MockClusterManager &mock_cm,
+               Http::AsyncClient::FailureReason reason);
 
   /**
    * Mock upstream which returns the given request.
    */
-  MockUpstream(Upstream::MockClusterManager& mock_cm, Http::MockAsyncClientRequest* request);
+  MockUpstream(Upstream::MockClusterManager &mock_cm,
+               Http::MockAsyncClientRequest *request);
 
 private:
   Http::MockAsyncClientRequest request_;

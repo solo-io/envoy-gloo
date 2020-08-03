@@ -5,9 +5,11 @@
 
 #include "common/http/message_impl.h"
 #include "common/protobuf/utility.h"
-#include "test/mocks/server/factory_context.h"
+
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
+#include "test/mocks/server/factory_context.h"
 #include "test/test_common/utility.h"
 
 using testing::_;
@@ -61,100 +63,90 @@ const std::string web_token = "web_token";
 
 class StsFetcherTest : public testing::Test {
 public:
-  void SetUp() override { TestUtility::loadFromYaml(service_account_credentials_config, uri_); }
+  void SetUp() override {
+    TestUtility::loadFromYaml(service_account_credentials_config, uri_);
+  }
   HttpUri uri_;
-  testing::NiceMock<Server::Configuration::MockFactoryContext> mock_factory_ctx_;
+  testing::NiceMock<Server::Configuration::MockFactoryContext>
+      mock_factory_ctx_;
 };
 
 // Test findByIssuer
 TEST_F(StsFetcherTest, TestGetSuccess) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200", valid_response);
-  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200",
+                        valid_response);
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   // Act
   fetcher->fetch(
-    uri_, 
-    role_arn, 
-    web_token, 
-    [&](const absl::string_view body){
-      EXPECT_EQ(body, valid_response);
-    }, 
-    [&](CredentialsFailureStatus){}
-  );
+      uri_, role_arn, web_token,
+      [&](const absl::string_view body) { EXPECT_EQ(body, valid_response); },
+      [&](CredentialsFailureStatus) {});
 }
 
 TEST_F(StsFetcherTest, TestGet503) {
   // Setup
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "503", "invalid");
-  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   // Act
   fetcher->fetch(
-    uri_, 
-    role_arn, 
-    web_token, 
-    [&](const absl::string_view){}, 
-    [&](CredentialsFailureStatus status){
-      EXPECT_EQ(status, CredentialsFailureStatus::Network);
-    }
-  );
+      uri_, role_arn, web_token, [&](const absl::string_view) {},
+      [&](CredentialsFailureStatus status) {
+        EXPECT_EQ(status, CredentialsFailureStatus::Network);
+      });
 }
 
 TEST_F(StsFetcherTest, TestCredentialsExpired) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "401", expired_token_response);
-  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "401",
+                        expired_token_response);
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   // Act
   fetcher->fetch(
-    uri_, 
-    role_arn, 
-    web_token, 
-    [&](const absl::string_view){}, 
-    [&](CredentialsFailureStatus status){
-      EXPECT_EQ(status, CredentialsFailureStatus::ExpiredToken);
-    }
-  );
+      uri_, role_arn, web_token, [&](const absl::string_view) {},
+      [&](CredentialsFailureStatus status) {
+        EXPECT_EQ(status, CredentialsFailureStatus::ExpiredToken);
+      });
 }
 
 TEST_F(StsFetcherTest, TestHttpFailure) {
   // Setup
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_,
-                           Http::AsyncClient::FailureReason::Reset);
-  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+                        Http::AsyncClient::FailureReason::Reset);
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
   EXPECT_TRUE(fetcher != nullptr);
   // Act
   fetcher->fetch(
-    uri_, 
-    role_arn, 
-    web_token, 
-    [&](const absl::string_view){}, 
-    [&](CredentialsFailureStatus status){
-      EXPECT_EQ(status, CredentialsFailureStatus::Network);
-    }
-  );
+      uri_, role_arn, web_token, [&](const absl::string_view) {},
+      [&](CredentialsFailureStatus status) {
+        EXPECT_EQ(status, CredentialsFailureStatus::Network);
+      });
 }
 
 TEST_F(StsFetcherTest, TestCancel) {
   // Setup
-  Http::MockAsyncClientRequest request(&(mock_factory_ctx_.cluster_manager_.async_client_));
+  Http::MockAsyncClientRequest request(
+      &(mock_factory_ctx_.cluster_manager_.async_client_));
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, &request);
-  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
   EXPECT_TRUE(fetcher != nullptr);
   EXPECT_CALL(request, cancel()).Times(1);
 
-   // Act
+  // Act
   fetcher->fetch(
-    uri_, 
-    role_arn, 
-    web_token, 
-    [&](const absl::string_view ){},
-    [&](CredentialsFailureStatus ){}
-  );
+      uri_, role_arn, web_token, [&](const absl::string_view) {},
+      [&](CredentialsFailureStatus) {});
   // Proper cancel
   fetcher->cancel();
   // Re-entrant cancel

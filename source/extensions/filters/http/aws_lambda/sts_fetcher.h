@@ -1,9 +1,10 @@
 #pragma once
 
-#include "envoy/common/pure.h"
 #include "envoy/api/api.h"
+#include "envoy/common/pure.h"
 #include "envoy/config/core/v3/http_uri.pb.h"
 #include "envoy/upstream/cluster_manager.h"
+
 #include "extensions/common/aws/credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/sts_status.h"
 
@@ -13,19 +14,24 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 namespace {
-  constexpr char StsFormatString[] = "Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&WebIdentityToken={}&Version=2011-06-15";
-  
-  constexpr char ExpiredTokenError[] = "ExpiredTokenException";
-}
+constexpr char StsFormatString[] =
+    "Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&"
+    "WebIdentityToken={}&Version=2011-06-15";
+
+constexpr char ExpiredTokenError[] = "ExpiredTokenException";
+} // namespace
 
 class StsCredentials : public Extensions::Common::Aws::Credentials {
 public:
   StsCredentials(absl::string_view access_key_id,
-                absl::string_view secret_access_key,
-                absl::string_view session_token,
-                const SystemTime& expiration_time) : Extensions::Common::Aws::Credentials(access_key_id, secret_access_key, session_token), expiration_time_(expiration_time) {};
+                 absl::string_view secret_access_key,
+                 absl::string_view session_token,
+                 const SystemTime &expiration_time)
+      : Extensions::Common::Aws::Credentials(access_key_id, secret_access_key,
+                                             session_token),
+        expiration_time_(expiration_time){};
 
-  const SystemTime& expirationTime() const {return expiration_time_;};
+  const SystemTime &expirationTime() const { return expiration_time_; };
 
 private:
   const SystemTime expiration_time_;
@@ -39,11 +45,11 @@ using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;
 
 /**
  * StsFetcher interface can be used to retrieve STS credentials
- * An instance of this interface is designed to retrieve one set of credentials at a time.
+ * An instance of this interface is designed to retrieve one set of credentials
+ * at a time.
  */
 class StsFetcher {
 public:
-
   virtual ~StsFetcher() = default;
 
   using SuccessCallback = std::function<void(const absl::string_view body)>;
@@ -66,10 +72,10 @@ public:
    * @param success the cb called on successful role assumption
    * @param failure the cb called on failed role assumption
    */
-  virtual void fetch(const envoy::config::core::v3::HttpUri& uri,
-                      const absl::string_view role_arn,
-                      const absl::string_view web_token,
-                      SuccessCallback success, FailureCallback failure) PURE;
+  virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
+                     const absl::string_view role_arn,
+                     const absl::string_view web_token, SuccessCallback success,
+                     FailureCallback failure) PURE;
 
   /*
    * Factory method for creating a StsFetcher.
@@ -77,7 +83,7 @@ public:
    * @param api the api instance
    * @return a StsFetcher instance
    */
-  static StsFetcherPtr create(Upstream::ClusterManager& cm, Api::Api& api);
+  static StsFetcherPtr create(Upstream::ClusterManager &cm, Api::Api &api);
 };
 
 } // namespace AwsLambda

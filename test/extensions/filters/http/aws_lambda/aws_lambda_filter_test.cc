@@ -1,7 +1,6 @@
+#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 #include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
-
-#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
@@ -28,7 +27,9 @@ namespace AwsLambda {
 
 class AWSLambdaConfigTestImpl : public AWSLambdaConfig {
 public:
-  ContextSharedPtr getCredentials(SharedAWSLambdaProtocolExtensionConfig, StsCredentialsProvider::Callbacks* callbacks) const override {
+  ContextSharedPtr
+  getCredentials(SharedAWSLambdaProtocolExtensionConfig,
+                 StsCredentialsProvider::Callbacks *callbacks) const override {
     called_ = true;
     if (credentials_ == nullptr) {
       callbacks->onFailure(CredentialsFailureStatus::Network);
@@ -63,7 +64,6 @@ protected:
     protoextconfig.set_region("us-east-1");
     filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
 
-
     if (!noCredentials) {
       if (sessionToken) {
         filter_config_->credentials_ =
@@ -84,8 +84,8 @@ protected:
                 protoextconfig)));
 
     filter_ = std::make_unique<AWSLambdaFilter>(
-        factory_context_.cluster_manager_,
-        factory_context_.api_, filter_config_);
+        factory_context_.cluster_manager_, factory_context_.api_,
+        filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -131,7 +131,9 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithToken) {
 
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
-  EXPECT_EQ(headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(), "session token");
+  EXPECT_EQ(
+      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(),
+      "session token");
 }
 
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {
@@ -160,7 +162,9 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfigWithToken) {
   EXPECT_TRUE(filter_config_->called_);
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
-  EXPECT_EQ(headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(), "session token");
+  EXPECT_EQ(
+      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(),
+      "session token");
 }
 
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithBadConfig) {

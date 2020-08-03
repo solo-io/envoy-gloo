@@ -4,11 +4,12 @@
 #include <list>
 #include <string>
 
+#include "envoy/http/header_map.h"
+
 #include "common/common/assert.h"
 #include "common/common/empty_string.h"
 #include "common/common/hex.h"
 #include "common/common/utility.h"
-#include "envoy/http/header_map.h"
 #include "common/http/headers.h"
 #include "common/http/utility.h"
 #include "common/singleton/const_singleton.h"
@@ -220,7 +221,8 @@ std::string AwsAuthenticator::signWithTime(
 
   // Add session token header if present
   if (session_token_ != nullptr) {
-    request_headers->addCopy(AwsAuthenticatorConsts::get().SecurityTokenHeader, (*session_token_));
+    request_headers->addCopy(AwsAuthenticatorConsts::get().SecurityTokenHeader,
+                             (*session_token_));
   }
 
   auto &&preparedHeaders = prepareHeaders(headers_to_sign);

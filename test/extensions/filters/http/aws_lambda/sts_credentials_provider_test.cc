@@ -11,8 +11,8 @@
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
 #include "test/extensions/filters/http/common/mock.h"
 #include "test/mocks/http/mocks.h"
-#include "test/test_common/utility.h"
 #include "test/test_common/simulated_time_system.h"
+#include "test/test_common/utility.h"
 
 using testing::_;
 using testing::AtLeast;
@@ -66,14 +66,14 @@ const std::string valid_expired_response = R"(
 </AssumeRoleWithWebIdentityResponse>
 )";
 
-
 const std::string service_account_credentials_config = R"(
 cluster: test
 uri: https://foo.com
 timeout: 1s
 )";
 
-class StsCredentialsProviderTest : public testing::Test, public Event::TestUsingSimulatedTime {
+class StsCredentialsProviderTest : public testing::Test,
+                                   public Event::TestUsingSimulatedTime {
 public:
   void SetUp() override {
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
@@ -111,7 +111,8 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
   // Setup
   init();
   absl::optional<std::string> role_arn = "test";
-  std::shared_ptr<MockStsContext> context_1 = std::make_shared<MockStsContext>();
+  std::shared_ptr<MockStsContext> context_1 =
+      std::make_shared<MockStsContext>();
   EXPECT_CALL(*context_1, fetcher()).Times(1);
 
   // Fetch credentials first call as they are not in the cache
@@ -139,21 +140,19 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
 
   sts_provider_->find(role_arn, context_1);
 
-  std::shared_ptr<MockStsContext> context_2 = std::make_shared<MockStsContext>();
+  std::shared_ptr<MockStsContext> context_2 =
+      std::make_shared<MockStsContext>();
   EXPECT_CALL(*context_2, callbacks()).Times(1);
 
   // Credentials are in cache, and not expired so return them
   EXPECT_CALL(context_2->callbacks_, onSuccess(_))
-    .WillOnce(
-        Invoke([&](std::shared_ptr<
-                    const Envoy::Extensions::Common::Aws::Credentials>
-                        result) -> void {
-          EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
-          EXPECT_EQ(result->secretAccessKey().value(),
-                    "some_secret_key");
-          EXPECT_EQ(result->sessionToken().value(),
-                    "some_session_token");
-        }));
+      .WillOnce(Invoke(
+          [&](std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+                  result) -> void {
+            EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
+            EXPECT_EQ(result->secretAccessKey().value(), "some_secret_key");
+            EXPECT_EQ(result->sessionToken().value(), "some_session_token");
+          }));
   sts_provider_->find(role_arn, context_2);
 }
 
@@ -161,7 +160,8 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
   // Setup
   init();
   absl::optional<std::string> role_arn = "test";
-  std::shared_ptr<MockStsContext> context_1 = std::make_shared<MockStsContext>();
+  std::shared_ptr<MockStsContext> context_1 =
+      std::make_shared<MockStsContext>();
   EXPECT_CALL(*context_1, fetcher()).Times(1);
 
   // Fetch credentials first call as they are not in the cache
@@ -189,7 +189,8 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
 
   sts_provider_->find(role_arn, context_1);
 
-  std::shared_ptr<MockStsContext> context_2 = std::make_shared<MockStsContext>();
+  std::shared_ptr<MockStsContext> context_2 =
+      std::make_shared<MockStsContext>();
   EXPECT_CALL(*context_2, fetcher()).Times(1);
 
   // Credentials are in the cache, but expired, so refetch
@@ -233,10 +234,9 @@ TEST_F(StsCredentialsProviderTest, TestFailure) {
         EXPECT_CALL(*context, callbacks()).Times(1);
 
         EXPECT_CALL(context->callbacks_, onFailure(_))
-            .WillOnce(
-                Invoke([&](CredentialsFailureStatus reason) -> void {
-                  EXPECT_EQ(reason, CredentialsFailureStatus::InvalidSts);
-                }));
+            .WillOnce(Invoke([&](CredentialsFailureStatus reason) -> void {
+              EXPECT_EQ(reason, CredentialsFailureStatus::InvalidSts);
+            }));
 
         failure(CredentialsFailureStatus::InvalidSts);
       }));
@@ -268,7 +268,8 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   EXPECT_CALL(*context, callbacks()).Times(1);
   EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
   // set time to just before expiry minus margin
-  auto just_before_expiry = expiry_time - std::chrono::minutes(5) - std::chrono::milliseconds(1);
+  auto just_before_expiry =
+      expiry_time - std::chrono::minutes(5) - std::chrono::milliseconds(1);
   // this converts duration to nanoseconds, so can't go too far into the future.
   // specifically, not after 2262
   std::chrono::system_clock::time_point sys_time(just_before_expiry);
@@ -280,14 +281,14 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   simTime().setSystemTime(SystemTime(expiry_time - std::chrono::minutes(5)));
   EXPECT_CALL(*context, fetcher()).Times(1);
   EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
-    .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
-                          const absl::string_view, const absl::string_view,
-                          StsFetcher::SuccessCallback success,
-                          StsFetcher::FailureCallback) -> void {
-      EXPECT_CALL(*context, callbacks()).Times(1);
-      EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
-      success(valid_response);
-    }));
+      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const absl::string_view, const absl::string_view,
+                           StsFetcher::SuccessCallback success,
+                           StsFetcher::FailureCallback) -> void {
+        EXPECT_CALL(*context, callbacks()).Times(1);
+        EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
+        success(valid_response);
+      }));
   sts_provider_->find(role_arn, context);
 }
 
