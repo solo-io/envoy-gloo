@@ -55,7 +55,6 @@ private:
   void handleDefaultBody();
 
   void lambdafy();
-  void cleanup();
 
   Http::RequestHeaderMap *request_headers_{};
   AwsAuthenticator aws_authenticator_;

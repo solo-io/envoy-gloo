@@ -64,8 +64,6 @@ AWSLambdaFilter::~AWSLambdaFilter() {}
 Http::FilterHeadersStatus
 AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
                                bool end_stream) {
-
-  request_headers_ = &headers;
   protocol_options_ = Http::SoloFilterUtility::resolveProtocolOptions<
       const AWSLambdaProtocolExtensionConfig>(
       SoloHttpFilterNames::get().AwsLambda, decoder_callbacks_,
@@ -75,11 +73,27 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     return Http::FilterHeadersStatus::Continue;
   }
 
+  request_headers_ = &headers;
+  end_stream_ = end_stream;
+
+  route_ = decoder_callbacks_->route();
+  // great! this is an aws cluster. get the function information:
+  function_on_route_ =
+      Http::Utility::resolveMostSpecificPerFilterConfig<AWSLambdaRouteConfig>(
+          SoloHttpFilterNames::get().AwsLambda, route_);
+
+  if (!function_on_route_) {
+    state_ = State::Responded;
+    decoder_callbacks_->sendLocalReply(
+        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
+        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
+    return Http::FilterHeadersStatus::StopIteration;
+  }
+
   // If the state is still the initial, attempt to get credentials
-  if (state_ == State::Init) {
-    state_ = State::Calling;
-    context_ = filter_config_->getCredentials(protocol_options_, this);
-  } 
+  ASSERT(state_ == State::Init);
+  state_ = State::Calling;
+  context_ = filter_config_->getCredentials(protocol_options_, this);
 
   if (state_ == State::Responded) {
     // An error was found, and a direct reply was set, make sure to stop iteration
@@ -92,14 +106,8 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
     if (state_ != State::Complete) {
       ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials", __func__);
       stopped_ = true;
-      end_stream_ = end_stream;
       return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
     }
-  }
-  
-  if (state_ == State::Responded) {
-    // if we already responded with local reply, stop iteration.
-    return Http::FilterHeadersStatus::StopIteration;
   }
 
   if (end_stream) {
@@ -140,21 +148,6 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
     return;
   }
 
-  route_ = decoder_callbacks_->route();
-  // great! this is an aws cluster. get the function information:
-  function_on_route_ =
-      Http::Utility::resolveMostSpecificPerFilterConfig<AWSLambdaRouteConfig>(
-          SoloHttpFilterNames::get().AwsLambda, route_);
-
-  if (!function_on_route_) {
-    state_ = State::Responded;
-    decoder_callbacks_->sendLocalReply(
-        Http::Code::InternalServerError, RcDetails::get().FunctionNotFoundBody,
-        nullptr, absl::nullopt, RcDetails::get().FunctionNotFound);
-    
-    return;
-  }
-
   aws_authenticator_.init(access_key, secret_key, session_token);
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
@@ -174,7 +167,6 @@ void AWSLambdaFilter::onSuccess(std::shared_ptr<const Envoy::Extensions::Common:
 //TODO: Use the failure status in the local reply
 void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
   state_ = State::Responded;
-
   decoder_callbacks_->sendLocalReply(Http::Code::InternalServerError,
                                       RcDetails::get().CredentialsNotFoundBody,
                                       nullptr, absl::nullopt,
@@ -184,21 +176,22 @@ void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
-  if (state_ == Calling) {
-    return Http::FilterDataStatus::StopIterationAndBuffer;
-  } else if (state_ == Responded) {
-    return Http::FilterDataStatus::StopIterationNoBuffer;
-  }
-
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
   }
+  end_stream_ = end_stream;
 
   if (data.length() != 0) {
     has_body_ = true;
   }
 
   aws_authenticator_.updatePayloadHash(data);
+
+  if (state_ == Calling) {
+    return Http::FilterDataStatus::StopIterationAndBuffer;
+  } else if (state_ == Responded) {
+    return Http::FilterDataStatus::StopIterationNoBuffer;
+  }
 
   if (end_stream) {
     lambdafy();
@@ -210,6 +203,7 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
+  end_stream_ = true;
   if (state_ == State::Calling) {
     return Http::FilterTrailersStatus::StopIteration;
   } else if (state_ == Responded) {
@@ -239,7 +233,6 @@ void AWSLambdaFilter::lambdafy() {
 
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
-  cleanup();
 }
 
 void AWSLambdaFilter::handleDefaultBody() {
@@ -252,12 +245,6 @@ void AWSLambdaFilter::handleDefaultBody() {
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }
-}
-
-void AWSLambdaFilter::cleanup() {
-  request_headers_ = nullptr;
-  function_on_route_ = nullptr;
-  protocol_options_.reset();
 }
 
 } // namespace AwsLambda
