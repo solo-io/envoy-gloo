@@ -49,7 +49,7 @@ public:
 
   MOCK_METHOD(
       void, find,
-      (absl::optional<std::string> role_arn, ContextSharedPtr context));
+      (const absl::optional<std::string>& role_arn, ContextSharedPtr context));
 };
 
 class MockStsContext : public StsCredentialsProvider::Context {

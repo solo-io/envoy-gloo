@@ -86,7 +86,7 @@ public:
 
 
   // Lookup credentials cache map. The cache only stores Jwks specified in the config.
-  virtual void find(absl::optional<std::string> role_arn, ContextSharedPtr context) PURE;
+  virtual void find(const absl::optional<std::string> & role_arn, ContextSharedPtr context) PURE;
 
 };
 
@@ -114,7 +114,7 @@ class StsCredentialsProviderImpl: public StsCredentialsProvider,
 
 public:
 
-  void find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context) override;
+  void find(const absl::optional<std::string> & role_arn_arg, ContextSharedPtr context) override;
 
     // Factory function to create an instance.
   static StsCredentialsProviderPtr

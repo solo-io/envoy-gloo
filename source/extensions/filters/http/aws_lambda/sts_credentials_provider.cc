@@ -64,13 +64,13 @@ void StsCredentialsProviderImpl::init() {
   });
 }
 
-void StsCredentialsProviderImpl::find(absl::optional<std::string> role_arn_arg, ContextSharedPtr context) {
+void StsCredentialsProviderImpl::find(const absl::optional<std::string> & role_arn_arg, ContextSharedPtr context) {
   auto& ctximpl = static_cast<Context&>(*context);
 
   std::string role_arn = default_role_arn_;
   // If role_arn_arg is present, use that, otherwise use env
   if (role_arn_arg.has_value()) {
-    role_arn = std::string(role_arn_arg.value());
+    role_arn = role_arn_arg.value();
   }
 
   ASSERT(!role_arn.empty());
