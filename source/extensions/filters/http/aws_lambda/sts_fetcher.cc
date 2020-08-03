@@ -78,8 +78,8 @@ public:
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: success", __func__, uri_->uri());
       if (response->body()) {
         const auto len = response->body()->length();
-        const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
-        success_callback_(&body);
+        const auto body = absl::string_view(static_cast<char*>(response->body()->linearize(len)), len);
+        success_callback_(body);
 
       } else {
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty", __func__, uri_->uri());
@@ -88,7 +88,7 @@ public:
     } else {
       if ((status_code % 400) <= 3 && response->body()) {
         const auto len = response->body()->length();
-        const auto body = std::string(static_cast<char*>(response->body()->linearize(len)), len);
+        const auto body = absl::string_view(static_cast<char*>(response->body()->linearize(len)), len);
         ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__, status_code, body);
         // TODO: cover more AWS error cases
         if (body.find(ExpiredTokenError) != std::string::npos) {

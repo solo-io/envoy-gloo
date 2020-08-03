@@ -134,7 +134,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
                             "some_session_token");
                 }));
 
-        success(&valid_response);
+        success(valid_response);
       }));
 
   sts_provider_->find(role_arn, context_1);
@@ -184,7 +184,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
                             "some_session_token");
                 }));
 
-        success(&valid_expired_response);
+        success(valid_expired_response);
       }));
 
   sts_provider_->find(role_arn, context_1);
@@ -212,7 +212,7 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
                             "some_session_token");
                 }));
 
-        success(&valid_expired_response);
+        success(valid_expired_response);
       }));
 
   sts_provider_->find(role_arn, context_2);
@@ -258,7 +258,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
                            StsFetcher::FailureCallback) -> void {
         EXPECT_CALL(*context, callbacks()).Times(1);
         EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
-        success(&valid_response);
+        success(valid_response);
       }));
 
   sts_provider_->find(role_arn, context);
@@ -286,7 +286,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
                           StsFetcher::FailureCallback) -> void {
       EXPECT_CALL(*context, callbacks()).Times(1);
       EXPECT_CALL(context->callbacks_, onSuccess(_)).Times(1);
-      success(&valid_response);
+      success(valid_response);
     }));
   sts_provider_->find(role_arn, context);
 }
