@@ -87,14 +87,28 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
 /*
  * Three options, in order of precedence
- *   1. Protocol Options
- *   2. Default Provider
- *   3. STS
+ *   1. STS
+ *   2. Protocol Options
+ *   3. Default Provider
+ * 
+ * This order maintains backwards compatability, while allowing easy use of STS credentials
+ * with protocol options
  */
 ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
     SharedAWSLambdaProtocolExtensionConfig ext_cfg,
     StsCredentialsProvider::Callbacks *callbacks) const {
-  // Always check extension config first, as it overrides
+
+  // Always check sts credentials first, as it overrides
+  if (sts_credentials_provider_) {
+    ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
+              __func__);
+    // return the context directly to the filter, as no direct credentials can
+    // be sent
+    auto context = context_factory_.create(callbacks);
+    sts_credentials_provider_->find(ext_cfg->roleArn(), context);
+    return context;
+  }
+
   if (ext_cfg->accessKey().has_value() && ext_cfg->secretKey().has_value()) {
     ENVOY_LOG(trace, "{}: Credentials found from protocol options", __func__);
     // attempt to set session_token, ok if nil
@@ -117,16 +131,6 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
         tls_slot_->getTyped<ThreadLocalCredentials>().credentials_);
     // no context necessary as these credentials are available immediately
     return nullptr;
-  }
-
-  if (sts_credentials_provider_) {
-    ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
-              __func__);
-    // return the context directly to the filter, as no direct credentials can
-    // be sent
-    auto context = context_factory_.create(callbacks);
-    sts_credentials_provider_->find(ext_cfg->roleArn(), context);
-    return context;
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
