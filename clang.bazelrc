@@ -1,0 +1,16 @@
+# Generated file, do not edit. If you want to disable clang, just delete this file.
+build:clang --action_env='PATH=/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:/usr/local/opt/protobuf@3.6/bin:/bin:/bin:/home/eitanya/src/bin:/home/eitanya/bin:/home/eitanya/.local/bin:/usr/local/bin:/opt/local/bin:/bin:/home/eitanya/src/prometheus:/home/eitanya/scripts/bin:/home/eitanya/.linkerd2/bin:/home/eitanya/.vscode-server-insiders/bin/459610f3ef11b956968afadff704bad3bc1a0de2/bin:/usr/local/opt/protobuf@3.6/bin:/bin:/bin:/home/eitanya/src/bin:/home/eitanya/bin:/home/eitanya/.local/bin:/usr/local/bin:/opt/local/bin:/bin:/home/eitanya/src/prometheus:/home/eitanya/scripts/bin:/home/eitanya/.linkerd2/bin:/home/eitanya/.vscode-server-insiders/bin/459610f3ef11b956968afadff704bad3bc1a0de2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/home/eitanya/.fzf/bin'
+build:clang --action_env=CC=clang
+build:clang --action_env=CXX=clang++
+build:clang --action_env='LLVM_CONFIG=/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-config'
+build:clang --repo_env='LLVM_CONFIG=/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin/llvm-config'
+build:clang --linkopt='-L/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/lib'
+build:clang --linkopt='-Wl,-rpath,/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/lib'
+
+build:clang-asan --action_env=ENVOY_UBSAN_VPTR=1
+build:clang-asan --copt=-fsanitize=vptr,function
+build:clang-asan --linkopt=-fsanitize=vptr,function
+build:clang-asan --linkopt='-L/home/eitanya/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/lib/clang/10.0.0/lib/linux'
+build:clang-asan --linkopt=-l:libclang_rt.ubsan_standalone-x86_64.a
+build:clang-asan --linkopt=-l:libclang_rt.ubsan_standalone_cxx-x86_64.a
+

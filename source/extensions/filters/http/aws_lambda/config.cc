@@ -34,7 +34,10 @@ constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
 struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
   ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
       : credentials_(credentials) {}
+  ThreadLocalCredentials(StsCredentialsProviderPtr credentials)
+      : sts_credentials_(credentials) {}
   CredentialsConstSharedPtr credentials_;
+  StsCredentialsProviderPtr sts_credentials_;
 };
 
 } // namespace
@@ -75,7 +78,10 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
     // use service account credentials provider
     auto service_account_creds = protoconfig.service_account_credentials();
-    sts_credentials_provider_ = sts_factory.create(service_account_creds);
+    tls_slot_->set([&service_account_creds, &sts_factory](Event::Dispatcher &) {
+      return std::make_shared<ThreadLocalCredentials>(sts_factory.create(service_account_creds));
+    });
+    sts_enabled_ = true;
     break;
   }
   case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
@@ -111,21 +117,21 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
     return nullptr;
   }
 
+  auto& thread_local_credentials =  tls_slot_->getTyped<ThreadLocalCredentials>();
   if (provider_) {
     ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
-    callbacks->onSuccess(
-        tls_slot_->getTyped<ThreadLocalCredentials>().credentials_);
+    callbacks->onSuccess(thread_local_credentials.credentials_);
     // no context necessary as these credentials are available immediately
     return nullptr;
   }
 
-  if (sts_credentials_provider_) {
+  if (sts_enabled_) {
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     // return the context directly to the filter, as no direct credentials can
     // be sent
     auto context = context_factory_.create(callbacks);
-    sts_credentials_provider_->find(ext_cfg->roleArn(), context);
+    thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(), context);
     return context;
   }
 
