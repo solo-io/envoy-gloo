@@ -5,8 +5,9 @@
 #include <cstring>
 #include <string>
 
-#include "envoy/runtime/runtime.h"
 #include "envoy/common/random_generator.h"
+#include "envoy/runtime/runtime.h"
+
 #include "common/common/assert.h"
 
 namespace Envoy {
