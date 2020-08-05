@@ -37,7 +37,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 Upstream::ProtocolOptionsConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
-    const Protobuf::Message &config, ProtobufMessage::ValidationVisitor &) {
+    const Protobuf::Message &config, Server::Configuration::ProtocolOptionsFactoryContext &) {
   const auto &proto_config =
       dynamic_cast<const envoy::config::filter::http::aws_lambda::v2::
                        AWSLambdaProtocolExtension &>(config);
