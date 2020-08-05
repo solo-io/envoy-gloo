@@ -4,7 +4,7 @@
 #include "common/common/assert.h"
 #include "common/nats/token_generator_impl.h"
 
-#include "test/mocks/runtime/mocks.h"
+#include "test/mocks/common.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -21,7 +21,7 @@ public:
 };
 
 TEST_F(NatsTokenGeneratorImplTest, Random) {
-  NiceMock<Runtime::MockRandomGenerator> random_generator;
+  NiceMock<Random::MockRandomGenerator> random_generator;
 
   for (auto i = 0; i < 1000; ++i) {
     TokenGeneratorImpl token_generator{random_generator};

@@ -1,7 +1,7 @@
 #include <climits>
 
 #include "common/nats/nuid/nuid.h"
-#include "common/runtime/runtime_impl.h"
+#include "common/common/random_generator.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
