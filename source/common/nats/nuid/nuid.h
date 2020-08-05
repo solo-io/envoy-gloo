@@ -6,7 +6,7 @@
 #include <string>
 
 #include "envoy/runtime/runtime.h"
-
+#include "envoy/common/random_generator.h"
 #include "common/common/assert.h"
 
 namespace Envoy {
@@ -44,8 +44,8 @@ public:
    * Generate a new NUID and properly initialize the prefix, sequential start,
    * and sequential increment.
    */
-  Nuid(Runtime::RandomGenerator &random_generator);
-  Nuid(Runtime::RandomGenerator &random_generator, uint64_t seq);
+  Nuid(Random::RandomGenerator &random_generator);
+  Nuid(Random::RandomGenerator &random_generator, uint64_t seq);
 
   /**
    * Generate the next NUID string.
@@ -74,7 +74,7 @@ private:
 
   template <uint8_t len> inline void convert(uint64_t n, char *output);
 
-  Runtime::RandomGenerator &random_generator_;
+  Random::RandomGenerator &random_generator_;
   char pre_[PRE_LEN];
   uint64_t seq_;
   uint64_t inc_;

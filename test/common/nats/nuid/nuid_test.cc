@@ -17,7 +17,7 @@ namespace Nuid {
  */
 class NuidTest : public testing::Test {
 protected:
-  Runtime::RandomGeneratorImpl random_generator_;
+  Random::RandomGeneratorImpl random_generator_;
 };
 
 TEST_F(NuidTest, Digits) { EXPECT_EQ(Nuid::BASE, strlen(Nuid::DIGITS)); }

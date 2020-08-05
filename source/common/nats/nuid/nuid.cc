@@ -13,14 +13,14 @@ constexpr uint64_t Nuid::MIN_INC;
 constexpr uint64_t Nuid::MAX_INC;
 constexpr uint8_t Nuid::TOTAL_LEN;
 
-Nuid::Nuid(Runtime::RandomGenerator &random_generator)
+Nuid::Nuid(Random::RandomGenerator &random_generator)
     : random_generator_(random_generator), seq_(int63_n(MAX_SEQ)),
       inc_(MIN_INC + int63_n(MAX_INC - MIN_INC)) {
 
   randomizePrefix();
 }
 
-Nuid::Nuid(Runtime::RandomGenerator &random_generator, uint64_t seq)
+Nuid::Nuid(Random::RandomGenerator &random_generator, uint64_t seq)
     : random_generator_(random_generator), seq_(seq),
       inc_(MIN_INC + int63_n(MAX_INC - MIN_INC)) {
   ASSERT(seq < Nuid::MAX_SEQ);

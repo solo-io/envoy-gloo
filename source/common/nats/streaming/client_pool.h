@@ -16,7 +16,7 @@ class ClientPool : public Client {
 public:
   ClientPool(const std::string &cluster_name, Upstream::ClusterManager &cm,
              Tcp::ConnPoolNats::ClientFactory<Message> &client_factory,
-             ThreadLocal::SlotAllocator &tls, Runtime::RandomGenerator &random,
+             ThreadLocal::SlotAllocator &tls, Random::RandomGenerator &random,
              const std::chrono::milliseconds &op_timeout);
 
   // Nats::Streaming::Client
@@ -29,7 +29,7 @@ public:
 private:
   struct ThreadLocalPool : public ThreadLocal::ThreadLocalObject {
     ThreadLocalPool(Tcp::ConnPoolNats::InstancePtr<Message> &&conn_pool,
-                    Runtime::RandomGenerator &random,
+                    Random::RandomGenerator &random,
                     Event::Dispatcher &dispatcher,
                     const std::chrono::milliseconds &op_timeout);
     Client &getClient();
@@ -41,7 +41,7 @@ private:
   Upstream::ClusterManager &cm_;
   Tcp::ConnPoolNats::ClientFactory<Message> &client_factory_;
   ThreadLocal::SlotPtr slot_;
-  Runtime::RandomGenerator &random_;
+  Random::RandomGenerator &random_;
   const std::chrono::milliseconds op_timeout_;
 };
 

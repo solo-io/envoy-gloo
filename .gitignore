@@ -3,3 +3,6 @@ ci/envoy.stripped
 generated
 .vscode/
 compile_commands.json
+
+clang.bazelrc
+user.bazelrc
