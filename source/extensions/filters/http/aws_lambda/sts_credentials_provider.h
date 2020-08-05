@@ -77,30 +77,6 @@ public:
                     ContextSharedPtr context) PURE;
 };
 
-class ThreadLocalStsCache : public Envoy::ThreadLocal::ThreadLocalObject {
-public:
-  ThreadLocalStsCache(absl::string_view web_token) : web_token_(web_token){};
-
-  const absl::string_view webToken() const { return web_token_; };
-
-  void setWebToken(absl::string_view web_token) {
-    web_token_ = std::string(web_token);
-  };
-
-  std::unordered_map<std::string, StsCredentialsConstSharedPtr> &
-  credentialsCache() {
-    return credentials_cache_;
-  };
-
-private:
-  // web_token set by AWS, will be auto-updated by StsCredentialsProvider
-  // TODO: udpate this file, inotify or timer
-  std::string web_token_;
-  // Credentials storage map, keyed by arn
-  std::unordered_map<std::string, StsCredentialsConstSharedPtr>
-      credentials_cache_;
-};
-
 class StsCredentialsProviderImpl
     : public StsCredentialsProvider,
       public Logger::Loggable<Logger::Id::aws>,
@@ -114,11 +90,10 @@ public:
   static StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
              AWSLambdaConfig_ServiceAccountCredentials &config,
-         Api::Api &api, ThreadLocal::SlotAllocator &tls,
-         Event::Dispatcher &dispatcher) {
+         Api::Api &api, Event::Dispatcher &dispatcher) {
 
     std::shared_ptr<StsCredentialsProviderImpl> ptr(
-        new StsCredentialsProviderImpl(config, api, tls, dispatcher));
+        new StsCredentialsProviderImpl(config, api, dispatcher));
     ptr->init();
     return ptr;
   };
@@ -127,8 +102,7 @@ private:
   StsCredentialsProviderImpl(
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
-      Api::Api &api, ThreadLocal::SlotAllocator &tls,
-      Event::Dispatcher &dispatcher);
+      Api::Api &api, Event::Dispatcher &dispatcher);
 
   void init();
 
@@ -139,7 +113,6 @@ private:
   std::string default_role_arn_;
   std::string token_file_;
   envoy::config::core::v3::HttpUri uri_;
-  ThreadLocal::SlotPtr tls_slot_;
 
   std::regex regex_access_key_;
   std::regex regex_secret_key_;
@@ -147,6 +120,13 @@ private:
   std::regex regex_expiration_;
 
   Envoy::Filesystem::WatcherPtr file_watcher_;
+
+  // web_token set by AWS, will be auto-updated by StsCredentialsProvider
+  // TODO: udpate this file, inotify or timer
+  std::string web_token_;
+  // Credentials storage map, keyed by arn
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr>
+      credentials_cache_;
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;
@@ -178,9 +158,8 @@ public:
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
   StsCredentialsProviderFactoryImpl(Api::Api &api,
-                                    ThreadLocal::SlotAllocator &tls,
                                     Event::Dispatcher &dispatcher)
-      : api_(api), tls_(tls), dispatcher_(dispatcher){};
+      : api_(api), dispatcher_(dispatcher){};
 
   StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
@@ -188,7 +167,6 @@ public:
 
 private:
   Api::Api &api_;
-  ThreadLocal::SlotAllocator &tls_;
   Event::Dispatcher &dispatcher_;
 };
 

@@ -56,13 +56,11 @@ private:
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-    Api::Api &api, ThreadLocal::SlotAllocator &tls,
-    Event::Dispatcher &dispatcher)
+    Api::Api &api, Event::Dispatcher &dispatcher)
     : api_(api), config_(config),
       default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
       token_file_(
           absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))),
-      tls_slot_(tls.allocateSlot()),
       file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
@@ -86,17 +84,12 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
         fmt::format("Web token file {} does not exist", token_file_));
   }
 
-  const auto web_token = api_.fileSystem().fileReadToEnd(token_file_);
+  web_token_ = api_.fileSystem().fileReadToEnd(token_file_);
   // File should not be empty
-  if (web_token == "") {
+  if (web_token_ == "") {
     throw EnvoyException(
         fmt::format("Web token file {} exists but is empty", token_file_));
   }
-
-  // create a thread local cache for the provider
-  tls_slot_->set([web_token](Event::Dispatcher &) {
-    return std::make_shared<ThreadLocalStsCache>(web_token);
-  });
 
   // Initialize regex strings, should never fail
   regex_access_key_ =
@@ -108,6 +101,7 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
   regex_expiration_ =
       Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
 }
+
 void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
   auto shared_this = shared_from_this();
@@ -119,11 +113,7 @@ void StsCredentialsProviderImpl::init() {
               shared_this->token_file_);
           // TODO: check if web_token is valid
           // TODO: stats here
-          shared_this->tls_slot_->runOnAllThreads([shared_this, web_token]() {
-            auto &tls_cache =
-                shared_this->tls_slot_->getTyped<ThreadLocalStsCache>();
-            tls_cache.setWebToken(web_token);
-          });
+          shared_this->web_token_ = web_token;
         } catch (const EnvoyException &e) {
           ENVOY_LOG_TO_LOGGER(
               Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
@@ -147,10 +137,8 @@ void StsCredentialsProviderImpl::find(
 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
-  auto &tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-  auto &credential_cache = tls_cache.credentialsCache();
-  const auto it = credential_cache.find(role_arn);
-  if (it != credential_cache.end()) {
+  const auto it = credentials_cache_.find(role_arn);
+  if (it != credentials_cache_.end()) {
     // thing  exists
     const auto now = api_.timeSource().systemTime();
     // If the expiration time is more than a minute away, return it immediately
@@ -163,7 +151,7 @@ void StsCredentialsProviderImpl::find(
   }
 
   ctximpl.fetcher().fetch(
-      uri_, role_arn, tls_cache.webToken(),
+      uri_, role_arn, web_token_,
       [this, context, role_arn](const absl::string_view body) {
         ASSERT(body != nullptr);
 
@@ -212,9 +200,7 @@ void StsCredentialsProviderImpl::find(
                 access_key, secret_key, session_token, expiration_time);
 
         // Success callback, save back to cache
-        auto &tls_cache = tls_slot_->getTyped<ThreadLocalStsCache>();
-        auto &credential_cache = tls_cache.credentialsCache();
-        credential_cache.emplace(role_arn, result);
+        credentials_cache_.emplace(role_arn, result);
         context->callbacks()->onSuccess(result);
       },
       [context](CredentialsFailureStatus reason) {
@@ -232,7 +218,7 @@ StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::create(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config) const {
 
-  return StsCredentialsProviderImpl::create(config, api_, tls_, dispatcher_);
+  return StsCredentialsProviderImpl::create(config, api_, dispatcher_);
 };
 
 } // namespace AwsLambda
