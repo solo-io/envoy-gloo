@@ -2,7 +2,7 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
-    "envoy_cc_binary",
+    "envoy_cc_test_binary",
     "envoy_package",
 )
 load(
@@ -25,9 +25,8 @@ envoy_gloo_cc_test(
     ],
 )
 
-envoy_cc_binary(
+envoy_cc_test_binary(
     name = "inja_transformer_speed_test",
-    testonly = 1,
     srcs = ["inja_transformer_speed_test.cc"],
     external_deps = [
         "benchmark",
