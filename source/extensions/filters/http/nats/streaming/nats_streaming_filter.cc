@@ -57,16 +57,12 @@ NatsStreamingFilter::decodeHeaders(Envoy::Http::RequestHeaderMap &headers,
   // TODO(talnordan): Consider extracting a common utility function which
   // converts a `HeaderMap` to a Protobuf `Map`, to reduce code duplication
   // with `Filters::Common::ExtAuthz::CheckRequestUtils::setHttpRequest()`.
-  auto mutable_headers = payload_.mutable_headers();
-  headers.iterate(
-      [](const Envoy::Http::HeaderEntry &e, void *ctx) {
-        Envoy::Protobuf::Map<std::string, std::string> *mutable_headers =
-            static_cast<Envoy::Protobuf::Map<std::string, std::string> *>(ctx);
-        (*mutable_headers)[std::string(e.key().getStringView())] =
-            std::string(e.value().getStringView());
-        return Envoy::Http::HeaderMap::Iterate::Continue;
-      },
-      mutable_headers);
+  auto *mutable_headers = payload_.mutable_headers();
+  headers.iterate([mutable_headers](const Envoy::Http::HeaderEntry &e) {
+    (*mutable_headers)[std::string(e.key().getStringView())] =
+        std::string(e.value().getStringView());
+    return Envoy::Http::HeaderMap::Iterate::Continue;
+  });
 
   if (end_stream) {
     relayToNatsStreaming();

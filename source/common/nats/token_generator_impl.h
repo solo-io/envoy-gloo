@@ -12,7 +12,7 @@ namespace Nats {
 
 class TokenGeneratorImpl : public TokenGenerator {
 public:
-  explicit TokenGeneratorImpl(Runtime::RandomGenerator &random_generator);
+  explicit TokenGeneratorImpl(Random::RandomGenerator &random_generator);
 
   // Nats::TokenGenerator
   std::string random() override;

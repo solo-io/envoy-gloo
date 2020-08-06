@@ -4,6 +4,7 @@
 #include "test/mocks/nats/mocks.h"
 #include "test/mocks/nats/streaming/mocks.h"
 #include "test/mocks/runtime/mocks.h"
+#include "test/mocks/common.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -19,7 +20,7 @@ class NatsStreamingClientImplTest : public testing::Test {
 public:
   Nats::ConnPoolNats::MockInstance *conn_pool_{
       new Nats::ConnPoolNats::MockInstance()};
-  NiceMock<Runtime::MockRandomGenerator> random_;
+  NiceMock<Random::MockRandomGenerator> random_;
   Event::MockDispatcher dispatcher_;
   std::chrono::milliseconds op_timeout_{5000};
   MockPublishCallbacks callbacks_;

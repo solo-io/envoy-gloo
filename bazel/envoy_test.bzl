@@ -70,6 +70,7 @@ def envoy_gloo_cc_test(
         deps = [
             ":" + name + "_lib_internal_only",
             repository + "//test:main",
+            repository + "//test/test_common:test_version_linkstamp",
         ],
         # from https://github.com/google/googletest/blob/6e1970e2376c14bf658eb88f655a054030353f9f/googlemock/src/gmock.cc#L51
         # 2 - by default, mocks act as StrictMocks.

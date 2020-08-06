@@ -10,7 +10,9 @@
 
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
 #include "test/extensions/filters/http/common/mock.h"
+#include "test/mocks/api/mocks.h"
 #include "test/mocks/http/mocks.h"
+#include "test/mocks/thread_local/mocks.h"
 #include "test/test_common/simulated_time_system.h"
 #include "test/test_common/utility.h"
 
