@@ -25,7 +25,7 @@ fi
 export ENVOY_SRCDIR=$SOURCE_DIR
 
 # google cloud build doesn't like ipv6
-export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors"
+export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --local_cpu_resources=${NUM_CPUS}"
 
 # google cloud build times out when using full throttle.
 export NUM_CPUS=16
