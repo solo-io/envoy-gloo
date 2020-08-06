@@ -172,7 +172,7 @@ StsConnectionPoolPtr StsConnectionPool::create(
     Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher &dispatcher,
     const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks) {
 
-  return std::make_unique<StsConnectionPoolImpl>(cm, api, dispatcher, role_arn,
+  return std::make_shared<StsConnectionPoolImpl>(cm, api, dispatcher, role_arn,
                                                  callbacks);
 }
 

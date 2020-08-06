@@ -26,11 +26,11 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm)
-    : api_(api), dispatcher_(dispatcher), config_(config),
+    : api_(api), dispatcher_(dispatcher), cm_(cm), config_(config),
       default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
       token_file_(
           absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))),
-      file_watcher_(dispatcher.createFilesystemWatcher()), cm_(cm) {
+      file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
@@ -89,7 +89,6 @@ void StsCredentialsProviderImpl::onSuccess(
 
 StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optional<std::string> &role_arn_arg, 
             StsConnectionPool::Context::Callbacks* callbacks) {
-  auto &ctximpl = static_cast<Context &>(*context);
 
   std::string role_arn = default_role_arn_;
   // If role_arn_arg is present, use that, otherwise use env
@@ -108,7 +107,7 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
     // If the expiration time is more than a minute away, return it immediately
     auto time_left = existing_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
-      ctximpl.callbacks()->onSuccess(existing_token->second);
+      callbacks->onSuccess(existing_token->second);
       return nullptr;
     }
     // token is expired, fallthrough to create a new one
@@ -116,7 +115,7 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
 
   // Look for active connection pool for given role_arn
   const auto existing_pool = connection_pools_.find(role_arn);
-  if (existing_pool != credentials_cache_.end()) {
+  if (existing_pool != connection_pools_.end()) {
     // We have an existing connection pool, add new context to connection pool and return it to the caller
     return existing_pool->second->add(callbacks);
   }

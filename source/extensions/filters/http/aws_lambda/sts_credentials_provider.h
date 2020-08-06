@@ -24,8 +24,8 @@ public:
   virtual ~StsCredentialsProvider() = default;
 
   // Lookup credentials cache map.
-  virtual void find(const absl::optional<std::string> &role_arn,
-                    ContextSharedPtr context) PURE;
+  virtual StsConnectionPool::Context* find(const absl::optional<std::string> &role_arn,
+            StsConnectionPool::Context::Callbacks* callbacks) PURE;
 };
 
 class StsCredentialsProviderImpl
@@ -45,10 +45,10 @@ public:
   static StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
              AWSLambdaConfig_ServiceAccountCredentials &config,
-         Api::Api &api, Event::Dispatcher &dispatcher) {
+         Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm) {
 
     std::shared_ptr<StsCredentialsProviderImpl> ptr(
-        new StsCredentialsProviderImpl(config, api, dispatcher));
+        new StsCredentialsProviderImpl(config, api, dispatcher, cm));
     ptr->init();
     return ptr;
   };

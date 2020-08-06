@@ -62,7 +62,7 @@ using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
 
 
 class StsConnectionPool;
-using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
+using StsConnectionPoolPtr = std::shared_ptr<StsConnectionPool>;
 
 class StsConnectionPool {
 public:
