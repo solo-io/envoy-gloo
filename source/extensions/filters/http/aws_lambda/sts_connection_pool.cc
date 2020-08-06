@@ -16,27 +16,11 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-namespace {
-/*
- * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum
- * lifespan of 15 minutes.
- * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
- *
- * In order to ensure that credentials never expire, we default to 2/3.
- *
- * This in combination with the very generous grace period which makes sure the
- * tokens are refreshed if they have < 5 minutes left on their lifetime. Whether
- * that lifetime is our prescribed, or from the response itself.
- */
-constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
-    std::chrono::minutes(10);
-
-} // namespace
-
 class StsConnectionPoolImpl : public StsConnectionPool,
                               public StsFetcher::Callbacks,
                               public Logger::Loggable<Logger::Id::aws> {
-  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher& dispatcher,
+  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
+                        Event::Dispatcher &dispatcher,
                         const absl::string_view role_arn,
                         StsConnectionPool::Callbacks *callbacks);
 
@@ -57,7 +41,8 @@ private:
                       public Event::DeferredDeletable,
                       public Envoy::LinkedObject<ContextImpl> {
   public:
-    ContextImpl(StsConnectionPool::Context::Callbacks *callbacks, StsConnectionPoolImpl& parent, Event::Dispatcher& dispatcher)
+    ContextImpl(StsConnectionPool::Context::Callbacks *callbacks,
+                StsConnectionPoolImpl &parent, Event::Dispatcher &dispatcher)
         : callbacks_(callbacks), parent_(parent), dispatcher_(dispatcher) {}
 
     StsConnectionPool::Context::Callbacks *callbacks() const override {
@@ -72,29 +57,28 @@ private:
 
   private:
     StsConnectionPool::Context::Callbacks *callbacks_;
-    StsConnectionPoolImpl& parent_;
-    Event::Dispatcher& dispatcher_;
+    StsConnectionPoolImpl &parent_;
+    Event::Dispatcher &dispatcher_;
   };
 
   using ContextImplPtr = std::unique_ptr<ContextImpl>;
 
   StsFetcherPtr fetcher_;
   Api::Api &api_;
-  Event::Dispatcher& dispatcher_;
+  Event::Dispatcher &dispatcher_;
   std::string role_arn_;
   StsConnectionPool::Callbacks *callbacks_;
 
   std::list<ContextImplPtr> connection_list_;
-
 };
 
 // using ContextImplPtr = std::unique_ptr<StsConnectionPoolImpl::ContextImpl>;
 
 StsConnectionPoolImpl::StsConnectionPoolImpl(
-    Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher& dispatcher,
+    Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher &dispatcher,
     const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks)
-    : fetcher_(StsFetcher::create(cm, api)), api_(api), dispatcher_(dispatcher), role_arn_(role_arn),
-      callbacks_(callbacks){};
+    : fetcher_(StsFetcher::create(cm, api)), api_(api), dispatcher_(dispatcher),
+      role_arn_(role_arn), callbacks_(callbacks){};
 
 StsConnectionPoolImpl::~StsConnectionPoolImpl() {
   // When the conn pool is being destructed, make sure to inform all of the

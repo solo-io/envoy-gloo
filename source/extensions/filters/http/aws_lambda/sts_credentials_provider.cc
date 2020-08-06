@@ -20,20 +20,6 @@ namespace {
 constexpr char AWS_ROLE_ARN[] = "AWS_ROLE_ARN";
 constexpr char AWS_WEB_IDENTITY_TOKEN_FILE[] = "AWS_WEB_IDENTITY_TOKEN_FILE";
 
-/*
- * AssumeRoleWithIdentity returns a set of temporary credentials with a minimum
- * lifespan of 15 minutes.
- * https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
- *
- * In order to ensure that credentials never expire, we default to 2/3.
- *
- * This in combination with the very generous grace period which makes sure the
- * tokens are refreshed if they have < 5 minutes left on their lifetime. Whether
- * that lifetime is our prescribed, or from the response itself.
- */
-constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
-    std::chrono::minutes(10);
-
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 } // namespace
 
