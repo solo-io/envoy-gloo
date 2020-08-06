@@ -70,9 +70,9 @@ using SharedAWSLambdaProtocolExtensionConfig =
 
 class AWSLambdaConfig {
 public:
-  virtual ContextSharedPtr
+  virtual StsConnectionPool::Context*
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-                 StsCredentialsProvider::Callbacks *callbacks) const PURE;
+                 StsConnectionPool::Context::Callbacks *callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -83,17 +83,16 @@ public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      Upstream::ClusterManager &cluster_manager,
       StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
       Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-      Stats::Scope &scope, Api::Api &api,
+      Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  ContextSharedPtr
+  StsConnectionPool::Context*
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-                 StsCredentialsProvider::Callbacks *callbacks) const override;
+                 StsConnectionPool::Context::Callbacks *callbacks) const override;
 
 private:
   CredentialsConstSharedPtr getProviderCredentials() const;
@@ -101,8 +100,6 @@ private:
                                             Stats::Scope &scope);
 
   void timerCallback();
-
-  ContextFactory context_factory_;
 
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;

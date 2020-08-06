@@ -19,13 +19,12 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
 
   auto sts_factory = StsCredentialsProviderFactoryImpl(
-      context.api(), context.threadLocal(), context.dispatcher());
+      context.api(), context.dispatcher(), context.clusterManager());
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::make_unique<
           Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-          context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
-      context.clusterManager(), sts_factory, context.dispatcher(),
-      context.threadLocal(), stats_prefix, context.scope(), context.api(),
+          context.api(), Extensions::Common::Aws::Utility::metadataFetcher), sts_factory, context.dispatcher(),
+      context.threadLocal(), stats_prefix, context.scope(),
       proto_config);
 
   return

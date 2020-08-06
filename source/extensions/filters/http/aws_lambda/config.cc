@@ -44,14 +44,12 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
-    Upstream::ClusterManager &cluster_manager,
     StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-    Stats::Scope &scope, Api::Api &api,
+    Stats::Scope &scope,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : context_factory_(cluster_manager, api),
-      stats_(generateStats(stats_prefix, scope)) {
+    : stats_(generateStats(stats_prefix, scope)) {
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -98,9 +96,9 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
  *   2. Default Provider
  *   3. STS
  */
-ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
+StsConnectionPool::Context* AWSLambdaConfigImpl::getCredentials(
     SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-    StsCredentialsProvider::Callbacks *callbacks) const {
+    StsConnectionPool::Context::Callbacks *callbacks) const {
   // Always check extension config first, as it overrides
   if (ext_cfg->accessKey().has_value() && ext_cfg->secretKey().has_value()) {
     ENVOY_LOG(trace, "{}: Credentials found from protocol options", __func__);
@@ -130,12 +128,7 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
   if (sts_enabled_) {
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
-    // return the context directly to the filter, as no direct credentials can
-    // be sent
-    auto context = context_factory_.create(callbacks);
-    thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(),
-                                                    context);
-    return context;
+    return thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(), callbacks);
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
