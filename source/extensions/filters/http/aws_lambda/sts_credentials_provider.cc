@@ -3,6 +3,7 @@
 #include "envoy/api/api.h"
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
+#include "common/common/linked_object.h"
 
 #include "extensions/common/aws/credentials_provider.h"
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
@@ -35,23 +36,51 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 } // namespace
 
-class ContextImpl : public StsCredentialsProvider::Context {
+class ContextImpl : public StsCredentialsProvider::Context, 
+                    public Event::DeferredDeletable,
+                    public Envoy::LinkedObject<ContextImpl> {
 public:
   ContextImpl(Upstream::ClusterManager &cm, Api::Api &api,
-              StsCredentialsProvider::Callbacks *callback)
-      : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback) {}
+              StsCredentialsProvider::Callbacks *callback,
+              StsCredentialsProvider::Canceller *cancellation_callback)
+      : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback), cancellation_callback_(cancellation_callback) {}
 
   StsCredentialsProvider::Callbacks *callbacks() const override {
     return callbacks_;
   }
-  StsFetcher &fetcher() override { return *fetcher_; }
 
-  void cancel() override { fetcher_->cancel(); }
+  // When a given context is cancelled, the connection pool it belongs to needs to find out, so register a callback
+  void cancel() override { cancellation_callback_->cancel(); }
 
 private:
-  StsFetcherPtr fetcher_;
+  StsCredentialsProvider::Canceller *cancellation_callback_;
   StsCredentialsProvider::Callbacks *callbacks_;
 };
+
+StsConnectionPoolImpl::StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
+            const envoy::config::core::v3::HttpUri &uri,
+             const absl::string_view role_arn,
+             const absl::string_view web_token): : fetcher_(StsFetcher::create(cm, api)) {
+  fetcher_.fetch(
+    uri, 
+    role_arn, 
+    web_token, 
+    [this](const absl::string_view body) {
+      // iterate through all members and return data
+    },
+    [](CredentialsFailureStatus reason) {
+      // iterate through all members and return data
+    }
+  );
+};
+
+void StsConnectionPoolImpl::cancel() {
+  // If list of connections is empty, cancel the fetcher
+}
+
+void StsConnectionPoolImpl::add(std::unique_ptr<ContextImpl> ctx) {
+  LinkedList::moveIntoList(ctx, connection_list_)
+}
 
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
@@ -137,18 +166,27 @@ void StsCredentialsProviderImpl::find(
 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
-  const auto it = credentials_cache_.find(role_arn);
-  if (it != credentials_cache_.end()) {
+  const auto existing_token = credentials_cache_.find(role_arn);
+  if (existing_token != credentials_cache_.end()) {
     // thing  exists
     const auto now = api_.timeSource().systemTime();
     // If the expiration time is more than a minute away, return it immediately
-    auto time_left = it->second->expirationTime() - now;
+    auto time_left = existing_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
-      ctximpl.callbacks()->onSuccess(it->second);
+      ctximpl.callbacks()->onSuccess(existing_token->second);
       return;
     }
     // token is expired, fallthrough to create a new one
   }
+
+  // Look for active connection pool for given role_arn
+  const auto existing_pool = connection_pools_.find(role_arn);
+  if (existing_pool != credentials_cache_.end()) {
+    // We have an existing connection pool, add new context to connection pool
+
+  }
+
+  // No pool exists, create a new one
 
   ctximpl.fetcher().fetch(
       uri_, role_arn, web_token_,

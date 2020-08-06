@@ -44,9 +44,19 @@ public:
     virtual void onFailure(CredentialsFailureStatus status) PURE;
   };
 
-  // Context object to hold data needed for verifier.
-  class Context {
+  class Canceller {
   public:
+    virtual ~Canceller() = default;
+      /**
+     * Called when a given context is cancelled
+     */
+    virtual void cancel() PURE;
+  }
+
+  // Context object to hold data needed for verifier.
+  class Context : public Canceller {
+  public:
+
     virtual ~Context() = default;
 
     /**
@@ -57,13 +67,6 @@ public:
     virtual Callbacks *callbacks() const PURE;
 
     /**
-     * Returns the request callback wrapped in this context.
-     *
-     * @returns the fetcher.
-     */
-    virtual StsFetcher &fetcher() PURE;
-
-    /**
      * Cancel any pending requests for this context.
      */
     virtual void cancel() PURE;
@@ -71,10 +74,33 @@ public:
 
   using ContextSharedPtr = std::shared_ptr<Context>;
 
-  // Lookup credentials cache map. The cache only stores Jwks specified in the
-  // config.
+  // Lookup credentials cache map.
   virtual void find(const absl::optional<std::string> &role_arn,
                     ContextSharedPtr context) PURE;
+};
+
+class StsConnectionPool {
+  virtual ~StsConnectionPool() = default;
+  
+  virtual void add(std::unique_ptr<ContextImpl> ctx) PURE;
+}
+
+using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
+
+
+class StsConnectionPoolImpl : public StsCredentialsProvider::Canceller {
+  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
+              const envoy::config::core::v3::HttpUri &uri,
+             const absl::string_view role_arn,
+             const absl::string_view web_token)
+  
+  void cancel() override;
+
+  void add(std::unique_ptr<ContextImpl> ctx) override;
+
+private:
+  StsFetcherPtr fetcher_;
+  std::list<ContextImpl> connection_list_;
 };
 
 class StsCredentialsProviderImpl
@@ -127,6 +153,9 @@ private:
   // Credentials storage map, keyed by arn
   std::unordered_map<std::string, StsCredentialsConstSharedPtr>
       credentials_cache_;
+
+  std::unordered_map<std::string, StsConnectionPoolPtr>
+      connection_pools_;
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;

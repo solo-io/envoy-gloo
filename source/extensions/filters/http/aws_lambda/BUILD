@@ -91,6 +91,7 @@ envoy_cc_library(
     deps = [
         ":sts_fetcher_lib",
         "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/common:linked_object",
         "@envoy//source/common/config:datasource_lib",
         "@envoy//source/common/protobuf:utility_lib",
         "@envoy//source/common/filesystem:watcher_lib",
