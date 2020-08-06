@@ -35,7 +35,7 @@ class ClientImpl : public Client,
                    public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   ClientImpl(Tcp::ConnPoolNats::InstancePtr<Message> &&conn_pool,
-             Runtime::RandomGenerator &random, Event::Dispatcher &dispatcher,
+             Random::RandomGenerator &random, Event::Dispatcher &dispatcher,
              const std::chrono::milliseconds &op_timeout);
 
   // Nats::Streaming::Client

@@ -23,15 +23,11 @@ void BodyHeaderTransformer::transform(
 
   json &headers = json_body["headers"];
   header_map.iterate(
-      [](const Http::HeaderEntry &header,
-         void *context) -> Http::HeaderMap::Iterate {
-        json *headers_ptr = static_cast<json *>(context);
-        json &headers = *headers_ptr;
+      [&headers](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
         headers[std::string(header.key().getStringView())] =
             std::string(header.value().getStringView());
         return Http::HeaderMap::Iterate::Continue;
-      },
-      &headers);
+      });
 
   // remove content length, as we have new body.
   header_map.removeContentLength();

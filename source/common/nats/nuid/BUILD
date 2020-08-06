@@ -16,6 +16,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "@envoy//include/envoy/runtime:runtime_interface",
+        "@envoy//include/envoy/common:random_generator_interface",
         "@envoy//source/common/common:assert_lib",
     ],
 )

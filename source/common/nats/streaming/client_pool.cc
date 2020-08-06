@@ -11,7 +11,7 @@ namespace Streaming {
 ClientPool::ClientPool(
     const std::string &cluster_name, Upstream::ClusterManager &cm,
     Tcp::ConnPoolNats::ClientFactory<Message> &client_factory,
-    ThreadLocal::SlotAllocator &tls, Runtime::RandomGenerator &random,
+    ThreadLocal::SlotAllocator &tls, Random::RandomGenerator &random,
     const std::chrono::milliseconds &op_timeout)
     : cm_(cm), client_factory_(client_factory), slot_(tls.allocateSlot()),
       random_(random), op_timeout_(op_timeout) {
@@ -36,7 +36,7 @@ PublishRequestPtr ClientPool::makeRequest(const std::string &subject,
 
 ClientPool::ThreadLocalPool::ThreadLocalPool(
     Tcp::ConnPoolNats::InstancePtr<Message> &&conn_pool,
-    Runtime::RandomGenerator &random, Event::Dispatcher &dispatcher,
+    Random::RandomGenerator &random, Event::Dispatcher &dispatcher,
     const std::chrono::milliseconds &op_timeout)
     : client_(std::move(conn_pool), random, dispatcher, op_timeout) {}
 

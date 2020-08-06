@@ -18,7 +18,7 @@ const std::string ClientImpl::INBOX_PREFIX{"_INBOX"};
 const std::string ClientImpl::PUB_ACK_PREFIX{"_STAN.acks"};
 
 ClientImpl::ClientImpl(Tcp::ConnPoolNats::InstancePtr<Message> &&conn_pool_,
-                       Runtime::RandomGenerator &random,
+                       Random::RandomGenerator &random,
                        Event::Dispatcher &dispatcher,
                        const std::chrono::milliseconds &op_timeout)
     : conn_pool_(std::move(conn_pool_)), token_generator_(random),

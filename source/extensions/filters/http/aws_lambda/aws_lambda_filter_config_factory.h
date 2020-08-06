@@ -23,9 +23,9 @@ public:
   AWSLambdaFilterConfigFactory()
       : FactoryBase(SoloHttpFilterNames::get().AwsLambda) {}
 
-  Upstream::ProtocolOptionsConfigConstSharedPtr
-  createProtocolOptionsConfig(const Protobuf::Message &config,
-                              ProtobufMessage::ValidationVisitor &) override;
+  Upstream::ProtocolOptionsConfigConstSharedPtr createProtocolOptionsConfig(
+      const Protobuf::Message &config,
+      Server::Configuration::ProtocolOptionsFactoryContext &) override;
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;
 
 private:

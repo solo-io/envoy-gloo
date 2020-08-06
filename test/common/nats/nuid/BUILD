@@ -18,7 +18,7 @@ envoy_gloo_cc_test(
     deps = [
         "//source/common/nats/nuid:nuid_lib",
         "@envoy//source/common/common:assert_lib",
-        "@envoy//source/common/runtime:runtime_lib",
+        "@envoy//source/common/common:random_generator_lib",
         "@envoy//test/mocks/runtime:runtime_mocks",
     ],
 )

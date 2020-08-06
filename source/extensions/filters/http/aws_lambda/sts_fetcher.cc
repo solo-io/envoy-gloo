@@ -65,9 +65,10 @@ public:
     message->headers().setContentType(
         Http::Headers::get().ContentTypeValues.FormUrlEncoded);
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            api_.timeSource().systemTime().time_since_epoch())
-                            .count();
-    const std::string body = fmt::format(StsFormatString, role_arn, now, web_token);
+                         api_.timeSource().systemTime().time_since_epoch())
+                         .count();
+    const std::string body =
+        fmt::format(StsFormatString, role_arn, now, web_token);
     message->body() = std::make_unique<Buffer::OwnedImpl>(body);
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start",
               uri_->uri());
