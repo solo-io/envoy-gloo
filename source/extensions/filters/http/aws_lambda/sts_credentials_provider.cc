@@ -3,6 +3,7 @@
 #include "envoy/api/api.h"
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
+
 #include "common/common/linked_object.h"
 
 #include "extensions/common/aws/credentials_provider.h"
@@ -40,7 +41,7 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Event::Dispatcher &dispatcher)
-    : api_(api), config_(config),
+    : api_(api), dispatcher_(dispatcher), config_(config),
       default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
       token_file_(
           absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))),
@@ -96,7 +97,8 @@ void StsCredentialsProviderImpl::init() {
       });
 }
 
-void StsCredentialsProviderImpl::onSuccess(std::shared_ptr<const StsCredentials> result, std::string_view role_arn) {
+void StsCredentialsProviderImpl::onSuccess(
+    std::shared_ptr<const StsCredentials> result, std::string_view role_arn) {
   credentials_cache_.emplace(role_arn, result);
 }
 
@@ -131,7 +133,6 @@ void StsCredentialsProviderImpl::find(
   const auto existing_pool = connection_pools_.find(role_arn);
   if (existing_pool != credentials_cache_.end()) {
     // We have an existing connection pool, add new context to connection pool
-
   }
 
   // No pool exists, create a new one

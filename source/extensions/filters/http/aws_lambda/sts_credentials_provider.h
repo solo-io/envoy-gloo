@@ -28,7 +28,6 @@ public:
                     ContextSharedPtr context) PURE;
 };
 
-
 class StsCredentialsProviderImpl
     : public StsCredentialsProvider,
       public StsConnectionPool::Callbacks,
@@ -39,7 +38,8 @@ public:
   void find(const absl::optional<std::string> &role_arn_arg,
             ContextSharedPtr context) override;
 
-  void onSuccess(std::shared_ptr<const StsCredentials>, std::string_view role_arn) override;
+  void onSuccess(std::shared_ptr<const StsCredentials>,
+                 std::string_view role_arn) override;
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr
@@ -62,6 +62,7 @@ private:
   void init();
 
   Api::Api &api_;
+  Event::Dispatcher &dispatcher_;
   const envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
 
@@ -83,8 +84,7 @@ private:
   std::unordered_map<std::string, StsCredentialsConstSharedPtr>
       credentials_cache_;
 
-  std::unordered_map<std::string, StsConnectionPoolPtr>
-      connection_pools_;
+  std::unordered_map<std::string, StsConnectionPoolPtr> connection_pools_;
 };
 
 using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;

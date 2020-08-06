@@ -101,6 +101,23 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "sts_connection_pool_lib",
+    srcs = ["sts_connection_pool.cc"],
+    hdrs = ["sts_connection_pool.h"],
+    repository = "@envoy",
+    deps = [
+        ":sts_fetcher_lib",
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/common:linked_object",
+        "@envoy//source/common/config:datasource_lib",
+        "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/common/filesystem:watcher_lib",
+        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
+    ],
+)
+
+envoy_cc_library(
     name = "sts_fetcher_lib",
     srcs = ["sts_fetcher.cc"],
     hdrs = ["sts_fetcher.h", "sts_status.h"],

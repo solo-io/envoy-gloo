@@ -3,6 +3,7 @@
 #include "envoy/api/api.h"
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
+
 #include "common/common/regex.h"
 #include "common/singleton/const_singleton.h"
 
@@ -18,33 +19,32 @@ namespace AwsLambda {
 
 class StsResponseRegexValues {
 public:
-  StsResponseRegex() {
+  StsResponseRegexValues() {
 
     // Initialize regex strings, should never fail
     regex_access_key =
         Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-    regex_secret_key =
-        Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
+    regex_secret_key = Regex::Utility::parseStdRegex(
+        "<SecretAccessKey>(.*?)</SecretAccessKey>");
     regex_session_token =
         Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
     regex_expiration =
         Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
   };
 
-  const std::regex regex_access_key;
+  std::regex regex_access_key;
 
-  const std::regex regex_secret_key;
+  std::regex regex_secret_key;
 
-  const std::regex regex_session_token;
+  std::regex regex_session_token;
 
-  const std::regex regex_expiration;
-}
+  std::regex regex_expiration;
+};
 
 using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
 
 class StsConnectionPool {
-public: 
-  
+public:
   virtual ~StsConnectionPool() = default;
 
   class Callbacks {
@@ -57,15 +57,14 @@ public:
      * @param credential the credentials
      * @param role_arn the role_arn used to create these credentials
      */
-    virtual void onSuccess(std::shared_ptr<const StsCredentials>, std::string_view role_arn) PURE;
+    virtual void onSuccess(std::shared_ptr<const StsCredentials>,
+                           std::string_view role_arn) PURE;
   };
 
   // Context object to hold data needed for verifier.
   class Context {
   public:
-
     virtual ~Context() = default;
-
 
     class Callbacks {
     public:
@@ -93,10 +92,12 @@ public:
      *
      * @returns the request callback.
      */
-    virtual Callbacks *callbacks() const PURE;
+    virtual StsConnectionPool::Context::Callbacks *callbacks() const PURE;
 
     /**
-     * Cancel any pending requests for this context.
+     * Returns the request callback wrapped in this context.
+     *
+     * @returns the request callback.
      */
     virtual void cancel() PURE;
   };
@@ -104,37 +105,14 @@ public:
   using ContextPtr = std::unique_ptr<Context>;
 
   virtual void init(const envoy::config::core::v3::HttpUri &uri,
-             const absl::string_view web_token) PURE;
-  
-  virtual Context* add(StsCredentialsProvider::Callbacks *callback) PURE;
-}
+                    const absl::string_view web_token) PURE;
+
+  virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
+};
 
 using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
 
-
-class StsConnectionPoolImpl: public StsFetcher::Callbacks {
-  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api
-             const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks)
-
-  void init(const envoy::config::core::v3::HttpUri &uri,
-             const absl::string_view web_token) override; 
-
-  Context* create(StsConnectionPool::Context::Callbacks *callbacks) override;
-
-  void onSuccess(const absl::string_view body) override;
-
-  void onFailure(CredentialsFailureStatus status) override;
-
-private:
-  StsFetcherPtr fetcher_;
-  std::string role_arn_;
-  StsConnectionPool::Callbacks *callbacks_;
-
-
-  std::list<ContextImpl> connection_list_;
-};
-
-using ContextPtr = std::unique_ptr<StsCredentialsProvider::Context>;
+using ContextPtr = std::unique_ptr<StsConnectionPool::Context>;
 
 } // namespace AwsLambda
 } // namespace HttpFilters

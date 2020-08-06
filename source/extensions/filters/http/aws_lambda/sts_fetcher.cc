@@ -35,7 +35,8 @@ public:
 
   void fetch(const envoy::config::core::v3::HttpUri &uri,
              const absl::string_view role_arn,
-             const absl::string_view web_token, StsFetcher::Callbacks* callbacks) override {
+             const absl::string_view web_token,
+             StsFetcher::Callbacks *callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
     ASSERT(!callbacks_);
 
@@ -149,7 +150,7 @@ private:
   Upstream::ClusterManager &cm_;
   Api::Api &api_;
   bool complete_{};
-  StsFetcher::Callbacks* callbacks_;
+  StsFetcher::Callbacks *callbacks_;
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
 

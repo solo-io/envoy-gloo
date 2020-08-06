@@ -79,7 +79,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     // use service account credentials provider
     auto service_account_creds = protoconfig.service_account_credentials();
     tls_slot_->set([&service_account_creds, &sts_factory](Event::Dispatcher &) {
-      return std::make_shared<ThreadLocalCredentials>(sts_factory.create(service_account_creds));
+      return std::make_shared<ThreadLocalCredentials>(
+          sts_factory.create(service_account_creds));
     });
     sts_enabled_ = true;
     break;
@@ -117,7 +118,8 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
     return nullptr;
   }
 
-  auto& thread_local_credentials =  tls_slot_->getTyped<ThreadLocalCredentials>();
+  auto &thread_local_credentials =
+      tls_slot_->getTyped<ThreadLocalCredentials>();
   if (provider_) {
     ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
     callbacks->onSuccess(thread_local_credentials.credentials_);
@@ -131,7 +133,8 @@ ContextSharedPtr AWSLambdaConfigImpl::getCredentials(
     // return the context directly to the filter, as no direct credentials can
     // be sent
     auto context = context_factory_.create(callbacks);
-    thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(), context);
+    thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(),
+                                                    context);
     return context;
   }
 
