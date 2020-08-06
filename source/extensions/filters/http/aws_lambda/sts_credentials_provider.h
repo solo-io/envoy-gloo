@@ -76,7 +76,7 @@ private:
   std::regex regex_session_token_;
   std::regex regex_expiration_;
 
-  Envoy::Filesystem::WatcherPtr file_watcher_;
+  // Envoy::Filesystem::WatcherPtr file_watcher_;
 
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
   // TODO: udpate this file, inotify or timer

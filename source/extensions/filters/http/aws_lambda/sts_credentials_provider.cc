@@ -29,8 +29,8 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     : api_(api), dispatcher_(dispatcher), cm_(cm), config_(config),
       default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
       token_file_(
-          absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))),
-      file_watcher_(dispatcher.createFilesystemWatcher()) {
+          absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))) {
+      // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
@@ -63,23 +63,23 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
 
 void StsCredentialsProviderImpl::init() {
   // Add file watcher for token file
-  auto shared_this = shared_from_this();
-  file_watcher_->addWatch(
-      token_file_, Filesystem::Watcher::Events::Modified,
-      [shared_this](uint32_t) {
-        try {
-          const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
-              shared_this->token_file_);
-          // TODO: check if web_token is valid
-          // TODO: stats here
-          shared_this->web_token_ = web_token;
-        } catch (const EnvoyException &e) {
-          ENVOY_LOG_TO_LOGGER(
-              Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
-              "{}: Exception while reading file during watch ({}): {}",
-              __func__, shared_this->token_file_, e.what());
-        }
-      });
+  // auto shared_this = shared_from_this();
+  // file_watcher_->addWatch(
+  //     token_file_, Filesystem::Watcher::Events::Modified,
+  //     [shared_this](uint32_t) {
+  //       try {
+  //         const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
+  //             shared_this->token_file_);
+  //         // TODO: check if web_token is valid
+  //         // TODO: stats here
+  //         shared_this->web_token_ = web_token;
+  //       } catch (const EnvoyException &e) {
+  //         ENVOY_LOG_TO_LOGGER(
+  //             Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
+  //             "{}: Exception while reading file during watch ({}): {}",
+  //             __func__, shared_this->token_file_, e.what());
+  //       }
+  //     });
 }
 
 void StsCredentialsProviderImpl::onSuccess(

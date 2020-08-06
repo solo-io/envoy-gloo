@@ -83,7 +83,7 @@ public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
+      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher,
       Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
       Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
@@ -111,6 +111,8 @@ private:
   Event::TimerPtr timer_;
 
   AwsLambdaFilterStats stats_;
+
+  std::unique_ptr<StsCredentialsProviderFactory> sts_factory_;
 };
 
 typedef std::shared_ptr<const AWSLambdaConfig> AWSLambdaConfigConstSharedPtr;

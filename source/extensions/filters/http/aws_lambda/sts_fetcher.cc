@@ -38,7 +38,7 @@ public:
              const absl::string_view web_token,
              StsFetcher::Callbacks *callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
-    ASSERT(!callbacks_);
+    ASSERT(callbacks_ == nullptr);
 
     complete_ = false;
     callbacks_ = callbacks;
@@ -150,7 +150,7 @@ private:
   Upstream::ClusterManager &cm_;
   Api::Api &api_;
   bool complete_{};
-  StsFetcher::Callbacks *callbacks_;
+  StsFetcher::Callbacks *callbacks_{};
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
 

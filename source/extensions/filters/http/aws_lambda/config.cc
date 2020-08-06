@@ -44,12 +44,12 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
-    StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
+    std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
     Stats::Scope &scope,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : stats_(generateStats(stats_prefix, scope)) {
+    : stats_(generateStats(stats_prefix, scope)){
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -75,10 +75,13 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       CredentialsFetcherCase::kServiceAccountCredentials: {
     ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
     // use service account credentials provider
+    tls_slot_ = tls.allocateSlot();
+    // transfer ptr ownership to sts_factor isn't cleaned up before we get into tls set
+    sts_factory_ = std::move(sts_factory);
     auto service_account_creds = protoconfig.service_account_credentials();
-    tls_slot_->set([&service_account_creds, &sts_factory](Event::Dispatcher &) {
-      return std::make_shared<ThreadLocalCredentials>(
-          sts_factory.create(service_account_creds));
+    tls_slot_->set([this, service_account_creds](Event::Dispatcher &) {
+      StsCredentialsProviderPtr sts_cred_provider = sts_factory_->create(service_account_creds);
+      return std::make_shared<ThreadLocalCredentials>(sts_cred_provider);
     });
     sts_enabled_ = true;
     break;

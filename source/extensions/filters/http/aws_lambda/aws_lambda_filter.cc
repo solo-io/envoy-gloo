@@ -125,6 +125,8 @@ void AWSLambdaFilter::onSuccess(
         credentials) {
   credentials_ = credentials;
   // Do not null context here; all hell will break loose.
+  // can now disregard hehe
+  context_ = nullptr;
   state_ = State::Complete;
 
   const std::string *access_key{};
