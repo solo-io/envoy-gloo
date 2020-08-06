@@ -94,23 +94,23 @@ public:
 
   virtual StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
-             AWSLambdaConfig_ServiceAccountCredentials &config) const PURE;
+             AWSLambdaConfig_ServiceAccountCredentials &config, 
+                                    Event::Dispatcher &dispatcher) const PURE;
 };
 
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
   StsCredentialsProviderFactoryImpl(Api::Api &api,
-                                    Event::Dispatcher &dispatcher,
                                     Upstream::ClusterManager &cm)
-      : api_(api), dispatcher_(dispatcher), cm_(cm) {};
+      : api_(api), cm_(cm) {};
 
   StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
-             AWSLambdaConfig_ServiceAccountCredentials &config) const override;
+             AWSLambdaConfig_ServiceAccountCredentials &config, 
+                                    Event::Dispatcher &dispatcher) const override;
 
 private:
   Api::Api &api_;
-  Event::Dispatcher &dispatcher_;
   Upstream::ClusterManager &cm_;
 };
 

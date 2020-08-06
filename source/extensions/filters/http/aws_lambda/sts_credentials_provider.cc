@@ -132,9 +132,10 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
 
 StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::create(
     const envoy::config::filter::http::aws_lambda::v2::
-        AWSLambdaConfig_ServiceAccountCredentials &config) const {
+        AWSLambdaConfig_ServiceAccountCredentials &config,
+                                    Event::Dispatcher &dispatcher) const {
 
-  return StsCredentialsProviderImpl::create(config, api_, dispatcher_, cm_);
+  return StsCredentialsProviderImpl::create(config, api_, dispatcher, cm_);
 };
 
 } // namespace AwsLambda

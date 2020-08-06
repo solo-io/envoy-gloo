@@ -79,8 +79,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     // transfer ptr ownership to sts_factor isn't cleaned up before we get into tls set
     sts_factory_ = std::move(sts_factory);
     auto service_account_creds = protoconfig.service_account_credentials();
-    tls_slot_->set([this, service_account_creds](Event::Dispatcher &) {
-      StsCredentialsProviderPtr sts_cred_provider = sts_factory_->create(service_account_creds);
+    tls_slot_->set([this, service_account_creds](Event::Dispatcher &dispatcher) {
+      StsCredentialsProviderPtr sts_cred_provider = sts_factory_->create(service_account_creds, dispatcher);
       return std::make_shared<ThreadLocalCredentials>(sts_cred_provider);
     });
     sts_enabled_ = true;
