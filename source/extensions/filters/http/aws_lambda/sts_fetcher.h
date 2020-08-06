@@ -29,7 +29,7 @@ public:
                  const SystemTime &expiration_time)
       : Extensions::Common::Aws::Credentials(access_key_id, secret_access_key,
                                              session_token),
-        expiration_time_(expiration_time){};
+        expiration_time_(expiration_time) {};
 
   const SystemTime &expirationTime() const { return expiration_time_; };
 
@@ -56,6 +56,24 @@ public:
 
   using FailureCallback = std::function<void(CredentialsFailureStatus status)>;
 
+  class Callbacks {
+  public:
+    virtual ~Callbacks() = default;
+
+    /**
+     * Called on successful request
+     *
+     * @param body the request body
+     */
+    virtual void onSuccess(const absl::string_view body) PURE;
+
+    /**
+     * Called on completion of request.
+     *
+     * @param status the status of the request.
+     */
+    virtual void onFailure(CredentialsFailureStatus status) PURE;
+  };
   /*
    * Cancel any in-flight request.
    */
@@ -74,8 +92,7 @@ public:
    */
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
                      const absl::string_view role_arn,
-                     const absl::string_view web_token, SuccessCallback success,
-                     FailureCallback failure) PURE;
+                     const absl::string_view web_token, StsFetcher::Callbacks* callbacks) PURE;
 
   /*
    * Factory method for creating a StsFetcher.

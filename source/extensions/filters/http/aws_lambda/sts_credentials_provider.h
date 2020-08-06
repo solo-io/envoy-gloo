@@ -23,94 +23,23 @@ class StsCredentialsProvider {
 public:
   virtual ~StsCredentialsProvider() = default;
 
-  class Callbacks {
-  public:
-    virtual ~Callbacks() = default;
-
-    /**
-     * Called on successful request
-     *
-     * @param credential the credentials
-     */
-    virtual void onSuccess(
-        std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>)
-        PURE;
-
-    /**
-     * Called on completion of request.
-     *
-     * @param status the status of the request.
-     */
-    virtual void onFailure(CredentialsFailureStatus status) PURE;
-  };
-
-  class Canceller {
-  public:
-    virtual ~Canceller() = default;
-      /**
-     * Called when a given context is cancelled
-     */
-    virtual void cancel() PURE;
-  }
-
-  // Context object to hold data needed for verifier.
-  class Context : public Canceller {
-  public:
-
-    virtual ~Context() = default;
-
-    /**
-     * Returns the request callback wrapped in this context.
-     *
-     * @returns the request callback.
-     */
-    virtual Callbacks *callbacks() const PURE;
-
-    /**
-     * Cancel any pending requests for this context.
-     */
-    virtual void cancel() PURE;
-  };
-
-  using ContextSharedPtr = std::shared_ptr<Context>;
-
   // Lookup credentials cache map.
   virtual void find(const absl::optional<std::string> &role_arn,
                     ContextSharedPtr context) PURE;
 };
 
-class StsConnectionPool {
-  virtual ~StsConnectionPool() = default;
-  
-  virtual void add(std::unique_ptr<ContextImpl> ctx) PURE;
-}
-
-using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
-
-
-class StsConnectionPoolImpl : public StsCredentialsProvider::Canceller {
-  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
-              const envoy::config::core::v3::HttpUri &uri,
-             const absl::string_view role_arn,
-             const absl::string_view web_token)
-  
-  void cancel() override;
-
-  void add(std::unique_ptr<ContextImpl> ctx) override;
-
-private:
-  StsFetcherPtr fetcher_;
-  std::list<ContextImpl> connection_list_;
-};
 
 class StsCredentialsProviderImpl
     : public StsCredentialsProvider,
+      public StsConnectionPool::Callbacks,
       public Logger::Loggable<Logger::Id::aws>,
       public std::enable_shared_from_this<StsCredentialsProviderImpl> {
 
 public:
   void find(const absl::optional<std::string> &role_arn_arg,
             ContextSharedPtr context) override;
+
+  void onSuccess(std::shared_ptr<const StsCredentials>, std::string_view role_arn) override;
 
   // Factory function to create an instance.
   static StsCredentialsProviderPtr

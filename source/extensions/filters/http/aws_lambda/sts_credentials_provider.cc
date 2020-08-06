@@ -36,52 +36,6 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 } // namespace
 
-class ContextImpl : public StsCredentialsProvider::Context, 
-                    public Event::DeferredDeletable,
-                    public Envoy::LinkedObject<ContextImpl> {
-public:
-  ContextImpl(Upstream::ClusterManager &cm, Api::Api &api,
-              StsCredentialsProvider::Callbacks *callback,
-              StsCredentialsProvider::Canceller *cancellation_callback)
-      : fetcher_(StsFetcher::create(cm, api)), callbacks_(callback), cancellation_callback_(cancellation_callback) {}
-
-  StsCredentialsProvider::Callbacks *callbacks() const override {
-    return callbacks_;
-  }
-
-  // When a given context is cancelled, the connection pool it belongs to needs to find out, so register a callback
-  void cancel() override { cancellation_callback_->cancel(); }
-
-private:
-  StsCredentialsProvider::Canceller *cancellation_callback_;
-  StsCredentialsProvider::Callbacks *callbacks_;
-};
-
-StsConnectionPoolImpl::StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
-            const envoy::config::core::v3::HttpUri &uri,
-             const absl::string_view role_arn,
-             const absl::string_view web_token): : fetcher_(StsFetcher::create(cm, api)) {
-  fetcher_.fetch(
-    uri, 
-    role_arn, 
-    web_token, 
-    [this](const absl::string_view body) {
-      // iterate through all members and return data
-    },
-    [](CredentialsFailureStatus reason) {
-      // iterate through all members and return data
-    }
-  );
-};
-
-void StsConnectionPoolImpl::cancel() {
-  // If list of connections is empty, cancel the fetcher
-}
-
-void StsConnectionPoolImpl::add(std::unique_ptr<ContextImpl> ctx) {
-  LinkedList::moveIntoList(ctx, connection_list_)
-}
-
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
@@ -119,16 +73,6 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     throw EnvoyException(
         fmt::format("Web token file {} exists but is empty", token_file_));
   }
-
-  // Initialize regex strings, should never fail
-  regex_access_key_ =
-      Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-  regex_secret_key_ =
-      Regex::Utility::parseStdRegex("<SecretAccessKey>(.*?)</SecretAccessKey>");
-  regex_session_token_ =
-      Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
-  regex_expiration_ =
-      Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
 }
 
 void StsCredentialsProviderImpl::init() {
@@ -150,6 +94,10 @@ void StsCredentialsProviderImpl::init() {
               __func__, shared_this->token_file_, e.what());
         }
       });
+}
+
+void StsCredentialsProviderImpl::onSuccess(std::shared_ptr<const StsCredentials> result, std::string_view role_arn) {
+  credentials_cache_.emplace(role_arn, result);
 }
 
 void StsCredentialsProviderImpl::find(
@@ -245,11 +193,6 @@ void StsCredentialsProviderImpl::find(
         // unsuccessful, send back empty creds?
         context->callbacks()->onFailure(reason);
       });
-};
-
-ContextSharedPtr
-ContextFactory::create(StsCredentialsProvider::Callbacks *callbacks) const {
-  return std::make_shared<ContextImpl>(cm_, api_, callbacks);
 };
 
 StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::create(

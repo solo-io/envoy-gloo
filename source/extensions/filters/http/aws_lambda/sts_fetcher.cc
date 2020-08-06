@@ -35,15 +35,12 @@ public:
 
   void fetch(const envoy::config::core::v3::HttpUri &uri,
              const absl::string_view role_arn,
-             const absl::string_view web_token, SuccessCallback success,
-             FailureCallback failure) override {
+             const absl::string_view web_token, StsFetcher::Callbacks* callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
-    ASSERT(!success_callback_);
-    ASSERT(!failure_callback_);
+    ASSERT(!callbacks_);
 
     complete_ = false;
-    success_callback_ = success;
-    failure_callback_ = failure;
+    callbacks_ = callbacks;
     uri_ = &uri;
 
     // Check if cluster is configured, fail the request if not.
@@ -54,7 +51,7 @@ public:
                 "is not configured",
                 __func__, uri.uri(), uri.cluster());
       complete_ = true;
-      failure_callback_(CredentialsFailureStatus::ClusterNotFound);
+      callbacks_->onFailure(CredentialsFailureStatus::ClusterNotFound);
       reset();
       return;
     }
@@ -92,12 +89,12 @@ public:
         const auto len = response->body()->length();
         const auto body = absl::string_view(
             static_cast<char *>(response->body()->linearize(len)), len);
-        success_callback_(body);
+        callbacks_->onSuccess(body);
 
       } else {
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty",
                   __func__, uri_->uri());
-        failure_callback_(CredentialsFailureStatus::Network);
+        callbacks_->onFailure(CredentialsFailureStatus::Network);
       }
     } else {
       if ((status_code >= 400) && (status_code <= 403) && response->body()) {
@@ -108,9 +105,9 @@ public:
                   status_code, body);
         // TODO: cover more AWS error cases
         if (body.find(ExpiredTokenError) != std::string::npos) {
-          failure_callback_(CredentialsFailureStatus::ExpiredToken);
+          callbacks_->onFailure(CredentialsFailureStatus::ExpiredToken);
         } else {
-          failure_callback_(CredentialsFailureStatus::Network);
+          callbacks_->onFailure(CredentialsFailureStatus::Network);
         }
         // TODO: parse the error string. Example:
         /*
@@ -130,7 +127,7 @@ public:
             "{}: assume role with token [uri = {}]: response status code {}",
             __func__, uri_->uri(), status_code);
         ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
-        failure_callback_(CredentialsFailureStatus::Network);
+        callbacks_->onFailure(CredentialsFailureStatus::Network);
       }
     }
     reset();
@@ -141,7 +138,7 @@ public:
     ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: network error {}",
               __func__, uri_->uri(), enumToInt(reason));
     complete_ = true;
-    failure_callback_(CredentialsFailureStatus::Network);
+    callbacks_->onFailure(CredentialsFailureStatus::Network);
     reset();
   }
 
@@ -152,15 +149,13 @@ private:
   Upstream::ClusterManager &cm_;
   Api::Api &api_;
   bool complete_{};
-  SuccessCallback success_callback_;
-  FailureCallback failure_callback_;
+  StsFetcher::Callbacks* callbacks_;
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
 
   void reset() {
     request_ = nullptr;
-    success_callback_ = nullptr;
-    failure_callback_ = nullptr;
+    callbacks_ = nullptr;
     uri_ = nullptr;
   }
 };
