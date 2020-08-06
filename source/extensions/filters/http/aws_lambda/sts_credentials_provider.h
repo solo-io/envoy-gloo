@@ -35,8 +35,8 @@ class StsCredentialsProviderImpl
       public std::enable_shared_from_this<StsCredentialsProviderImpl> {
 
 public:
-  void find(const absl::optional<std::string> &role_arn_arg,
-            ContextSharedPtr context) override;
+  StsConnectionPool::Context* find(const absl::optional<std::string> &role_arn_arg,
+            StsConnectionPool::Context::Callbacks* callbacks) override;
 
   void onSuccess(std::shared_ptr<const StsCredentials>,
                  std::string_view role_arn) override;
@@ -57,12 +57,13 @@ private:
   StsCredentialsProviderImpl(
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
-      Api::Api &api, Event::Dispatcher &dispatcher);
+      Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm);
 
   void init();
 
   Api::Api &api_;
   Event::Dispatcher &dispatcher_;
+  Upstream::ClusterManager &cm_;
   const envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
 
@@ -87,23 +88,6 @@ private:
   std::unordered_map<std::string, StsConnectionPoolPtr> connection_pools_;
 };
 
-using ContextSharedPtr = std::shared_ptr<StsCredentialsProvider::Context>;
-
-class ContextFactory {
-public:
-  ContextFactory(Upstream::ClusterManager &cm, Api::Api &api)
-      : cm_(cm), api_(api){};
-
-  virtual ~ContextFactory() = default;
-
-  virtual ContextSharedPtr
-  create(StsCredentialsProvider::Callbacks *callbacks) const;
-
-private:
-  Upstream::ClusterManager &cm_;
-  Api::Api &api_;
-};
-
 class StsCredentialsProviderFactory {
 public:
   virtual ~StsCredentialsProviderFactory() = default;
@@ -116,8 +100,9 @@ public:
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
   StsCredentialsProviderFactoryImpl(Api::Api &api,
-                                    Event::Dispatcher &dispatcher)
-      : api_(api), dispatcher_(dispatcher){};
+                                    Event::Dispatcher &dispatcher,
+                                    Upstream::ClusterManager &cm)
+      : api_(api), dispatcher_(dispatcher), cm_(cm) {};
 
   StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
@@ -126,6 +111,7 @@ public:
 private:
   Api::Api &api_;
   Event::Dispatcher &dispatcher_;
+  Upstream::ClusterManager &cm_;
 };
 
 } // namespace AwsLambda
