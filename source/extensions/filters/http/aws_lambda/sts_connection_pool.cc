@@ -19,6 +19,7 @@ namespace AwsLambda {
 class StsConnectionPoolImpl : public StsConnectionPool,
                               public StsFetcher::Callbacks,
                               public Logger::Loggable<Logger::Id::aws> {
+public:
   StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
                         Event::Dispatcher &dispatcher,
                         const absl::string_view role_arn,
@@ -166,6 +167,14 @@ void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
     ctx->callbacks()->onFailure(status);
   }
 };
+
+StsConnectionPoolPtr StsConnectionPool::create(
+    Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher &dispatcher,
+    const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks) {
+
+  return std::make_unique<StsConnectionPoolImpl>(cm, api, dispatcher, role_arn,
+                                                 callbacks);
+}
 
 } // namespace AwsLambda
 } // namespace HttpFilters
