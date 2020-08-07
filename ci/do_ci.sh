@@ -28,7 +28,7 @@ export ENVOY_SRCDIR=$SOURCE_DIR
 export NUM_CPUS=16
 
 # google cloud build doesn't like ipv6
-export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --local_cpu_resources=${NUM_CPUS}"
+export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --jobs=${NUM_CPUS}"
 
 echo Building
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
