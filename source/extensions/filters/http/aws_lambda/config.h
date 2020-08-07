@@ -78,12 +78,13 @@ public:
 
 class AWSLambdaConfigImpl
     : public AWSLambdaConfig,
-      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter>,
+      public std::enable_shared_from_this<AWSLambdaConfigImpl> {
 public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher,
+      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher, Api::Api &api,
       Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
       Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
@@ -96,21 +97,29 @@ public:
 
 private:
   CredentialsConstSharedPtr getProviderCredentials() const;
+
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
                                             Stats::Scope &scope);
 
   void timerCallback();
 
+  void init();
+
+  AwsLambdaFilterStats stats_;
+
+  Api::Api &api_;
+
+  Envoy::Filesystem::WatcherPtr file_watcher_;
+
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
 
   bool sts_enabled_ = false;
+  std::string token_file_;
 
   ThreadLocal::SlotPtr tls_slot_;
 
   Event::TimerPtr timer_;
-
-  AwsLambdaFilterStats stats_;
 
   std::unique_ptr<StsCredentialsProviderFactory> sts_factory_;
 };

@@ -15,21 +15,57 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-namespace {
-constexpr char AWS_ROLE_ARN[] = "AWS_ROLE_ARN";
-constexpr char AWS_WEB_IDENTITY_TOKEN_FILE[] = "AWS_WEB_IDENTITY_TOKEN_FILE";
+class StsCredentialsProviderImpl
+    : public StsCredentialsProvider,
+      public StsConnectionPool::Callbacks,
+      public Logger::Loggable<Logger::Id::aws> {
 
-constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
-} // namespace
+public:
+  StsCredentialsProviderImpl(
+      const envoy::config::filter::http::aws_lambda::v2::
+          AWSLambdaConfig_ServiceAccountCredentials &config,
+      Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm);
+
+  StsConnectionPool::Context* find(const absl::optional<std::string> &role_arn_arg,
+            StsConnectionPool::Context::Callbacks* callbacks) override;
+
+  void setWebToken(std::string_view web_token) override;
+
+  void onSuccess(std::shared_ptr<const StsCredentials>,
+                 std::string_view role_arn) override;
+
+private:
+
+  Api::Api &api_;
+  Event::Dispatcher &dispatcher_;
+  Upstream::ClusterManager &cm_;
+  const envoy::config::filter::http::aws_lambda::v2::
+      AWSLambdaConfig_ServiceAccountCredentials config_;
+
+  std::string default_role_arn_;
+  envoy::config::core::v3::HttpUri uri_;
+
+  std::regex regex_access_key_;
+  std::regex regex_secret_key_;
+  std::regex regex_session_token_;
+  std::regex regex_expiration_;
+
+  // web_token set by AWS, will be auto-updated by StsCredentialsProvider
+  // TODO: udpate this file, inotify or timer
+  std::string web_token_;
+  // Credentials storage map, keyed by arn
+  std::unordered_map<std::string, StsCredentialsConstSharedPtr>
+      credentials_cache_;
+
+  std::unordered_map<std::string, StsConnectionPoolPtr> connection_pools_;
+};
 
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm)
     : api_(api), dispatcher_(dispatcher), cm_(cm), config_(config),
-      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
-      token_file_(
-          absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE))) {
+      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))) {
       // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
@@ -39,7 +75,8 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
 
   // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
   // credentials to be enabled
-  if (token_file_ == "") {
+  std::string token_file = std::string(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
+  if (token_file == "") {
     throw EnvoyException(fmt::format("Env var {} must be present, and set",
                                      AWS_WEB_IDENTITY_TOKEN_FILE));
   }
@@ -48,38 +85,21 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
         fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
   }
   // File must exist on system
-  if (!api_.fileSystem().fileExists(token_file_)) {
+  if (!api_.fileSystem().fileExists(token_file)) {
     throw EnvoyException(
-        fmt::format("Web token file {} does not exist", token_file_));
+        fmt::format("Web token file {} does not exist", token_file));
   }
 
-  web_token_ = api_.fileSystem().fileReadToEnd(token_file_);
+  web_token_ = api_.fileSystem().fileReadToEnd(token_file);
   // File should not be empty
   if (web_token_ == "") {
     throw EnvoyException(
-        fmt::format("Web token file {} exists but is empty", token_file_));
+        fmt::format("Web token file {} exists but is empty", token_file));
   }
 }
 
-void StsCredentialsProviderImpl::init() {
-  // Add file watcher for token file
-  // auto shared_this = shared_from_this();
-  // file_watcher_->addWatch(
-  //     token_file_, Filesystem::Watcher::Events::Modified,
-  //     [shared_this](uint32_t) {
-  //       try {
-  //         const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
-  //             shared_this->token_file_);
-  //         // TODO: check if web_token is valid
-  //         // TODO: stats here
-  //         shared_this->web_token_ = web_token;
-  //       } catch (const EnvoyException &e) {
-  //         ENVOY_LOG_TO_LOGGER(
-  //             Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
-  //             "{}: Exception while reading file during watch ({}): {}",
-  //             __func__, shared_this->token_file_, e.what());
-  //       }
-  //     });
+void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
+  web_token_ = web_token;
 }
 
 void StsCredentialsProviderImpl::onSuccess(
@@ -130,13 +150,41 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
   return conn_pool->add(callbacks);
 };
 
-StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::create(
+
+class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
+public:
+  StsCredentialsProviderFactoryImpl(Api::Api &api,
+                                    Upstream::ClusterManager &cm)
+      : api_(api), cm_(cm) {};
+
+  StsCredentialsProviderPtr
+  build(const envoy::config::filter::http::aws_lambda::v2::
+             AWSLambdaConfig_ServiceAccountCredentials &config, 
+                                    Event::Dispatcher &dispatcher) const override;
+
+private:
+  Api::Api &api_;
+  Upstream::ClusterManager &cm_;
+};
+
+StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
                                     Event::Dispatcher &dispatcher) const {
 
-  return StsCredentialsProviderImpl::create(config, api_, dispatcher, cm_);
+  return StsCredentialsProvider::create(config, api_, dispatcher, cm_);
 };
+
+
+StsCredentialsProviderPtr StsCredentialsProvider::create(const envoy::config::filter::http::aws_lambda::v2::
+             AWSLambdaConfig_ServiceAccountCredentials &config,
+         Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm) {
+  return std::make_shared<StsCredentialsProviderImpl>(config, api, dispatcher, cm);
+}
+
+StsCredentialsProviderFactoryPtr StsCredentialsProviderFactory::create(Api::Api &api, Upstream::ClusterManager &cm) {
+  return std::make_unique<StsCredentialsProviderFactoryImpl>(api, cm);
+}
 
 } // namespace AwsLambda
 } // namespace HttpFilters

@@ -44,12 +44,12 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
-    std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher,
+    std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher,Api::Api &api,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
     Stats::Scope &scope,
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
-    : stats_(generateStats(stats_prefix, scope)){
+    : stats_(generateStats(stats_prefix, scope)), api_(api), file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -74,13 +74,16 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
   case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
       CredentialsFetcherCase::kServiceAccountCredentials: {
     ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
+
+    token_file_ = 
+        absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
     // use service account credentials provider
     tls_slot_ = tls.allocateSlot();
     // transfer ptr ownership to sts_factor isn't cleaned up before we get into tls set
     sts_factory_ = std::move(sts_factory);
     auto service_account_creds = protoconfig.service_account_credentials();
     tls_slot_->set([this, service_account_creds](Event::Dispatcher &dispatcher) {
-      StsCredentialsProviderPtr sts_cred_provider = sts_factory_->create(service_account_creds, dispatcher);
+      StsCredentialsProviderPtr sts_cred_provider = sts_factory_->build(service_account_creds, dispatcher);
       return std::make_shared<ThreadLocalCredentials>(sts_cred_provider);
     });
     sts_enabled_ = true;
@@ -91,6 +94,33 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     break;
   }
   }
+}
+
+void AWSLambdaConfigImpl::init() {
+    // Add file watcher for token file
+  auto shared_this = shared_from_this();
+  file_watcher_->addWatch(
+      token_file_, Filesystem::Watcher::Events::Modified,
+      [shared_this](uint32_t) {
+        try {
+          const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
+              shared_this->token_file_);
+          // Set the web token on all sts credentials providers
+          shared_this->tls_slot_->runOnAllThreads(
+            [web_token](ThreadLocal::ThreadLocalObjectSharedPtr previous) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+              auto prev_config = std::dynamic_pointer_cast<ThreadLocalCredentials>(previous);
+              prev_config->sts_credentials_->setWebToken(web_token);
+              return previous;
+          });
+          // TODO: check if web_token is valid
+          // TODO: stats here
+        } catch (const EnvoyException &e) {
+          ENVOY_LOG_TO_LOGGER(
+              Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
+              "{}: Exception while reading file during watch ({}): {}",
+              __func__, shared_this->token_file_, e.what());
+        }
+      });
 }
 
 /*
