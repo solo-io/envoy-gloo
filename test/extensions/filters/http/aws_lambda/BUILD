@@ -81,6 +81,7 @@ envoy_cc_mock(
         "@envoy//test/mocks/server:overload_manager_mocks",
         "@envoy//test/mocks/server:server_lifecycle_notifier_mocks",
         "//source/extensions/filters/http/aws_lambda:sts_fetcher_lib",
+        "//source/extensions/filters/http/aws_lambda:sts_connection_pool_lib",
         "//source/extensions/filters/http/aws_lambda:sts_credentials_provider_lib",
     ],
 )

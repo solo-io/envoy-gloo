@@ -3,6 +3,7 @@
 #include "envoy/config/core/v3/http_uri.pb.h"
 
 #include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "extensions/filters/http/aws_lambda/sts_connection_pool.h"
 #include "extensions/filters/http/aws_lambda/sts_fetcher.h"
 
 #include "test/mocks/upstream/mocks.h"
@@ -21,11 +22,18 @@ public:
               (const envoy::config::core::v3::HttpUri &uri,
                const absl::string_view role_arn,
                const absl::string_view web_token,
-               StsFetcher::SuccessCallback success,
-               StsFetcher::FailureCallback failure));
+               StsFetcher::Callbacks* callbacks));
 };
 
-class MockStsCallbacks : public StsCredentialsProvider::Callbacks {
+class MockStsFetcherCallbacks : public StsFetcher::Callbacks {
+public:
+  MOCK_METHOD(
+      void, onSuccess,
+      (const absl::string_view body));
+  MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status));
+};
+
+class MockStsContextCallbacks : public StsConnectionPool::Context::Callbacks {
 public:
   MOCK_METHOD(
       void, onSuccess,
@@ -33,14 +41,21 @@ public:
   MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status));
 };
 
+class MockStsConnectionPoolCallbacks: public StsConnectionPool::Callbacks {
+  MOCK_METHOD(
+      void, onSuccess,
+      (std::shared_ptr<const StsCredentials> result, std::string_view role_arn));
+};
+
 class MockStsCredentialsProviderFactory : public StsCredentialsProviderFactory {
 public:
   MockStsCredentialsProviderFactory();
   ~MockStsCredentialsProviderFactory() override;
 
-  MOCK_METHOD(StsCredentialsProviderPtr, create,
+  MOCK_METHOD(StsCredentialsProviderPtr, build,
               (const envoy::config::filter::http::aws_lambda::v2::
-                   AWSLambdaConfig_ServiceAccountCredentials &config),
+                   AWSLambdaConfig_ServiceAccountCredentials &config, 
+                Event::Dispatcher &dispatcher),
               (const, override));
 };
 
@@ -49,21 +64,21 @@ public:
   MockStsCredentialsProvider();
   ~MockStsCredentialsProvider() override;
 
-  MOCK_METHOD(void, find,
+  MOCK_METHOD(StsConnectionPool::Context *, find,
               (const absl::optional<std::string> &role_arn,
-               ContextSharedPtr context));
+       StsConnectionPool::Context::Callbacks *callbacks));
+  MOCK_METHOD(void, setWebToken,
+              (std::string_view web_token));
 };
 
-class MockStsContext : public StsCredentialsProvider::Context {
+class MockStsContext : public StsConnectionPool::Context {
 public:
   MockStsContext();
 
   MOCK_METHOD(void, cancel, ());
-  MOCK_METHOD(StsFetcher &, fetcher, ());
-  MOCK_METHOD(StsCredentialsProvider::Callbacks *, callbacks, (), (const));
+  MOCK_METHOD(StsConnectionPool::Context::Callbacks *, callbacks, (), (const));
 
-  testing::NiceMock<MockStsFetcher> fetcher_;
-  testing::NiceMock<MockStsCallbacks> callbacks_;
+  testing::NiceMock<MockStsContextCallbacks> callbacks_;
 };
 
 // A mock HTTP upstream.

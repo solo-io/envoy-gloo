@@ -52,10 +52,6 @@ class StsFetcher {
 public:
   virtual ~StsFetcher() = default;
 
-  using SuccessCallback = std::function<void(const absl::string_view body)>;
-
-  using FailureCallback = std::function<void(CredentialsFailureStatus status)>;
-
   class Callbacks {
   public:
     virtual ~Callbacks() = default;

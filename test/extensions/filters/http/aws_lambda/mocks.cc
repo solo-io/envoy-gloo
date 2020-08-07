@@ -10,7 +10,6 @@ using ::testing::Return;
 using ::testing::ReturnRef;
 
 MockStsContext::MockStsContext() {
-  ON_CALL(*this, fetcher()).WillByDefault(ReturnRef(fetcher_));
   ON_CALL(*this, callbacks()).WillByDefault(Return(&callbacks_));
 }
 
