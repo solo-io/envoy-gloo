@@ -130,7 +130,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     auto time_left = existing_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
       callbacks->onSuccess(existing_token->second);
-      return nullptr;
+      return nullptr; 
     }
     // token is expired, fallthrough to create a new one
   }
@@ -138,20 +138,27 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // Look for active connection pool for given role_arn
   const auto existing_pool = connection_pools_.find(role_arn);
   if (existing_pool != connection_pools_.end()) {
-    // We have an existing connection pool, add new context to connection pool
-    // and return it to the caller
+    // We have an existing connection pool, check if there is already a request in flight
+    if (!existing_pool->second->requestInFlight()) {
+      // If the request is not in flight, start a new fetch
+      // initialize the connection
+      existing_pool->second->init(uri_, web_token_);
+    }
+    //add new context to connection pool and return it to the caller
     return existing_pool->second->add(callbacks);
   }
 
-  // No pool exists, create a new one
-  auto conn_pool =
-      StsConnectionPool::create(cm_, api_, dispatcher_, role_arn, this);
   // Add the new pool to our list of active pools
-  connection_pools_.emplace(role_arn, conn_pool);
+  // from yuval:
+  // note: emplace retrurn an iterator to the element,
+  // so you can take the iterator, and then use the flow above, right?
+  // see: https://en.cppreference.com/w/cpp/container/map/emplace
+  //
+  auto conn_pool = connection_pools_.emplace(role_arn, StsConnectionPool::create(cm_, api_, dispatcher_, role_arn, this)).first;
   // initialize the connection
-  conn_pool->init(uri_, web_token_);
+  conn_pool->second->init(uri_, web_token_);
   // generate and return a context with the current callbacks
-  return conn_pool->add(callbacks);
+  return conn_pool->second->add(callbacks);
 };
 
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
@@ -182,7 +189,7 @@ StsCredentialsProviderPtr StsCredentialsProvider::create(
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Event::Dispatcher &dispatcher,
     Upstream::ClusterManager &cm) {
-  return std::make_shared<StsCredentialsProviderImpl>(config, api, dispatcher,
+  return std::make_unique<StsCredentialsProviderImpl>(config, api, dispatcher,
                                                       cm);
 }
 

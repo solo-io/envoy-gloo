@@ -24,7 +24,7 @@ constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 } // namespace
 
 class StsCredentialsProvider;
-using StsCredentialsProviderPtr = std::shared_ptr<StsCredentialsProvider>;
+using StsCredentialsProviderPtr = std::unique_ptr<StsCredentialsProvider>;
 
 class StsCredentialsProvider {
 public:

@@ -37,6 +37,8 @@ public:
 
   void onFailure(CredentialsFailureStatus status) override;
 
+  bool requestInFlight() override {return request_in_flight_;};
+
 private:
   class ContextImpl : public StsConnectionPool::Context,
                       public Event::DeferredDeletable,
@@ -71,6 +73,8 @@ private:
   StsConnectionPool::Callbacks *callbacks_;
 
   std::list<ContextImplPtr> connection_list_;
+
+  bool request_in_flight_ = false;
 };
 
 // using ContextImplPtr = std::unique_ptr<StsConnectionPoolImpl::ContextImpl>;
@@ -95,6 +99,7 @@ StsConnectionPoolImpl::~StsConnectionPoolImpl() {
 
 void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
                                  const absl::string_view web_token) {
+  request_in_flight_ = true;
   fetcher_->fetch(uri, role_arn_, web_token, this);
 }
 
@@ -109,6 +114,7 @@ StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
 
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(body != nullptr);
+  request_in_flight_ = false;
 
 // using a macro as we need to return on error
 // TODO(yuval-k): we can use string_view instead of string when we upgrade to
@@ -157,14 +163,18 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   // Send result back to Credential Provider to store in cache
   callbacks_->onSuccess(result, role_arn_);
   // Send result back to all contexts waiting in list
-  for (auto &&ctx : connection_list_) {
-    ctx->callbacks()->onSuccess(result);
+  while (!connection_list_.empty()) {
+    connection_list_.back()->callbacks()->onSuccess(result);
+    connection_list_.pop_back();
   }
 };
 
 void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
-  for (auto &&ctx : connection_list_) {
-    ctx->callbacks()->onFailure(status);
+  request_in_flight_ = false;
+  
+  while (!connection_list_.empty()) {
+    connection_list_.back()->callbacks()->onFailure(status);
+    connection_list_.pop_back();
   }
 };
 

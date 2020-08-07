@@ -129,6 +129,8 @@ public:
 
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
 
+  virtual bool requestInFlight() PURE;
+
   static StsConnectionPoolPtr create(Upstream::ClusterManager &cm,
                                      Api::Api &api,
                                      Event::Dispatcher &dispatcher,

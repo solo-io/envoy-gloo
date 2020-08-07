@@ -35,7 +35,7 @@ struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
   ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
       : credentials_(credentials) {}
   ThreadLocalCredentials(StsCredentialsProviderPtr credentials)
-      : sts_credentials_(credentials) {}
+      : sts_credentials_(std::move(credentials)) {}
   CredentialsConstSharedPtr credentials_;
   StsCredentialsProviderPtr sts_credentials_;
 };
@@ -89,7 +89,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
         [this, service_account_creds](Event::Dispatcher &dispatcher) {
           StsCredentialsProviderPtr sts_cred_provider =
               sts_factory_->build(service_account_creds, dispatcher);
-          return std::make_shared<ThreadLocalCredentials>(sts_cred_provider);
+          return std::make_shared<ThreadLocalCredentials>(std::move(sts_cred_provider));
         });
     sts_enabled_ = true;
     break;

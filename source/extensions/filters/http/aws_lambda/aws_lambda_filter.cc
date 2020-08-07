@@ -173,6 +173,8 @@ void AWSLambdaFilter::onSuccess(
 
 // TODO: Use the failure status in the local reply
 void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
+  // cancel mustn't be called
+  context_ = nullptr;
   state_ = State::Responded;
   decoder_callbacks_->sendLocalReply(
       Http::Code::InternalServerError, RcDetails::get().CredentialsNotFoundBody,
