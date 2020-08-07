@@ -15,19 +15,20 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-class StsCredentialsProviderImpl
-    : public StsCredentialsProvider,
-      public StsConnectionPool::Callbacks,
-      public Logger::Loggable<Logger::Id::aws> {
+class StsCredentialsProviderImpl : public StsCredentialsProvider,
+                                   public StsConnectionPool::Callbacks,
+                                   public Logger::Loggable<Logger::Id::aws> {
 
 public:
   StsCredentialsProviderImpl(
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
-      Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm);
+      Api::Api &api, Event::Dispatcher &dispatcher,
+      Upstream::ClusterManager &cm);
 
-  StsConnectionPool::Context* find(const absl::optional<std::string> &role_arn_arg,
-            StsConnectionPool::Context::Callbacks* callbacks) override;
+  StsConnectionPool::Context *
+  find(const absl::optional<std::string> &role_arn_arg,
+       StsConnectionPool::Context::Callbacks *callbacks) override;
 
   void setWebToken(std::string_view web_token) override;
 
@@ -35,7 +36,6 @@ public:
                  std::string_view role_arn) override;
 
 private:
-
   Api::Api &api_;
   Event::Dispatcher &dispatcher_;
   Upstream::ClusterManager &cm_;
@@ -66,7 +66,7 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm)
     : api_(api), dispatcher_(dispatcher), cm_(cm), config_(config),
       default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))) {
-      // file_watcher_(dispatcher.createFilesystemWatcher()) {
+  // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
@@ -75,7 +75,8 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
 
   // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
   // credentials to be enabled
-  std::string token_file = std::string(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
+  std::string token_file = std::string(
+      absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
   if (token_file == "") {
     throw EnvoyException(fmt::format("Env var {} must be present, and set",
                                      AWS_WEB_IDENTITY_TOKEN_FILE));
@@ -107,8 +108,9 @@ void StsCredentialsProviderImpl::onSuccess(
   credentials_cache_.emplace(role_arn, result);
 }
 
-StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optional<std::string> &role_arn_arg, 
-            StsConnectionPool::Context::Callbacks* callbacks) {
+StsConnectionPool::Context *StsCredentialsProviderImpl::find(
+    const absl::optional<std::string> &role_arn_arg,
+    StsConnectionPool::Context::Callbacks *callbacks) {
 
   std::string role_arn = default_role_arn_;
   // If role_arn_arg is present, use that, otherwise use env
@@ -136,12 +138,14 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
   // Look for active connection pool for given role_arn
   const auto existing_pool = connection_pools_.find(role_arn);
   if (existing_pool != connection_pools_.end()) {
-    // We have an existing connection pool, add new context to connection pool and return it to the caller
+    // We have an existing connection pool, add new context to connection pool
+    // and return it to the caller
     return existing_pool->second->add(callbacks);
   }
 
   // No pool exists, create a new one
-  auto conn_pool = StsConnectionPool::create(cm_, api_, dispatcher_, role_arn, this);
+  auto conn_pool =
+      StsConnectionPool::create(cm_, api_, dispatcher_, role_arn, this);
   // Add the new pool to our list of active pools
   connection_pools_.emplace(role_arn, conn_pool);
   // initialize the connection
@@ -150,17 +154,15 @@ StsConnectionPool::Context* StsCredentialsProviderImpl::find(const absl::optiona
   return conn_pool->add(callbacks);
 };
 
-
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
-  StsCredentialsProviderFactoryImpl(Api::Api &api,
-                                    Upstream::ClusterManager &cm)
-      : api_(api), cm_(cm) {};
+  StsCredentialsProviderFactoryImpl(Api::Api &api, Upstream::ClusterManager &cm)
+      : api_(api), cm_(cm){};
 
   StsCredentialsProviderPtr
   build(const envoy::config::filter::http::aws_lambda::v2::
-             AWSLambdaConfig_ServiceAccountCredentials &config, 
-                                    Event::Dispatcher &dispatcher) const override;
+            AWSLambdaConfig_ServiceAccountCredentials &config,
+        Event::Dispatcher &dispatcher) const override;
 
 private:
   Api::Api &api_;
@@ -170,19 +172,23 @@ private:
 StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-                                    Event::Dispatcher &dispatcher) const {
+    Event::Dispatcher &dispatcher) const {
 
   return StsCredentialsProvider::create(config, api_, dispatcher, cm_);
 };
 
-
-StsCredentialsProviderPtr StsCredentialsProvider::create(const envoy::config::filter::http::aws_lambda::v2::
-             AWSLambdaConfig_ServiceAccountCredentials &config,
-         Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm) {
-  return std::make_shared<StsCredentialsProviderImpl>(config, api, dispatcher, cm);
+StsCredentialsProviderPtr StsCredentialsProvider::create(
+    const envoy::config::filter::http::aws_lambda::v2::
+        AWSLambdaConfig_ServiceAccountCredentials &config,
+    Api::Api &api, Event::Dispatcher &dispatcher,
+    Upstream::ClusterManager &cm) {
+  return std::make_shared<StsCredentialsProviderImpl>(config, api, dispatcher,
+                                                      cm);
 }
 
-StsCredentialsProviderFactoryPtr StsCredentialsProviderFactory::create(Api::Api &api, Upstream::ClusterManager &cm) {
+StsCredentialsProviderFactoryPtr
+StsCredentialsProviderFactory::create(Api::Api &api,
+                                      Upstream::ClusterManager &cm) {
   return std::make_unique<StsCredentialsProviderFactoryImpl>(api, cm);
 }
 

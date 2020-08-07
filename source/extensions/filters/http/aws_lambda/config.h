@@ -70,7 +70,7 @@ using SharedAWSLambdaProtocolExtensionConfig =
 
 class AWSLambdaConfig {
 public:
-  virtual StsConnectionPool::Context*
+  virtual StsConnectionPool::Context *
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
                  StsConnectionPool::Context::Callbacks *callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
@@ -84,16 +84,17 @@ public:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory, Event::Dispatcher &dispatcher, Api::Api &api,
+      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+      Event::Dispatcher &dispatcher, Api::Api &api,
       Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
       Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
   ~AWSLambdaConfigImpl() = default;
 
-  StsConnectionPool::Context*
-  getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-                 StsConnectionPool::Context::Callbacks *callbacks) const override;
+  StsConnectionPool::Context *getCredentials(
+      SharedAWSLambdaProtocolExtensionConfig ext_cfg,
+      StsConnectionPool::Context::Callbacks *callbacks) const override;
 
 private:
   CredentialsConstSharedPtr getProviderCredentials() const;

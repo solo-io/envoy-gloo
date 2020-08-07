@@ -23,7 +23,6 @@ constexpr char AWS_WEB_IDENTITY_TOKEN_FILE[] = "AWS_WEB_IDENTITY_TOKEN_FILE";
 constexpr std::chrono::minutes REFRESH_GRACE_PERIOD{5};
 } // namespace
 
-
 class StsCredentialsProvider;
 using StsCredentialsProviderPtr = std::shared_ptr<StsCredentialsProvider>;
 
@@ -32,19 +31,22 @@ public:
   virtual ~StsCredentialsProvider() = default;
 
   // Lookup credentials cache map.
-  virtual StsConnectionPool::Context* find(const absl::optional<std::string> &role_arn,
-            StsConnectionPool::Context::Callbacks* callbacks) PURE;
+  virtual StsConnectionPool::Context *
+  find(const absl::optional<std::string> &role_arn,
+       StsConnectionPool::Context::Callbacks *callbacks) PURE;
 
   virtual void setWebToken(std::string_view web_token) PURE;
 
   static StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
              AWSLambdaConfig_ServiceAccountCredentials &config,
-         Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm);
+         Api::Api &api, Event::Dispatcher &dispatcher,
+         Upstream::ClusterManager &cm);
 };
 
 class StsCredentialsProviderFactory;
-using StsCredentialsProviderFactoryPtr = std::unique_ptr<StsCredentialsProviderFactory>;
+using StsCredentialsProviderFactoryPtr =
+    std::unique_ptr<StsCredentialsProviderFactory>;
 
 class StsCredentialsProviderFactory {
 public:
@@ -52,11 +54,11 @@ public:
 
   virtual StsCredentialsProviderPtr
   build(const envoy::config::filter::http::aws_lambda::v2::
-             AWSLambdaConfig_ServiceAccountCredentials &config, 
-                                    Event::Dispatcher &dispatcher) const PURE;
+            AWSLambdaConfig_ServiceAccountCredentials &config,
+        Event::Dispatcher &dispatcher) const PURE;
 
-  static StsCredentialsProviderFactoryPtr
-  create(Api::Api &api, Upstream::ClusterManager &cm);
+  static StsCredentialsProviderFactoryPtr create(Api::Api &api,
+                                                 Upstream::ClusterManager &cm);
 };
 
 } // namespace AwsLambda

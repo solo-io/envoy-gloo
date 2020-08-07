@@ -60,7 +60,6 @@ public:
 
 using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
 
-
 class StsConnectionPool;
 using StsConnectionPoolPtr = std::shared_ptr<StsConnectionPool>;
 
@@ -130,10 +129,11 @@ public:
 
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
 
-  static StsConnectionPoolPtr
-  create(Upstream::ClusterManager &cm, Api::Api &api,
-         Event::Dispatcher &dispatcher, const absl::string_view role_arn,
-         StsConnectionPool::Callbacks *callbacks);
+  static StsConnectionPoolPtr create(Upstream::ClusterManager &cm,
+                                     Api::Api &api,
+                                     Event::Dispatcher &dispatcher,
+                                     const absl::string_view role_arn,
+                                     StsConnectionPool::Callbacks *callbacks);
 };
 
 using ContextPtr = std::unique_ptr<StsConnectionPool::Context>;
