@@ -20,10 +20,10 @@ class StsConnectionPoolImpl : public StsConnectionPool,
                               public StsFetcher::Callbacks,
                               public Logger::Loggable<Logger::Id::aws> {
 public:
-  StsConnectionPoolImpl(Upstream::ClusterManager &cm, Api::Api &api,
-                        Event::Dispatcher &dispatcher,
+  StsConnectionPoolImpl(Api::Api &api, Event::Dispatcher &dispatcher,
                         const absl::string_view role_arn,
-                        StsConnectionPool::Callbacks *callbacks);
+                        StsConnectionPool::Callbacks *callbacks,
+                        StsFetcherPtr fetcher);
 
   ~StsConnectionPoolImpl();
 
@@ -37,7 +37,7 @@ public:
 
   void onFailure(CredentialsFailureStatus status) override;
 
-  bool requestInFlight() override {return request_in_flight_;};
+  bool requestInFlight() override { return request_in_flight_; };
 
 private:
   class ContextImpl : public StsConnectionPool::Context,
@@ -80,9 +80,10 @@ private:
 // using ContextImplPtr = std::unique_ptr<StsConnectionPoolImpl::ContextImpl>;
 
 StsConnectionPoolImpl::StsConnectionPoolImpl(
-    Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher &dispatcher,
-    const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks)
-    : fetcher_(StsFetcher::create(cm, api)), api_(api), dispatcher_(dispatcher),
+    Api::Api &api, Event::Dispatcher &dispatcher,
+    const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks,
+    StsFetcherPtr fetcher)
+    : fetcher_(std::move(fetcher)), api_(api), dispatcher_(dispatcher),
       role_arn_(role_arn), callbacks_(callbacks){};
 
 StsConnectionPoolImpl::~StsConnectionPoolImpl() {
@@ -171,19 +172,21 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
 
 void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
   request_in_flight_ = false;
-  
+
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onFailure(status);
     connection_list_.pop_back();
   }
 };
 
-StsConnectionPoolPtr StsConnectionPool::create(
-    Upstream::ClusterManager &cm, Api::Api &api, Event::Dispatcher &dispatcher,
-    const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks) {
+StsConnectionPoolPtr
+StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
+                          const absl::string_view role_arn,
+                          StsConnectionPool::Callbacks *callbacks,
+                          StsFetcherPtr fetcher) {
 
-  return std::make_shared<StsConnectionPoolImpl>(cm, api, dispatcher, role_arn,
-                                                 callbacks);
+  return std::make_shared<StsConnectionPoolImpl>(api, dispatcher, role_arn,
+                                                 callbacks, std::move(fetcher));
 }
 
 } // namespace AwsLambda

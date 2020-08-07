@@ -131,11 +131,11 @@ public:
 
   virtual bool requestInFlight() PURE;
 
-  static StsConnectionPoolPtr create(Upstream::ClusterManager &cm,
-                                     Api::Api &api,
+  static StsConnectionPoolPtr create(Api::Api &api,
                                      Event::Dispatcher &dispatcher,
                                      const absl::string_view role_arn,
-                                     StsConnectionPool::Callbacks *callbacks);
+                                     StsConnectionPool::Callbacks *callbacks,
+                                     StsFetcherPtr fetcher);
 };
 
 using ContextPtr = std::unique_ptr<StsConnectionPool::Context>;

@@ -83,8 +83,7 @@ TEST_F(StsFetcherTest, TestGetSuccess) {
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
   EXPECT_CALL(callbacks, onSuccess(valid_response)).Times(1);
   // Act
-  fetcher->fetch(
-      uri_, role_arn, web_token, &callbacks);
+  fetcher->fetch(uri_, role_arn, web_token, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestGet503) {
@@ -98,8 +97,7 @@ TEST_F(StsFetcherTest, TestGet503) {
   EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::Network)).Times(1);
 
   // Act
-  fetcher->fetch(
-      uri_, role_arn, web_token, &callbacks);
+  fetcher->fetch(uri_, role_arn, web_token, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestCredentialsExpired) {
@@ -111,11 +109,11 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
-  EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::ExpiredToken)).Times(1);
+  EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::ExpiredToken))
+      .Times(1);
 
   // Act
-  fetcher->fetch(
-      uri_, role_arn, web_token, &callbacks);
+  fetcher->fetch(uri_, role_arn, web_token, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestHttpFailure) {
@@ -130,8 +128,7 @@ TEST_F(StsFetcherTest, TestHttpFailure) {
   EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::Network)).Times(1);
 
   // Act
-  fetcher->fetch(
-      uri_, role_arn, web_token, &callbacks);
+  fetcher->fetch(uri_, role_arn, web_token, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestCancel) {
@@ -147,8 +144,7 @@ TEST_F(StsFetcherTest, TestCancel) {
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
 
   // Act
-  fetcher->fetch(
-      uri_, role_arn, web_token, &callbacks);
+  fetcher->fetch(uri_, role_arn, web_token, &callbacks);
   // Proper cancel
   fetcher->cancel();
   // Re-entrant cancel

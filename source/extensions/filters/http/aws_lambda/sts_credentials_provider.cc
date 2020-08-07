@@ -130,7 +130,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     auto time_left = existing_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
       callbacks->onSuccess(existing_token->second);
-      return nullptr; 
+      return nullptr;
     }
     // token is expired, fallthrough to create a new one
   }
@@ -138,13 +138,14 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // Look for active connection pool for given role_arn
   const auto existing_pool = connection_pools_.find(role_arn);
   if (existing_pool != connection_pools_.end()) {
-    // We have an existing connection pool, check if there is already a request in flight
+    // We have an existing connection pool, check if there is already a request
+    // in flight
     if (!existing_pool->second->requestInFlight()) {
       // If the request is not in flight, start a new fetch
       // initialize the connection
       existing_pool->second->init(uri_, web_token_);
     }
-    //add new context to connection pool and return it to the caller
+    // add new context to connection pool and return it to the caller
     return existing_pool->second->add(callbacks);
   }
 
@@ -154,7 +155,12 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // so you can take the iterator, and then use the flow above, right?
   // see: https://en.cppreference.com/w/cpp/container/map/emplace
   //
-  auto conn_pool = connection_pools_.emplace(role_arn, StsConnectionPool::create(cm_, api_, dispatcher_, role_arn, this)).first;
+  auto conn_pool =
+      connection_pools_
+          .emplace(role_arn,
+                   StsConnectionPool::create(api_,
+                                             dispatcher_, role_arn, this, StsFetcher::create(cm_, api_)))
+          .first;
   // initialize the connection
   conn_pool->second->init(uri_, web_token_);
   // generate and return a context with the current callbacks
