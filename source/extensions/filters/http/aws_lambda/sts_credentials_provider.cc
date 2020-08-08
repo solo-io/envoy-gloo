@@ -23,7 +23,8 @@ public:
   StsCredentialsProviderImpl(
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
-      Api::Api &api, Upstream::ClusterManager &cm, StsConnectionPoolFactoryPtr conn_pool_factory);
+      Api::Api &api, Upstream::ClusterManager &cm,
+      StsConnectionPoolFactoryPtr conn_pool_factory);
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
@@ -57,9 +58,11 @@ private:
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-    Api::Api &api, Upstream::ClusterManager &cm, StsConnectionPoolFactoryPtr conn_pool_factory)
+    Api::Api &api, Upstream::ClusterManager &cm,
+    StsConnectionPoolFactoryPtr conn_pool_factory)
     : api_(api), cm_(cm), config_(config),
-      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))), conn_pool_factory_(std::move(conn_pool_factory)) {
+      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
+      conn_pool_factory_(std::move(conn_pool_factory)) {
   // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
@@ -151,7 +154,9 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   //
   auto conn_pool =
       connection_pools_
-          .emplace(role_arn, conn_pool_factory_->build(role_arn, this, StsFetcher::create(cm_, api_))).first;
+          .emplace(role_arn, conn_pool_factory_->build(
+                                 role_arn, this, StsFetcher::create(cm_, api_)))
+          .first;
   // initialize the connection
   conn_pool->second->init(uri_, web_token_);
   // generate and return a context with the current callbacks
@@ -187,8 +192,8 @@ StsCredentialsProviderPtr StsCredentialsProvider::create(
     Api::Api &api, Event::Dispatcher &dispatcher,
     Upstream::ClusterManager &cm) {
 
-  return std::make_unique<StsCredentialsProviderImpl>(config, api,
-                                                      cm, StsConnectionPoolFactory::create(api, dispatcher));
+  return std::make_unique<StsCredentialsProviderImpl>(
+      config, api, cm, StsConnectionPoolFactory::create(api, dispatcher));
 }
 
 StsCredentialsProviderFactoryPtr

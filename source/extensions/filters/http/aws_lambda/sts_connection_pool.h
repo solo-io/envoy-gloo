@@ -152,7 +152,7 @@ public:
                                      StsFetcherPtr fetcher) PURE;
 
   static StsConnectionPoolFactoryPtr create(Api::Api &api,
-                                     Event::Dispatcher &dispatcher);
+                                            Event::Dispatcher &dispatcher);
 };
 
 } // namespace AwsLambda

@@ -192,16 +192,17 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
                                                  callbacks, std::move(fetcher));
 }
 
-class StsConnectionPoolFactoryImpl: public StsConnectionPoolFactory {
+class StsConnectionPoolFactoryImpl : public StsConnectionPoolFactory {
 public:
-  StsConnectionPoolFactoryImpl(Api::Api &api, Event::Dispatcher &dispatcher):
-    api_(api), dispatcher_(dispatcher) {}
+  StsConnectionPoolFactoryImpl(Api::Api &api, Event::Dispatcher &dispatcher)
+      : api_(api), dispatcher_(dispatcher) {}
 
   StsConnectionPoolPtr build(const absl::string_view role_arn,
-                                     StsConnectionPool::Callbacks *callbacks,
-                                     StsFetcherPtr fetcher) override {
+                             StsConnectionPool::Callbacks *callbacks,
+                             StsFetcherPtr fetcher) override {
 
-    return StsConnectionPool::create(api_, dispatcher_, role_arn, callbacks, std::move(fetcher));
+    return StsConnectionPool::create(api_, dispatcher_, role_arn, callbacks,
+                                     std::move(fetcher));
   };
 
 private:
@@ -209,8 +210,8 @@ private:
   Event::Dispatcher &dispatcher_;
 };
 
-StsConnectionPoolFactoryPtr StsConnectionPoolFactory::create(Api::Api &api,
-                                     Event::Dispatcher &dispatcher) {
+StsConnectionPoolFactoryPtr
+StsConnectionPoolFactory::create(Api::Api &api, Event::Dispatcher &dispatcher) {
   return std::make_unique<StsConnectionPoolFactoryImpl>(api, dispatcher);
 }
 
