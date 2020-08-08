@@ -53,6 +53,8 @@ private:
     }
 
     void cancel() override {
+      // Cancel should never be called once the context has been removed from the list.
+      ASSERT(inserted());
       if (inserted()) {
         dispatcher_.deferredDelete(removeFromList(parent_.connection_list_));
       }
