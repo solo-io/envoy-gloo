@@ -140,6 +140,21 @@ public:
 
 using ContextPtr = std::unique_ptr<StsConnectionPool::Context>;
 
+class StsConnectionPoolFactory;
+using StsConnectionPoolFactoryPtr = std::unique_ptr<StsConnectionPoolFactory>;
+
+class StsConnectionPoolFactory {
+public:
+  virtual ~StsConnectionPoolFactory() = default;
+
+  virtual StsConnectionPoolPtr build(const absl::string_view role_arn,
+                                     StsConnectionPool::Callbacks *callbacks,
+                                     StsFetcherPtr fetcher) PURE;
+
+  static StsConnectionPoolFactoryPtr create(Api::Api &api,
+                                     Event::Dispatcher &dispatcher);
+};
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions

@@ -53,7 +53,8 @@ private:
     }
 
     void cancel() override {
-      // Cancel should never be called once the context has been removed from the list.
+      // Cancel should never be called once the context has been removed from
+      // the list.
       ASSERT(inserted());
       if (inserted()) {
         dispatcher_.deferredDelete(removeFromList(parent_.connection_list_));
@@ -189,6 +190,28 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
 
   return std::make_shared<StsConnectionPoolImpl>(api, dispatcher, role_arn,
                                                  callbacks, std::move(fetcher));
+}
+
+class StsConnectionPoolFactoryImpl: public StsConnectionPoolFactory {
+public:
+  StsConnectionPoolFactoryImpl(Api::Api &api, Event::Dispatcher &dispatcher):
+    api_(api), dispatcher_(dispatcher) {}
+
+  StsConnectionPoolPtr build(const absl::string_view role_arn,
+                                     StsConnectionPool::Callbacks *callbacks,
+                                     StsFetcherPtr fetcher) override {
+
+    return StsConnectionPool::create(api_, dispatcher_, role_arn, callbacks, std::move(fetcher));
+  };
+
+private:
+  Api::Api &api_;
+  Event::Dispatcher &dispatcher_;
+};
+
+StsConnectionPoolFactoryPtr StsConnectionPoolFactory::create(Api::Api &api,
+                                     Event::Dispatcher &dispatcher) {
+  return std::make_unique<StsConnectionPoolFactoryImpl>(api, dispatcher);
 }
 
 } // namespace AwsLambda

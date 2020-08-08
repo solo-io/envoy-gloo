@@ -23,8 +23,7 @@ public:
   StsCredentialsProviderImpl(
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
-      Api::Api &api, Event::Dispatcher &dispatcher,
-      Upstream::ClusterManager &cm);
+      Api::Api &api, Upstream::ClusterManager &cm, StsConnectionPoolFactoryPtr conn_pool_factory);
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
@@ -37,18 +36,13 @@ public:
 
 private:
   Api::Api &api_;
-  Event::Dispatcher &dispatcher_;
   Upstream::ClusterManager &cm_;
   const envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
 
   std::string default_role_arn_;
   envoy::config::core::v3::HttpUri uri_;
-
-  std::regex regex_access_key_;
-  std::regex regex_secret_key_;
-  std::regex regex_session_token_;
-  std::regex regex_expiration_;
+  StsConnectionPoolFactoryPtr conn_pool_factory_;
 
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
   // TODO: udpate this file, inotify or timer
@@ -63,9 +57,9 @@ private:
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-    Api::Api &api, Event::Dispatcher &dispatcher, Upstream::ClusterManager &cm)
-    : api_(api), dispatcher_(dispatcher), cm_(cm), config_(config),
-      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))) {
+    Api::Api &api, Upstream::ClusterManager &cm, StsConnectionPoolFactoryPtr conn_pool_factory)
+    : api_(api), cm_(cm), config_(config),
+      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))), conn_pool_factory_(std::move(conn_pool_factory)) {
   // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
@@ -157,10 +151,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   //
   auto conn_pool =
       connection_pools_
-          .emplace(role_arn,
-                   StsConnectionPool::create(api_,
-                                             dispatcher_, role_arn, this, StsFetcher::create(cm_, api_)))
-          .first;
+          .emplace(role_arn, conn_pool_factory_->build(role_arn, this, StsFetcher::create(cm_, api_))).first;
   // initialize the connection
   conn_pool->second->init(uri_, web_token_);
   // generate and return a context with the current callbacks
@@ -195,8 +186,9 @@ StsCredentialsProviderPtr StsCredentialsProvider::create(
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Event::Dispatcher &dispatcher,
     Upstream::ClusterManager &cm) {
-  return std::make_unique<StsCredentialsProviderImpl>(config, api, dispatcher,
-                                                      cm);
+
+  return std::make_unique<StsCredentialsProviderImpl>(config, api,
+                                                      cm, StsConnectionPoolFactory::create(api, dispatcher));
 }
 
 StsCredentialsProviderFactoryPtr

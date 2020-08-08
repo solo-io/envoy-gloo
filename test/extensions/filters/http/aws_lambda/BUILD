@@ -109,6 +109,7 @@ envoy_gloo_cc_test(
         "//source/extensions/filters/http/aws_lambda:sts_credentials_provider_lib",
         "@envoy//test/extensions/filters/http/common:mock_lib",
         "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:factory_context_mocks",
         "@envoy//test/test_common:utility_lib",
         "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
     ],

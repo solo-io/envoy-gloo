@@ -12,6 +12,7 @@
 #include "test/extensions/filters/http/common/mock.h"
 #include "test/mocks/api/mocks.h"
 #include "test/mocks/http/mocks.h"
+#include "test/mocks/server/factory_context.h"
 #include "test/mocks/thread_local/mocks.h"
 #include "test/test_common/simulated_time_system.h"
 #include "test/test_common/utility.h"
@@ -79,39 +80,23 @@ class StsCredentialsProviderTest : public testing::Test,
 public:
   void SetUp() override {
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
-  }
-
-  void init() {
-    EXPECT_CALL(api_.file_system_, fileExists(_))
-        .Times(1)
-        .WillOnce(Return(true));
-    EXPECT_CALL(api_.file_system_, fileReadToEnd(_))
-        .Times(1)
-        .WillOnce(Return("web_token"));
-
-    watcher_ = new Filesystem::MockWatcher();
-    EXPECT_CALL(dispatcher_, createFilesystemWatcher_())
-        .WillOnce(Return(watcher_));
-    EXPECT_CALL(*watcher_, addWatch("test", _, _)).Times(1);
 
     setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
     setenv("AWS_ROLE_ARN", "test", 1);
-    sts_provider_ = StsCredentialsProviderImpl::create(
-        config_, api_, thread_local_, dispatcher_);
+    sts_provider_ = StsCredentialsProvider::create(
+        config_, mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_,
+        mock_factory_ctx_.cluster_manager_);
   }
 
   envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
-  testing::NiceMock<ThreadLocal::MockInstance> thread_local_;
-  testing::NiceMock<Api::MockApi> api_;
-  testing::NiceMock<Event::MockDispatcher> dispatcher_;
-  Filesystem::MockWatcher *watcher_;
-  std::shared_ptr<StsCredentialsProvider> sts_provider_;
+  testing::NiceMock<Server::Configuration::MockFactoryContext>
+      mock_factory_ctx_;
+  std::unique_ptr<StsCredentialsProvider> sts_provider_;
 };
 
 TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
   // Setup
-  init();
   absl::optional<std::string> role_arn = "test";
   std::shared_ptr<MockStsContext> context_1 =
       std::make_shared<MockStsContext>();
@@ -160,7 +145,6 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithCacheHit) {
 
 TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
   // Setup
-  init();
   absl::optional<std::string> role_arn = "test";
   std::shared_ptr<MockStsContext> context_1 =
       std::make_shared<MockStsContext>();
@@ -221,33 +205,8 @@ TEST_F(StsCredentialsProviderTest, TestSuccessCallbackWithExpiredCacheTarget) {
   sts_provider_->find(role_arn, context_2);
 }
 
-TEST_F(StsCredentialsProviderTest, TestFailure) {
-  // Setup
-  init();
-  absl::optional<std::string> role_arn = "test";
-  std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
-  EXPECT_CALL(*context, fetcher()).Times(1);
-
-  EXPECT_CALL(context->fetcher_, fetch(_, _, _, _, _))
-      .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
-                           const absl::string_view, const absl::string_view,
-                           StsFetcher::SuccessCallback,
-                           StsFetcher::FailureCallback failure) -> void {
-        EXPECT_CALL(*context, callbacks()).Times(1);
-
-        EXPECT_CALL(context->callbacks_, onFailure(_))
-            .WillOnce(Invoke([&](CredentialsFailureStatus reason) -> void {
-              EXPECT_EQ(reason, CredentialsFailureStatus::InvalidSts);
-            }));
-
-        failure(CredentialsFailureStatus::InvalidSts);
-      }));
-  sts_provider_->find(role_arn, context);
-}
-
 TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   // Setup
-  init();
   absl::optional<std::string> role_arn = "test";
   std::shared_ptr<MockStsContext> context = std::make_shared<MockStsContext>();
 
