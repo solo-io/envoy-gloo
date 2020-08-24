@@ -183,17 +183,18 @@ StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Event::Dispatcher &dispatcher) const {
 
-  return StsCredentialsProvider::create(config, api_, dispatcher, cm_);
+  return StsCredentialsProvider::create(
+      config, api_, cm_, StsConnectionPoolFactory::create(api_, dispatcher));
 };
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-    Api::Api &api, Event::Dispatcher &dispatcher,
-    Upstream::ClusterManager &cm) {
+    Api::Api &api, Upstream::ClusterManager &cm,
+    StsConnectionPoolFactoryPtr factory) {
 
-  return std::make_unique<StsCredentialsProviderImpl>(
-      config, api, cm, StsConnectionPoolFactory::create(api, dispatcher));
+  return std::make_unique<StsCredentialsProviderImpl>(config, api, cm,
+                                                      std::move(factory));
 }
 
 StsCredentialsProviderFactoryPtr

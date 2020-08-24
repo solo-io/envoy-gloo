@@ -18,6 +18,12 @@ MockStsCredentialsProviderFactory::MockStsCredentialsProviderFactory() =
 MockStsCredentialsProviderFactory::~MockStsCredentialsProviderFactory() =
     default;
 
+MockStsConnectionPoolFactory::MockStsConnectionPoolFactory() = default;
+MockStsConnectionPoolFactory::~MockStsConnectionPoolFactory() = default;
+
+// MockStsConnectionPool::MockStsConnectionPool() = default;
+// MockStsConnectionPool::~MockStsConnectionPool() = default;
+
 MockStsCredentialsProvider::MockStsCredentialsProvider() = default;
 MockStsCredentialsProvider::~MockStsCredentialsProvider() = default;
 

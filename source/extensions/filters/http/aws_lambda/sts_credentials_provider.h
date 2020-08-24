@@ -40,8 +40,8 @@ public:
   static StsCredentialsProviderPtr
   create(const envoy::config::filter::http::aws_lambda::v2::
              AWSLambdaConfig_ServiceAccountCredentials &config,
-         Api::Api &api, Event::Dispatcher &dispatcher,
-         Upstream::ClusterManager &cm);
+         Api::Api &api, Upstream::ClusterManager &cm,
+         StsConnectionPoolFactoryPtr factory);
 };
 
 class StsCredentialsProviderFactory;

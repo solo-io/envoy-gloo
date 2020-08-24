@@ -61,7 +61,7 @@ public:
 using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
 
 class StsConnectionPool;
-using StsConnectionPoolPtr = std::shared_ptr<StsConnectionPool>;
+using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
 
 class StsConnectionPool {
 public:
@@ -149,7 +149,7 @@ public:
 
   virtual StsConnectionPoolPtr build(const absl::string_view role_arn,
                                      StsConnectionPool::Callbacks *callbacks,
-                                     StsFetcherPtr fetcher) PURE;
+                                     StsFetcherPtr fetcher) const PURE;
 
   static StsConnectionPoolFactoryPtr create(Api::Api &api,
                                             Event::Dispatcher &dispatcher);

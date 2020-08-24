@@ -58,6 +58,17 @@ public:
               (const, override));
 };
 
+class MockStsConnectionPoolFactory : public StsConnectionPoolFactory {
+public:
+  MockStsConnectionPoolFactory();
+  ~MockStsConnectionPoolFactory() override;
+
+  MOCK_METHOD(StsConnectionPoolPtr, build,
+              (const absl::string_view role_arn,
+               StsConnectionPool::Callbacks *callbacks, StsFetcherPtr fetcher),
+              (const, override));
+};
+
 class MockStsCredentialsProvider : public StsCredentialsProvider {
 public:
   MockStsCredentialsProvider();
@@ -71,7 +82,6 @@ public:
 
 class MockStsConnectionPool : public StsConnectionPool {
 public:
-  MockStsConnectionPool();
 
   MOCK_METHOD(StsConnectionPool::Context *, add,
               (StsConnectionPool::Context::Callbacks * callback));

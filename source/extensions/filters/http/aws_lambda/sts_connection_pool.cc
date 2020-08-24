@@ -188,7 +188,7 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
                           StsConnectionPool::Callbacks *callbacks,
                           StsFetcherPtr fetcher) {
 
-  return std::make_shared<StsConnectionPoolImpl>(api, dispatcher, role_arn,
+  return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, role_arn,
                                                  callbacks, std::move(fetcher));
 }
 
@@ -199,7 +199,7 @@ public:
 
   StsConnectionPoolPtr build(const absl::string_view role_arn,
                              StsConnectionPool::Callbacks *callbacks,
-                             StsFetcherPtr fetcher) override {
+                             StsFetcherPtr fetcher) const override {
 
     return StsConnectionPool::create(api_, dispatcher_, role_arn, callbacks,
                                      std::move(fetcher));
