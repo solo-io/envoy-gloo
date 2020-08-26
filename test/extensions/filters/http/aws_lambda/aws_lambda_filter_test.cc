@@ -27,9 +27,9 @@ namespace AwsLambda {
 
 class AWSLambdaConfigTestImpl : public AWSLambdaConfig {
 public:
-  ContextSharedPtr
+  StsConnectionPool::Context *
   getCredentials(SharedAWSLambdaProtocolExtensionConfig,
-                 StsCredentialsProvider::Callbacks *callbacks) const override {
+      StsConnectionPool::Context::Callbacks *callbacks) const override {
     called_ = true;
     if (credentials_ == nullptr) {
       callbacks->onFailure(CredentialsFailureStatus::Network);
