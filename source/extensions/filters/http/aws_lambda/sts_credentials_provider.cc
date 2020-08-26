@@ -147,11 +147,6 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   // Add the new pool to our list of active pools
-  // from yuval:
-  // note: emplace retrurn an iterator to the element,
-  // so you can take the iterator, and then use the flow above, right?
-  // see: https://en.cppreference.com/w/cpp/container/map/emplace
-  //
   auto conn_pool =
       connection_pools_
           .emplace(role_arn, conn_pool_factory_->build(
