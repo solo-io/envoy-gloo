@@ -82,7 +82,6 @@ public:
 
 class MockStsConnectionPool : public StsConnectionPool {
 public:
-
   MOCK_METHOD(StsConnectionPool::Context *, add,
               (StsConnectionPool::Context::Callbacks * callback));
   MOCK_METHOD(void, init,

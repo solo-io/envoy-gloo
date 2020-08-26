@@ -37,7 +37,7 @@ public:
 
 protected:
   void SetUp() override {
-      sts_factory_ = new NiceMock<MockStsCredentialsProviderFactory>();
+    sts_factory_ = new NiceMock<MockStsCredentialsProviderFactory>();
   }
 
   NiceMock<Server::Configuration::MockFactoryContext> context_;
@@ -81,10 +81,11 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
 
-  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{sts_factory_};
-  AWSLambdaConfigImpl config(std::move(cred_provider), std::move(unique_factory),
-                             context_.dispatcher_, context_.api_, context_.thread_local_,
-                             "prefix.", stats_, protoconfig);
+  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
+      sts_factory_};
+  AWSLambdaConfigImpl config(
+      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
+      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -146,10 +147,11 @@ TEST_F(ConfigTest, FailingToRotate) {
       .WillOnce(Return(creds))
       .WillOnce(Return(Envoy::Extensions::Common::Aws::Credentials()));
 
-  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{sts_factory_};
-  AWSLambdaConfigImpl config(std::move(cred_provider), std::move(unique_factory),
-                             context_.dispatcher_, context_.api_, context_.thread_local_,
-                             "prefix.", stats_, protoconfig);
+  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
+      sts_factory_};
+  AWSLambdaConfigImpl config(
+      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
+      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config_1 =
       std::make_shared<const AWSLambdaProtocolExtensionConfig>(protoextconfig);
@@ -195,10 +197,11 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
   auto cred_provider = std::make_unique<
       NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
 
-  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{sts_factory_};
-  AWSLambdaConfigImpl config(std::move(cred_provider), std::move(unique_factory),
-                             context_.dispatcher_, context_.api_, context_.thread_local_,
-                             "prefix.", stats_, protoconfig);
+  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
+      sts_factory_};
+  AWSLambdaConfigImpl config(
+      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
+      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -245,19 +248,21 @@ TEST_F(ConfigTest, WithStsCreds) {
       NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
 
   auto sts_cred_provider_ = new NiceMock<MockStsCredentialsProvider>();
-  std::unique_ptr<NiceMock<MockStsCredentialsProvider>> sts_cred_provider{sts_cred_provider_};
+  std::unique_ptr<NiceMock<MockStsCredentialsProvider>> sts_cred_provider{
+      sts_cred_provider_};
 
   EXPECT_CALL(*sts_factory_, build(_, _))
       .WillOnce(Invoke([&](const envoy::config::filter::http::aws_lambda::v2::
-                   AWSLambdaConfig_ServiceAccountCredentials &,
-               Event::Dispatcher &) -> StsCredentialsProviderPtr {
+                               AWSLambdaConfig_ServiceAccountCredentials &,
+                           Event::Dispatcher &) -> StsCredentialsProviderPtr {
         return std::move(sts_cred_provider);
       }));
 
-  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{sts_factory_};
-  AWSLambdaConfigImpl config(std::move(cred_provider), std::move(unique_factory),
-                             context_.dispatcher_, context_.api_, context_.thread_local_,
-                             "prefix.", stats_, protoconfig);
+  std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
+      sts_factory_};
+  AWSLambdaConfigImpl config(
+      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
+      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks;
 
@@ -266,12 +271,13 @@ TEST_F(ConfigTest, WithStsCreds) {
 
   EXPECT_CALL(*sts_cred_provider_, find(_, _))
       .WillOnce(Invoke([&](const absl::optional<std::string> &role_arn_arg,
-               StsConnectionPool::Context::Callbacks *) -> StsConnectionPool::Context * {
+                           StsConnectionPool::Context::Callbacks *)
+                           -> StsConnectionPool::Context * {
         EXPECT_EQ(ext_config->roleArn().value(), role_arn_arg);
         return nullptr;
       }));
   auto ptr = config.getCredentials(ext_config, &callbacks);
-  EXPECT_NE(nullptr, ptr);
+  EXPECT_EQ(nullptr, ptr);
 }
 
 } // namespace AwsLambda
