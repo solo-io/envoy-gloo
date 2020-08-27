@@ -64,25 +64,27 @@ public:
 
     setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
     setenv("AWS_ROLE_ARN", "test", 1);
-    std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
-        &sts_connection_pool_factory_};
-    sts_provider_ = StsCredentialsProvider::create(
-        config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
-        std::move(factory_));
     sts_connection_pool_ = new testing::NiceMock<MockStsConnectionPool>();
+    sts_connection_pool_factory_ =
+        new testing::NiceMock<MockStsConnectionPoolFactory>();
   }
 
   envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
   testing::NiceMock<Server::Configuration::MockFactoryContext>
       mock_factory_ctx_;
-  std::unique_ptr<StsCredentialsProvider> sts_provider_;
-  testing::NiceMock<MockStsConnectionPoolFactory> sts_connection_pool_factory_;
+  testing::NiceMock<MockStsConnectionPoolFactory> *sts_connection_pool_factory_;
   testing::NiceMock<MockStsConnectionPool> *sts_connection_pool_;
 };
 
 TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   // Setup
+
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
+      sts_connection_pool_factory_};
+  auto sts_provider = StsCredentialsProvider::create(
+      config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
+      std::move(factory_));
   absl::optional<std::string> role_arn = "test";
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
@@ -90,7 +92,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
       sts_connection_pool_};
   StsConnectionPool::Callbacks *credentials_provider_callbacks;
 
-  EXPECT_CALL(sts_connection_pool_factory_, build(_, _, _))
+  EXPECT_CALL(*sts_connection_pool_factory_, build(_, _, _))
       .WillOnce(Invoke([&](const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
                            StsFetcherPtr) -> StsConnectionPoolPtr {
@@ -108,14 +110,14 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
       }));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 
-  sts_provider_->find(role_arn, &ctx_callbacks_1);
+  sts_provider->find(role_arn, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
   EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 
-  sts_provider_->find(role_arn, &ctx_callbacks_2);
+  sts_provider->find(role_arn, &ctx_callbacks_2);
 
   // place credentials in the cache
   auto credentials = std::make_shared<const StsCredentials>(
@@ -132,7 +134,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
             EXPECT_EQ(success_creds->secretAccessKey(), "secret_key");
             EXPECT_EQ(success_creds->sessionToken(), "session_token");
           }));
-  sts_provider_->find(role_arn, &ctx_callbacks_3);
+  sts_provider->find(role_arn, &ctx_callbacks_3);
 }
 
 } // namespace AwsLambda
