@@ -161,7 +161,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
       access_key, secret_key, session_token, expiration_time);
 
   // Send result back to Credential Provider to store in cache
-  callbacks_->onSuccess(result, role_arn_);
+  callbacks_->onResult(result, role_arn_);
   // Send result back to all contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);

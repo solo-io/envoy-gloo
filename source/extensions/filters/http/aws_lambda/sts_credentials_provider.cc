@@ -24,7 +24,7 @@ public:
       const envoy::config::filter::http::aws_lambda::v2::
           AWSLambdaConfig_ServiceAccountCredentials &config,
       Api::Api &api, Upstream::ClusterManager &cm,
-      StsConnectionPoolFactoryPtr conn_pool_factory);
+      StsConnectionPoolFactoryPtr conn_pool_factory, std::string_view web_token, std::string_view role_arn);
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
@@ -32,7 +32,7 @@ public:
 
   void setWebToken(std::string_view web_token) override;
 
-  void onSuccess(std::shared_ptr<const StsCredentials>,
+  void onResult(std::shared_ptr<const StsCredentials>,
                  std::string_view role_arn) override;
 
 private:
@@ -59,48 +59,23 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Upstream::ClusterManager &cm,
-    StsConnectionPoolFactoryPtr conn_pool_factory)
-    : api_(api), cm_(cm), config_(config),
-      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))),
-      conn_pool_factory_(std::move(conn_pool_factory)) {
+    StsConnectionPoolFactoryPtr conn_pool_factory, std::string_view web_token, std::string_view role_arn)
+    : api_(api), cm_(cm), config_(config), default_role_arn_(role_arn),
+      conn_pool_factory_(std::move(conn_pool_factory)),
+    web_token_(web_token) {
   // file_watcher_(dispatcher.createFilesystemWatcher()) {
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
   // TODO: Figure out how to get this to compile, timeout is not all that
   // important right now uri_.set_allocated_timeout(config_.mutable_timeout())
-
-  // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
-  // credentials to be enabled
-  std::string token_file = std::string(
-      absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
-  if (token_file == "") {
-    throw EnvoyException(fmt::format("Env var {} must be present, and set",
-                                     AWS_WEB_IDENTITY_TOKEN_FILE));
-  }
-  if (default_role_arn_ == "") {
-    throw EnvoyException(
-        fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
-  }
-  // File must exist on system
-  if (!api_.fileSystem().fileExists(token_file)) {
-    throw EnvoyException(
-        fmt::format("Web token file {} does not exist", token_file));
-  }
-
-  web_token_ = api_.fileSystem().fileReadToEnd(token_file);
-  // File should not be empty
-  if (web_token_ == "") {
-    throw EnvoyException(
-        fmt::format("Web token file {} exists but is empty", token_file));
-  }
 }
 
 void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
   web_token_ = web_token;
 }
 
-void StsCredentialsProviderImpl::onSuccess(
+void StsCredentialsProviderImpl::onResult(
     std::shared_ptr<const StsCredentials> result, std::string_view role_arn) {
   credentials_cache_.emplace(role_arn, result);
 }
@@ -161,7 +136,34 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
   StsCredentialsProviderFactoryImpl(Api::Api &api, Upstream::ClusterManager &cm)
-      : api_(api), cm_(cm){};
+      : api_(api), cm_(cm), 
+      default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))) {
+
+      // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
+      // credentials to be enabled
+      std::string token_file = std::string(
+          absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
+      if (token_file == "") {
+        throw EnvoyException(fmt::format("Env var {} must be present, and set",
+                                        AWS_WEB_IDENTITY_TOKEN_FILE));
+      }
+      if (default_role_arn_ == "") {
+        throw EnvoyException(
+            fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
+      }
+      // File must exist on system
+      if (!api_.fileSystem().fileExists(token_file)) {
+        throw EnvoyException(
+            fmt::format("Web token file {} does not exist", token_file));
+      }
+
+      web_token_ = api_.fileSystem().fileReadToEnd(token_file);
+      // File should not be empty
+      if (web_token_ == "") {
+        throw EnvoyException(
+            fmt::format("Web token file {} exists but is empty", token_file));
+      }
+  };
 
   StsCredentialsProviderPtr
   build(const envoy::config::filter::http::aws_lambda::v2::
@@ -171,6 +173,8 @@ public:
 private:
   Api::Api &api_;
   Upstream::ClusterManager &cm_;
+  std::string web_token_;
+  std::string default_role_arn_;
 };
 
 StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
@@ -179,17 +183,17 @@ StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
     Event::Dispatcher &dispatcher) const {
 
   return StsCredentialsProvider::create(
-      config, api_, cm_, StsConnectionPoolFactory::create(api_, dispatcher));
+      config, api_, cm_, StsConnectionPoolFactory::create(api_, dispatcher), web_token_, default_role_arn_);
 };
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
     Api::Api &api, Upstream::ClusterManager &cm,
-    StsConnectionPoolFactoryPtr factory) {
+    StsConnectionPoolFactoryPtr factory, std::string_view web_token, std::string_view role_arn) {
 
   return std::make_unique<StsCredentialsProviderImpl>(config, api, cm,
-                                                      std::move(factory));
+                                                      std::move(factory), web_token, role_arn);
 }
 
 StsCredentialsProviderFactoryPtr

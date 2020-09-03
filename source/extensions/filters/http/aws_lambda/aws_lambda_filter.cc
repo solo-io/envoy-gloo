@@ -124,8 +124,6 @@ void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
   credentials_ = credentials;
-  // Do not null context here; all hell will break loose.
-  // can now disregard hehe
   context_ = nullptr;
   state_ = State::Complete;
 

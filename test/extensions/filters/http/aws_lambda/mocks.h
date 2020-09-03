@@ -41,7 +41,7 @@ public:
 
 class MockStsConnectionPoolCallbacks : public StsConnectionPool::Callbacks {
 public:
-  MOCK_METHOD(void, onSuccess,
+  MOCK_METHOD(void, onResult,
               (std::shared_ptr<const StsCredentials> result,
                std::string_view role_arn));
 };

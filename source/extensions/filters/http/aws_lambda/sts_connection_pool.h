@@ -77,7 +77,7 @@ public:
      * @param credential the credentials
      * @param role_arn the role_arn used to create these credentials
      */
-    virtual void onSuccess(std::shared_ptr<const StsCredentials>,
+    virtual void onResult(std::shared_ptr<const StsCredentials>,
                            std::string_view role_arn) PURE;
   };
 
