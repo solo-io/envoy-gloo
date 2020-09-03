@@ -208,6 +208,22 @@ void AWSLambdaConfigImpl::timerCallback() {
   }
 }
 
+std::shared_ptr<AWSLambdaConfigImpl> AWSLambdaConfigImpl::create(
+      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+          &&provider,
+      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+      Event::Dispatcher &dispatcher, Api::Api &api,
+      Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
+      Stats::Scope &scope,
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+          &protoconfig) {
+                // We can't use make_shared here because the constructor of this class is private.
+            std::shared_ptr<AWSLambdaConfigImpl> ptr(
+                new AWSLambdaConfigImpl(std::move(provider), std::move(sts_factory), dispatcher, api, tls, stats_prefix, scope, protoconfig));
+            ptr->init();
+            return ptr;
+          }
+
 AwsLambdaFilterStats
 AWSLambdaConfigImpl::generateStats(const std::string &prefix,
                                    Stats::Scope &scope) {
