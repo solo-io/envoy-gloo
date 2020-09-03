@@ -92,9 +92,7 @@ StsConnectionPoolImpl::StsConnectionPoolImpl(
 StsConnectionPoolImpl::~StsConnectionPoolImpl() {
   // When the conn pool is being destructed, make sure to inform all of the
   // contexts
-  for (auto &&ctx : connection_list_) {
-    ctx->callbacks()->onFailure(CredentialsFailureStatus::ContextCancelled);
-  }
+  onFailure(CredentialsFailureStatus::ContextCancelled);
   // Cancel fetch
   if (fetcher_ != nullptr) {
     fetcher_->cancel();
@@ -131,9 +129,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
                                     StsResponseRegex::get().regex_##X);        \
     if (!result || !(matched.size() != 1)) {                                   \
       ENVOY_LOG(trace, "response body did not contain " #X);                   \
-      for (auto &&ctx : connection_list_) {                                    \
-        ctx->callbacks()->onFailure(CredentialsFailureStatus::InvalidSts);     \
-      }                                                                        \
+      onFailure(CredentialsFailureStatus::InvalidSts);                         \
       return;                                                                  \
     }                                                                          \
     const auto &sub_match = matched[1];                                        \
