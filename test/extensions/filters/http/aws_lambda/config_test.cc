@@ -258,11 +258,11 @@ TEST_F(ConfigTest, WithStsCreds) {
         return std::move(sts_cred_provider);
       }));
 
-    setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
-    auto watcher = new Filesystem::MockWatcher();
-    EXPECT_CALL(context_.dispatcher_, createFilesystemWatcher_())
-        .WillOnce(Return(watcher));
-    EXPECT_CALL(*watcher, addWatch("test", _, _)).Times(1);
+  setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
+  auto watcher = new Filesystem::MockWatcher();
+  EXPECT_CALL(context_.dispatcher_, createFilesystemWatcher_())
+      .WillOnce(Return(watcher));
+  EXPECT_CALL(*watcher, addWatch("test", _, _)).Times(1);
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};

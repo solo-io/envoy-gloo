@@ -41,7 +41,8 @@ public:
   create(const envoy::config::filter::http::aws_lambda::v2::
              AWSLambdaConfig_ServiceAccountCredentials &config,
          Api::Api &api, Upstream::ClusterManager &cm,
-         StsConnectionPoolFactoryPtr factory, std::string_view web_token, std::string_view role_arn);
+         StsConnectionPoolFactoryPtr factory, std::string_view web_token,
+         std::string_view role_arn);
 };
 
 class StsCredentialsProviderFactory;

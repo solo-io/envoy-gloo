@@ -84,15 +84,14 @@ public:
   ~AWSLambdaConfigImpl() = default;
 
   static std::shared_ptr<AWSLambdaConfigImpl>
-  create(
-      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
-          &&provider,
-      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
-      Event::Dispatcher &dispatcher, Api::Api &api,
-      Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-      Stats::Scope &scope,
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
-          &protoconfig);
+  create(std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+             &&provider,
+         std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+         Event::Dispatcher &dispatcher, Api::Api &api,
+         Envoy::ThreadLocal::SlotAllocator &tls,
+         const std::string &stats_prefix, Stats::Scope &scope,
+         const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+             &protoconfig);
 
   StsConnectionPool::Context *getCredentials(
       SharedAWSLambdaProtocolExtensionConfig ext_cfg,
@@ -108,7 +107,7 @@ private:
       Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
-          
+
   CredentialsConstSharedPtr getProviderCredentials() const;
 
   static AwsLambdaFilterStats generateStats(const std::string &prefix,

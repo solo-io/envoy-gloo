@@ -78,7 +78,7 @@ public:
      * @param role_arn the role_arn used to create these credentials
      */
     virtual void onResult(std::shared_ptr<const StsCredentials>,
-                           std::string_view role_arn) PURE;
+                          std::string_view role_arn) PURE;
   };
 
   // Context object to hold data needed for verifier.

@@ -70,8 +70,8 @@ public:
 
 TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   // Setup
-    std::string role_arn = "test_arn";
-    std::string token = "test_token";
+  std::string role_arn = "test_arn";
+  std::string token = "test_token";
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
       sts_connection_pool_factory_};
   auto sts_provider = StsCredentialsProvider::create(

@@ -104,32 +104,33 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 
 void AWSLambdaConfigImpl::init() {
   if (sts_enabled_) {
-  // Add file watcher for token file
-  auto shared_this = shared_from_this();
-  file_watcher_->addWatch(
-      token_file_, Filesystem::Watcher::Events::Modified,
-      [shared_this](uint32_t) {
-        try {
-          const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
-              shared_this->token_file_);
-          // Set the web token on all sts credentials providers
-          shared_this->tls_slot_->runOnAllThreads(
-              [web_token](ThreadLocal::ThreadLocalObjectSharedPtr previous)
-                  -> ThreadLocal::ThreadLocalObjectSharedPtr {
-                auto prev_config =
-                    std::dynamic_pointer_cast<ThreadLocalCredentials>(previous);
-                prev_config->sts_credentials_->setWebToken(web_token);
-                return previous;
-              });
-          // TODO: check if web_token is valid
-          // TODO: stats here
-        } catch (const EnvoyException &e) {
-          ENVOY_LOG_TO_LOGGER(
-              Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
-              "{}: Exception while reading file during watch ({}): {}",
-              __func__, shared_this->token_file_, e.what());
-        }
-      });
+    // Add file watcher for token file
+    auto shared_this = shared_from_this();
+    file_watcher_->addWatch(
+        token_file_, Filesystem::Watcher::Events::Modified,
+        [shared_this](uint32_t) {
+          try {
+            const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
+                shared_this->token_file_);
+            // Set the web token on all sts credentials providers
+            shared_this->tls_slot_->runOnAllThreads(
+                [web_token](ThreadLocal::ThreadLocalObjectSharedPtr previous)
+                    -> ThreadLocal::ThreadLocalObjectSharedPtr {
+                  auto prev_config =
+                      std::dynamic_pointer_cast<ThreadLocalCredentials>(
+                          previous);
+                  prev_config->sts_credentials_->setWebToken(web_token);
+                  return previous;
+                });
+            // TODO: check if web_token is valid
+            // TODO: stats here
+          } catch (const EnvoyException &e) {
+            ENVOY_LOG_TO_LOGGER(
+                Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
+                "{}: Exception while reading file during watch ({}): {}",
+                __func__, shared_this->token_file_, e.what());
+          }
+        });
   }
 }
 
@@ -211,20 +212,22 @@ void AWSLambdaConfigImpl::timerCallback() {
 }
 
 std::shared_ptr<AWSLambdaConfigImpl> AWSLambdaConfigImpl::create(
-      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
-          &&provider,
-      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
-      Event::Dispatcher &dispatcher, Api::Api &api,
-      Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-      Stats::Scope &scope,
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
-          &protoconfig) {
-                // We can't use make_shared here because the constructor of this class is private.
-            std::shared_ptr<AWSLambdaConfigImpl> ptr(
-                new AWSLambdaConfigImpl(std::move(provider), std::move(sts_factory), dispatcher, api, tls, stats_prefix, scope, protoconfig));
-            ptr->init();
-            return ptr;
-          }
+    std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+        &&provider,
+    std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+    Event::Dispatcher &dispatcher, Api::Api &api,
+    Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
+    Stats::Scope &scope,
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+        &protoconfig) {
+  // We can't use make_shared here because the constructor of this class is
+  // private.
+  std::shared_ptr<AWSLambdaConfigImpl> ptr(new AWSLambdaConfigImpl(
+      std::move(provider), std::move(sts_factory), dispatcher, api, tls,
+      stats_prefix, scope, protoconfig));
+  ptr->init();
+  return ptr;
+}
 
 AwsLambdaFilterStats
 AWSLambdaConfigImpl::generateStats(const std::string &prefix,
