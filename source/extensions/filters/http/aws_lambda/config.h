@@ -108,7 +108,7 @@ private:
       Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
-
+          
   CredentialsConstSharedPtr getProviderCredentials() const;
 
   static AwsLambdaFilterStats generateStats(const std::string &prefix,

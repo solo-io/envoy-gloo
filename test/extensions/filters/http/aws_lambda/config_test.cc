@@ -83,7 +83,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  AWSLambdaConfigImpl config(
+  auto config = AWSLambdaConfigImpl::create(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
@@ -101,7 +101,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
             EXPECT_EQ(result->sessionToken().has_value(), false);
           }));
 
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_1, &callbacks_1));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_1, &callbacks_1));
 
   timer->invokeCallback();
 
@@ -118,7 +118,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
             EXPECT_EQ(result->sessionToken().value(), "session_token");
           }));
 
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_2, &callbacks_2));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_2, &callbacks_2));
 
   EXPECT_EQ(
       2UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
@@ -149,7 +149,7 @@ TEST_F(ConfigTest, FailingToRotate) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  AWSLambdaConfigImpl config(
+  auto config = AWSLambdaConfigImpl::create(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
@@ -168,12 +168,12 @@ TEST_F(ConfigTest, FailingToRotate) {
             EXPECT_EQ(result->sessionToken().has_value(), false);
           }));
 
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_1, &callbacks_1));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_1, &callbacks_1));
 
   timer->invokeCallback();
 
   // When we fail to rotate we latch to the last good credentials
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_1, &callbacks_1));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_1, &callbacks_1));
 
   EXPECT_EQ(
       1UL, stats_.counterFromString("prefix.aws_lambda.fetch_success").value());
@@ -199,7 +199,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  AWSLambdaConfigImpl config(
+  auto config = AWSLambdaConfigImpl::create(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
@@ -217,7 +217,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
             EXPECT_EQ(result->sessionToken().has_value(), false);
           }));
 
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_1, &callbacks_1));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_1, &callbacks_1));
 
   NiceMock<MockStsContextCallbacks> callbacks_2;
   protoextconfig.set_session_token("session_token");
@@ -233,7 +233,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
             EXPECT_EQ(result->sessionToken().value(), "session_token");
           }));
 
-  EXPECT_EQ(nullptr, config.getCredentials(ext_config_2, &callbacks_2));
+  EXPECT_EQ(nullptr, config->getCredentials(ext_config_2, &callbacks_2));
 }
 
 TEST_F(ConfigTest, WithStsCreds) {
@@ -258,9 +258,15 @@ TEST_F(ConfigTest, WithStsCreds) {
         return std::move(sts_cred_provider);
       }));
 
+    setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
+    auto watcher = new Filesystem::MockWatcher();
+    EXPECT_CALL(context_.dispatcher_, createFilesystemWatcher_())
+        .WillOnce(Return(watcher));
+    EXPECT_CALL(*watcher, addWatch("test", _, _)).Times(1);
+
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  AWSLambdaConfigImpl config(
+  auto config = AWSLambdaConfigImpl::create(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
 
@@ -276,7 +282,7 @@ TEST_F(ConfigTest, WithStsCreds) {
         EXPECT_EQ(ext_config->roleArn().value(), role_arn_arg);
         return nullptr;
       }));
-  auto ptr = config.getCredentials(ext_config, &callbacks);
+  auto ptr = config->getCredentials(ext_config, &callbacks);
   EXPECT_EQ(nullptr, ptr);
 }
 

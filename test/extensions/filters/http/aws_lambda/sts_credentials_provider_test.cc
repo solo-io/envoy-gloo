@@ -55,15 +55,6 @@ public:
   void SetUp() override {
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
 
-    EXPECT_CALL(mock_factory_ctx_.api_.file_system_, fileExists(_))
-        .Times(1)
-        .WillOnce(Return(true));
-    EXPECT_CALL(mock_factory_ctx_.api_.file_system_, fileReadToEnd(_))
-        .Times(1)
-        .WillOnce(Return("web_token"));
-
-    setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
-    setenv("AWS_ROLE_ARN", "test", 1);
     sts_connection_pool_ = new testing::NiceMock<MockStsConnectionPool>();
     sts_connection_pool_factory_ =
         new testing::NiceMock<MockStsConnectionPoolFactory>();
@@ -79,13 +70,13 @@ public:
 
 TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   // Setup
-
+    std::string role_arn = "test_arn";
+    std::string token = "test_token";
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
       sts_connection_pool_factory_};
   auto sts_provider = StsCredentialsProvider::create(
       config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
-      std::move(factory_));
-  absl::optional<std::string> role_arn = "test";
+      std::move(factory_), token, role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
   std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool{
@@ -96,7 +87,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
       .WillOnce(Invoke([&](const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
                            StsFetcherPtr) -> StsConnectionPoolPtr {
-        EXPECT_EQ(role_arn_arg, "test");
+        EXPECT_EQ(role_arn_arg, role_arn);
         credentials_provider_callbacks = callbacks;
         return std::move(unique_pool);
       }));
@@ -104,7 +95,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   EXPECT_CALL(*sts_connection_pool_, init(_, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const absl::string_view web_token) {
-        EXPECT_EQ(web_token, "web_token");
+        EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
       }));
@@ -123,7 +114,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   auto credentials = std::make_shared<const StsCredentials>(
       "access_key", "secret_key", "session_token",
       SystemTime(expiry_time - std::chrono::minutes(5)));
-  credentials_provider_callbacks->onSuccess(credentials, "test");
+  credentials_provider_callbacks->onResult(credentials, role_arn);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
   EXPECT_CALL(ctx_callbacks_3, onSuccess(_))

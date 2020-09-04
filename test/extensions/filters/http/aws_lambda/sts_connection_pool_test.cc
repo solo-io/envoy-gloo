@@ -96,7 +96,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
                             "some_session_token");
                 }));
         // Check that credentials provider callback is made correctly
-        EXPECT_CALL(pool_callbacks, onSuccess(_, _))
+        EXPECT_CALL(pool_callbacks, onResult(_, _))
             .WillOnce(Invoke([&](std::shared_ptr<const StsCredentials> result,
                                  std::string_view inner_role_arn) -> void {
               EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
@@ -157,7 +157,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
             EXPECT_EQ(result->sessionToken().value(), "some_session_token");
           }));
   // Check that credentials provider callback is made correctly
-  EXPECT_CALL(pool_callbacks, onSuccess(_, _))
+  EXPECT_CALL(pool_callbacks, onResult(_, _))
       .WillOnce(Invoke([&](std::shared_ptr<const StsCredentials> result,
                            std::string_view inner_role_arn) -> void {
         EXPECT_EQ(result->accessKeyId().value(), "some_access_key");

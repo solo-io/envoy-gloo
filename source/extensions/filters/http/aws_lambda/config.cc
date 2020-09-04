@@ -103,6 +103,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
 }
 
 void AWSLambdaConfigImpl::init() {
+  if (sts_enabled_) {
   // Add file watcher for token file
   auto shared_this = shared_from_this();
   file_watcher_->addWatch(
@@ -129,6 +130,7 @@ void AWSLambdaConfigImpl::init() {
               __func__, shared_this->token_file_, e.what());
         }
       });
+  }
 }
 
 /*
