@@ -251,14 +251,27 @@ TEST_F(ConfigTest, WithStsCreds) {
   std::unique_ptr<NiceMock<MockStsCredentialsProvider>> sts_cred_provider{
       sts_cred_provider_};
 
-  EXPECT_CALL(*sts_factory_, build(_, _))
-      .WillOnce(Invoke([&](const envoy::config::filter::http::aws_lambda::v2::
-                               AWSLambdaConfig_ServiceAccountCredentials &,
-                           Event::Dispatcher &) -> StsCredentialsProviderPtr {
-        return std::move(sts_cred_provider);
-      }));
-
   setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
+  setenv("AWS_ROLE_ARN", "test_arn", 1);
+
+  EXPECT_CALL(context_.api_.file_system_, fileExists(_))
+      .Times(1)
+      .WillOnce(Return(true));
+  EXPECT_CALL(context_.api_.file_system_, fileReadToEnd(_))
+      .Times(1)
+      .WillOnce(Return("web_token"));
+
+  EXPECT_CALL(*sts_factory_, build(_, _, _, _))
+      .WillOnce(
+          Invoke([&](const envoy::config::filter::http::aws_lambda::v2::
+                         AWSLambdaConfig_ServiceAccountCredentials &,
+                     Event::Dispatcher &, std::string_view web_token,
+                     std::string_view role_arn) -> StsCredentialsProviderPtr {
+            EXPECT_EQ(web_token, "web_token");
+            EXPECT_EQ(role_arn, "test_arn");
+            return std::move(sts_cred_provider);
+          }));
+
   auto watcher = new Filesystem::MockWatcher();
   EXPECT_CALL(context_.dispatcher_, createFilesystemWatcher_())
       .WillOnce(Return(watcher));

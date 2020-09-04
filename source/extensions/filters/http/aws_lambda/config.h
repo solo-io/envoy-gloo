@@ -117,6 +117,8 @@ private:
 
   void init();
 
+  void loadSTSData();
+
   AwsLambdaFilterStats stats_;
 
   Api::Api &api_;
@@ -128,6 +130,8 @@ private:
 
   bool sts_enabled_ = false;
   std::string token_file_;
+  std::string web_token_;
+  std::string role_arn_;
 
   ThreadLocal::SlotPtr tls_slot_;
 

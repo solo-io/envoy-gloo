@@ -56,7 +56,8 @@ public:
   virtual StsCredentialsProviderPtr
   build(const envoy::config::filter::http::aws_lambda::v2::
             AWSLambdaConfig_ServiceAccountCredentials &config,
-        Event::Dispatcher &dispatcher) const PURE;
+        Event::Dispatcher &dispatcher, std::string_view web_token,
+        std::string_view role_arn) const PURE;
 
   static StsCredentialsProviderFactoryPtr create(Api::Api &api,
                                                  Upstream::ClusterManager &cm);

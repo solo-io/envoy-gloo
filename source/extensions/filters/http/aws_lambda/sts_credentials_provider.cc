@@ -137,55 +137,28 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
 class StsCredentialsProviderFactoryImpl : public StsCredentialsProviderFactory {
 public:
   StsCredentialsProviderFactoryImpl(Api::Api &api, Upstream::ClusterManager &cm)
-      : api_(api), cm_(cm),
-        default_role_arn_(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN))) {
-
-    // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
-    // credentials to be enabled
-    std::string token_file = std::string(
-        absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
-    if (token_file == "") {
-      throw EnvoyException(fmt::format("Env var {} must be present, and set",
-                                       AWS_WEB_IDENTITY_TOKEN_FILE));
-    }
-    if (default_role_arn_ == "") {
-      throw EnvoyException(
-          fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
-    }
-    // File must exist on system
-    if (!api_.fileSystem().fileExists(token_file)) {
-      throw EnvoyException(
-          fmt::format("Web token file {} does not exist", token_file));
-    }
-
-    web_token_ = api_.fileSystem().fileReadToEnd(token_file);
-    // File should not be empty
-    if (web_token_ == "") {
-      throw EnvoyException(
-          fmt::format("Web token file {} exists but is empty", token_file));
-    }
-  };
+      : api_(api), cm_(cm){};
 
   StsCredentialsProviderPtr
   build(const envoy::config::filter::http::aws_lambda::v2::
             AWSLambdaConfig_ServiceAccountCredentials &config,
-        Event::Dispatcher &dispatcher) const override;
+        Event::Dispatcher &dispatcher, std::string_view web_token,
+        std::string_view role_arn) const override;
 
 private:
   Api::Api &api_;
   Upstream::ClusterManager &cm_;
-  std::string web_token_;
-  std::string default_role_arn_;
 };
 
 StsCredentialsProviderPtr StsCredentialsProviderFactoryImpl::build(
     const envoy::config::filter::http::aws_lambda::v2::
         AWSLambdaConfig_ServiceAccountCredentials &config,
-    Event::Dispatcher &dispatcher) const {
+    Event::Dispatcher &dispatcher, std::string_view web_token,
+    std::string_view role_arn) const {
 
   return StsCredentialsProvider::create(
       config, api_, cm_, StsConnectionPoolFactory::create(api_, dispatcher),
-      web_token_, default_role_arn_);
+      web_token, role_arn);
 };
 
 StsCredentialsProviderPtr StsCredentialsProvider::create(

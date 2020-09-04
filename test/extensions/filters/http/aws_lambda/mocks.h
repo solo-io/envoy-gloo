@@ -54,7 +54,8 @@ public:
   MOCK_METHOD(StsCredentialsProviderPtr, build,
               (const envoy::config::filter::http::aws_lambda::v2::
                    AWSLambdaConfig_ServiceAccountCredentials &config,
-               Event::Dispatcher &dispatcher),
+               Event::Dispatcher &dispatcher, std::string_view web_token,
+               std::string_view role_arn),
               (const, override));
 };
 

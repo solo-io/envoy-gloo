@@ -77,8 +77,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       CredentialsFetcherCase::kServiceAccountCredentials: {
     ENVOY_LOG(debug, "{}: Using STS credentials source", __func__);
 
-    token_file_ =
-        absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
+    // Load all of the env data for STS credentials
+    loadSTSData();
     // use service account credentials provider
     tls_slot_ = tls.allocateSlot();
     // transfer ptr ownership to sts_factor isn't cleaned up before we get into
@@ -87,8 +87,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     auto service_account_creds = protoconfig.service_account_credentials();
     tls_slot_->set(
         [this, service_account_creds](Event::Dispatcher &dispatcher) {
-          StsCredentialsProviderPtr sts_cred_provider =
-              sts_factory_->build(service_account_creds, dispatcher);
+          StsCredentialsProviderPtr sts_cred_provider = sts_factory_->build(
+              service_account_creds, dispatcher, web_token_, role_arn_);
           return std::make_shared<ThreadLocalCredentials>(
               std::move(sts_cred_provider));
         });
@@ -100,6 +100,34 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     break;
   }
   }
+}
+
+void AWSLambdaConfigImpl::loadSTSData() {
+    // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
+    // credentials to be enabled
+    token_file_ =
+        absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
+    if (token_file_ == "") {
+      throw EnvoyException(fmt::format("Env var {} must be present, and set",
+                                       AWS_WEB_IDENTITY_TOKEN_FILE));
+    }
+    role_arn_ = absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN));
+    if (role_arn_ == "") {
+      throw EnvoyException(
+          fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));
+    }
+    // File must exist on system
+    if (!api_.fileSystem().fileExists(token_file_)) {
+      throw EnvoyException(
+          fmt::format("Web token file {} does not exist", token_file_));
+    }
+
+    web_token_ = api_.fileSystem().fileReadToEnd(token_file_);
+    // File should not be empty
+    if (web_token_ == "") {
+      throw EnvoyException(
+          fmt::format("Web token file {} exists but is empty", token_file_));
+    }
 }
 
 void AWSLambdaConfigImpl::init() {
