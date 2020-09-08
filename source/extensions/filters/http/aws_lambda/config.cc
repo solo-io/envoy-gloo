@@ -86,9 +86,9 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     sts_factory_ = std::move(sts_factory);
     auto service_account_creds = protoconfig.service_account_credentials();
     tls_slot_->set(
-        [this, service_account_creds](Event::Dispatcher &dispatcher) {
+        [this, web_token = web_token_, role_arn = role_arn_, service_account_creds](Event::Dispatcher &dispatcher) {
           StsCredentialsProviderPtr sts_cred_provider = sts_factory_->build(
-              service_account_creds, dispatcher, web_token_, role_arn_);
+              service_account_creds, dispatcher, web_token, role_arn);
           return std::make_shared<ThreadLocalCredentials>(
               std::move(sts_cred_provider));
         });
