@@ -10,7 +10,6 @@ using ::testing::Return;
 using ::testing::ReturnRef;
 
 MockStsContext::MockStsContext() {
-  ON_CALL(*this, fetcher()).WillByDefault(ReturnRef(fetcher_));
   ON_CALL(*this, callbacks()).WillByDefault(Return(&callbacks_));
 }
 
@@ -18,6 +17,12 @@ MockStsCredentialsProviderFactory::MockStsCredentialsProviderFactory() =
     default;
 MockStsCredentialsProviderFactory::~MockStsCredentialsProviderFactory() =
     default;
+
+MockStsConnectionPoolFactory::MockStsConnectionPoolFactory() = default;
+MockStsConnectionPoolFactory::~MockStsConnectionPoolFactory() = default;
+
+// MockStsConnectionPool::MockStsConnectionPool() = default;
+// MockStsConnectionPool::~MockStsConnectionPool() = default;
 
 MockStsCredentialsProvider::MockStsCredentialsProvider() = default;
 MockStsCredentialsProvider::~MockStsCredentialsProvider() = default;

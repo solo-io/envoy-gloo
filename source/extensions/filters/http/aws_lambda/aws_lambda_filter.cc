@@ -124,7 +124,7 @@ void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
   credentials_ = credentials;
-  // Do not null context here; all hell will break loose.
+  context_ = nullptr;
   state_ = State::Complete;
 
   const std::string *access_key{};
@@ -171,6 +171,8 @@ void AWSLambdaFilter::onSuccess(
 
 // TODO: Use the failure status in the local reply
 void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
+  // cancel mustn't be called
+  context_ = nullptr;
   state_ = State::Responded;
   decoder_callbacks_->sendLocalReply(
       Http::Code::InternalServerError, RcDetails::get().CredentialsNotFoundBody,

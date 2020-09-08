@@ -70,50 +70,74 @@ using SharedAWSLambdaProtocolExtensionConfig =
 
 class AWSLambdaConfig {
 public:
-  virtual ContextSharedPtr
+  virtual StsConnectionPool::Context *
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-                 StsCredentialsProvider::Callbacks *callbacks) const PURE;
+                 StsConnectionPool::Context::Callbacks *callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
 class AWSLambdaConfigImpl
     : public AWSLambdaConfig,
-      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter>,
+      public std::enable_shared_from_this<AWSLambdaConfigImpl> {
 public:
+  ~AWSLambdaConfigImpl() = default;
+
+  static std::shared_ptr<AWSLambdaConfigImpl>
+  create(std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+             &&provider,
+         std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+         Event::Dispatcher &dispatcher, Api::Api &api,
+         Envoy::ThreadLocal::SlotAllocator &tls,
+         const std::string &stats_prefix, Stats::Scope &scope,
+         const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
+             &protoconfig);
+
+  StsConnectionPool::Context *getCredentials(
+      SharedAWSLambdaProtocolExtensionConfig ext_cfg,
+      StsConnectionPool::Context::Callbacks *callbacks) const override;
+
+private:
   AWSLambdaConfigImpl(
       std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
           &&provider,
-      Upstream::ClusterManager &cluster_manager,
-      StsCredentialsProviderFactory &sts_factory, Event::Dispatcher &dispatcher,
+      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
+      Event::Dispatcher &dispatcher, Api::Api &api,
       Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-      Stats::Scope &scope, Api::Api &api,
+      Stats::Scope &scope,
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
-  ~AWSLambdaConfigImpl() = default;
 
-  ContextSharedPtr
-  getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
-                 StsCredentialsProvider::Callbacks *callbacks) const override;
-
-private:
   CredentialsConstSharedPtr getProviderCredentials() const;
+
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
                                             Stats::Scope &scope);
 
   void timerCallback();
 
-  ContextFactory context_factory_;
+  void init();
+
+  void loadSTSData();
+
+  AwsLambdaFilterStats stats_;
+
+  Api::Api &api_;
+
+  Envoy::Filesystem::WatcherPtr file_watcher_;
 
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
 
-  ThreadLocal::SlotPtr tls_slot_;
+  bool sts_enabled_ = false;
+  std::string token_file_;
+  std::string web_token_;
+  std::string role_arn_;
 
-  StsCredentialsProviderPtr sts_credentials_provider_;
+  ThreadLocal::SlotPtr tls_slot_;
 
   Event::TimerPtr timer_;
 
-  AwsLambdaFilterStats stats_;
+  std::unique_ptr<StsCredentialsProviderFactory> sts_factory_;
 };
 
 typedef std::shared_ptr<const AWSLambdaConfig> AWSLambdaConfigConstSharedPtr;

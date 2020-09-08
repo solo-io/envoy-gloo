@@ -1,10 +1,10 @@
 #include "common/nats/streaming/client_impl.h"
 
+#include "test/mocks/common.h"
 #include "test/mocks/event/mocks.h"
 #include "test/mocks/nats/mocks.h"
 #include "test/mocks/nats/streaming/mocks.h"
 #include "test/mocks/runtime/mocks.h"
-#include "test/mocks/common.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

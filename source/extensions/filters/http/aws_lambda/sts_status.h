@@ -15,6 +15,8 @@ enum class CredentialsFailureStatus {
   ExpiredToken,
   /* Token is expired. */
   ClusterNotFound,
+  /* The filter is being destroyed, therefore the request should be cancelled */
+  ContextCancelled
 };
 
 } // namespace AwsLambda

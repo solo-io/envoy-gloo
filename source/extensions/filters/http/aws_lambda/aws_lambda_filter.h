@@ -22,7 +22,7 @@ namespace AwsLambda {
  * it expects retrieveFunction to be called before decodeHeaders.
  */
 class AWSLambdaFilter : public Http::StreamDecoderFilter,
-                        StsCredentialsProvider::Callbacks,
+                        StsConnectionPool::Context::Callbacks,
                         Logger::Loggable<Logger::Id::filter> {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
@@ -75,7 +75,7 @@ private:
 
   CredentialsConstSharedPtr credentials_;
 
-  ContextSharedPtr context_;
+  StsConnectionPool::Context *context_;
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
   // The state of the get credentials request.
