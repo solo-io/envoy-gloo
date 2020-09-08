@@ -1,0 +1,5 @@
+changelog:
+- type: NEW_FEATURE
+  description: Add connection pooling to AWS STS connections for better performance
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/80
+
