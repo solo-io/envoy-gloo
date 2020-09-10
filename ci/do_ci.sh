@@ -15,6 +15,10 @@ cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
 mkdir -p $SOURCE_DIR/ci/flaky_test
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test/run_process_xml.sh $SOURCE_DIR/ci/flaky_test
 
+cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
+
+
+
 
 if [ -f $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh ]; then
   cp $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh bazel/
