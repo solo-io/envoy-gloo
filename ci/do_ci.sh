@@ -10,8 +10,10 @@ cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 # dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
 # cp -f $UPSTREAM_ENVOY_SRCDIR/bazel/get_workspace_status $SOURCE_DIR/bazel/get_workspace_status
-
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
+
+mkdir -p $SOURCE_DIR/ci/flaky_test
+cp -f $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test/run_process_xml.sh $SOURCE_DIR/ci/flaky_test
 
 
 if [ -f $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh ]; then
