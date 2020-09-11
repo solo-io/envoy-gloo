@@ -1,5 +1,5 @@
 REPOSITORY_LOCATIONS = dict(
-    # envoy master-v1.16.0 pre-release
+    # envoy-wasm master-v1.16.0 pre-release
     envoy = dict(
         commit = "7901e9e63b74d95230a719b4f883510a7f539428",
         remote = "https://github.com/envoyproxy/envoy-wasm",
