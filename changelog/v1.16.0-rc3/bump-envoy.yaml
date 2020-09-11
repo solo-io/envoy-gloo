@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to pull in build fix for google uri dependency.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 862cc5de037bf0930b8251c5d9a2dc2d63844950
