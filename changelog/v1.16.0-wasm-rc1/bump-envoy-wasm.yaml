@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update to latest version of envoy-wasm
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy-wasm
+  dependencyTag: 7901e9e63b74d95230a719b4f883510a7f539428
