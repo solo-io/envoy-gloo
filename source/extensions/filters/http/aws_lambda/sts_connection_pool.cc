@@ -115,7 +115,7 @@ StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
 };
 
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
-  ASSERT(body != nullptr);
+  ASSERT(!body.empty());
   request_in_flight_ = false;
 
 // using a macro as we need to return on error
