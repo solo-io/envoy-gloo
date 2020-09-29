@@ -1,6 +1,6 @@
 changelog:
 - type: DEPENDENCY_BUMP
-  description: Update envoy to pull in build fix for google uri dependency.
-  dependencyOwner: envoyproxy
+  description: Update envoy to pull in build fix for google uri dependency, compeletion callback and CVE fix.
+  dependencyOwner: yuval-k
   dependencyRepo: envoy
-  dependencyTag: 862cc5de037bf0930b8251c5d9a2dc2d63844950
+  dependencyTag: 51faa5a74f8e19d914078a02acd7b19565b583e8
