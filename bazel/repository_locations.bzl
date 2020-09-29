@@ -13,3 +13,4 @@ REPOSITORY_LOCATIONS = dict(
         commit = "53c3eefa2cf790a7130fed3e13a3be35c2f2ace2",  # v3.7.0
         remote = "https://github.com/nlohmann/json",
     ),
+)
