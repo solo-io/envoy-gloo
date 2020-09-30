@@ -75,7 +75,7 @@ private:
 
   CredentialsConstSharedPtr credentials_;
 
-  StsConnectionPool::Context *context_;
+  StsConnectionPool::Context *context_{};
   // The state of the request
   enum State { Init, Calling, Responded, Complete };
   // The state of the get credentials request.
