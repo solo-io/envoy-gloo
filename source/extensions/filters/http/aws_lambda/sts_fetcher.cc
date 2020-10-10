@@ -86,10 +86,10 @@ public:
     if (status_code == enumToInt(Http::Code::OK)) {
       ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: success",
                 __func__, uri_->uri());
-      if (response->body()) {
-        const auto len = response->body()->length();
+      if (response->body().length() > 0) {
+        const auto len = response->body().length();
         const auto body = absl::string_view(
-            static_cast<char *>(response->body()->linearize(len)), len);
+            static_cast<char *>(response->body().linearize(len)), len);
         callbacks_->onSuccess(body);
 
       } else {
@@ -98,10 +98,10 @@ public:
         callbacks_->onFailure(CredentialsFailureStatus::Network);
       }
     } else {
-      if ((status_code >= 400) && (status_code <= 403) && response->body()) {
-        const auto len = response->body()->length();
+      if ((status_code >= 400) && (status_code <= 403) && (response->body().length() > 0)) {
+        const auto len = response->body().length();
         const auto body = absl::string_view(
-            static_cast<char *>(response->body()->linearize(len)), len);
+            static_cast<char *>(response->body().linearize(len)), len);
         ENVOY_LOG(debug, "{}: StatusCode: {}, Body: \n {}", __func__,
                   status_code, body);
         // TODO: cover more AWS error cases
