@@ -67,7 +67,7 @@ public:
                          .count();
     const std::string body =
         fmt::format(StsFormatString, role_arn, now, web_token);
-    message->body() = std::make_unique<Buffer::OwnedImpl>(body);
+    message->body().add(body);
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start",
               uri_->uri());
     auto options = Http::AsyncClient::RequestOptions().setTimeout(
