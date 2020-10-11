@@ -34,7 +34,7 @@ NatsStreamingFilterConfigFactory::createFilterFactoryFromProtoTyped(
   Envoy::Nats::Streaming::ClientPtr nats_streaming_client =
       std::make_shared<Envoy::Nats::Streaming::ClientPool>(
           config->cluster(), context.clusterManager(), client_factory,
-          context.threadLocal(), context.random(), config->opTimeout());
+          context.threadLocal(), context.api().randomGenerator(), config->opTimeout());
 
   return [config, nats_streaming_client](
              Envoy::Http::FilterChainFactoryCallbacks &callbacks) -> void {
