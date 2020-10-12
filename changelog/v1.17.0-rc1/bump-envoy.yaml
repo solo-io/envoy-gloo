@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy master with wasm.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 2097fe908f2abb718757dbd4087d793c861d7c5a
