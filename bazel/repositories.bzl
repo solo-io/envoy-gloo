@@ -4,6 +4,7 @@ load(
     "git_repository",
     "new_git_repository",
 )
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load(":repository_locations.bzl", "REPOSITORY_LOCATIONS")
 
 # function copied from envoy: @envoy/bazel/repositories.bzl
@@ -46,22 +47,22 @@ def _repository_impl(name, **kwargs):
             )
     else:  # HTTP
         # HTTP tarball at a given URL. Add a BUILD file if requested.
-        if "build_file" in kwargs:
-            native.new_http_archive(
-                name = name,
-                urls = location["urls"],
-                sha256 = location["sha256"],
-                strip_prefix = location["strip_prefix"],
-                **kwargs
-            )
-        else:
-            native.http_archive(
-                name = name,
-                urls = location["urls"],
-                sha256 = location["sha256"],
-                strip_prefix = location["strip_prefix"],
-                **kwargs
-            )
+        # if "build_file" in kwargs:
+        #     new_http_archive(
+        #         name = name,
+        #         urls = location["urls"],
+        #         sha256 = location["sha256"],
+        #         strip_prefix = location["strip_prefix"],
+        #         **kwargs
+        #     )
+        # else:
+        http_archive(
+            name = name,
+            url = location["url"],
+            sha256 = location["sha256"],
+            strip_prefix = location["strip_prefix"],
+            **kwargs
+        )
 
 def envoy_gloo_dependencies():
     _repository_impl("envoy")
