@@ -6,7 +6,7 @@ FROM frolvlad/alpine-glibc
 ENV loglevel=info
 
 RUN apk upgrade --update-cache \
-    && apk add dumb-init \
+    && apk add dumb-init ca-certificates \
     && rm -rf /var/cache/apk/*
 
 RUN mkdir -p /etc/envoy
