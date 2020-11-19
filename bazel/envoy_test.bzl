@@ -1,6 +1,7 @@
 # Copied from @envoy/bazel/envoy_test.bzl and uses public visibility for tests
 # So we can target them to use our coverage.
 
+load("@rules_cc//cc:defs.bzl", "cc_test")
 load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_test_library",
@@ -61,7 +62,7 @@ def envoy_gloo_cc_test(
         tags = test_lib_tags,
         copts = copts,
     )
-    native.cc_test(
+    cc_test(
         name = name,
         copts = envoy_copts(repository, test = True) + copts,
         linkopts = _envoy_test_linkopts(),
