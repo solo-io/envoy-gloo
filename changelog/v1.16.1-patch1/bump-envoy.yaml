@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to pull in latest release.
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 0717f49fef0dac3818cd7cdc52bf18e0ae1f7a2c
