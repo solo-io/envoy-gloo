@@ -149,7 +149,7 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
 
   // CHeck that the session_token header is set correctly
   auto session_header =
-      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)
+      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)[0]
           ->value()
           .getStringView();
   EXPECT_EQ(session_header, sessiontoken);

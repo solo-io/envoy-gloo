@@ -132,7 +132,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithToken) {
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
   EXPECT_EQ(
-      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(),
+      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)[0]->value(),
       "session token");
 }
 
@@ -163,7 +163,7 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfigWithToken) {
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
   EXPECT_EQ(
-      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)->value(),
+      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)[0]->value(),
       "session token");
 }
 
