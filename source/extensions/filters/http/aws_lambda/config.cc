@@ -128,21 +128,8 @@ void AWSLambdaConfigImpl::init() {
           try {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
-            // Set the web token on all sts credentials providers
-            // shared_this->tls_->runOnAllThreads(
-            //     [web_token](ThreadLocal::ThreadLocalObjectSharedPtr previous)
-            //         -> ThreadLocal::ThreadLocalObjectSharedPtr {
-            //       auto prev_config =
-            //           std::dynamic_pointer_cast<ThreadLocalCredentials>(
-            //               previous);
-            //       prev_config->sts_credentials_->setWebToken(web_token);
-            //       return previous;
-            //     });
             shared_this->tls_.runOnAllThreads(
                 [web_token](OptRef<ThreadLocalCredentials> prev_config) {
-                  // auto prev_config =
-                  //     std::dynamic_pointer_cast<ThreadLocalCredentials>(
-                  //         previous);
                   prev_config->sts_credentials_->setWebToken(web_token);
                 });
             // TODO: check if web_token is valid
