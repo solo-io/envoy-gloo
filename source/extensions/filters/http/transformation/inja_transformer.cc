@@ -34,13 +34,13 @@ typedef ConstSingleton<BoolHeaderValues> BoolHeader;
 
 // TODO: move to common
 namespace {
-const Http::HeaderEntry *
+const Http::HeaderMap::GetResult
 getHeader(const Http::RequestOrResponseHeaderMap &header_map,
           const Http::LowerCaseString &key) {
   return header_map.get(key);
 }
 
-const Http::HeaderEntry *
+const Http::HeaderMap::GetResult
 getHeader(const Http::RequestOrResponseHeaderMap &header_map,
           const std::string &key) {
   // use explicit constuctor so string is lowered
@@ -73,11 +73,11 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
     absl::string_view sv(string_body);
     return extractValue(callbacks, sv);
   } else {
-    const Http::HeaderEntry *header_entry = getHeader(header_map, headername_);
-    if (!header_entry) {
+    const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
+    if (header_entries.empty()) {
       return "";
     }
-    return extractValue(callbacks, header_entry->value().getStringView());
+    return extractValue(callbacks, header_entries[0]->value().getStringView());
   }
 }
 
@@ -130,11 +130,11 @@ TransformerInstance::TransformerInstance(
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
   const std::string &headername = args.at(0)->get_ref<const std::string &>();
-  const Http::HeaderEntry *header_entry = getHeader(header_map_, headername);
-  if (!header_entry) {
+  const Http::HeaderMap::GetResult header_entries = getHeader(header_map_, headername);
+  if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entry->value().getStringView());
+  return std::string(header_entries[0]->value().getStringView());
 }
 
 json TransformerInstance::request_header_callback(
@@ -143,12 +143,12 @@ json TransformerInstance::request_header_callback(
     return "";
   }
   const std::string &headername = args.at(0)->get_ref<const std::string &>();
-  const Http::HeaderEntry *header_entry =
+  const Http::HeaderMap::GetResult header_entries =
       getHeader(*request_headers_, headername);
-  if (!header_entry) {
+  if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entry->value().getStringView());
+  return std::string(header_entries[0]->value().getStringView());
 }
 
 json TransformerInstance::extracted_callback(

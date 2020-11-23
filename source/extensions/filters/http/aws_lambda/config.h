@@ -108,6 +108,16 @@ private:
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
           &protoconfig);
 
+
+  struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
+    ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
+        : credentials_(credentials) {}
+    ThreadLocalCredentials(StsCredentialsProviderPtr credentials)
+        : sts_credentials_(std::move(credentials)) {}
+    CredentialsConstSharedPtr credentials_;
+    StsCredentialsProviderPtr sts_credentials_;
+  };
+
   CredentialsConstSharedPtr getProviderCredentials() const;
 
   static AwsLambdaFilterStats generateStats(const std::string &prefix,
@@ -133,7 +143,7 @@ private:
   std::string web_token_;
   std::string role_arn_;
 
-  ThreadLocal::SlotPtr tls_slot_;
+  ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;
 
   Event::TimerPtr timer_;
 

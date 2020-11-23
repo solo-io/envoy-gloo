@@ -76,11 +76,20 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
   for (auto header = headers_to_sign.begin(), end = headers_to_sign.end();
        header != end; header++) {
 
-    const Http::HeaderEntry *headerEntry;
+    const Http::HeaderEntry *headerEntry{};
     if (*header == AwsAuthenticatorConsts::get().Host) {
       headerEntry = request_headers_->Host();
     } else {
-      headerEntry = request_headers_->get(*header);
+      const auto getter = request_headers_->get(*header);
+      if (!getter.empty()) {
+        headerEntry = getter[0];
+      }
+      
+    }
+
+    // Should not happen, need to check now that envoy does not default header entries
+    if (headerEntry == nullptr) {
+      continue;
     }
 
     auto headerName = header->get();

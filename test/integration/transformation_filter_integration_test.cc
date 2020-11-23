@@ -221,7 +221,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   processRequest(response);
 
   std::string xsolo_header(upstream_request_->headers()
-                               .get(Http::LowerCaseString("x-solo"))
+                               .get(Http::LowerCaseString("x-solo"))[0]
                                ->value()
                                .getStringView());
   EXPECT_EQ("solo.io", xsolo_header);
@@ -375,7 +375,7 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
   processRequest(response);
 
   EXPECT_EQ("12347", upstream_request_->headers()
-                         .get(Http::LowerCaseString("x-solo"))
+                         .get(Http::LowerCaseString("x-solo"))[0]
                          ->value()
                          .getStringView());
   std::string body = upstream_request_->body().toString();

@@ -111,7 +111,7 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfig) {
                                 10);
 
   EXPECT_NE(0, upstream_request_->headers()
-                   .get(Http::LowerCaseString("authorization"))
+                   .get(Http::LowerCaseString("authorization"))[0]
                    ->value()
                    .size());
 }
@@ -125,7 +125,7 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithChain) {
                                 10);
 
   EXPECT_NE(0, upstream_request_->headers()
-                   .get(Http::LowerCaseString("authorization"))
+                   .get(Http::LowerCaseString("authorization"))[0]
                    ->value()
                    .size());
   EXPECT_EQ(1UL,

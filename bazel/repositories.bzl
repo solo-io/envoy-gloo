@@ -1,4 +1,6 @@
-# Use skylark for native Git.
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# Use starlark for native Git.
 load(
     "@bazel_tools//tools/build_defs/repo:git.bzl",
     "git_repository",
@@ -55,7 +57,7 @@ def _repository_impl(name, **kwargs):
                 **kwargs
             )
         else:
-            native.http_archive(
+            http_archive(
                 name = name,
                 urls = location["urls"],
                 sha256 = location["sha256"],

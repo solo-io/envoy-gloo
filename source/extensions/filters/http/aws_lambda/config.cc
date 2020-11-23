@@ -30,16 +30,6 @@ namespace {
 // Refreshing every 14 minutes should guarantee us fresh credentials.
 constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
     std::chrono::minutes(14);
-
-struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
-  ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
-      : credentials_(credentials) {}
-  ThreadLocalCredentials(StsCredentialsProviderPtr credentials)
-      : sts_credentials_(std::move(credentials)) {}
-  CredentialsConstSharedPtr credentials_;
-  StsCredentialsProviderPtr sts_credentials_;
-};
-
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
@@ -51,7 +41,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
     : stats_(generateStats(stats_prefix, scope)), api_(api),
-      file_watcher_(dispatcher.createFilesystemWatcher()) {
+      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls) {
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -61,9 +51,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     ENVOY_LOG(debug, "{}: Using default credentials source", __func__);
     provider_ = std::move(provider);
 
-    tls_slot_ = tls.allocateSlot();
     auto empty_creds = std::make_shared<const CommonAws::Credentials>();
-    tls_slot_->set([empty_creds](Event::Dispatcher &) {
+    tls_.set([empty_creds](Event::Dispatcher &) {
       return std::make_shared<ThreadLocalCredentials>(empty_creds);
     });
 
@@ -80,12 +69,11 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     // Load all of the env data for STS credentials
     loadSTSData();
     // use service account credentials provider
-    tls_slot_ = tls.allocateSlot();
     // transfer ptr ownership to sts_factor isn't cleaned up before we get into
     // tls set
     sts_factory_ = std::move(sts_factory);
     auto service_account_creds = protoconfig.service_account_credentials();
-    tls_slot_->set([this, web_token = web_token_, role_arn = role_arn_,
+    tls_.set([this, web_token = web_token_, role_arn = role_arn_,
                     service_account_creds](Event::Dispatcher &dispatcher) {
       StsCredentialsProviderPtr sts_cred_provider = sts_factory_->build(
           service_account_creds, dispatcher, web_token, role_arn);
@@ -140,15 +128,9 @@ void AWSLambdaConfigImpl::init() {
           try {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
-            // Set the web token on all sts credentials providers
-            shared_this->tls_slot_->runOnAllThreads(
-                [web_token](ThreadLocal::ThreadLocalObjectSharedPtr previous)
-                    -> ThreadLocal::ThreadLocalObjectSharedPtr {
-                  auto prev_config =
-                      std::dynamic_pointer_cast<ThreadLocalCredentials>(
-                          previous);
+            shared_this->tls_.runOnAllThreads(
+                [web_token](OptRef<ThreadLocalCredentials> prev_config) {
                   prev_config->sts_credentials_->setWebToken(web_token);
-                  return previous;
                 });
             // TODO: check if web_token is valid
             // TODO: stats here
@@ -188,11 +170,9 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     return nullptr;
   }
 
-  auto &thread_local_credentials =
-      tls_slot_->getTyped<ThreadLocalCredentials>();
   if (provider_) {
     ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
-    callbacks->onSuccess(thread_local_credentials.credentials_);
+    callbacks->onSuccess(tls_->credentials_);
     // no context necessary as these credentials are available immediately
     return nullptr;
   }
@@ -200,7 +180,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
   if (sts_enabled_) {
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
-    return thread_local_credentials.sts_credentials_->find(ext_cfg->roleArn(),
+    return tls_->sts_credentials_->find(ext_cfg->roleArn(),
                                                            callbacks);
   }
 
@@ -221,13 +201,13 @@ void AWSLambdaConfigImpl::timerCallback() {
     stats_.fetch_success_.inc();
     stats_.current_state_.set(1);
     auto currentCreds =
-        tls_slot_->getTyped<ThreadLocalCredentials>().credentials_;
+        tls_->credentials_;
     if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
       stats_.creds_rotated_.inc();
       ENVOY_LOG(debug, "refreshing AWS credentials");
       auto shared_new_creds =
           std::make_shared<const CommonAws::Credentials>(new_creds);
-      tls_slot_->set([shared_new_creds](Event::Dispatcher &) {
+      tls_.set([shared_new_creds](Event::Dispatcher &) {
         return std::make_shared<ThreadLocalCredentials>(shared_new_creds);
       });
     }
