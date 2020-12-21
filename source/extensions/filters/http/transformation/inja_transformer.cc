@@ -283,6 +283,18 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
   }
+  const auto &headers_to_append = transformation.headers_to_append();
+  for (auto idx = 0; idx < transformation.headers_to_append_size(); idx++) {
+    const auto &it = headers_to_append.Get(idx);
+    Http::LowerCaseString header_name(it.key());
+    try {
+      headers_to_append_.emplace_back(std::make_pair(std::move(header_name),
+                                           parser.parse(it.value().text())));
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it.key(), e.what()));
+    }
+  }
   const auto &dynamic_metadata_values =
       transformation.dynamic_metadata_values();
   for (auto it = dynamic_metadata_values.begin();
@@ -438,6 +450,17 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     if (!output.empty()) {
       // we can add the key as reference as the headers_ lifetime is as the
       // route's
+      header_map.addReferenceKey(templated_header.first, output);
+    }
+  }
+
+  // Headers to Append Values transform:
+  for (const auto &templated_header : headers_to_append_) {
+    std::string output = instance.render(templated_header.second);
+    if (!output.empty()) {
+      // we can add the key as reference as the headers_to_append_ lifetime is as the
+      // route's
+      // don't remove headers that already exist
       header_map.addReferenceKey(templated_header.first, output);
     }
   }

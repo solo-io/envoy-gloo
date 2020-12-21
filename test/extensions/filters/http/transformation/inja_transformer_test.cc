@@ -334,6 +334,33 @@ TEST(Transformer, transformSimple) {
   EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
+TEST(Transformer, transformMultipleHeaderValues) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body;
+  TransformationTemplate transformation;
+
+  const auto &header = transformation.add_headers_to_append();
+  header->set_key("x-custom-header");
+  header->mutable_value()->set_text("{{upper(\"first value\")}}");
+  const auto &header1 = transformation.add_headers_to_append();
+  header1->set_key("x-custom-header");
+  header1->mutable_value()->set_text("{{upper(\"second value\")}}");
+  transformation.set_advanced_templates(false);
+
+  InjaTransformer transformer(transformation);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+
+
+  auto lowerkey = Http::LowerCaseString("x-custom-header");
+  auto result = headers.get(lowerkey);
+  EXPECT_EQ("FIRST VALUE", result[0]->value().getStringView());
+  EXPECT_EQ("SECOND VALUE", result[1]->value().getStringView());
+}
+
 TEST(Transformer, transformSimpleNestedStructs) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
