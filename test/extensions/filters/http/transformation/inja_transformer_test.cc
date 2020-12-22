@@ -364,6 +364,38 @@ TEST(Transformer, transformMultipleHeaderValues) {
   EXPECT_EQ("SECOND VALUE", result[2]->value().getStringView());
 }
 
+TEST(Transformer, transformHeaderAndHeadersToAppend) {
+  Http::TestRequestHeaderMapImpl headers{{"x-custom-header", "original value"}};
+  Buffer::OwnedImpl body;
+  TransformationTemplate transformation;
+  // define "headers"
+  // this should overwrite existing headers with the same name
+  (*transformation.mutable_headers())["x-custom-header"].set_text(
+      "{{upper(\"overwritten value\")}}");
+  // define "headers_to_append" 
+  // these header values should be appended to the current x-custom-header
+  const auto &header = transformation.add_headers_to_append();
+  header->set_key("x-custom-header");
+  header->mutable_value()->set_text("{{upper(\"first value\")}}");
+  const auto &header1 = transformation.add_headers_to_append();
+  header1->set_key("x-custom-header");
+  header1->mutable_value()->set_text("{{upper(\"second value\")}}");
+  transformation.set_advanced_templates(false);
+
+  InjaTransformer transformer(transformation);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+
+
+  auto lowerkey = Http::LowerCaseString("x-custom-header");
+  auto result = headers.get(lowerkey);
+  // Check original header value is preserved
+  EXPECT_EQ("OVERWRITTEN VALUE", result[0]->value().getStringView());
+  // Check multiple transformed values are included
+  EXPECT_EQ("FIRST VALUE", result[1]->value().getStringView());
+  EXPECT_EQ("SECOND VALUE", result[2]->value().getStringView());
+}
+
 TEST(Transformer, transformSimpleNestedStructs) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
