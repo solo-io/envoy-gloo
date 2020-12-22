@@ -337,7 +337,7 @@ TEST(Transformer, transformSimple) {
 TEST(Transformer, transformMultipleHeaderValues) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
+                                         {"x-custom-header", "original value"},
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body;
   TransformationTemplate transformation;
@@ -357,8 +357,11 @@ TEST(Transformer, transformMultipleHeaderValues) {
 
   auto lowerkey = Http::LowerCaseString("x-custom-header");
   auto result = headers.get(lowerkey);
-  EXPECT_EQ("FIRST VALUE", result[0]->value().getStringView());
-  EXPECT_EQ("SECOND VALUE", result[1]->value().getStringView());
+  // Check original header value is preserved
+  EXPECT_EQ("original value", result[0]->value().getStringView());
+  // Check multiple transformed values are included
+  EXPECT_EQ("FIRST VALUE", result[1]->value().getStringView());
+  EXPECT_EQ("SECOND VALUE", result[2]->value().getStringView());
 }
 
 TEST(Transformer, transformSimpleNestedStructs) {
