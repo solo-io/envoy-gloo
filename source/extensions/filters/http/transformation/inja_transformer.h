@@ -93,6 +93,7 @@ private:
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_;
   std::vector<DynamicMetadataValue> dynamic_metadata_;
   std::unordered_map<std::string, std::string> environ_;
 
