@@ -35,6 +35,7 @@ const std::string DUPLICATE_HEADER_TRANSFORMATION =
     R"EOF(
   request_transformation:
     transformation_template:
+      advanced_templates: true
       headers_to_append:
         - key: x-solo
           value: 
@@ -231,16 +232,19 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
   initialize();
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                                  {":authority", "www.solo.io"},
-                                                 {":path", "/users/234"}};
+                                                 {":path", "/users/234"},
+                                                 {"x-solo", "original header (not preserved)"},
+                                                 {"x-solo", "original header 2 (not preserved)"}};
 
   auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
   processRequest(response);
-
+  
   std::string xsolo_header(upstream_request_->headers()
                                .get(Http::LowerCaseString("x-solo"))[0]
                                ->value()
                                .getStringView());
   EXPECT_EQ("solo.io", xsolo_header);
+  EXPECT_EQ(1, upstream_request_->headers().get(Http::LowerCaseString("x-solo")).size());
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ("abc 234", body);
 }
