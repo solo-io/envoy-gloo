@@ -30,9 +30,9 @@ MockStsCredentialsProvider::~MockStsCredentialsProvider() = default;
 MockUpstream::MockUpstream(Upstream::MockClusterManager &mock_cm,
                            const std::string &status,
                            const std::string &response_body)
-    : request_(&mock_cm.async_client_), status_(status),
+    : request_(&mock_cm.thread_local_cluster_.async_client_), status_(status),
       response_body_(response_body) {
-  ON_CALL(mock_cm.async_client_, send_(testing::_, testing::_, testing::_))
+  ON_CALL(mock_cm.thread_local_cluster_.async_client_, send_(testing::_, testing::_, testing::_))
       .WillByDefault(testing::Invoke(
           [this](Http::RequestMessagePtr &, Http::AsyncClient::Callbacks &cb,
                  const Http::AsyncClient::RequestOptions &)
@@ -53,8 +53,8 @@ MockUpstream::MockUpstream(Upstream::MockClusterManager &mock_cm,
 
 MockUpstream::MockUpstream(Upstream::MockClusterManager &mock_cm,
                            Http::AsyncClient::FailureReason reason)
-    : request_(&mock_cm.async_client_) {
-  ON_CALL(mock_cm.async_client_, send_(testing::_, testing::_, testing::_))
+    : request_(&mock_cm.thread_local_cluster_.async_client_) {
+  ON_CALL(mock_cm.thread_local_cluster_.async_client_, send_(testing::_, testing::_, testing::_))
       .WillByDefault(testing::Invoke(
           [this, reason](Http::RequestMessagePtr &,
                          Http::AsyncClient::Callbacks &cb,
@@ -67,8 +67,8 @@ MockUpstream::MockUpstream(Upstream::MockClusterManager &mock_cm,
 
 MockUpstream::MockUpstream(Upstream::MockClusterManager &mock_cm,
                            Http::MockAsyncClientRequest *request)
-    : request_(&mock_cm.async_client_) {
-  ON_CALL(mock_cm.async_client_, send_(testing::_, testing::_, testing::_))
+    : request_(&mock_cm.thread_local_cluster_.async_client_) {
+  ON_CALL(mock_cm.thread_local_cluster_.async_client_, send_(testing::_, testing::_, testing::_))
       .WillByDefault(testing::Return(request));
 }
 
