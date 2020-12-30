@@ -12,8 +12,8 @@ envoy_package()
 
 envoy_cc_library(
     name = "matchers_lib",
-    srcs = ["matcher.cc"],
-    hdrs = ["matcher.h"],
+    srcs = ["solo_matcher.cc"],
+    hdrs = ["solo_matcher.h"],
     repository = "@envoy",
     external_deps = ["abseil_optional"],
     deps = [

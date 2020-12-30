@@ -10,7 +10,7 @@
 #include "envoy/stats/stats_macros.h"
 
 #include "common/http/header_utility.h"
-#include "common/matcher/matcher.h"
+#include "common/matcher/solo_matcher.h"
 #include "common/protobuf/protobuf.h"
 
 namespace Envoy {
