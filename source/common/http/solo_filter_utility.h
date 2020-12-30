@@ -87,7 +87,7 @@ public:
       return nullptr;
     }
 
-    auto *cluster = cluster_manager.clusters().getCluster(*cluster_name);
+    auto cluster = cluster_manager.clusters().getCluster(*cluster_name);
 
     if (!cluster.has_value()) {
       return nullptr;
