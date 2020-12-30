@@ -134,7 +134,7 @@ TEST_F(StsFetcherTest, TestHttpFailure) {
 TEST_F(StsFetcherTest, TestCancel) {
   // Setup
   Http::MockAsyncClientRequest request(
-      &(mock_factory_ctx_.cluster_manager_.async_client_));
+      &(mock_factory_ctx_.cluster_manager_.thread_local_cluster_.async_client_));
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, &request);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
       mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
