@@ -46,7 +46,7 @@ public:
 
     // Check if cluster is configured, fail the request if not.
     // Otherwise cm_.httpAsyncClientForCluster will throw exception.
-    if (cm_.get(uri.cluster()) == nullptr) {
+    if (cm_.getThreadLocalCluster(uri.cluster()) == nullptr) {
       ENVOY_LOG(error,
                 "{}: assume role with token [uri = {}] failed: [cluster = {}] "
                 "is not configured",
