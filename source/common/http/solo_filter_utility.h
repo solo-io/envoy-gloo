@@ -93,7 +93,7 @@ public:
       return nullptr;
     }
 
-    auto cluster_info = cluster->info();
+    auto cluster_info = cluster->get().info();
     return cluster_info->extensionProtocolOptionsTyped<ConfigType>(filter_name);
   }
 
