@@ -46,7 +46,9 @@ public:
 
     // Check if cluster is configured, fail the request if not.
     // Otherwise cm_.httpAsyncClientForCluster will throw exception.
-    if (cm_.getThreadLocalCluster(uri.cluster()) == nullptr) {
+    const auto thread_local_cluster = cm_.getThreadLocalCluster(uri.cluster());
+    
+    if (thread_local_cluster == nullptr) {
       ENVOY_LOG(error,
                 "{}: assume role with token [uri = {}] failed: [cluster = {}] "
                 "is not configured",
@@ -73,8 +75,7 @@ public:
     auto options = Http::AsyncClient::RequestOptions().setTimeout(
         std::chrono::milliseconds(
             DurationUtil::durationToMilliseconds(uri.timeout())));
-    request_ = cm_.httpAsyncClientForCluster(uri.cluster())
-                   .send(std::move(message), *this, options);
+    request_ = thread_local_cluster->httpAsyncClient().send(std::move(message), *this, options);
   }
 
   // HTTP async receive methods
