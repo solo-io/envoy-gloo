@@ -2,6 +2,7 @@
 #include "extensions/filters/http/transformation/transformation_filter.h"
 
 #include "test/mocks/common.h"
+#include "common/matcher/matcher.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 
