@@ -2,6 +2,7 @@
 
 #include "extensions/filters/http/transformation/inja_transformer.h"
 
+#include "common/matcher/matcher.h"
 #include "test/mocks/http/mocks.h"
 #include "test/test_common/utility.h"
 
