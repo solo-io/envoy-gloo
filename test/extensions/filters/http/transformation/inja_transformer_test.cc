@@ -3,6 +3,7 @@
 
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
+#include "common/matcher/matcher.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "test/test_common/environment.h"
