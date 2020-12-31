@@ -349,6 +349,8 @@ TEST(TcpClientFactoryImplTest, Basic) {
 class TcpConnPoolImplTest : public testing::Test, public ClientFactory<T> {
 public:
   TcpConnPoolImplTest() {
+    cm_.initializeClusters({"foo"}, {});
+    cm_.initializeThreadLocalClusters({"foo"});
     conn_pool_.reset(new InstanceImpl<T, MockDecoder>(cluster_name_, cm_, *this,
                                                       dispatcher_));
     conn_pool_->setPoolCallbacks(callbacks_);

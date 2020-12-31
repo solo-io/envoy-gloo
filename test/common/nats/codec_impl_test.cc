@@ -5,7 +5,6 @@
 #include "common/nats/codec_impl.h"
 
 #include "test/mocks/nats/mocks.h"
-#include "test/test_common/printers.h"
 
 #include "gtest/gtest.h"
 

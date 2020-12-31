@@ -30,7 +30,7 @@ public:
       throw EnvoyException("nats-streaming filter: only one concurrent "
                            "connection is currently supported");
     }
-    if (!clusterManager.get(cluster_)) {
+    if (!clusterManager.clusters().hasCluster(cluster_)) {
       throw EnvoyException(fmt::format(
           "nats-streaming filter: unknown cluster '{}' in config", cluster_));
     }

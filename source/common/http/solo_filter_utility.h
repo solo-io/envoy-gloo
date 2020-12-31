@@ -87,7 +87,7 @@ public:
       return nullptr;
     }
 
-    auto *cluster = cluster_manager.get(*cluster_name);
+    auto cluster = cluster_manager.getThreadLocalCluster(*cluster_name);
 
     if (!cluster) {
       return nullptr;
