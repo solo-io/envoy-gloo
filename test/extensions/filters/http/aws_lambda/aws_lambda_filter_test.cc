@@ -51,6 +51,8 @@ protected:
   void SetUp() override { setupRoute(); }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false) {
+    factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
+    factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -131,9 +133,9 @@ TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithToken) {
 
   // Check aws headers.
   EXPECT_TRUE(headers.has("Authorization"));
-  EXPECT_EQ(
-      headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader)[0]->value(),
-      "session token");
+  auto header(headers.get(AwsAuthenticatorConsts::get().SecurityTokenHeader));
+  ASSERT_EQ(header.size(), 1);
+  EXPECT_EQ(header[0]->value(), "session token");
 }
 
 TEST_F(AWSLambdaFilterTest, SignsOnHeadersEndStreamWithConfig) {

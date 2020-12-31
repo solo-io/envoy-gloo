@@ -64,6 +64,8 @@ const std::string web_token = "web_token";
 class StsFetcherTest : public testing::Test {
 public:
   void SetUp() override {
+    mock_factory_ctx_.cluster_manager_.initializeClusters({"test"}, {});
+    mock_factory_ctx_.cluster_manager_.initializeThreadLocalClusters({"test"});
     TestUtility::loadFromYaml(service_account_credentials_config, uri_);
   }
   HttpUri uri_;

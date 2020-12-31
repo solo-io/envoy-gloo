@@ -275,7 +275,7 @@ private:
     }
     void makeRequest(const std::string &hash_key, const T &request) {
       if (!maybe_client_) {
-        auto *cluster = parent_.cm_.get(cluster_name_);
+        auto *cluster = parent_.cm_.getThreadLocalCluster(cluster_name_);
         if (!cluster) {
           // TODO(talnordan):
           // parent_.callbacks_->onFailure("no cluster");

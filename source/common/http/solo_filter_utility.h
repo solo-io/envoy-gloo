@@ -87,13 +87,13 @@ public:
       return nullptr;
     }
 
-    auto cluster = cluster_manager.clusters().getCluster(*cluster_name);
+    auto cluster = cluster_manager.getThreadLocalCluster(*cluster_name);
 
-    if (!cluster.has_value()) {
+    if (!cluster) {
       return nullptr;
     }
 
-    auto cluster_info = cluster->get().info();
+    auto cluster_info = cluster->info();
     return cluster_info->extensionProtocolOptionsTyped<ConfigType>(filter_name);
   }
 
