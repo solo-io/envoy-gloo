@@ -26,6 +26,8 @@ envoy_cc_library(
         "//source/extensions/filters/http:solo_well_known_names",
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//include/envoy/router:router_interface",
+        "@envoy//include/envoy/config:typed_config_interface",
+        "@envoy//source/common/protobuf:message_validator_lib",
     ],
 )
 
@@ -48,6 +50,7 @@ envoy_cc_library(
         "@envoy//source/common/http:utility_lib",
         "@envoy//include/envoy/stats:stats_interface",
         "@envoy//include/envoy/stats:stats_macros",
+        "@envoy//source/common/protobuf:utility_lib",
     ],
 )
 
@@ -108,6 +111,7 @@ envoy_cc_library(
         "@envoy//include/envoy/http:filter_interface",
         "@envoy//include/envoy/router:router_interface",
         "@envoy//source/common/http:header_utility_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )
 

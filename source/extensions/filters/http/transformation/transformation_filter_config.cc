@@ -2,6 +2,10 @@
 
 #include "common/common/assert.h"
 #include "common/common/matchers.h"
+#include "common/protobuf/protobuf.h"
+#include "common/protobuf/message_validator_impl.h"
+#include "common/config/utility.h"
+
 
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/inja_transformer.h"
@@ -19,6 +23,11 @@ TransformerConstSharedPtr Transformation::getTransformer(
         transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
     return std::make_unique<BodyHeaderTransformer>();
+  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
+    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), ProtobufMessage::getNullValidationVisitor(), factory);
+    return factory.createTransformer(*config);
+  }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
     // TODO: return null here?

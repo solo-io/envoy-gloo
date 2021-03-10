@@ -3,9 +3,11 @@
 #include <string>
 
 #include "envoy/router/router.h"
+#include "envoy/config/typed_config.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/common/factory_base.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 
@@ -81,6 +83,27 @@ private:
 class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
   RouteTransformationFilterConfig(RouteTransformationConfigProto proto_config);
+};
+
+
+/**
+ * Implemented for transformation extensions and registered via Registry::registerFactory or the
+ * convenience class RegisterFactory.
+ */
+class TransformerExtensionFactory :  public Config::TypedFactory{
+public:
+  ~TransformerExtensionFactory() override = default;
+
+/**
+ * Create a particular transformation extension implementation from a config proto. If the 
+ * implementation is unable to produce a factory with the provided parameters, it should throw
+ * EnvoyException. The returned pointer should never be nullptr.
+ * @param config the custom configuration for this transformer exttension type.
+ */
+  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config) PURE;
+
+  std::string category() const override {return "io.solo.transformation"; }
+  std::string name() const override { return "transformation.factory.name"; }
 };
 
 } // namespace Transformation
