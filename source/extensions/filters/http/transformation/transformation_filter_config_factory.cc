@@ -22,7 +22,7 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
 
   FilterConfigSharedPtr config = std::make_shared<TransformationFilterConfig>(
-      proto_config, stats_prefix, context.scope());
+      proto_config, stats_prefix, context);
 
   return [config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
     auto filter = new TransformationFilter(config);
@@ -33,9 +33,9 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
 Router::RouteSpecificFilterConfigConstSharedPtr
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const RouteTransformationConfigProto &proto_config,
-    Server::Configuration::ServerFactoryContext &,
+    Server::Configuration::ServerFactoryContext &context,
     ProtobufMessage::ValidationVisitor &) {
-  return std::make_shared<const RouteTransformationFilterConfig>(proto_config);
+  return std::make_shared<const RouteTransformationFilterConfig>(proto_config, context);
 }
 
 /**
