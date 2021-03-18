@@ -122,7 +122,7 @@ message Transformation {
     // 'headers', containing the headers, and 'body', containing the original
     // body.
     HeaderBodyTransform header_body_transform = 2;
-    // An extension point to convert to a transformer.
+    // Configuration for an externally implemented transformer.
     envoy.config.core.v3.TypedExtensionConfig transformer_config = 3;
   }
 }
