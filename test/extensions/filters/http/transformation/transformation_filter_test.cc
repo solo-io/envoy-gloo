@@ -23,6 +23,9 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
+NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
   NiceMock<Stats::MockIsolatedStatsStore> scope;
   envoy::api::v2::filter::http::TransformationRule transformation_rule;
@@ -40,7 +43,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
-                                                     scope),
+                                                     factory_context_),
         EnvoyException,
         "Failed to parse request template: Failed to parse body template "
         "[inja.exception.parser_error] expected expression close, got 'valid'");
@@ -58,12 +61,14 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
-                                                     scope),
+                                                     factory_context_),
         EnvoyException,
         "Failed to parse response template: Failed to parse body template "
         "[inja.exception.parser_error] expected expression close, got 'valid'");
   }
 }
+
+
 
 TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
   {
@@ -73,7 +78,7 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         "{{not a valid template");
 
     EXPECT_THROW_WITH_MESSAGE(
-        std::make_unique<RouteTransformationFilterConfig>(route_config),
+        std::make_unique<RouteTransformationFilterConfig>(route_config, server_factory_context_),
         EnvoyException,
         "Failed to parse request template: Failed to parse body template "
         "[inja.exception.parser_error] expected expression close, got 'valid'");
@@ -85,12 +90,20 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         "{{not a valid template");
 
     EXPECT_THROW_WITH_MESSAGE(
-        std::make_unique<RouteTransformationFilterConfig>(route_config),
+        std::make_unique<RouteTransformationFilterConfig>(route_config, server_factory_context_),
         EnvoyException,
         "Failed to parse response template: Failed to parse body template "
         "[inja.exception.parser_error] expected expression close, got 'valid'");
   }
 }
+
+// class TestFactoryContext : public Server::Configuration::FactoryContext {
+// public:
+//   TestFactoryContext(Stats::Scope scope): scope_(std::make_unique<Stats::Scope>(scope)){};
+//   Stats::Scope& scope() {return *scope_;}
+// private:
+//   Stats::ScopePtr scope_;
+// };
 
 class TransformationFilterTest : public testing::Test {
 public:
@@ -105,7 +118,7 @@ public:
     *listener_config_.mutable_transformations()->Add() = transformation_rule_;
 
     route_config_wrapper_.reset(
-        new RouteTransformationFilterConfig(route_config_));
+        new RouteTransformationFilterConfig(route_config_, server_factory_context_));
 
     if (!null_route_config_) {
       ON_CALL(*filter_callbacks_.route_,
@@ -132,10 +145,10 @@ public:
         }));
 
     const std::string &stats_prefix = "test_";
-
+    // auto factory_context = std::make_shared<TestFactoryContext>(filter_callbacks_.clusterInfo()->statsScope());
     config_ = std::make_shared<TransformationFilterConfig>(
         listener_config_, stats_prefix,
-        filter_callbacks_.clusterInfo()->statsScope());
+        factory_context_);
 
     filter_ = std::make_unique<TransformationFilter>(config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
@@ -290,6 +303,7 @@ public:
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_filter_callbacks_;
+
   std::unique_ptr<TransformationFilter> filter_;
   RouteTransformationConfigProto route_config_;
   TransformationConfigProto listener_config_;
