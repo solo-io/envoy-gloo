@@ -138,7 +138,6 @@ public:
         }));
 
     const std::string &stats_prefix = "test_";
-    to factory_context = std::make_shared<TestFactoryContext>(filter_callbacks_.clusterInfo()->statsScope());
     config_ = std::make_shared<TransformationFilterConfig>(
         listener_config_, stats_prefix,
         factory_context_);
