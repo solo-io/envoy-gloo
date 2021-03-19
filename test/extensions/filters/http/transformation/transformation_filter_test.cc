@@ -23,10 +23,8 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
-
   NiceMock<Stats::MockIsolatedStatsStore> scope;
   envoy::api::v2::filter::http::TransformationRule transformation_rule;
   auto &route_matcher = (*transformation_rule.mutable_match());
@@ -68,8 +66,6 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
   }
 }
 
-
-
 TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
       NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
 
@@ -98,14 +94,6 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         "[inja.exception.parser_error] expected expression close, got 'valid'");
   }
 }
-
-// class TestFactoryContext : public Server::Configuration::FactoryContext {
-// public:
-//   TestFactoryContext(Stats::Scope scope): scope_(std::make_unique<Stats::Scope>(scope)){};
-//   Stats::Scope& scope() {return *scope_;}
-// private:
-//   Stats::ScopePtr scope_;
-// };
 
 class TransformationFilterTest : public testing::Test {
 public:
@@ -150,7 +138,7 @@ public:
         }));
 
     const std::string &stats_prefix = "test_";
-    // auto factory_context = std::make_shared<TestFactoryContext>(filter_callbacks_.clusterInfo()->statsScope());
+    to factory_context = std::make_shared<TestFactoryContext>(filter_callbacks_.clusterInfo()->statsScope());
     config_ = std::make_shared<TransformationFilterConfig>(
         listener_config_, stats_prefix,
         factory_context_);
