@@ -23,10 +23,10 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
-NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
+  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+
   NiceMock<Stats::MockIsolatedStatsStore> scope;
   envoy::api::v2::filter::http::TransformationRule transformation_rule;
   auto &route_matcher = (*transformation_rule.mutable_match());
@@ -71,6 +71,8 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
 
 TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
+      NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
+
   {
     RouteTransformationConfigProto route_config;
     auto &transformation = (*route_config.mutable_request_transformation());
@@ -107,6 +109,9 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
 class TransformationFilterTest : public testing::Test {
 public:
+  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+  NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
+  
   enum class ConfigType {
     Listener,
     Route,
