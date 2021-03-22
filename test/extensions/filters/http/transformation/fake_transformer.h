@@ -18,8 +18,8 @@ public:
                          const Http::RequestHeaderMap *,
                          Buffer::Instance &,
                          Http::StreamFilterCallbacks &) const override {
-                           // pass
   }
+
 };
 
 class FakeTransformerFactory : public TransformerExtensionFactory {

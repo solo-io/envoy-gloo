@@ -28,7 +28,6 @@ TransformerConstSharedPtr Transformation::getTransformer(
     auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
     return factory.createTransformer(*config, context);
-    
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:

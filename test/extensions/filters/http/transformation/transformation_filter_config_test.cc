@@ -30,12 +30,28 @@ using FakeTransformerProto = envoy::test::extensions::transformation::FakeTransf
 
 TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
   envoy::api::v2::filter::http::Transformation transformation;
-  auto factoryConfig = std::make_shared<envoy::config::core::v3::TypedExtensionConfig>();
+  auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
-  transformation.set_allocated_transformer_config(factoryConfig.get());
   auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
   EXPECT_EQ(factory.name(), "io.solo.transformer.fake");
 }
+
+TEST(Transformation, TestGetTransformer){
+  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+
+  Transformation t;
+  envoy::api::v2::filter::http::Transformation transformation;
+
+  auto factoryConfig = transformation.mutable_transformer_config();
+  factoryConfig->set_name("io.solo.transformer.fake");
+  auto any = factoryConfig->mutable_typed_config();
+  any->set_type_url("type.googleapis.com/envoy.config.transformer.xslt.v2.XsltTransformation");
+  auto transformer = t.getTransformer(transformation, factory_context_);
+  auto fakeTransformer = dynamic_cast<const Envoy::Extensions::Transformer::Fake::FakeTransformer *>(transformer.get());
+  // if transformer is not fake transformer type, will return nullptr
+  EXPECT_NE(fakeTransformer, nullptr);
+}
+
 }
 }
 }
