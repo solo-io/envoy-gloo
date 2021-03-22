@@ -3,11 +3,14 @@
 #include <string>
 
 #include "envoy/router/router.h"
+#include "envoy/config/typed_config.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
 #include "extensions/filters/http/transformation/transformer.h"
+#include "extensions/filters/http/common/factory_base.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
+#include "envoy/server/factory_context.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -17,7 +20,8 @@ namespace Transformation {
 class Transformation {
 public:
   static TransformerConstSharedPtr getTransformer(
-      const envoy::api::v2::filter::http::Transformation &transformation);
+      const envoy::api::v2::filter::http::Transformation &transformation,
+      Server::Configuration::CommonFactoryContext &context );
 };
 
 class ResponseMatcher;
@@ -44,7 +48,7 @@ using RouteTransformationConfigProto =
 class TransformationFilterConfig : public FilterConfig {
 public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config,
-                             const std::string &prefix, Stats::Scope &scope);
+                             const std::string &prefix, Server::Configuration::FactoryContext &context);
 
   const std::vector<MatcherTransformerPair> &transformerPairs() const override {
     return transformer_pairs_;
@@ -64,7 +68,8 @@ public:
   PerStageRouteTransformationFilterConfig() = default;
   void addTransformation(
       const envoy::api::v2::filter::http::
-          RouteTransformations_RouteTransformation &transformations);
+          RouteTransformations_RouteTransformation &transformations,
+          Server::Configuration::CommonFactoryContext &context);
 
   TransformerPairConstSharedPtr
   findTransformers(const Http::RequestHeaderMap &headers) const override;
@@ -80,7 +85,31 @@ private:
 
 class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
-  RouteTransformationFilterConfig(RouteTransformationConfigProto proto_config);
+  RouteTransformationFilterConfig(RouteTransformationConfigProto proto_config,
+    Server::Configuration::ServerFactoryContext &context);
+};
+
+
+/**
+ * Implemented for transformation extensions and registered via Registry::registerFactory or the
+ * convenience class RegisterFactory.
+ */
+class TransformerExtensionFactory :  public Config::TypedFactory{
+public:
+  ~TransformerExtensionFactory() override = default;
+
+/**
+ * Create a particular transformation extension implementation from a config proto. If the 
+ * implementation is unable to produce a factory with the provided parameters, it should throw
+ * EnvoyException. The returned pointer should never be nullptr.
+ * @param config the custom configuration for this transformer exttension type.
+ */
+  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) PURE;
+
+  virtual std::string name() const override PURE;
+
+  std::string category() const override {return "io.solo.transformer"; }
 };
 
 } // namespace Transformation
