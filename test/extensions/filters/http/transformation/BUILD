@@ -9,6 +9,7 @@ load(
     "//bazel:envoy_test.bzl",
     "envoy_gloo_cc_test",
 )
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
 envoy_package()
 
@@ -63,4 +64,21 @@ envoy_gloo_cc_test(
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/test_common:utility_lib",
     ],
+)
+
+envoy_gloo_cc_test(
+    name = "transformation_filter_config_test",
+    repository = "@envoy",
+    srcs = ["fake_transformer.h", "transformation_filter_config_test.cc"],
+    deps = [
+        "@envoy//test/test_common:utility_lib",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "//source/extensions/filters/http/transformation:transformation_filter_lib",
+        ":pkg_cc_proto",
+    ]
+)
+
+api_proto_package(
+    visibility = ["//visibility:public"],
 )

@@ -107,6 +107,8 @@ public:
   virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) PURE;
 
+  virtual std::string name() const override PURE;
+
   std::string category() const override {return "io.solo.transformer"; }
 };
 
