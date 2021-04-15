@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy master with 1.18.0
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 345ffe37148b7a35b6e8e04db0300463689e3ff1
