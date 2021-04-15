@@ -32,7 +32,6 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
                                     bool end_stream) {
 
   request_headers_ = &header_map;
-
   setupTransformationPair();
 
   if (is_error()) {
@@ -151,6 +150,7 @@ TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
   return Http::FilterTrailersStatus::Continue;
 }
 
+// Creates pair of request and response transformation per route
 void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 

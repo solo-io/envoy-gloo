@@ -1,0 +1,7 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/2180
+  resolvesIssue: false
+  description: >
+    Introduces `transformer_config` as an extension point for custom transformer configuration. Custom transformers can be implemented
+    by creating a sub-class of the Transformation::TransformerExtensionFactory and implementing the `createTransformer` method.

@@ -2,6 +2,10 @@
 
 #include "common/common/assert.h"
 #include "common/common/matchers.h"
+#include "common/protobuf/protobuf.h"
+#include "common/protobuf/message_validator_impl.h"
+#include "common/config/utility.h"
+
 
 #include "extensions/filters/http/transformation/body_header_transformer.h"
 #include "extensions/filters/http/transformation/inja_transformer.h"
@@ -12,13 +16,19 @@ namespace HttpFilters {
 namespace Transformation {
 
 TransformerConstSharedPtr Transformation::getTransformer(
-    const envoy::api::v2::filter::http::Transformation &transformation) {
+    const envoy::api::v2::filter::http::Transformation &transformation, 
+    Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
     return std::make_unique<InjaTransformer>(
         transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform:
     return std::make_unique<BodyHeaderTransformer>();
+  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
+    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
+    return factory.createTransformer(*config, context);
+  }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
     // TODO: return null here?
@@ -29,8 +39,8 @@ TransformerConstSharedPtr Transformation::getTransformer(
 
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
-    Stats::Scope &scope)
-    : FilterConfig(prefix, scope, proto_config.stage()) {
+    Server::Configuration::FactoryContext &context)
+    : FilterConfig(prefix, context.scope(), proto_config.stage()) {
 
   for (const auto &rule : proto_config.transformations()) {
     if (!rule.has_match()) {
@@ -45,7 +55,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       if (route_transformation.has_request_transformation()) {
         try {
           request_transformation = Transformation::getTransformer(
-              route_transformation.request_transformation());
+              route_transformation.request_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
               fmt::format("Failed to parse request template: {}", e.what()));
@@ -54,7 +64,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       if (route_transformation.has_response_transformation()) {
         try {
           response_transformation = Transformation::getTransformer(
-              route_transformation.response_transformation());
+              route_transformation.response_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
               fmt::format("Failed to parse response template: {}", e.what()));
@@ -116,7 +126,8 @@ ResponseMatcherConstPtr ResponseMatcher::create(
 }
 
 RouteTransformationFilterConfig::RouteTransformationFilterConfig(
-    RouteTransformationConfigProto proto_config) {
+    RouteTransformationConfigProto proto_config, 
+    Server::Configuration::ServerFactoryContext &context) {
 
   if (proto_config.transformations_size() == 0) {
     // no new style config, convert the deprecated config:
@@ -142,7 +153,7 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
       temp_stages[transformation.stage()].reset(
           new PerStageRouteTransformationFilterConfig());
     }
-    temp_stages[transformation.stage()]->addTransformation(transformation);
+    temp_stages[transformation.stage()]->addTransformation(transformation, context);
   }
   for (uint32_t i = 0; i < stages_.size(); i++) {
     stages_[i] = std::move(temp_stages[i]);
@@ -151,7 +162,7 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
 
 void PerStageRouteTransformationFilterConfig::addTransformation(
     const envoy::api::v2::filter::http::RouteTransformations_RouteTransformation
-        &transformation) {
+        &transformation, Server::Configuration::CommonFactoryContext &context) {
   using envoy::api::v2::filter::http::RouteTransformations_RouteTransformation;
   // create either request or response one.
   switch (transformation.match_case()) {
@@ -169,7 +180,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     if (request_match.has_request_transformation()) {
       try {
         request_transformation = Transformation::getTransformer(
-            request_match.request_transformation());
+            request_match.request_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(
             fmt::format("Failed to parse request template: {}", e.what()));
@@ -178,7 +189,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     if (request_match.has_response_transformation()) {
       try {
         response_transformation = Transformation::getTransformer(
-            request_match.response_transformation());
+            request_match.response_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(
             fmt::format("Failed to parse response template: {}", e.what()));
@@ -205,7 +216,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     auto &&transformation = response_match.response_transformation();
     try {
       std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(
-          std::move(matcher), Transformation::getTransformer(transformation));
+          std::move(matcher), Transformation::getTransformer(transformation, context));
       response_transformations_.emplace_back(std::move(pair));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
