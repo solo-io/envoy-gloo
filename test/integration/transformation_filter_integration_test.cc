@@ -188,7 +188,7 @@ public:
       upstream_request_->encodeData(data, true);
     }
 
-    response->waitForEndStream();
+    ASSERT_TRUE(response->waitForEndStream());
   }
 
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
