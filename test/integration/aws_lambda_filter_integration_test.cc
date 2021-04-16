@@ -28,8 +28,7 @@ class AWSLambdaFilterIntegrationTest
       public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   AWSLambdaFilterIntegrationTest()
-      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam(),
-                            realTime()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
 
   void TearDown() override {
     TestEnvironment::unsetEnvVar("AWS_ACCESS_KEY_ID");
