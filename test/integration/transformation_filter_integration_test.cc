@@ -143,8 +143,7 @@ class TransformationFilterIntegrationTest
       public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   TransformationFilterIntegrationTest()
-      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam(),
-                            realTime()) {}
+      : HttpIntegrationTest(Http::CodecClient::Type::HTTP1, GetParam()) {}
 
   /**
    * Initializer for an individual integration test.
@@ -189,7 +188,7 @@ public:
       upstream_request_->encodeData(data, true);
     }
 
-    response->waitForEndStream();
+    ASSERT_TRUE(response->waitForEndStream());
   }
 
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
