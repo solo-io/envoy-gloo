@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy base bootstrap extensions fix
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-private
+  dependencyTag: 94af54d11e2be9ac8c8e00663e3a08432e023042
