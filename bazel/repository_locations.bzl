@@ -1,5 +1,5 @@
 REPOSITORY_LOCATIONS = dict(
-    # v1.17.2 release with bootstrap extension branch. Provides singleton fix for wasm plugin. 
+    # v1.17.3 release with bootstrap extension branch. Provides singleton fix for wasm plugin. 
     # (https://github.com/envoyproxy/envoy/commit/e899c7b0cda0a4a4050afff07670a5a7dbbd0e5e) 
     envoy = dict(
         commit = "c54077894733bc4f056f74d166c50c6ccdda59fc",
