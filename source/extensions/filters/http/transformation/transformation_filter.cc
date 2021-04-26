@@ -210,13 +210,20 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
 }
 
 void TransformationFilter::transformAccessLogs() {
+  if (access_log_transformation_ == nullptr) {
+    return;
+  }
+
   Http::StreamFilterCallbacks *on_complete_callbacks{};
+  // Body isn't required for this transformer since it isn't included
+  // in access logs
   Buffer::OwnedImpl emptyBody{};
   try {
     access_log_transformation_->transform(*response_headers_,
                                           request_headers_, 
                                           emptyBody, 
                                           *on_complete_callbacks);
+    
   } catch (std::exception &e)  {
     ENVOY_STREAM_LOG(debug, 
                      "failure transforming access logs {}", 
