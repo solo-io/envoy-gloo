@@ -56,6 +56,7 @@ class TransformerPair {
 public:
   TransformerPair(TransformerConstSharedPtr request_transformer,
                   TransformerConstSharedPtr response_transformer,
+                  TransformerConstSharedPtr access_log_transformer,
                   bool should_clear_cache);
 
   TransformerConstSharedPtr getRequestTranformation() const {
@@ -66,12 +67,17 @@ public:
     return response_transformation_;
   }
 
+  TransformerConstSharedPtr getAccessLogTransformation() const {
+    return access_log_transformation_;
+  }
+
   bool shouldClearCache() const { return clear_route_cache_; }
 
 private:
   bool clear_route_cache_{};
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
+  TransformerConstSharedPtr access_log_transformation_;
 };
 typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;
 

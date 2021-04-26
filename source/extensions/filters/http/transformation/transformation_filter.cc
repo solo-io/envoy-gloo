@@ -27,6 +27,8 @@ TransformationFilter::~TransformationFilter() {}
 
 void TransformationFilter::onDestroy() { resetInternalState(); }
 
+void TransformationFilter::onStreamComplete() { transformAccessLogs(); }
+
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
                                     bool end_stream) {
@@ -177,6 +179,8 @@ void TransformationFilter::setupTransformationPair() {
         active_transformer_pair->getRequestTranformation();
     response_transformation_ =
         active_transformer_pair->getResponseTranformation();
+    access_log_transformation_ =
+        active_transformer_pair->getAccessLogTransformation();
   }
 }
 
@@ -203,6 +207,22 @@ void TransformationFilter::addDecoderData(Buffer::Instance &data) {
 
 void TransformationFilter::addEncoderData(Buffer::Instance &data) {
   encoder_callbacks_->addEncodedData(data, false);
+}
+
+void TransformationFilter::transformAccessLogs() {
+  Http::StreamFilterCallbacks *on_complete_callbacks{};
+  Buffer::OwnedImpl emptyBody{};
+  try {
+    access_log_transformation_->transform(*response_headers_,
+                                          request_headers_, 
+                                          emptyBody, 
+                                          *on_complete_callbacks);
+  } catch (std::exception &e)  {
+    ENVOY_STREAM_LOG(debug, 
+                     "failure transforming access logs {}", 
+                     *on_complete_callbacks, 
+                     e.what());
+  }
 }
 
 void TransformationFilter::transformSomething(
