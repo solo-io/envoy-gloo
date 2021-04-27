@@ -87,7 +87,7 @@ private:
 
   void transformRequest();
   void transformResponse();
-  void transformAccessLogs();
+  void transformOnStreamCompletion();
 
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
@@ -114,7 +114,7 @@ private:
 
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
-  TransformerConstSharedPtr access_log_transformation_;
+  TransformerConstSharedPtr on_stream_completion_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;

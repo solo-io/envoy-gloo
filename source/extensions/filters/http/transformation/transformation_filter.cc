@@ -27,7 +27,7 @@ TransformationFilter::~TransformationFilter() {}
 
 void TransformationFilter::onDestroy() { resetInternalState(); }
 
-void TransformationFilter::onStreamComplete() { transformAccessLogs(); }
+void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
 
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
@@ -179,8 +179,8 @@ void TransformationFilter::setupTransformationPair() {
         active_transformer_pair->getRequestTranformation();
     response_transformation_ =
         active_transformer_pair->getResponseTranformation();
-    access_log_transformation_ =
-        active_transformer_pair->getAccessLogTransformation();
+    on_stream_completion_transformation_ =
+        active_transformer_pair->getOnStreamCompletionTransformation();
   }
 }
 
@@ -209,8 +209,8 @@ void TransformationFilter::addEncoderData(Buffer::Instance &data) {
   encoder_callbacks_->addEncodedData(data, false);
 }
 
-void TransformationFilter::transformAccessLogs() {
-  if (access_log_transformation_ == nullptr) {
+void TransformationFilter::transformOnStreamCompletion() {
+  if (on_stream_completion_transformation_ == nullptr) {
     return;
   }
 
@@ -219,14 +219,13 @@ void TransformationFilter::transformAccessLogs() {
   // in access logs
   Buffer::OwnedImpl emptyBody{};
   try {
-    access_log_transformation_->transform(*response_headers_,
-                                          request_headers_, 
-                                          emptyBody, 
-                                          *on_complete_callbacks);
-    
+    on_stream_completion_transformation_->transform(*response_headers_,
+                                                    request_headers_, 
+                                                    emptyBody, 
+                                                    *on_complete_callbacks);
   } catch (std::exception &e)  {
     ENVOY_STREAM_LOG(debug, 
-                     "failure transforming access logs {}", 
+                     "failure transforming on stream completion {}", 
                      *on_complete_callbacks, 
                      e.what());
   }
