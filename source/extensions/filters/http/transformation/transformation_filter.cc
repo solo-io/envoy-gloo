@@ -223,6 +223,10 @@ void TransformationFilter::transformOnStreamCompletion() {
                                                     request_headers_, 
                                                     emptyBody, 
                                                     *on_complete_callbacks);
+    on_stream_completion_transformation_->transform(*request_headers_,
+                                                    request_headers_, 
+                                                    emptyBody, 
+                                                    *on_complete_callbacks);
   } catch (std::exception &e)  {
     ENVOY_STREAM_LOG(debug, 
                      "failure transforming on stream completion {}", 
