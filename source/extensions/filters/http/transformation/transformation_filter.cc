@@ -215,18 +215,10 @@ void TransformationFilter::transformOnStreamCompletion() {
   }
 
   Http::StreamFilterCallbacks *on_complete_callbacks{};
-  // Body isn't required for this transformer since it isn't included
-  // in access logs
-  Buffer::OwnedImpl emptyBody{};
   try {
-    on_stream_completion_transformation_->transform(*response_headers_,
-                                                    request_headers_, 
-                                                    emptyBody, 
-                                                    *on_complete_callbacks);
-    on_stream_completion_transformation_->transform(*request_headers_,
-                                                    request_headers_, 
-                                                    emptyBody, 
-                                                    *on_complete_callbacks);
+    on_stream_completion_transformation_->transform_headers(*request_headers_,
+                                                            *response_headers_,
+                                                            *on_complete_callbacks);
   } catch (std::exception &e)  {
     ENVOY_STREAM_LOG(debug, 
                      "failure transforming on stream completion {}", 

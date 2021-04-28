@@ -48,6 +48,9 @@ public:
                          const Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
+  virtual void transform_headers(Http::RequestHeaderMap &,
+                                 Http::ResponseHeaderMap &,
+                                 Http::StreamFilterCallbacks &) const {};
 };
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
