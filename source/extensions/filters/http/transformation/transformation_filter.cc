@@ -220,7 +220,7 @@ void TransformationFilter::transformOnStreamCompletion() {
   Buffer::OwnedImpl emptyBody{};
   try {
     on_stream_completion_transformation_->transform(*response_headers_,
-                                                    *request_headers_, 
+                                                    request_headers_, 
                                                     emptyBody, 
                                                     *on_complete_callbacks);
   } catch (std::exception &e)  {
@@ -239,7 +239,7 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    transformation->transform(header_map, *request_headers_, body, callbacks);
+    transformation->transform(header_map, request_headers_, body, callbacks);
 
     if (body.length() > 0) {
       (this->*addData)(body);
