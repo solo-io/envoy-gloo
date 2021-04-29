@@ -12,7 +12,7 @@ namespace Transformation {
 class BodyHeaderTransformer : public Transformer {
 public:
   void transform(Http::RequestOrResponseHeaderMap &map,
-                 const Http::RequestHeaderMap *request_headers,
+                 Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return false; };
