@@ -77,7 +77,7 @@ TransformationFilterConfig::TransformationFilterConfig(
               route_transformation.on_stream_completion_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
-              fmt::format("Failed to parse on stream completion template: {}", e.what()));
+              fmt::format("Failed to get the on stream completion transformation: {}", e.what()));
         }
       }
     }

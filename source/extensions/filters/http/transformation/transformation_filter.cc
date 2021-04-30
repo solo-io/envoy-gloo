@@ -4,6 +4,7 @@
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/http/header_utility.h"
+#include "common/http/header_map_impl.h"
 #include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
@@ -218,6 +219,13 @@ void TransformationFilter::transformOnStreamCompletion() {
   // Body isn't required for this transformer since it isn't included
   // in access logs
   Buffer::OwnedImpl emptyBody{};
+
+  // If response_headers_ is a nullptr (this can happpen if a client disconnects)
+  // we pass in an empty response header to avoid errors within the transformer.
+  if (response_headers_ == nullptr) {
+    response_headers_ = Http::ResponseHeaderMapImpl::create().get();
+  }
+
   try {
     on_stream_completion_transformation_->transform(*response_headers_,
                                                     request_headers_, 
