@@ -228,6 +228,7 @@ void TransformationFilter::transformOnStreamCompletion() {
                      "failure transforming on stream completion {}", 
                      *on_complete_callbacks, 
                      e.what());
+    filter_config_->stats().on_stream_complete_error_.inc();
   }
 }
 

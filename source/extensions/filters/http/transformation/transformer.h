@@ -27,7 +27,8 @@ namespace Transformation {
   COUNTER(response_header_transformations)                                     \
   COUNTER(response_body_transformations)                                       \
   COUNTER(request_error)                                                       \
-  COUNTER(response_error)
+  COUNTER(response_error)                                                      \
+  COUNTER(on_stream_complete_error)
 
 /**
  * Wrapper struct for transformation @see stats_macros.h
