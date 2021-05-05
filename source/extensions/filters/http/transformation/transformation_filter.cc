@@ -218,11 +218,13 @@ void TransformationFilter::transformOnStreamCompletion() {
   // Body isn't required for this transformer since it isn't included
   // in access logs
   Buffer::OwnedImpl emptyBody{};
+  std::unique_ptr<Http::ResponseHeaderMapImpl> emptyResponseHeaderMap = 
+      Http::ResponseHeaderMapImpl::create();
 
   // If response_headers_ is a nullptr (this can happpen if a client disconnects)
   // we pass in an empty response header to avoid errors within the transformer.
   if (response_headers_ == nullptr) {
-    response_headers_ = Http::ResponseHeaderMapImpl::create().get();
+    response_headers_ = emptyResponseHeaderMap.get();
   }
 
   try {
