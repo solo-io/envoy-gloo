@@ -4,6 +4,7 @@
 #include "common/common/enum_to_int.h"
 #include "common/config/metadata.h"
 #include "common/http/header_utility.h"
+#include "common/http/header_map_impl.h"
 #include "common/http/utility.h"
 
 #include "extensions/filters/http/solo_well_known_names.h"
@@ -26,6 +27,8 @@ TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
 TransformationFilter::~TransformationFilter() {}
 
 void TransformationFilter::onDestroy() { resetInternalState(); }
+
+void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
 
 Http::FilterHeadersStatus
 TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
@@ -177,6 +180,8 @@ void TransformationFilter::setupTransformationPair() {
         active_transformer_pair->getRequestTranformation();
     response_transformation_ =
         active_transformer_pair->getResponseTranformation();
+    on_stream_completion_transformation_ =
+        active_transformer_pair->getOnStreamCompletionTransformation();
   }
 }
 
@@ -203,6 +208,37 @@ void TransformationFilter::addDecoderData(Buffer::Instance &data) {
 
 void TransformationFilter::addEncoderData(Buffer::Instance &data) {
   encoder_callbacks_->addEncodedData(data, false);
+}
+
+void TransformationFilter::transformOnStreamCompletion() {
+  if (on_stream_completion_transformation_ == nullptr) {
+    return;
+  }
+
+  // Body isn't required for this transformer since it isn't included
+  // in access logs
+  Buffer::OwnedImpl emptyBody{};
+  std::unique_ptr<Http::ResponseHeaderMapImpl> emptyResponseHeaderMap;
+
+  // If response_headers_ is a nullptr (this can happpen if a client disconnects)
+  // we pass in an empty response header to avoid errors within the transformer.
+  if (response_headers_ == nullptr) {
+    emptyResponseHeaderMap = Http::ResponseHeaderMapImpl::create();
+    response_headers_ = emptyResponseHeaderMap.get();
+  }
+
+  try {
+    on_stream_completion_transformation_->transform(*response_headers_,
+                                                    request_headers_, 
+                                                    emptyBody, 
+                                                    *encoder_callbacks_);
+  } catch (std::exception &e)  {
+    ENVOY_STREAM_LOG(debug, 
+                     "failure transforming on stream completion {}", 
+                     *encoder_callbacks_, 
+                     e.what());
+    filter_config_->stats().on_stream_complete_error_.inc();
+  }
 }
 
 void TransformationFilter::transformSomething(

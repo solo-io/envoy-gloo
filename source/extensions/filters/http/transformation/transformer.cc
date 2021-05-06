@@ -11,10 +11,12 @@ constexpr uint64_t MAX_STAGE_NUMBER = 10UL;
 
 TransformerPair::TransformerPair(TransformerConstSharedPtr request_transformer,
                                  TransformerConstSharedPtr response_transformer,
+                                 TransformerConstSharedPtr on_stream_completion_transformer,
                                  bool should_clear_cache)
     : clear_route_cache_(should_clear_cache),
       request_transformation_(request_transformer),
-      response_transformation_(response_transformer) {}
+      response_transformation_(response_transformer),
+      on_stream_completion_transformation_(on_stream_completion_transformer) {}
 
 TransformerPairConstSharedPtr
 FilterConfig::findTransformers(const Http::RequestHeaderMap &headers) const {

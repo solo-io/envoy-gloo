@@ -27,6 +27,8 @@ public:
   // Http::FunctionalFilterBase
   void onDestroy() override;
 
+  void onStreamComplete() override;
+
   // Http::StreamDecoderFilter
   Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap &,
                                           bool) override;
@@ -85,6 +87,7 @@ private:
 
   void transformRequest();
   void transformResponse();
+  void transformOnStreamCompletion();
 
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
@@ -111,6 +114,7 @@ private:
 
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
+  TransformerConstSharedPtr on_stream_completion_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;
