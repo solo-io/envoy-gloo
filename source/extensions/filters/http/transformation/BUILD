@@ -47,6 +47,7 @@ envoy_cc_library(
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",
+        "@envoy//source/common/http:header_map_lib",
         "@envoy//source/common/http:utility_lib",
         "@envoy//include/envoy/stats:stats_interface",
         "@envoy//include/envoy/stats:stats_macros",
