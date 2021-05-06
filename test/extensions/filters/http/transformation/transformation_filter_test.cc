@@ -721,9 +721,10 @@ TEST_F(TransformationFilterTest, WithoutResponseHeaderOnStreamComplete) {
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   EXPECT_EQ(EMPTY_STRING, headers_.get_("added-header"));
 
-  // onStreamComplete shouuld be successful despite
+  // onStreamComplete should be successful (no errors) despite
   // response_headers being a nullptr (since it wasn't encoded)
   EXPECT_NO_THROW(filter_->onStreamComplete());
+  EXPECT_EQ(0U, config_->stats().on_stream_complete_error_.value());
 }
 
 TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
@@ -741,8 +742,8 @@ TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
   res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   
-  // Raise an arbitrary error during a call that is done in
-  // the Inja transformer
+  // Raise an arbitrary error during a call that is triggeres
+  // during the Inja header transformer
   ON_CALL(encoder_filter_callbacks_, clusterInfo())
         .WillByDefault(Throw(std::runtime_error("arbitrary error")));
 
