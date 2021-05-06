@@ -27,7 +27,8 @@ namespace Transformation {
   COUNTER(response_header_transformations)                                     \
   COUNTER(response_body_transformations)                                       \
   COUNTER(request_error)                                                       \
-  COUNTER(response_error)
+  COUNTER(response_error)                                                      \
+  COUNTER(on_stream_complete_error)
 
 /**
  * Wrapper struct for transformation @see stats_macros.h
@@ -45,7 +46,7 @@ public:
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
                          // request header map. this has the request header map
                          // even when transforming responses.
-                         const Http::RequestHeaderMap *request_headers,
+                         Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
@@ -56,6 +57,7 @@ class TransformerPair {
 public:
   TransformerPair(TransformerConstSharedPtr request_transformer,
                   TransformerConstSharedPtr response_transformer,
+                  TransformerConstSharedPtr on_stream_completion_transformer,
                   bool should_clear_cache);
 
   TransformerConstSharedPtr getRequestTranformation() const {
@@ -66,12 +68,17 @@ public:
     return response_transformation_;
   }
 
+  TransformerConstSharedPtr getOnStreamCompletionTransformation() const {
+    return on_stream_completion_transformation_;
+  }
+
   bool shouldClearCache() const { return clear_route_cache_; }
 
 private:
   bool clear_route_cache_{};
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
+  TransformerConstSharedPtr on_stream_completion_transformation_;
 };
 typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;
 

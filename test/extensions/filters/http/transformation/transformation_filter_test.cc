@@ -16,6 +16,7 @@ using testing::Return;
 using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
+using testing::Throw;
 using testing::WithArg;
 
 namespace Envoy {
@@ -200,6 +201,21 @@ public:
       auto &transformation = (*route_config_.mutable_request_transformation());
       transformation.mutable_header_body_transform();
     }
+    initFilter(); // Re-load config.
+  }
+
+  void initOnStreamCompleteTransformHeader() {
+    auto &route_matcher = (*transformation_rule_.mutable_match());
+    route_matcher.set_prefix("/");
+    null_route_config_ = true;
+    auto &transformation =
+        (*transformation_rule_.mutable_route_transformations()
+            ->mutable_on_stream_completion_transformation());
+    transformation.mutable_transformation_template()->mutable_passthrough();
+    envoy::api::v2::filter::http::InjaTemplate header_value;
+    header_value.set_text("added-value");
+    (*transformation.mutable_transformation_template()
+          ->mutable_headers())["added-header"] = header_value;
     initFilter(); // Re-load config.
   }
 
@@ -670,6 +686,71 @@ TEST_F(TransformationFilterTest, HappyPathWithHeadersBodyTemplate) {
   Buffer::OwnedImpl downstream_body("testbody");
   auto res = filter_->decodeData(downstream_body, true);
   EXPECT_EQ(Http::FilterDataStatus::Continue, res);
+}
+
+TEST_F(TransformationFilterTest, HappyPathOnStreamComplete) {
+  initOnStreamCompleteTransformHeader();
+
+  Http::TestResponseHeaderMapImpl response_headers{
+    {"content-type", "test"},
+    {":method", "GET"},
+    {":authority", "www.solo.io"},
+    {":path", "/path"}};
+
+  // Create response and request headers
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  
+  // Header should not be added yet
+  EXPECT_EQ(EMPTY_STRING, headers_.get_("added-header"));
+  EXPECT_EQ(EMPTY_STRING, response_headers.get_("added-header"));
+
+  filter_->onStreamComplete();
+  // Header is added to response headers as part of onStreamComplete
+  EXPECT_EQ("added-value", response_headers.get_("added-header"));
+  EXPECT_EQ(EMPTY_STRING, headers_.get_("added-header"));
+}
+
+TEST_F(TransformationFilterTest, WithoutResponseHeaderOnStreamComplete) {
+  initOnStreamCompleteTransformHeader();
+
+  // There are only request headers
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(EMPTY_STRING, headers_.get_("added-header"));
+
+  // onStreamComplete should be successful (no errors) despite
+  // response_headers being a nullptr (since it wasn't encoded)
+  EXPECT_NO_THROW(filter_->onStreamComplete());
+  EXPECT_EQ(0U, config_->stats().on_stream_complete_error_.value());
+}
+
+TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
+  initOnStreamCompleteTransformHeader();
+
+  Http::TestResponseHeaderMapImpl response_headers{
+    {"content-type", "test"},
+    {":method", "GET"},
+    {":authority", "www.solo.io"},
+    {":path", "/path"}};
+
+  // Create response and request headers
+  auto res = filter_->decodeHeaders(headers_, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  
+  // Raise an arbitrary error during a call that is triggeres
+  // during the Inja header transformer
+  ON_CALL(encoder_filter_callbacks_, clusterInfo())
+        .WillByDefault(Throw(std::runtime_error("arbitrary error")));
+
+  // Verify that error is caught and stat is incremented
+  EXPECT_NO_THROW(filter_->onStreamComplete());
+  EXPECT_EQ(1U, config_->stats().on_stream_complete_error_.value());
+ 
 }
 
 } // namespace Transformation
