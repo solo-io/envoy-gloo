@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Bump envoy for CVE-2021-29492 fix (https://github.com/envoyproxy/envoy/security/advisories/GHSA-4987-27fx-x6cf)
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: 6e17cc8bac1c76f2e76a316c54d4534a76d5bc32
