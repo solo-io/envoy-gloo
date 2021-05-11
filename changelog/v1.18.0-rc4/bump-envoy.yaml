@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.18.3 for CVE-2021-29492
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 98c1c9e9a40804b93b074badad1cdf284b47d58b
