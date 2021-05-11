@@ -1,6 +1,6 @@
 changelog:
 - type: DEPENDENCY_BUMP
-  description: Update envoy to 1.16.4 for CVE
+  description: Update envoy to 1.16.4 for CVE-2021-29492
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
   dependencyTag: bf5d0eb44b781ac26ff1513700bcb114b7cf4300
