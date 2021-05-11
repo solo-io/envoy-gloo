@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: update envoy for CVE
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-gloo
+  dependencyTag: 5333b928d8bcffa26ab19bf018369a835f697585
