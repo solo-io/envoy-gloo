@@ -48,6 +48,7 @@ TransformationFilterConfig::TransformationFilterConfig(
     }
     TransformerConstSharedPtr request_transformation;
     TransformerConstSharedPtr response_transformation;
+    TransformerConstSharedPtr on_stream_completion_transformation;
     bool clear_route_cache = false;
     if (rule.has_route_transformations()) {
       const auto &route_transformation = rule.route_transformations();
@@ -70,10 +71,21 @@ TransformationFilterConfig::TransformationFilterConfig(
               fmt::format("Failed to parse response template: {}", e.what()));
         }
       }
+      if (route_transformation.has_on_stream_completion_transformation()) {
+        try {
+          on_stream_completion_transformation = Transformation::getTransformer(
+              route_transformation.on_stream_completion_transformation(), context);
+        } catch (const std::exception &e) {
+          throw EnvoyException(
+              fmt::format("Failed to get the on stream completion transformation: {}", e.what()));
+        }
+      }
     }
     TransformerPairConstSharedPtr transformer_pair =
-        std::make_unique<TransformerPair>(
-            request_transformation, response_transformation, clear_route_cache);
+        std::make_unique<TransformerPair>(request_transformation,
+                                          response_transformation,
+                                          on_stream_completion_transformation,
+                                          clear_route_cache);
     transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
                                     transformer_pair);
   }
@@ -202,6 +214,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
       TransformerPairConstSharedPtr transformer_pair =
           std::make_unique<TransformerPair>(request_transformation,
                                             response_transformation,
+                                            nullptr,
                                             clear_route_cache);
       transformer_pairs_.emplace_back(matcher, transformer_pair);
     }

@@ -15,7 +15,7 @@ public:
   void transform (Http::RequestOrResponseHeaderMap &,
                          // request header map. this has the request header map
                          // even when transforming responses.
-                         const Http::RequestHeaderMap *,
+                         Http::RequestHeaderMap *,
                          Buffer::Instance &,
                          Http::StreamFilterCallbacks &) const override {
   }

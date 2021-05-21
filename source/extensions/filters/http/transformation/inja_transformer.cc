@@ -351,7 +351,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
 InjaTransformer::~InjaTransformer() {}
 
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
-                                const Http::RequestHeaderMap *request_headers,
+                                Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
                                 Http::StreamFilterCallbacks &callbacks) const {
   absl::optional<std::string> string_body;
