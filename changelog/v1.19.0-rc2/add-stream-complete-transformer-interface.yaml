@@ -1,7 +1,0 @@
-changelog:
-- type: NEW_FEATURE
-  issueLink: https://github.com/solo-io/gloo/issues/4282
-  resolvesIssue: false
-  description: >
-    Add `on_stream_complete_transformation` route transformation interface to allow
-    transforming header maps in the onStreamComplete callback.
