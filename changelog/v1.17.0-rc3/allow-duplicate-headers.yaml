@@ -1,0 +1,7 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/gloo/issues/3901
+    resolvesIssue: false
+    description: >
+      Previously, the transformation filter removed multiple headers with the same header name from being processed. 
+      This adds a new field headers_to_append, which allows users to specify multiple template values for a header, and each of the headers values will be present in the final request.
