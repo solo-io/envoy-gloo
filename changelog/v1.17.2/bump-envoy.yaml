@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy master with 1.17.2
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 21fe4496ca0c7798d6a9a747fdbf1ec1071e7f4f
