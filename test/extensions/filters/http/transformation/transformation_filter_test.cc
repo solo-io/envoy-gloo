@@ -678,7 +678,7 @@ TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
   auto edResult = filter_->encodeData(buf, false);
   EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer, edResult);
   
-    Http::TestResponseTrailerMapImpl response_trailers{};
+  Http::TestResponseTrailerMapImpl response_trailers{};
   auto etResult = filter_->encodeTrailers(response_trailers);
   EXPECT_EQ(Http::FilterTrailersStatus::StopIteration, etResult);
 
