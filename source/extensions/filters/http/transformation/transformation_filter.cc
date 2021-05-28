@@ -26,7 +26,10 @@ TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
 
 TransformationFilter::~TransformationFilter() {}
 
-void TransformationFilter::onDestroy() { resetInternalState(); }
+void TransformationFilter::onDestroy() { 
+  destroyed_ = true;
+  resetInternalState(); 
+}
 
 void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
 
@@ -110,12 +113,12 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
   if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
     // responseActive() == false
-    return Http::FilterHeadersStatus::Continue;
+    return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
   if (end_stream || response_transformation_->passthrough_body()) {
     filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
-    return Http::FilterHeadersStatus::Continue;
+    return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
 
   return Http::FilterHeadersStatus::StopIteration;
@@ -124,7 +127,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
 Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
                                                         bool end_stream) {
   if (!responseActive()) {
-    return Http::FilterDataStatus::Continue;
+    return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
   response_body_.move(data);
@@ -132,13 +135,13 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
       (response_body_.length() > encoder_buffer_limit_)) {
     error(Error::PayloadTooLarge);
     responseError();
-    return Http::FilterDataStatus::Continue;
+    return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
   if (end_stream) {
     filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
-    return Http::FilterDataStatus::Continue;
+    return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
   return Http::FilterDataStatus::StopIterationNoBuffer;
@@ -150,7 +153,7 @@ TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
     filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
   }
-  return Http::FilterTrailersStatus::Continue;
+  return destroyed_ ? Http::FilterTrailersStatus::StopIteration : Http::FilterTrailersStatus::Continue;
 }
 
 // Creates pair of request and response transformation per route
