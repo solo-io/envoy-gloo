@@ -115,6 +115,7 @@ private:
   Http::Code error_code_;
   std::string error_messgae_;
   bool should_clear_cache_{};
+  bool destroyed_{};
 
   FilterConfigSharedPtr filter_config_;
 };
