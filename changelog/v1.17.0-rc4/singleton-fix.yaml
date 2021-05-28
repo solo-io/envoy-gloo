@@ -1,6 +1,0 @@
-changelog:
-- type: DEPENDENCY_BUMP
-  description: Update envoy base with singleton fix.
-  dependencyOwner: yuval-k
-  dependencyRepo: envoy
-  dependencyTag: 449118844b8b8eb5533ea50117d3789033bf2f9f

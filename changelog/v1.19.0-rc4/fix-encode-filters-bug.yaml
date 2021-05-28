@@ -1,0 +1,9 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/gloo/issues/4801
+  resolvesIssue: false
+  description: >
+    Avoids use-after-free error caused by encoding filters adding data to buffer/body 
+    and hitting buffer size limit. Envoy destroys filters after hitting buffer size limit, 
+    but the encoding filters continue execution, causing the error. This checks to see if the 
+    encoding filter has been destroyed before continuing execution.
