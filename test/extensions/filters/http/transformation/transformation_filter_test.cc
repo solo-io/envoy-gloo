@@ -753,6 +753,24 @@ TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
  
 }
 
+TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
+  initFilterWithHeadersBody(TransformationFilterTest::ConfigType::Both);
+  // filter_->onDestroy();
+  // Http::TestResponseHeaderMapImpl response_headers{};
+  // auto ehResult = filter_->encodeHeaders(response_headers, false);
+  // EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, ehResult);
+  
+  // Buffer::OwnedImpl buf{};
+  
+  // auto edResult = filter_->encodeData(buf, false);
+  // EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer, edResult);
+  
+  //   Http::TestResponseTrailerMapImpl response_trailers{};
+  // auto etResult = filter_->encodeTrailers(response_trailers);
+  // EXPECT_EQ(Http::FilterTrailersStatus::StopIteration, etResult);
+
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
