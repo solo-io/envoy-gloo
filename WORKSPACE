@@ -10,6 +10,15 @@ load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
 
 envoy_gloo_dependencies()
 
+load("@io_istio_proxy//bazel:repositories.bzl", "istioapi_dependencies")
+
+istioapi_dependencies()
+
+load("@io_istio_proxy//bazel:wasm.bzl", "wasm_dependencies")
+
+wasm_dependencies()
+
+
 load("@envoy//bazel:api_binding.bzl", "envoy_api_binding")
 
 envoy_api_binding()

@@ -16,6 +16,7 @@ envoy_cc_binary(
     stamped = True,
     deps = [
         "//:envoy_gloo_all_filters_lib",
+        "//:istio_proxy_all_filters_lib",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )
