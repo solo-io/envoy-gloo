@@ -86,7 +86,7 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
                         absl::string_view value) const {
   // get and regex
   std::match_results<absl::string_view::const_iterator> regex_result;
-  if (std::regex_match(value.begin(), value.end(), regex_result,
+  if (std::regex_search(value.begin(), value.end(), regex_result,
                        extract_regex_)) {
     if (group_ >= regex_result.size()) {
       // this should never happen as we test this in the ctor.

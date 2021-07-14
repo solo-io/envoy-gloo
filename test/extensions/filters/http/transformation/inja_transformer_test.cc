@@ -227,6 +227,23 @@ TEST(Extraction, ExtractIdFromHeader) {
   EXPECT_EQ("123", res);
 }
 
+TEST(Extraction, ExtractIdFromBody) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"}};
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.mutable_body();
+  extractor.set_regex("id: ([0-9]{4})");
+  extractor.set_subgroup(1);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  std::string body(R"EOF(
+    id: 1234
+  )EOF");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
+  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+
+  EXPECT_EQ("1234", res);
+}
+
 TEST(Extraction, ExtractorWorkWithNewlines) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
