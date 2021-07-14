@@ -1,0 +1,9 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/gloo/issues/5000
+    resolvesIssue: false
+    description: >
+      Fixes issue where extractor regex's need to match the *entire* text in order
+      any match to be found. This is not ideal for situations where you only want the regex
+      to match on a subsection of the input text. Changing the underlying method from `regex_match` to
+      `regex_search` fixes this behaviour. 
