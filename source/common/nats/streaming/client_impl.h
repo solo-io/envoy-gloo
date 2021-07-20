@@ -8,13 +8,13 @@
 #include "envoy/runtime/runtime.h"
 #include "envoy/tcp/conn_pool_nats.h"
 
-#include "common/common/logger.h"
-#include "common/nats/streaming/connect_response_handler.h"
-#include "common/nats/streaming/heartbeat_handler.h"
-#include "common/nats/streaming/message_utility.h"
-#include "common/nats/streaming/pub_request_handler.h"
-#include "common/nats/subject_utility.h"
-#include "common/nats/token_generator_impl.h"
+#include "source/common/common/logger.h"
+#include "source/common/nats/streaming/connect_response_handler.h"
+#include "source/common/nats/streaming/heartbeat_handler.h"
+#include "source/common/nats/streaming/message_utility.h"
+#include "source/common/nats/streaming/pub_request_handler.h"
+#include "source/common/nats/subject_utility.h"
+#include "source/common/nats/token_generator_impl.h"
 
 #include "absl/types/optional.h"
 

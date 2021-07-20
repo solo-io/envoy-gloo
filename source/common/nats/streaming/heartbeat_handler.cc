@@ -1,8 +1,8 @@
-#include "common/nats/streaming/heartbeat_handler.h"
+#include "source/common/nats/streaming/heartbeat_handler.h"
 
 #include <string>
 
-#include "common/nats/message_builder.h"
+#include "source/common/nats/message_builder.h"
 
 namespace Envoy {
 namespace Nats {
