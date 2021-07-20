@@ -3,10 +3,10 @@
 
 #include "envoy/config/core/v3/http_uri.pb.h"
 
-#include "common/http/message_impl.h"
-#include "common/protobuf/utility.h"
+#include "source/common/http/message_impl.h"
+#include "source/common/protobuf/utility.h"
 
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
 #include "test/extensions/filters/http/common/mock.h"

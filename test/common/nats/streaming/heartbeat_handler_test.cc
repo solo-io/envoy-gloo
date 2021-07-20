@@ -1,6 +1,6 @@
-#include "common/common/assert.h"
-#include "common/nats/message_builder.h"
-#include "common/nats/streaming/heartbeat_handler.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/message_builder.h"
+#include "source/common/nats/streaming/heartbeat_handler.h"
 
 #include "test/mocks/nats/mocks.h"
 

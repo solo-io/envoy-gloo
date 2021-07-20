@@ -1,6 +1,6 @@
-#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
+#include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
+#include "source/extensions/filters/http/aws_lambda/aws_lambda_filter.h"
+#include "source/extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"

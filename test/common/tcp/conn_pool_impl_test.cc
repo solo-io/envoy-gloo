@@ -3,9 +3,9 @@
 
 #include "envoy/tcp/codec.h"
 
-#include "common/network/utility.h"
-#include "common/tcp/conn_pool_impl.h"
-#include "common/upstream/upstream_impl.h"
+#include "source/common/network/utility.h"
+#include "source/common/tcp/conn_pool_impl.h"
+#include "source/common/upstream/upstream_impl.h"
 
 #include "test/mocks/event/mocks.h"
 #include "test/mocks/network/mocks.h"

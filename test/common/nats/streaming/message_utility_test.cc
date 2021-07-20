@@ -1,5 +1,5 @@
-#include "common/common/assert.h"
-#include "common/nats/streaming/message_utility.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/streaming/message_utility.h"
 
 #include "test/test_common/utility.h"
 

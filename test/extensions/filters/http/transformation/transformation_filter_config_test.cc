@@ -1,10 +1,10 @@
-#include "extensions/filters/http/transformation/transformation_filter_config.h"
+#include "source/extensions/filters/http/transformation/transformation_filter_config.h"
 #include "test/extensions/filters/http/transformation/fake_transformer.h"
 #include "test/test_common/utility.h"
-#include "common/config/utility.h"
+#include "source/common/config/utility.h"
 #include "test/mocks/server/mocks.h"
-#include "common/protobuf/protobuf.h"
-#include "common/protobuf/utility.h"
+#include "source/common/protobuf/protobuf.h"
+#include "source/common/protobuf/utility.h"
 
 
 #include "gmock/gmock.h"

@@ -1,7 +1,7 @@
 #include <string>
 
-#include "common/buffer/buffer_impl.h"
-#include "common/buffer/buffer_utility.h"
+#include "source/common/buffer/buffer_impl.h"
+#include "source/common/buffer/buffer_utility.h"
 
 #include "gtest/gtest.h"
 

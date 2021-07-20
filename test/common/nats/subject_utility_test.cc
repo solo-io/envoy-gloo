@@ -1,5 +1,5 @@
-#include "common/common/assert.h"
-#include "common/nats/subject_utility.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/subject_utility.h"
 
 #include "gtest/gtest.h"
 

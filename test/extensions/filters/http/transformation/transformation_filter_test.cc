@@ -1,5 +1,5 @@
-#include "extensions/filters/http/solo_well_known_names.h"
-#include "extensions/filters/http/transformation/transformation_filter.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/transformation/transformation_filter.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"

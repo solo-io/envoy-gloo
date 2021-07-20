@@ -1,6 +1,6 @@
-#include "common/buffer/buffer_impl.h"
+#include "source/common/buffer/buffer_impl.h"
 
-#include "extensions/filters/http/transformation/body_header_transformer.h"
+#include "source/extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
