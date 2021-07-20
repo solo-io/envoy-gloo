@@ -12,7 +12,7 @@ envoy_cc_library(
     name = "codec_interface",
     hdrs = ["codec.h"],
     repository = "@envoy",
-    deps = ["@envoy//include/envoy/buffer:buffer_interface"],
+    deps = ["@envoy//envoy/buffer:buffer_interface"],
 )
 
 envoy_cc_library(

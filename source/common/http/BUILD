@@ -14,8 +14,8 @@ envoy_cc_library(
     hdrs = ["solo_filter_utility.h"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/server:filter_config_interface",
-        "@envoy//include/envoy/upstream:cluster_manager_interface",
+        "@envoy//envoy/server:filter_config_interface",
+        "@envoy//envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:logger_lib",
         "@envoy//source/common/common:utility_lib",

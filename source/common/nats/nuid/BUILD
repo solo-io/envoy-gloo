@@ -15,8 +15,8 @@ envoy_cc_library(
     external_deps = ["abseil_optional"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/runtime:runtime_interface",
-        "@envoy//include/envoy/common:random_generator_interface",
+        "@envoy//envoy/runtime:runtime_interface",
+        "@envoy//envoy/common:random_generator_interface",
         "@envoy//source/common/common:assert_lib",
     ],
 )

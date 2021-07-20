@@ -63,7 +63,6 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//api/envoy/config/filter/http/nats/streaming/v2:pkg_cc_proto",
-        "@envoy//include/envoy/registry",
-        "@envoy//include/envoy/router:router_interface",
+        "@envoy//envoy/router:router_interface",
     ],
 )

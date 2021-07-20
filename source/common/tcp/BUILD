@@ -27,9 +27,9 @@ envoy_cc_library(
     deps = [
         ":codec_lib",
         "//include/envoy/tcp:conn_pool_interface",
-        "@envoy//include/envoy/router:router_interface",
-        "@envoy//include/envoy/thread_local:thread_local_interface",
-        "@envoy//include/envoy/upstream:cluster_manager_interface",
+        "@envoy//envoy/router:router_interface",
+        "@envoy//envoy/thread_local:thread_local_interface",
+        "@envoy//envoy/upstream:cluster_manager_interface",
         "@envoy//source/common/buffer:buffer_lib",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/network:filter_lib",
