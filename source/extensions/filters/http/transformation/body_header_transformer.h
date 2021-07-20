@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include "extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
 
 namespace Envoy {
 namespace Extensions {

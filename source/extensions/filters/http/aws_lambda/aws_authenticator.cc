@@ -1,4 +1,4 @@
-#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
+#include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 
 #include <algorithm>
 #include <list>
@@ -6,13 +6,13 @@
 
 #include "envoy/http/header_map.h"
 
-#include "common/common/assert.h"
-#include "common/common/empty_string.h"
-#include "common/common/hex.h"
-#include "common/common/utility.h"
-#include "common/http/headers.h"
-#include "common/http/utility.h"
-#include "common/singleton/const_singleton.h"
+#include "source/common/common/assert.h"
+#include "source/common/common/empty_string.h"
+#include "source/common/common/hex.h"
+#include "source/common/common/utility.h"
+#include "source/common/http/headers.h"
+#include "source/common/http/utility.h"
+#include "source/common/singleton/const_singleton.h"
 
 namespace Envoy {
 namespace Extensions {

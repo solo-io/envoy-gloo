@@ -1,4 +1,4 @@
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
+#include "source/extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 
 #include <algorithm>
 #include <list>

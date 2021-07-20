@@ -1,4 +1,4 @@
-#include "common/nats/token_generator_impl.h"
+#include "source/common/nats/token_generator_impl.h"
 
 #include <algorithm>
 

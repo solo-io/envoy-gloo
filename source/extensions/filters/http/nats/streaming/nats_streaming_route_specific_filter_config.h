@@ -1,6 +1,6 @@
 #pragma once
 
-#include "envoy/router/router.h"
+#include "source/envoy/router/router.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 

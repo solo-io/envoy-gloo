@@ -8,8 +8,8 @@
 #include "envoy/stats/stats_macros.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "extensions/common/aws/credentials_provider.h"
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/common/aws/credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"

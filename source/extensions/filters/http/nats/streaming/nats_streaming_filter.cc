@@ -8,13 +8,13 @@
 #include "envoy/http/header_map.h"
 #include "envoy/nats/streaming/client.h"
 
-#include "common/common/macros.h"
-#include "common/common/utility.h"
-#include "common/grpc/common.h"
-#include "common/http/solo_filter_utility.h"
-#include "common/http/utility.h"
+#include "source/common/common/macros.h"
+#include "source/common/common/utility.h"
+#include "source/common/grpc/common.h"
+#include "source/common/http/solo_filter_utility.h"
+#include "source/common/http/utility.h"
 
-#include "extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {

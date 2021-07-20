@@ -4,11 +4,11 @@
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
 
-#include "common/common/regex.h"
-#include "common/singleton/const_singleton.h"
+#include "source/common/common/regex.h"
+#include "source/common/singleton/const_singleton.h"
 
-#include "extensions/common/aws/credentials_provider.h"
-#include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+#include "source/extensions/common/aws/credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_fetcher.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 

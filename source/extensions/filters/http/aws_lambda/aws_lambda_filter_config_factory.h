@@ -2,8 +2,8 @@
 
 #include "envoy/upstream/upstream.h"
 
-#include "extensions/filters/http/common/factory_base.h"
-#include "extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/common/factory_base.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 

@@ -5,7 +5,7 @@
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
 
-#include "extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
 
 // clang-format off
 #include "nlohmann/json.hpp"

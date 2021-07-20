@@ -1,10 +1,10 @@
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
+#include "source/extensions/filters/http/aws_lambda/aws_lambda_filter_config_factory.h"
 
 #include "envoy/registry/registry.h"
 
-#include "extensions/common/aws/credentials_provider_impl.h"
-#include "extensions/common/aws/utility.h"
-#include "extensions/filters/http/aws_lambda/aws_lambda_filter.h"
+#include "source/extensions/common/aws/credentials_provider_impl.h"
+#include "source/extensions/common/aws/utility.h"
+#include "source/extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 
 namespace Envoy {
 namespace Extensions {

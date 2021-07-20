@@ -5,9 +5,9 @@
 #include "envoy/router/router.h"
 #include "envoy/config/typed_config.h"
 
-#include "extensions/filters/http/solo_well_known_names.h"
-#include "extensions/filters/http/transformation/transformer.h"
-#include "extensions/filters/http/common/factory_base.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/common/factory_base.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 #include "envoy/server/factory_context.h"

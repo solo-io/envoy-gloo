@@ -1,6 +1,6 @@
-#include "extensions/filters/http/transformation/body_header_transformer.h"
+#include "source/extensions/filters/http/transformation/body_header_transformer.h"
 
-#include "common/http/headers.h"
+#include "source/common/http/headers.h"
 
 #include "nlohmann/json.hpp"
 

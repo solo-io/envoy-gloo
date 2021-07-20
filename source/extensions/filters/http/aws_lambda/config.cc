@@ -1,8 +1,8 @@
-#include "extensions/filters/http/aws_lambda/config.h"
+#include "source/extensions/filters/http/aws_lambda/config.h"
 
 #include "envoy/thread_local/thread_local.h"
 
-#include "common/common/regex.h"
+#include "source/common/common/regex.h"
 
 namespace Envoy {
 namespace Extensions {

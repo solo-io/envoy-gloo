@@ -1,4 +1,4 @@
-#include "common/nats/codec_impl.h"
+#include "source/common/nats/codec_impl.h"
 
 #include "envoy/nats/codec.h"
 

@@ -6,9 +6,9 @@
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
-#include "extensions/filters/http/aws_lambda/config.h"
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
+#include "source/extensions/filters/http/aws_lambda/config.h"
+#include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
