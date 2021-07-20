@@ -12,7 +12,7 @@ envoy_cc_library(
     name = "codec_interface",
     hdrs = ["codec.h"],
     repository = "@envoy",
-    deps = ["@envoy//include/envoy/buffer:buffer_interface"],
+    deps = ["@envoy//envoy/buffer:buffer_interface"],
 )
 
 envoy_cc_library(
@@ -23,6 +23,6 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":codec_interface",
-        "@envoy//include/envoy/upstream:cluster_manager_interface",
+        "@envoy//envoy/upstream:cluster_manager_interface",
     ],
 )
