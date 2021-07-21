@@ -3,10 +3,10 @@
 #include <map>
 
 #include "envoy/event/timer.h"
-#include "envoy/nats/codec.h"
-#include "envoy/nats/streaming/client.h"
+#include "include/envoy/nats/codec.h"
+#include "include/envoy/nats/streaming/client.h"
 #include "envoy/runtime/runtime.h"
-#include "envoy/tcp/conn_pool_nats.h"
+#include "include/envoy/tcp/conn_pool_nats.h"
 
 #include "source/common/common/logger.h"
 #include "source/common/nats/streaming/connect_response_handler.h"

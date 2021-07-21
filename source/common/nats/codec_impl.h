@@ -1,7 +1,7 @@
 #pragma once
 
-#include "envoy/nats/codec.h"
-#include "envoy/tcp/codec.h"
+#include "include/envoy/nats/codec.h"
+#include "include/envoy/tcp/codec.h"
 
 #include "source/common/common/logger.h"
 

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "envoy/nats/token_generator.h"
+#include "include/envoy/nats/token_generator.h"
 
 #include "fmt/format.h"
 
