@@ -7,16 +7,16 @@
 
 #include "envoy/http/header_map.h"
 
-#include "common/buffer/buffer_impl.h"
-#include "common/common/empty_string.h"
-#include "common/common/hex.h"
-#include "common/common/utility.h"
-#include "common/http/headers.h"
-#include "common/http/solo_filter_utility.h"
-#include "common/http/utility.h"
-#include "common/singleton/const_singleton.h"
+#include "source/common/buffer/buffer_impl.h"
+#include "source/common/common/empty_string.h"
+#include "source/common/common/hex.h"
+#include "source/common/common/utility.h"
+#include "source/common/http/headers.h"
+#include "source/common/http/solo_filter_utility.h"
+#include "source/common/http/utility.h"
+#include "source/common/singleton/const_singleton.h"
 
-#include "extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 namespace Envoy {
 namespace Extensions {

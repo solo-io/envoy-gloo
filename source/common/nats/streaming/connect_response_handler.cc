@@ -1,8 +1,8 @@
-#include "common/nats/streaming/connect_response_handler.h"
+#include "source/common/nats/streaming/connect_response_handler.h"
 
 #include <string>
 
-#include "common/nats/streaming/message_utility.h"
+#include "source/common/nats/streaming/message_utility.h"
 
 namespace Envoy {
 namespace Nats {

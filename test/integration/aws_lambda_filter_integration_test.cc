@@ -1,6 +1,6 @@
-#include "common/config/metadata.h"
+#include "source/common/config/metadata.h"
 
-#include "extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"

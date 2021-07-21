@@ -2,7 +2,7 @@
 
 #include "envoy/tcp/conn_pool_nats.h"
 
-#include "common/nats/codec_impl.h"
+#include "source/common/nats/codec_impl.h"
 
 #include "gmock/gmock.h"
 

@@ -3,7 +3,7 @@
 #include "envoy/nats/codec.h"
 #include "envoy/tcp/codec.h"
 
-#include "common/common/logger.h"
+#include "source/common/common/logger.h"
 
 namespace Envoy {
 namespace Nats {

@@ -6,7 +6,7 @@
 #include "source/common/http/message_impl.h"
 #include "source/common/protobuf/utility.h"
 
-#include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+#include "source/extensions/filters/http/aws_lambda/sts_fetcher.h"
 
 #include "test/extensions/filters/http/aws_lambda/mocks.h"
 #include "test/mocks/server/factory_context.h"

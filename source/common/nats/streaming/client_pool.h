@@ -6,7 +6,7 @@
 #include "envoy/thread_local/thread_local.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/nats/streaming/client_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
 
 namespace Envoy {
 namespace Nats {
