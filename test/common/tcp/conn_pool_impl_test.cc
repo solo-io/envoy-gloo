@@ -1,7 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "envoy/tcp/codec.h"
+#include "include/envoy/tcp/codec.h"
 
 #include "source/common/network/utility.h"
 #include "source/common/tcp/conn_pool_impl.h"

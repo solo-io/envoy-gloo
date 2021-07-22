@@ -1,6 +1,6 @@
 #pragma once
 
-#include "envoy/tcp/conn_pool_nats.h"
+#include "include/envoy/tcp/conn_pool_nats.h"
 
 #include "source/common/nats/codec_impl.h"
 

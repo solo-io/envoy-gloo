@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "envoy/tcp/codec.h"
-#include "envoy/tcp/conn_pool_nats.h"
+#include "include/envoy/tcp/codec.h"
+#include "include/envoy/tcp/conn_pool_nats.h"
 
 #include "source/common/tcp/codec_impl.h"
 
