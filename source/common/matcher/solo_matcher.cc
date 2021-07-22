@@ -122,7 +122,7 @@ public:
   RegexMatcherImpl(const RouteMatch &match) : BaseMatcherImpl(match) {
     if (match.path_specifier_case() ==
         RouteMatch::kHiddenEnvoyDeprecatedRegex) {
-      regex_ = Regex::Utility::parseStdRegexAsCompiledMatcher(
+      regex_ = parseStdRegexAsCompiledMatcher(
           match.hidden_envoy_deprecated_regex());
       regex_str_ = match.hidden_envoy_deprecated_regex();
     } else {
@@ -148,10 +148,18 @@ public:
   }
 
 private:
+
+static Regex::CompiledMatcherPtr parseStdRegexAsCompiledMatcher(const std::string& regex,
+                                 std::regex::flag_type flags = std::regex::optimize);
   Regex::CompiledMatcherPtr regex_;
   // raw regex string, for logging.
   std::string regex_str_;
 };
+
+Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const std::string& regex,
+                                                           std::regex::flag_type flags) {
+  return std::make_unique<Regex::CompiledMatcherPtr>(Regex::Utility::parseStdRegex(regex, flags));
+}
 
 } // namespace
 
