@@ -156,9 +156,35 @@ static Regex::CompiledMatcherPtr parseStdRegexAsCompiledMatcher(const std::strin
   std::string regex_str_;
 };
 
+class CompiledStdMatcher : public Regex::CompiledMatcher {
+public:
+  CompiledStdMatcher(std::regex&& regex) : regex_(std::move(regex)) {}
+
+  // CompiledMatcher
+  bool match(absl::string_view value) const override {
+    try {
+      return std::regex_match(value.begin(), value.end(), regex_);
+    } catch (const std::regex_error& e) {
+      return false;
+    }
+  }
+
+  // CompiledMatcher
+  std::string replaceAll(absl::string_view value, absl::string_view substitution) const override {
+    try {
+      return std::regex_replace(std::string(value), regex_, std::string(substitution));
+    } catch (const std::regex_error& e) {
+      return std::string(value);
+    }
+  }
+
+private:
+  const std::regex regex_;
+};
+
 Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const std::string& regex,
                                                            std::regex::flag_type flags) {
-  return std::make_unique<Regex::CompiledMatcherPtr>(Regex::Utility::parseStdRegex(regex, flags));
+  return std::make_unique<CompiledStdMatcher>(Regex::Utility::parseStdRegex(regex, flags));
 }
 
 } // namespace
