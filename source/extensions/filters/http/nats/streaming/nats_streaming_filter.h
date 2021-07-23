@@ -1,6 +1,6 @@
 #pragma once
 
-#include "envoy/nats/streaming/client.h"
+#include "include/envoy/nats/streaming/client.h"
 
 #include "source/extensions/filters/http/nats/streaming/nats_streaming_filter_config.h"
 #include "source/extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"

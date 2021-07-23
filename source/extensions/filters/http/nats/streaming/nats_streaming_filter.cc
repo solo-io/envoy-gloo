@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "envoy/http/header_map.h"
-#include "envoy/nats/streaming/client.h"
+#include "include/envoy/nats/streaming/client.h"
 
 #include "source/common/common/macros.h"
 #include "source/common/common/utility.h"
