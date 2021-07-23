@@ -1,4 +1,4 @@
-#include "envoy/nats/codec.h"
+#include "include/envoy/nats/codec.h"
 
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/assert.h"
