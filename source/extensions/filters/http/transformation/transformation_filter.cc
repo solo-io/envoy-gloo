@@ -6,6 +6,7 @@
 #include "source/common/http/header_utility.h"
 #include "source/common/http/header_map_impl.h"
 #include "source/common/http/utility.h"
+#include "source/common/http/solo_filter_utility.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 #include "source/extensions/filters/http/transformation/transformer.h"
@@ -161,7 +162,7 @@ void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 
   route_config_ =
-      Http::Utility::resolveMostSpecificPerFilterConfig<RouteFilterConfig>(
+      Http::SoloFilterUtility::resolvePerFilterConfig<RouteFilterConfig>(
           filter_config_->name(), route_);
   TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard
