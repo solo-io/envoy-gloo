@@ -1,7 +1,7 @@
-#include "common/nats/streaming/pub_request_handler.h"
+#include "source/common/nats/streaming/pub_request_handler.h"
 
-#include "common/common/assert.h"
-#include "common/nats/streaming/message_utility.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/streaming/message_utility.h"
 
 namespace Envoy {
 namespace Nats {

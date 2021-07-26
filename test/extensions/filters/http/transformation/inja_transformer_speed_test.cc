@@ -1,6 +1,6 @@
-#include "common/common/empty_string.h"
+#include "source/common/common/empty_string.h"
 
-#include "extensions/filters/http/transformation/inja_transformer.h"
+#include "source/extensions/filters/http/transformation/inja_transformer.h"
 
 #include "test/mocks/http/mocks.h"
 #include "test/test_common/utility.h"

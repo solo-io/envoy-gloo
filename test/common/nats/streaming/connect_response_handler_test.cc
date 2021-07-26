@@ -1,6 +1,6 @@
-#include "common/common/assert.h"
-#include "common/nats/streaming/connect_response_handler.h"
-#include "common/nats/streaming/message_utility.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/streaming/connect_response_handler.h"
+#include "source/common/nats/streaming/message_utility.h"
 
 #include "gmock/gmock.h"
 

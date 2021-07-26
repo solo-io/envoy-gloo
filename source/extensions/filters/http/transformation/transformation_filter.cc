@@ -1,14 +1,15 @@
-#include "extensions/filters/http/transformation/transformation_filter.h"
+#include "source/extensions/filters/http/transformation/transformation_filter.h"
 
-#include "common/common/empty_string.h"
-#include "common/common/enum_to_int.h"
-#include "common/config/metadata.h"
-#include "common/http/header_utility.h"
-#include "common/http/header_map_impl.h"
-#include "common/http/utility.h"
+#include "source/common/common/empty_string.h"
+#include "source/common/common/enum_to_int.h"
+#include "source/common/config/metadata.h"
+#include "source/common/http/header_utility.h"
+#include "source/common/http/header_map_impl.h"
+#include "source/common/http/utility.h"
+#include "source/common/http/solo_filter_utility.h"
 
-#include "extensions/filters/http/solo_well_known_names.h"
-#include "extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -161,7 +162,7 @@ void TransformationFilter::setupTransformationPair() {
   route_ = decoder_callbacks_->route();
 
   route_config_ =
-      Http::Utility::resolveMostSpecificPerFilterConfig<RouteFilterConfig>(
+      Http::SoloFilterUtility::resolvePerFilterConfig<RouteFilterConfig>(
           filter_config_->name(), route_);
   TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard

@@ -1,4 +1,4 @@
-#include "extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
+#include "source/extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
 
 namespace Envoy {
 namespace Extensions {

@@ -1,12 +1,12 @@
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "envoy/api/api.h"
 #include "envoy/common/pure.h"
 #include "envoy/common/time.h"
 
-#include "common/common/linked_object.h"
+#include "source/common/common/linked_object.h"
 
-#include "extensions/common/aws/credentials_provider.h"
+#include "source/extensions/common/aws/credentials_provider.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 

@@ -5,8 +5,8 @@
 #include "envoy/config/core/v3/http_uri.pb.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "extensions/common/aws/credentials_provider.h"
-#include "extensions/filters/http/aws_lambda/sts_status.h"
+#include "source/extensions/common/aws/credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_status.h"
 
 namespace Envoy {
 namespace Extensions {

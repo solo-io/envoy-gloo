@@ -5,7 +5,7 @@
 
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/protobuf/utility.h"
+#include "source/common/protobuf/utility.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 

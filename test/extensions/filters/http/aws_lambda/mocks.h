@@ -2,9 +2,9 @@
 
 #include "envoy/config/core/v3/http_uri.pb.h"
 
-#include "extensions/filters/http/aws_lambda/sts_connection_pool.h"
-#include "extensions/filters/http/aws_lambda/sts_credentials_provider.h"
-#include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+#include "source/extensions/filters/http/aws_lambda/sts_connection_pool.h"
+#include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/sts_fetcher.h"
 
 #include "test/mocks/upstream/mocks.h"
 

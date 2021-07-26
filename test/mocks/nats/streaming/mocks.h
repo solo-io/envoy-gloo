@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/nats/streaming/client_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
 
 #include "gmock/gmock.h"
 

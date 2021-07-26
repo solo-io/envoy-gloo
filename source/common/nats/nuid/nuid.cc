@@ -1,4 +1,4 @@
-#include "common/nats/nuid/nuid.h"
+#include "source/common/nats/nuid/nuid.h"
 
 namespace Envoy {
 namespace Nats {

@@ -1,6 +1,6 @@
 #include <ctime>
 
-#include "extensions/filters/http/aws_lambda/aws_authenticator.h"
+#include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"

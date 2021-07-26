@@ -6,7 +6,7 @@
 #include "envoy/common/time.h"
 #include "envoy/http/header_map.h"
 
-#include "common/singleton/const_singleton.h"
+#include "source/common/singleton/const_singleton.h"
 
 #include "openssl/digest.h"
 #include "openssl/hmac.h"

@@ -8,7 +8,7 @@
 #include "envoy/common/random_generator.h"
 #include "envoy/runtime/runtime.h"
 
-#include "common/common/assert.h"
+#include "source/common/common/assert.h"
 
 namespace Envoy {
 namespace Nats {

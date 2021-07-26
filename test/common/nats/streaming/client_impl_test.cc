@@ -1,4 +1,4 @@
-#include "common/nats/streaming/client_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/event/mocks.h"

@@ -4,8 +4,8 @@
 #include <string>
 
 #include "envoy/event/timer.h"
-#include "envoy/nats/streaming/client.h"
-#include "envoy/nats/streaming/inbox_handler.h"
+#include "include/envoy/nats/streaming/client.h"
+#include "include/envoy/nats/streaming/inbox_handler.h"
 
 #include "absl/types/optional.h"
 

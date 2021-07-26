@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <cctype>
 
-#include "common/common/assert.h"
-#include "common/nats/token_generator_impl.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/token_generator_impl.h"
 
 #include "test/mocks/common.h"
 

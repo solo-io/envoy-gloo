@@ -1,8 +1,8 @@
-#include "common/nats/streaming/client_pool.h"
+#include "source/common/nats/streaming/client_pool.h"
 
-#include "common/nats/codec_impl.h"
-#include "common/nats/streaming/client_impl.h"
-#include "common/tcp/conn_pool_impl.h"
+#include "source/common/nats/codec_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
+#include "source/common/tcp/conn_pool_impl.h"
 
 namespace Envoy {
 namespace Nats {

@@ -9,9 +9,9 @@
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
 
-#include "common/http/header_utility.h"
-#include "common/matcher/solo_matcher.h"
-#include "common/protobuf/protobuf.h"
+#include "source/common/http/header_utility.h"
+#include "source/common/matcher/solo_matcher.h"
+#include "source/common/protobuf/protobuf.h"
 
 namespace Envoy {
 namespace Extensions {

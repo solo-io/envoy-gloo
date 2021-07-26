@@ -1,4 +1,4 @@
-#include "common/nats/streaming/message_utility.h"
+#include "source/common/nats/streaming/message_utility.h"
 
 namespace Envoy {
 namespace Nats {

@@ -1,12 +1,12 @@
-#include "common/nats/streaming/client_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
 
 #include "envoy/event/dispatcher.h"
 
-#include "common/buffer/buffer_utility.h"
-#include "common/common/assert.h"
-#include "common/common/macros.h"
-#include "common/common/utility.h"
-#include "common/nats/message_builder.h"
+#include "source/common/buffer/buffer_utility.h"
+#include "source/common/common/assert.h"
+#include "source/common/common/macros.h"
+#include "source/common/common/utility.h"
+#include "source/common/nats/message_builder.h"
 
 namespace Envoy {
 namespace Nats {

@@ -86,8 +86,8 @@ envoy_cc_library(
         "//include/envoy/nats/streaming:client_interface",
         "//include/envoy/nats/streaming:inbox_handler_interface",
         "//source/common/nats/streaming:message_utility_lib",
-        "@envoy//include/envoy/common:time_interface",
-        "@envoy//include/envoy/event:timer_interface",
+        "@envoy//envoy/common:time_interface",
+        "@envoy//envoy/event:timer_interface",
         "@envoy//source/common/buffer:buffer_lib",
     ],
 )

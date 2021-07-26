@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.19.0
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 68fe53a889416fd8570506232052b06f5a531541

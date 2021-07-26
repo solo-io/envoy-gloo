@@ -16,6 +16,6 @@ envoy_cc_library(
     hdrs = ["buffer_utility.h"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/buffer:buffer_interface",
+        "@envoy//envoy/buffer:buffer_interface",
     ],
 )

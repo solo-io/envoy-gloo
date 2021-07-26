@@ -4,17 +4,17 @@
 
 #include "envoy/event/dispatcher.h"
 #include "envoy/network/connection.h"
-#include "envoy/tcp/conn_pool_nats.h"
+#include "include/envoy/tcp/conn_pool_nats.h"
 #include "envoy/thread_local/thread_local.h"
 #include "envoy/upstream/cluster_manager.h"
 #include "envoy/upstream/thread_local_cluster.h"
 #include "envoy/upstream/upstream.h"
 
-#include "common/buffer/buffer_impl.h"
-#include "common/common/assert.h"
-#include "common/network/filter_impl.h"
-#include "common/tcp/codec_impl.h"
-#include "common/upstream/load_balancer_impl.h"
+#include "source/common/buffer/buffer_impl.h"
+#include "source/common/common/assert.h"
+#include "source/common/network/filter_impl.h"
+#include "source/common/tcp/codec_impl.h"
+#include "source/common/upstream/load_balancer_impl.h"
 
 namespace Envoy {
 namespace Tcp {

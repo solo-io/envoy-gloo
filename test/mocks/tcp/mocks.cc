@@ -1,5 +1,5 @@
-#include "common/common/assert.h"
-#include "common/common/macros.h"
+#include "source/common/common/assert.h"
+#include "source/common/common/macros.h"
 
 #include "test/mocks/tcp/mocks_nats.h"
 

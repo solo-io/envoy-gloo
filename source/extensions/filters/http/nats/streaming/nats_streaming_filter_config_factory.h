@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "extensions/filters/http/common/factory_base.h"
-#include "extensions/filters/http/solo_well_known_names.h"
+#include "source/extensions/filters/http/common/factory_base.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "envoy/nats/streaming/client.h"
+#include "include/envoy/nats/streaming/client.h"
 
-#include "extensions/filters/http/nats/streaming/nats_streaming_filter_config.h"
-#include "extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
+#include "source/extensions/filters/http/nats/streaming/nats_streaming_filter_config.h"
+#include "source/extensions/filters/http/nats/streaming/nats_streaming_route_specific_filter_config.h"
 
 #include "api/envoy/config/filter/http/nats/streaming/v2/nats_streaming.pb.validate.h"
 #include "api/envoy/config/filter/http/nats/streaming/v2/payload.pb.validate.h"

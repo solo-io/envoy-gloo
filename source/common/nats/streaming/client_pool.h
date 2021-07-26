@@ -1,12 +1,12 @@
 #pragma once
 
-#include "envoy/nats/codec.h"
-#include "envoy/nats/streaming/client.h"
-#include "envoy/tcp/conn_pool_nats.h"
+#include "include/envoy/nats/codec.h"
+#include "include/envoy/nats/streaming/client.h"
+#include "include/envoy/tcp/conn_pool_nats.h"
 #include "envoy/thread_local/thread_local.h"
 #include "envoy/upstream/cluster_manager.h"
 
-#include "common/nats/streaming/client_impl.h"
+#include "source/common/nats/streaming/client_impl.h"
 
 namespace Envoy {
 namespace Nats {

@@ -1,8 +1,8 @@
-#include "extensions/filters/http/aws_lambda/config.h"
+#include "source/extensions/filters/http/aws_lambda/config.h"
 
 #include "envoy/thread_local/thread_local.h"
 
-#include "common/common/regex.h"
+#include "source/common/common/regex.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -94,12 +94,12 @@ void AWSLambdaConfigImpl::loadSTSData() {
   // AWS_WEB_IDENTITY_TOKEN_FILE and AWS_ROLE_ARN must be set for STS
   // credentials to be enabled
   token_file_ =
-      absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE));
+      std::string(absl::NullSafeStringView(std::getenv(AWS_WEB_IDENTITY_TOKEN_FILE)));
   if (token_file_ == "") {
     throw EnvoyException(fmt::format("Env var {} must be present, and set",
                                      AWS_WEB_IDENTITY_TOKEN_FILE));
   }
-  role_arn_ = absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN));
+  role_arn_ = std::string(absl::NullSafeStringView(std::getenv(AWS_ROLE_ARN)));
   if (role_arn_ == "") {
     throw EnvoyException(
         fmt::format("Env var {} must be present, and set", AWS_ROLE_ARN));

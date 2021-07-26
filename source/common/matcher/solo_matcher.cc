@@ -1,9 +1,9 @@
-#include "common/matcher/solo_matcher.h"
+#include "source/common/matcher/solo_matcher.h"
 
-#include "common/common/logger.h"
-#include "common/common/regex.h"
-#include "common/config/version_converter.h"
-#include "common/router/config_impl.h"
+#include "source/common/common/logger.h"
+#include "source/common/common/regex.h"
+#include "source/common/config/version_converter.h"
+#include "source/common/router/config_impl.h"
 
 #include "absl/strings/match.h"
 
@@ -122,7 +122,7 @@ public:
   RegexMatcherImpl(const RouteMatch &match) : BaseMatcherImpl(match) {
     if (match.path_specifier_case() ==
         RouteMatch::kHiddenEnvoyDeprecatedRegex) {
-      regex_ = Regex::Utility::parseStdRegexAsCompiledMatcher(
+      regex_ = parseStdRegexAsCompiledMatcher(
           match.hidden_envoy_deprecated_regex());
       regex_str_ = match.hidden_envoy_deprecated_regex();
     } else {
@@ -148,10 +148,44 @@ public:
   }
 
 private:
+
+static Regex::CompiledMatcherPtr parseStdRegexAsCompiledMatcher(const std::string& regex,
+                                 std::regex::flag_type flags = std::regex::optimize);
   Regex::CompiledMatcherPtr regex_;
   // raw regex string, for logging.
   std::string regex_str_;
 };
+
+class CompiledStdMatcher : public Regex::CompiledMatcher {
+public:
+  CompiledStdMatcher(std::regex&& regex) : regex_(std::move(regex)) {}
+
+  // CompiledMatcher
+  bool match(absl::string_view value) const override {
+    try {
+      return std::regex_match(value.begin(), value.end(), regex_);
+    } catch (const std::regex_error& e) {
+      return false;
+    }
+  }
+
+  // CompiledMatcher
+  std::string replaceAll(absl::string_view value, absl::string_view substitution) const override {
+    try {
+      return std::regex_replace(std::string(value), regex_, std::string(substitution));
+    } catch (const std::regex_error& e) {
+      return std::string(value);
+    }
+  }
+
+private:
+  const std::regex regex_;
+};
+
+Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const std::string& regex,
+                                                           std::regex::flag_type flags) {
+  return std::make_unique<CompiledStdMatcher>(Regex::Utility::parseStdRegex(regex, flags));
+}
 
 } // namespace
 

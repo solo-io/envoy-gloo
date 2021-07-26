@@ -1,8 +1,8 @@
-#include "envoy/nats/codec.h"
+#include "include/envoy/nats/codec.h"
 
-#include "common/buffer/buffer_impl.h"
-#include "common/common/assert.h"
-#include "common/nats/codec_impl.h"
+#include "source/common/buffer/buffer_impl.h"
+#include "source/common/common/assert.h"
+#include "source/common/nats/codec_impl.h"
 
 #include "test/mocks/nats/mocks.h"
 

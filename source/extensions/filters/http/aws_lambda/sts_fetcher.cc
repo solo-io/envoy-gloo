@@ -1,10 +1,10 @@
-#include "extensions/filters/http/aws_lambda/sts_fetcher.h"
+#include "source/extensions/filters/http/aws_lambda/sts_fetcher.h"
 
-#include "common/buffer/buffer_impl.h"
-#include "common/common/enum_to_int.h"
-#include "common/common/regex.h"
-#include "common/http/headers.h"
-#include "common/http/utility.h"
+#include "source/common/buffer/buffer_impl.h"
+#include "source/common/common/enum_to_int.h"
+#include "source/common/common/regex.h"
+#include "source/common/http/headers.h"
+#include "source/common/http/utility.h"
 
 namespace Envoy {
 namespace Extensions {

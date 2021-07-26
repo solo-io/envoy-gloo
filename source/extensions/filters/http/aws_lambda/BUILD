@@ -17,8 +17,8 @@ envoy_cc_library(
     external_deps = ["ssl"],
     repository = "@envoy",
     deps = [
-        "@envoy//include/envoy/buffer:buffer_interface",
-        "@envoy//include/envoy/http:header_map_interface",
+        "@envoy//envoy/buffer:buffer_interface",
+        "@envoy//envoy/http:header_map_interface",
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/common:empty_string",
         "@envoy//source/common/common:hex_lib",
@@ -76,8 +76,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":aws_lambda_filter_lib",
-        "@envoy//include/envoy/registry",
-        "@envoy//include/envoy/server:filter_config_interface",
+        "@envoy//envoy/server:filter_config_interface",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
 )

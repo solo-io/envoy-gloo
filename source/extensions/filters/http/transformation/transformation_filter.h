@@ -2,10 +2,10 @@
 
 #include "envoy/server/filter_config.h"
 
-#include "common/buffer/buffer_impl.h"
+#include "source/common/buffer/buffer_impl.h"
 
-#include "extensions/filters/http/transformation/transformation_filter_config.h"
-#include "extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/transformation_filter_config.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 

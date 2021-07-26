@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "envoy/nats/codec.h"
+#include "include/envoy/nats/codec.h"
 
 namespace Envoy {
 namespace Nats {

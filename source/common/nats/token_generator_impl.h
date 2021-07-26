@@ -2,10 +2,10 @@
 
 #include <string>
 
-#include "envoy/nats/token_generator.h"
+#include "include/envoy/nats/token_generator.h"
 #include "envoy/runtime/runtime.h"
 
-#include "common/nats/nuid/nuid.h"
+#include "source/common/nats/nuid/nuid.h"
 
 namespace Envoy {
 namespace Nats {

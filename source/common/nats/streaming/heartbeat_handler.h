@@ -3,8 +3,8 @@
 #include <string>
 
 #include "envoy/common/pure.h"
-#include "envoy/nats/codec.h"
-#include "envoy/nats/streaming/inbox_handler.h"
+#include "include/envoy/nats/codec.h"
+#include "include/envoy/nats/streaming/inbox_handler.h"
 
 #include "absl/types/optional.h"
 
