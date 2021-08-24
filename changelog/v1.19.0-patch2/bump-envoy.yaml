@@ -1,0 +1,6 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    description: Update envoy to 1.19.0-patch2 for CVE-2021-32777, CVE-2021-32779, CVE-2021-32781, CVE-2021-32778, CVE-2021-32780
+    dependencyOwner: solo-io
+    dependencyRepo: envoy-fork
+    dependencyTag: a837c56012d86284b8c6a1b7da87ee7c18c23d43
