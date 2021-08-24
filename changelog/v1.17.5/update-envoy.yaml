@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.17.4 for CVE-2021-32777, CVE-2021-32779, CVE-2021-32781, CVE-2021-32778, CVE-2021-32780
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: 7327c8a932716ffd57dd343ae812b3d300fe6ee1
