@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.18.4 for CVE-2021-32777, CVE-2021-32779, CVE-2021-32781, CVE-2021-32778, CVE-2021-32780
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: bef18019d8fc33a4ed6aca3679aff2100241ac5e
