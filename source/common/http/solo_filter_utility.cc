@@ -33,19 +33,10 @@ SoloFilterUtility::resolvePerFilterBaseConfig(
 
   const Router::RouteSpecificFilterConfig *maybe_filter_config{};
 
-  const Router::RouteEntry *routeEntry = route->routeEntry();
-  if (routeEntry) {
-    maybe_filter_config = routeEntry->perFilterConfig(filter_name);
-  }
-
   if (!maybe_filter_config) {
-    maybe_filter_config = route->perFilterConfig(filter_name);
+    maybe_filter_config = route->mostSpecificPerFilterConfig(filter_name);
   }
 
-  if (!maybe_filter_config && routeEntry) {
-    maybe_filter_config =
-        routeEntry->virtualHost().perFilterConfig(filter_name);
-  }
   return maybe_filter_config;
 }
 

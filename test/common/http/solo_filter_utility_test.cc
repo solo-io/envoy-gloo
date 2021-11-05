@@ -38,7 +38,7 @@ TEST_F(PerFilterConfigUtilTest, NoRouteEntry) {
   RouteSpecificFilterConfig r;
 
   EXPECT_CALL(*route_, routeEntry()).WillOnce(Return(nullptr));
-  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
+  EXPECT_CALL(*route_, mostSpecificPerFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
 
   EXPECT_EQ(
       &r, SoloFilterUtility::resolvePerFilterConfig<RouteSpecificFilterConfig>(
@@ -49,11 +49,11 @@ TEST_F(PerFilterConfigUtilTest, ConfigInRouteEntry) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, mostSpecificPerFilterConfig(FILTER_NAME))
       .WillOnce(Return(&r));
 
-  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).Times(0);
-  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(*route_, mostSpecificPerFilterConfig(FILTER_NAME)).Times(0);
+  EXPECT_CALL(route_->route_entry_.virtual_host_, mostSpecificPerFilterConfig(FILTER_NAME))
       .Times(0);
 
   EXPECT_EQ(
@@ -65,10 +65,10 @@ TEST_F(PerFilterConfigUtilTest, CfgInRouteNotInRouteEntry) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, mostSpecificPerFilterConfig(FILTER_NAME))
       .WillOnce(Return(nullptr));
-  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
-  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(*route_, mostSpecificPerFilterConfig(FILTER_NAME)).WillOnce(Return(&r));
+  EXPECT_CALL(route_->route_entry_.virtual_host_, mostSpecificPerFilterConfig(FILTER_NAME))
       .Times(0);
 
   EXPECT_EQ(
@@ -80,10 +80,10 @@ TEST_F(PerFilterConfigUtilTest, HaveVirtualHost) {
 
   RouteSpecificFilterConfig r;
 
-  EXPECT_CALL(route_->route_entry_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(route_->route_entry_, mostSpecificPerFilterConfig(FILTER_NAME))
       .WillOnce(Return(nullptr));
-  EXPECT_CALL(*route_, perFilterConfig(FILTER_NAME)).WillOnce(Return(nullptr));
-  EXPECT_CALL(route_->route_entry_.virtual_host_, perFilterConfig(FILTER_NAME))
+  EXPECT_CALL(*route_, mostSpecificPerFilterConfig(FILTER_NAME)).WillOnce(Return(nullptr));
+  EXPECT_CALL(route_->route_entry_.virtual_host_, mostSpecificPerFilterConfig(FILTER_NAME))
       .WillOnce(Return(&r));
 
   EXPECT_EQ(

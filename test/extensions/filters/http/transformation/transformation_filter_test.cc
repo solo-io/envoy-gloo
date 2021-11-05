@@ -116,17 +116,17 @@ public:
 
     if (!null_route_config_) {
       ON_CALL(*filter_callbacks_.route_,
-              perFilterConfig(SoloHttpFilterNames::get().Transformation))
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().Transformation))
           .WillByDefault(Return(route_config_wrapper_.get()));
       ON_CALL(*encoder_filter_callbacks_.route_,
-              perFilterConfig(SoloHttpFilterNames::get().Transformation))
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().Transformation))
           .WillByDefault(Return(route_config_wrapper_.get()));
     } else {
       ON_CALL(*filter_callbacks_.route_,
-              perFilterConfig(SoloHttpFilterNames::get().Transformation))
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().Transformation))
           .WillByDefault(Return(nullptr));
       ON_CALL(*encoder_filter_callbacks_.route_,
-              perFilterConfig(SoloHttpFilterNames::get().Transformation))
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().Transformation))
           .WillByDefault(Return(nullptr));
     }
 
