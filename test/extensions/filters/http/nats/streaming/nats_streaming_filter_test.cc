@@ -142,7 +142,7 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(callbacks_.route_->route_entry_, mostSpecificPerFilterConfig(name))
+  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
       .WillByDefault(Return(&config));
 
   Http::TestRequestHeaderMapImpl headers;
@@ -162,7 +162,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(callbacks_.route_->route_entry_, mostSpecificPerFilterConfig(name))
+  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
@@ -198,7 +198,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithHeadersAndOneChunkOfData) {
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(callbacks_.route_->route_entry_, mostSpecificPerFilterConfig(name))
+  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
@@ -231,7 +231,7 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
   const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(callbacks_.route_->route_entry_, mostSpecificPerFilterConfig(name))
+  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
