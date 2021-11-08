@@ -24,21 +24,5 @@ SoloFilterUtility::resolveClusterName(StreamFilterCallbacks *filter_callbacks) {
   return &route_entry->clusterName();
 }
 
-const Router::RouteSpecificFilterConfig *
-SoloFilterUtility::resolvePerFilterBaseConfig(
-    const std::string &filter_name, const Router::RouteConstSharedPtr &route) {
-  if (!route) {
-    return nullptr;
-  }
-
-  const Router::RouteSpecificFilterConfig *maybe_filter_config{};
-
-  if (!maybe_filter_config) {
-    maybe_filter_config = route->mostSpecificPerFilterConfig(filter_name);
-  }
-
-  return maybe_filter_config;
-}
-
 } // namespace Http
 } // namespace Envoy

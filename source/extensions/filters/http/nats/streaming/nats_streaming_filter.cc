@@ -128,7 +128,7 @@ void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
   const std::string &name = SoloHttpFilterNames::get().NatsStreaming;
 
   // A `shared_ptr` to the result of `route()` is stored as a member in order
-  // to make sure that the pointer returned by `resolvePerFilterConfig()`
+  // to make sure that the pointer returned by `resolveMostSpecificPerFilterConfig()`
   // remains valid for the current request.
   route_ = decoder_callbacks_->route();
 
