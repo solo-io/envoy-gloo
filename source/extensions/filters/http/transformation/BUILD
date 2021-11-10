@@ -43,7 +43,6 @@ envoy_cc_library(
     deps = [
         ":transformation_filter_config",
         ":transformer_lib",
-        "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/common:enum_to_int",
         "@envoy//source/common/config:metadata_lib",

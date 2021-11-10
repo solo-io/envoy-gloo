@@ -95,8 +95,8 @@ protected:
 
     filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
 
-    ON_CALL(filter_callbacks_.route_->route_entry_,
-            perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+    ON_CALL(*filter_callbacks_.route_,
+            mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
@@ -279,8 +279,8 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+  EXPECT_CALL(*filter_callbacks_.route_,
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillRepeatedly(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
@@ -371,8 +371,8 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
 }
 
 TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
-  ON_CALL(filter_callbacks_.route_->route_entry_,
-          perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+  ON_CALL(*filter_callbacks_.route_,
+          mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillByDefault(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},

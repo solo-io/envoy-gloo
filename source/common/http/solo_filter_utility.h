@@ -37,42 +37,6 @@ public:
   static const std::string *
   resolveClusterName(StreamFilterCallbacks *filter_callbacks);
 
-  /**
-   * Retreives the route specific config. Route specific config can be in a few
-   * places, that are checked in order. The first config found is returned. The
-   * order is:
-   * - the routeEntry() (for config that's applied on weighted clusters)
-   * - the route
-   * - and finally from the virtual host object (routeEntry()->virtualhost()).
-   *
-   * To use, simply:
-   *
-   *     auto route = stream_callbacks_.route();
-   *     const auto* config =
-   *         SoloFilterUtility::resolvePerFilterConfig(FILTER_NAME, route);
-   *
-   * See notes about config's lifetime below.
-   *
-   * @param filter_name The name of the filter who's route config should be
-   * fetched.
-   *
-   * @param route The route to check for route configs. nullptr routes will
-   * result in nullptr being reutrned.
-   *
-   * @return The route config if found. nullptr if not found. The returned
-   * pointer's lifetime is the same as the route parameter.
-   */
-  template <class ConfigType>
-  static const ConfigType *
-  resolvePerFilterConfig(const std::string &filter_name,
-                         const Router::RouteConstSharedPtr &route) {
-    static_assert(
-        std::is_base_of<Router::RouteSpecificFilterConfig, ConfigType>::value,
-        "ConfigType must be a subclass of Router::RouteSpecificFilterConfig");
-    return dynamic_cast<const ConfigType *>(
-        resolvePerFilterBaseConfig(filter_name, route));
-  }
-
   template <class ConfigType>
   static std::shared_ptr<const ConfigType>
   resolveProtocolOptions(const std::string &filter_name,
@@ -97,14 +61,6 @@ public:
     return cluster_info->extensionProtocolOptionsTyped<ConfigType>(filter_name);
   }
 
-private:
-  /**
-   * The non template implementation of resolvePerFilterConfig. see
-   * resolvePerFilterConfig for docs.
-   */
-  static const Router::RouteSpecificFilterConfig *
-  resolvePerFilterBaseConfig(const std::string &filter_name,
-                             const Router::RouteConstSharedPtr &route);
 };
 
 } // namespace Http
