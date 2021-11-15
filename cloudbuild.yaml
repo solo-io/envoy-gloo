@@ -7,6 +7,8 @@ steps:
   env:
   - 'COMMIT_SHA=$COMMIT_SHA'
   - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  secretEnv:
+  - 'GCP_SERVICE_ACCOUNT_KEY'
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
