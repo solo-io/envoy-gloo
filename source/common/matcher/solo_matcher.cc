@@ -2,7 +2,6 @@
 
 #include "source/common/common/logger.h"
 #include "source/common/common/regex.h"
-#include "source/common/config/version_converter.h"
 #include "source/common/router/config_impl.h"
 
 #include "absl/strings/match.h"
@@ -188,13 +187,6 @@ Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const
 }
 
 } // namespace
-
-MatcherConstPtr
-Matcher::create(const ::envoy::api::v2::route::RouteMatch &match) {
-  RouteMatch match2;
-  Config::VersionConverter::upgrade(match, match2);
-  return create(match2);
-}
 
 MatcherConstPtr Matcher::create(const RouteMatch &match) {
   switch (match.path_specifier_case()) {
