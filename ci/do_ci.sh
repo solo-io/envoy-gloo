@@ -18,7 +18,7 @@ cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
 cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
 
 # Copy the upstream contrib extensions
-cp -rf $UPSTREAM_ENVOY_SRCDIR/contrib/ $SOURCE_DIR/contrib/
+# cp -rf $UPSTREAM_ENVOY_SRCDIR/contrib/ $SOURCE_DIR/contrib/
 
 if [ -f $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh ]; then
   cp $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh bazel/
@@ -38,6 +38,11 @@ export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test
 
 # sudo apt-get install google-perftools -y
 # export PPROF_PATH=$(which google-pprof)
+
+# We do not need/want to build the Envoy contrib filters so we replace the
+# associated targets with the ENVOY_BUILD values
+export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
+export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 
 echo Building
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
