@@ -42,7 +42,7 @@ timeout: 7200s
 artifacts:
   objects:
     location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
-    paths: ['linux/amd64/build_release/envoy']
+    paths: ['linux/amd64/build_envoy_release/envoy']
 
 availableSecrets:
   inline:
