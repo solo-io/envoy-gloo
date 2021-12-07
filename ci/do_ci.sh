@@ -17,8 +17,8 @@ cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
 
 cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
 
-
-
+# Copy the upstream contrib extensions
+cp -f $UPSTREAM_ENVOY_SRCDIR/contrib/ $SOURCE_DIR/contrib/
 
 if [ -f $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh ]; then
   cp $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh bazel/
@@ -40,5 +40,4 @@ export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test
 # export PPROF_PATH=$(which google-pprof)
 
 echo Building
-export ENVOY_CONTRIB_BUILD_TARGET=//source/exe:envoy-static
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
