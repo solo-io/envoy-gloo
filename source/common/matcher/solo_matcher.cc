@@ -174,11 +174,6 @@ private:
   const std::regex regex_;
 };
 
-Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const std::string& regex,
-                                                           std::regex::flag_type flags) {
-  return std::make_unique<CompiledStdMatcher>(Regex::Utility::parseStdRegex(regex, flags));
-}
-
 } // namespace
 
 MatcherConstPtr Matcher::create(const RouteMatch &match) {
