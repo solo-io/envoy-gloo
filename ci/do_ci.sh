@@ -17,8 +17,6 @@ cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
 
 cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
 
-# Copy the upstream contrib extensions
-# cp -rf $UPSTREAM_ENVOY_SRCDIR/contrib/ $SOURCE_DIR/contrib/
 
 if [ -f $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh ]; then
   cp $UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh bazel/
