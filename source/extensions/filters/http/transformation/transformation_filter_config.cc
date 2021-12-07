@@ -100,7 +100,7 @@ public:
 
 private:
   std::vector<Http::HeaderUtility::HeaderDataPtr> headers_;
-  absl::optional<Matchers::StringMatcher> response_code_details_match_;
+  absl::optional<Matchers::StringMatcherImpl<envoy::type::matcher::v3::StringMatcher>> response_code_details_match_;
 };
 
 ResponseMatcherImpl::ResponseMatcherImpl(
