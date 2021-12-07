@@ -37,7 +37,8 @@ export NUM_CPUS=10
 export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --jobs=${NUM_CPUS}"
 
 # sudo apt-get install google-perftools -y
-# export PPROF_PATH=$(which google-pprof) 
+# export PPROF_PATH=$(which google-pprof)
 
 echo Building
+export ENVOY_CONTRIB_BUILD_TARGET=//source/exe:envoy-static
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
