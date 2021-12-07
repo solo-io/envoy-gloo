@@ -119,16 +119,9 @@ private:
 class RegexMatcherImpl : public BaseMatcherImpl {
 public:
   RegexMatcherImpl(const RouteMatch &match) : BaseMatcherImpl(match) {
-    if (match.path_specifier_case() ==
-        RouteMatch::kHiddenEnvoyDeprecatedRegex) {
-      regex_ = parseStdRegexAsCompiledMatcher(
-          match.hidden_envoy_deprecated_regex());
-      regex_str_ = match.hidden_envoy_deprecated_regex();
-    } else {
-      ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
-      regex_ = Regex::Utility::parseRegex(match.safe_regex());
-      regex_str_ = match.safe_regex().regex();
-    }
+    ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
+    regex_ = Regex::Utility::parseRegex(match.safe_regex());
+    regex_str_ = match.safe_regex().regex();
   }
 
   bool matches(const Http::RequestHeaderMap &headers) const override {
@@ -194,7 +187,6 @@ MatcherConstPtr Matcher::create(const RouteMatch &match) {
     return std::make_shared<PrefixMatcherImpl>(match);
   case RouteMatch::PathSpecifierCase::kPath:
     return std::make_shared<PathMatcherImpl>(match);
-  case RouteMatch::PathSpecifierCase::kHiddenEnvoyDeprecatedRegex:
   case RouteMatch::PathSpecifierCase::kSafeRegex:
     return std::make_shared<RegexMatcherImpl>(match);
   // path specifier is required.

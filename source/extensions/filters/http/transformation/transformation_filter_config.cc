@@ -16,7 +16,7 @@ namespace HttpFilters {
 namespace Transformation {
 
 TransformerConstSharedPtr Transformation::getTransformer(
-    const envoy::api::v2::filter::http::Transformation &transformation, 
+    const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
@@ -100,7 +100,7 @@ public:
 
 private:
   std::vector<Http::HeaderUtility::HeaderDataPtr> headers_;
-  absl::optional<Matchers::StringMatcherImpl> response_code_details_match_;
+  absl::optional<Matchers::StringMatcher> response_code_details_match_;
 };
 
 ResponseMatcherImpl::ResponseMatcherImpl(
@@ -138,7 +138,7 @@ ResponseMatcherConstPtr ResponseMatcher::create(
 }
 
 RouteTransformationFilterConfig::RouteTransformationFilterConfig(
-    RouteTransformationConfigProto proto_config, 
+    RouteTransformationConfigProto proto_config,
     Server::Configuration::ServerFactoryContext &context) {
 
   if (proto_config.transformations_size() == 0) {
