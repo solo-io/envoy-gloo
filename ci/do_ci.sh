@@ -34,13 +34,13 @@ export NUM_CPUS=10
 # google cloud build doesn't like ipv6
 export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --jobs=${NUM_CPUS}"
 
-# sudo apt-get install google-perftools -y
-# export PPROF_PATH=$(which google-pprof)
-
 # We do not need/want to build the Envoy contrib filters so we replace the
 # associated targets with the ENVOY_BUILD values
 export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
 export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
+
+# sudo apt-get install google-perftools -y
+# export PPROF_PATH=$(which google-pprof)
 
 echo Building
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
