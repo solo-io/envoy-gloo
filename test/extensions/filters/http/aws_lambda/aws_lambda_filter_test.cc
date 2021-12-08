@@ -414,7 +414,7 @@ TEST_F(AWSLambdaFilterTest, UpstreamErrorSetTo504) {
     {":path", "/path"}};
   auto res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
-  EXPECT_EQ(response_headers.get_(":status"), "504");
+  EXPECT_EQ(response_headers.getStatusValue(), "504");
   
 }
 
