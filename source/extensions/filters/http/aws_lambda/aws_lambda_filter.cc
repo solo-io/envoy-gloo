@@ -164,7 +164,6 @@ void AWSLambdaFilter::onSuccess(
                                        RcDetails::get().CredentialsNotFound);
     return;
   }
- 
   aws_authenticator_.init(access_key, secret_key, session_token);
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
@@ -236,7 +235,6 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
 }
 
 void AWSLambdaFilter::lambdafy() {
-  
   handleDefaultBody();
 
   const std::string &invocation_type =
