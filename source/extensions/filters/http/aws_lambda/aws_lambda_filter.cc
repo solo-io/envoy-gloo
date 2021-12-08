@@ -126,7 +126,7 @@ Http::FilterHeadersStatus
 AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
 
   if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
-    // We treat upstream errors as if it was any other upstream error
+    // We treat upstream function errors as if it was any other upstream error
     headers.setStatus(504);
     return Http::FilterHeadersStatus::Continue;
   }
