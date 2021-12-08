@@ -402,6 +402,22 @@ TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
             filter_->decodeHeaders(headers, true));
 }
 
+TEST_F(AWSLambdaFilterTest, UpstreamErrorSetTo504) {
+  setup_func();
+
+  Http::TestResponseHeaderMapImpl response_headers{
+    {"content-type", "test"},
+    {":method", "GET"},
+    {":authority", "www.solo.io"},
+    {":status", "200"},
+    {"x-amz-function-error", "fakerr"},
+    {":path", "/path"}};
+  auto res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(response_headers.getStatusValue(), "504");
+  
+}
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions
