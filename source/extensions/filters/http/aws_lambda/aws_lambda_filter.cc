@@ -130,7 +130,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
     headers.setStatus(504);
     return Http::FilterHeadersStatus::Continue;
   }
-  return Http::FilterHeadersStatus::StopIteration;
+  return Http::FilterHeadersStatus::Continue;
 }
 
 void AWSLambdaFilter::onSuccess(
