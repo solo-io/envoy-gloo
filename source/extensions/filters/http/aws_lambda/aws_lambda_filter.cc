@@ -133,16 +133,6 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
   return Http::FilterHeadersStatus::StopIteration;
 }
 
-Http::FilterDataStatus AWSLambdaFilter::encodeData(Buffer::Instance &,
-                                                        bool ) {
-  return Http::FilterDataStatus::Continue;
-}
-
-Http::FilterTrailersStatus
-AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
-  return Http::FilterTrailersStatus::StopIteration;
-}
-
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
