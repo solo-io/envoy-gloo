@@ -118,14 +118,15 @@ void AWSLambdaConfigImpl::loadSTSData() {
   }
 }
 
-void AWSLambdaConfigImpl::init() {
+void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
   if (sts_enabled_) {
-    // Add file watcher for token file
+    // Set up a filewatch and timer for sts token upating.
     auto shared_this = shared_from_this();
-    file_watcher_->addWatch(
-        token_file_, Filesystem::Watcher::Events::Modified,
-        [shared_this](uint32_t) {
-          try {
+
+    // While the filewatch should be sufficient we have seen instances where the calls are dropped.
+    // Given the usual usage of sts this should only be of concern when web token is self managed.
+    shared_this->timer_ = dispatcher.createTimer([shared_this] { 
+        try {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
             shared_this->tls_.runOnAllThreads(
@@ -137,9 +138,21 @@ void AWSLambdaConfigImpl::init() {
           } catch (const EnvoyException &e) {
             ENVOY_LOG_TO_LOGGER(
                 Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
-                "{}: Exception while reading file during watch ({}): {}",
+                "{}: Exception while reading web token file ({}): {}",
                 __func__, shared_this->token_file_, e.what());
           }
+
+        // re-enable refresh te timer with paranoid short time
+        // Time decided given min plausible web_token life of 1 hour in AWS
+        shared_this->timer_->enableTimer(REFRESH_AWS_CREDS);
+     });
+
+    shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
+    file_watcher_->addWatch(
+        token_file_, Filesystem::Watcher::Events::Modified,
+        [shared_this](uint32_t) {
+          // Force timer callback
+          shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
         });
   }
 }
@@ -233,7 +246,7 @@ std::shared_ptr<AWSLambdaConfigImpl> AWSLambdaConfigImpl::create(
   std::shared_ptr<AWSLambdaConfigImpl> ptr(new AWSLambdaConfigImpl(
       std::move(provider), std::move(sts_factory), dispatcher, api, tls,
       stats_prefix, scope, protoconfig));
-  ptr->init();
+  ptr->init(dispatcher);
   return ptr;
 }
 

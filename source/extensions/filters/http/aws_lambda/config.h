@@ -125,7 +125,7 @@ private:
 
   void timerCallback();
 
-  void init();
+  void init(Event::Dispatcher &dispatcher);
 
   void loadSTSData();
 
