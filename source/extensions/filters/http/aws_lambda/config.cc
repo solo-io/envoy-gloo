@@ -43,6 +43,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     : stats_(generateStats(stats_prefix, scope)), api_(api),
       file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls) {
 
+  propagateOriginalRouting_ = protoconfig.propagate_original_routing().value();
+
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
   switch (protoconfig.credentials_fetcher_case()) {

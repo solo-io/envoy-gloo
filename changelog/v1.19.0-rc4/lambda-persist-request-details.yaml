@@ -1,0 +1,8 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/5560
+  resolvesIssue: false
+  description: >
+    Adds lambda option to persist the original request info that otherwise gets lost.
+    Set as an option to avoid leaking potentially sensitive path info by default.
+    Implemented here to allow for usage within access logs.

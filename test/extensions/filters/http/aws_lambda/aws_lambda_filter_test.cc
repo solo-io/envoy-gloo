@@ -257,6 +257,29 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
+TEST_F(AWSLambdaFilterTest, PersistOriginalHeaders) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+
+  setup_func();
+  filter_config_->propagateOriginalRouting_ = true;
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(headers, true));
+  EXPECT_EQ("/getsomething", headers.get_("x-envoy-original-path"));
+}
+TEST_F(AWSLambdaFilterTest, DontPersistOriginalHeaders) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+
+  setup_func();
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+  EXPECT_EQ("", headers.get_("x-envoy-original-path"));
+}
+
 TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

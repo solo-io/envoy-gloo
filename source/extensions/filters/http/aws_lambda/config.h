@@ -74,6 +74,7 @@ public:
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
                  StsConnectionPool::Context::Callbacks *callbacks) const PURE;
   virtual ~AWSLambdaConfig() = default;
+  bool propagateOriginalRouting_;  
 };
 
 class AWSLambdaConfigImpl
