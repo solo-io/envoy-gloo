@@ -147,11 +147,12 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
         shared_this->timer_->enableTimer(REFRESH_AWS_CREDS);
      });
 
-    shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
+    // loadSTSData has already happened so set the timer to the standard refresh time.
+    shared_this->timer_->enableTimer(REFRESH_AWS_CREDS);
     file_watcher_->addWatch(
         token_file_, Filesystem::Watcher::Events::Modified,
         [shared_this](uint32_t) {
-          // Force timer callback
+          // Force timer callback to happen immediately to pick up the change.
           shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
         });
   }
