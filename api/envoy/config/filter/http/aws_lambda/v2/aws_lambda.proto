@@ -83,8 +83,7 @@ message AWSLambdaConfig {
     google.protobuf.Duration timeout = 3;
   }
 
-    // Set original route information as headers on the request.
-    // If set this information is passed along to AWS.
-    // As a result this can be used for pretty access_logging.
+    // Send downstream method and path as `x-envoy-original-path` and ... 
+    // headers on the request to AWS lambda. Defaults to false.
     google.protobuf.BoolValue propagate_original_routing = 3;
 }
