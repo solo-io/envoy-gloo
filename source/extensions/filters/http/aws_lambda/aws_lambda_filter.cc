@@ -43,6 +43,7 @@ public:
   const Http::LowerCaseString LogType{"x-amz-log-type"};
   const std::string LogNone{"None"};
   const Http::LowerCaseString HostHead{"x-amz-log-type"};
+  const Http::LowerCaseString FunctionError{"x-amz-function-error"};
 };
 
 typedef ConstSingleton<AWSLambdaHeaderValues> AWSLambdaHeaderNames;
@@ -120,6 +121,17 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
+
+Http::FilterHeadersStatus 
+AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
+
+  if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
+    // We treat upstream function errors as if it was any other upstream error
+    headers.setStatus(504);
+  }
+  return Http::FilterHeadersStatus::Continue;
+}
+
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
@@ -151,7 +163,6 @@ void AWSLambdaFilter::onSuccess(
                                        RcDetails::get().CredentialsNotFound);
     return;
   }
-
   aws_authenticator_.init(access_key, secret_key, session_token);
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
@@ -223,7 +234,6 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
 }
 
 void AWSLambdaFilter::lambdafy() {
-
   handleDefaultBody();
 
   const std::string &invocation_type =

@@ -29,7 +29,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
   return
       [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-        callbacks.addStreamDecoderFilter(std::make_shared<AWSLambdaFilter>(
+        callbacks.addStreamFilter(std::make_shared<AWSLambdaFilter>(
             context.clusterManager(), context.api(), config));
       };
 }
