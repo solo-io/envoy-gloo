@@ -41,7 +41,10 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
     : stats_(generateStats(stats_prefix, scope)), api_(api),
-      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls) {
+      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls),
+      credential_refresh_delay_(std::chrono::milliseconds(
+        DurationUtil::durationToMilliseconds(
+          protoconfig.credential_refresh_delay()))){
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -144,11 +147,18 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
 
         // re-enable refresh te timer with paranoid short time
         // Time decided given min plausible web_token life of 1 hour in AWS
-        shared_this->timer_->enableTimer(REFRESH_AWS_CREDS);
+        if (shared_this->credential_refresh_delay_.count() > 0){
+            shared_this->timer_->enableTimer(
+                                shared_this->credential_refresh_delay_);
+        }
      });
-
-    // loadSTSData has already happened so set the timer to the standard refresh time.
-    shared_this->timer_->enableTimer(REFRESH_AWS_CREDS);
+    if (credential_refresh_delay_.count() > 0){
+          ENVOY_LOG(debug, "{}: STS enabled with {} time refresh",
+       __func__, shared_this->credential_refresh_delay_.count());
+      shared_this->timer_->enableTimer(shared_this->credential_refresh_delay_);
+    }else{
+        ENVOY_LOG(debug, "{}: STS enabled without time based refresh",__func__);
+    }
     file_watcher_->addWatch(
         token_file_, Filesystem::Watcher::Events::Modified,
         [shared_this](uint32_t) {

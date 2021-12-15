@@ -83,4 +83,9 @@ message AWSLambdaConfig {
     google.protobuf.Duration timeout = 3;
   }
 
+  // Sets cadence for refreshing credentials for Service Account.
+  // Does nothing if Service account is not set.
+  // Does not affect the default filewatch for service account only augments it.
+  // Defaults to not refreshing on time period. Suggested is 14 minutes.
+  google.protobuf.Duration credential_refresh_delay = 3;
 }
