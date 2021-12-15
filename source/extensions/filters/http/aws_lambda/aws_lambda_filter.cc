@@ -55,10 +55,9 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 Api::Api &api, bool should_propagate_origin,
+                                 Api::Api &api,
                                  AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager), 
-      propagate_original_routing_(should_propagate_origin), 
+    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),  
       filter_config_(filter_config){}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
@@ -166,7 +165,7 @@ void AWSLambdaFilter::onSuccess(
   }
   aws_authenticator_.init(access_key, secret_key, session_token);
 
-  if (propagate_original_routing_){
+  if (filter_config_->ShouldPropagateOrigin()){
     request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
     request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
                                       request_headers_->getMethodValue());

@@ -26,8 +26,7 @@ class AWSLambdaFilter : public Http::StreamFilter,
                         StsConnectionPool::Context::Callbacks,
                         Logger::Loggable<Logger::Id::filter> {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
-                  bool should_propagate_origin, 
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api, 
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -94,7 +93,6 @@ private:
   Router::RouteConstSharedPtr route_;
   const AWSLambdaRouteConfig *function_on_route_{};
   bool has_body_{};
-  bool propagate_original_routing_;  
 
   AWSLambdaConfigConstSharedPtr filter_config_;
 
