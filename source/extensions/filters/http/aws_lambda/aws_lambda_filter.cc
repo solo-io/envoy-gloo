@@ -132,6 +132,10 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
   return Http::FilterHeadersStatus::Continue;
 }
 
+Http::FilterDataStatus AWSLambdaFilter::encodeData(Buffer::Instance &, bool ){  
+  return Http::FilterDataStatus::Continue;
+}
+
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {

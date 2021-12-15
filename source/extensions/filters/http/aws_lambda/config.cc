@@ -252,7 +252,7 @@ AWSLambdaRouteConfig::AWSLambdaRouteConfig(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
         &protoconfig)
     : path_(functionUrlPath(protoconfig.name(), protoconfig.qualifier())),
-      async_(protoconfig.async()) {
+      async_(protoconfig.async()), unwrap_as_alb_(protoconfig.unwrap_as_alb()) {
 
   if (protoconfig.has_empty_body_override()) {
     default_body_ = protoconfig.empty_body_override().value();

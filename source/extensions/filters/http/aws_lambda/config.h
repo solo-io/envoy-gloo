@@ -170,10 +170,12 @@ public:
   const absl::optional<std::string> &defaultBody() const {
     return default_body_;
   }
+  bool unwrapAsAlb() const { return unwrap_as_alb_; }
 
 private:
   std::string path_;
   bool async_;
+  bool unwrap_as_alb_;
   absl::optional<std::string> default_body_;
 
   static std::string functionUrlPath(const std::string &name,
