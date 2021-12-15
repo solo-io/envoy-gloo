@@ -3,6 +3,8 @@ changelog:
   issueLink: https://github.com/solo-io/gloo/issues/5560
   resolvesIssue: false
   description: >
-    Adds lambda option to persist the original request info that otherwise gets lost.
-    Set as an option to avoid leaking potentially sensitive path info by default.
-    Implemented here to allow for usage within access logs.
+    Adds lambda option to persist original request info that otherwise is lost.
+    Defaults to false to avoid leaking potentially sensitive info.
+    Follows envoy x-forwarded's example and may need to be false when 
+    envoy is in a mesh deployment.
+    Implemented here to allow for usage of original request path in access logs.
