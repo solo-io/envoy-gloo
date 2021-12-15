@@ -41,6 +41,11 @@ public:
 
   CredentialsConstSharedPtr credentials_;
   mutable bool called_{};
+
+  bool propagateOriginalRouting() const override{
+    return propagate_original_routing_;
+  }
+  bool propagate_original_routing_;
 };
 
 class AWSLambdaFilterTest : public testing::Test {
@@ -51,7 +56,7 @@ protected:
   void SetUp() override { setupRoute(); }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
-                  bool should_propagate_origin = false) {
+                  bool persistOriginalHeaders = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
@@ -78,6 +83,8 @@ protected:
                 "access key", "secret key");
       }
     }
+    
+    filter_config_->propagate_original_routing_=persistOriginalHeaders;
 
     ON_CALL(
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
@@ -88,7 +95,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_, factory_context_.api_,
-        should_propagate_origin, filter_config_);
+        filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -258,17 +265,16 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
-TEST_F(AWSLambdaFilterTest, PersistOriginalHeaders) {
+TEST_F(AWSLambdaFilterTest, PropagateOriginalHeaders) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-
 
   setupRoute(false, false, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(headers, true));
   EXPECT_EQ("/getsomething", headers.get_("x-envoy-original-path"));
 }
-TEST_F(AWSLambdaFilterTest, DontPersistOriginalHeaders) {
+TEST_F(AWSLambdaFilterTest, DontPropagateOriginalHeaders) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
