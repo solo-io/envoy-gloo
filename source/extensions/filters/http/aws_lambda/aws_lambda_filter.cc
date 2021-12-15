@@ -55,10 +55,10 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
          Http::Headers::get().ContentType});
 
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
-                                 Api::Api &api, bool shouldPropagateOrgin,
+                                 Api::Api &api, bool should_propagate_origin,
                                  AWSLambdaConfigConstSharedPtr filter_config)
     : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager), 
-      propagate_original_routing_(shouldPropagateOrgin), filter_config_(filter_config){}
+      propagate_original_routing_(should_propagate_origin), filter_config_(filter_config){}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 

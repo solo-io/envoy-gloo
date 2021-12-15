@@ -26,12 +26,12 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
                                             context.clusterManager()),
       context.dispatcher(), context.api(), context.threadLocal(), stats_prefix,
       context.scope(), proto_config);
-  auto shouldPropagateOrgin = proto_config.propagate_original_routing().value();
+  auto should_propagate_origin = proto_config.propagate_original_routing().value();
   return
-      [&context, shouldPropagateOrgin, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
+      [&context, should_propagate_origin, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
         callbacks.addStreamFilter(std::make_shared<AWSLambdaFilter>(
             context.clusterManager(), context.api(),
-            shouldPropagateOrgin, config));
+            should_propagate_origin, config));
       };
 }
 

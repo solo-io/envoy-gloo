@@ -51,7 +51,7 @@ protected:
   void SetUp() override { setupRoute(); }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
-                  bool shouldPropagateOrigin = false) {
+                  bool should_propagate_origin = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
@@ -88,7 +88,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_, factory_context_.api_,
-        shouldPropagateOrigin, filter_config_);
+        should_propagate_origin, filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 

@@ -27,7 +27,7 @@ class AWSLambdaFilter : public Http::StreamFilter,
                         Logger::Loggable<Logger::Id::filter> {
 public:
   AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
-                  bool shouldPropagateOrgin, 
+                  bool should_propagate_origin, 
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
