@@ -165,7 +165,7 @@ void AWSLambdaFilter::onSuccess(
   }
   aws_authenticator_.init(access_key, secret_key, session_token);
 
-  if (filter_config_->ShouldPropagateOrigin()){
+  if (filter_config_->propagateOriginalRouting()){
     request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
     request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
                                       request_headers_->getMethodValue());

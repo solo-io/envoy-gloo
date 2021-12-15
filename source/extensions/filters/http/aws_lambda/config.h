@@ -73,7 +73,7 @@ public:
   virtual StsConnectionPool::Context *
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
                  StsConnectionPool::Context::Callbacks *callbacks) const PURE;
-  virtual bool ShouldPropagateOrigin() const PURE;
+  virtual bool propagateOriginalRouting() const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -98,7 +98,7 @@ public:
       SharedAWSLambdaProtocolExtensionConfig ext_cfg,
       StsConnectionPool::Context::Callbacks *callbacks) const override;
 
-    bool ShouldPropagateOrigin() const override{
+    bool propagateOriginalRouting() const override{
       return propagate_original_routing_;
     }
 
