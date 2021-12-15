@@ -50,7 +50,8 @@ public:
 protected:
   void SetUp() override { setupRoute(); }
 
-  void setupRoute(bool sessionToken = false, bool noCredentials = false) {
+  void setupRoute(bool sessionToken = false, bool noCredentials = false,
+                  bool shouldPropagateOrigin = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
@@ -87,7 +88,7 @@ protected:
 
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_, factory_context_.api_,
-        filter_config_);
+        shouldPropagateOrigin, filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
 
@@ -263,8 +264,7 @@ TEST_F(AWSLambdaFilterTest, PersistOriginalHeaders) {
                                          {":path", "/getsomething"}};
 
 
-  setup_func();
-  filter_config_->propagateOriginalRouting_ = true;
+  setupRoute(false, false, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(headers, true));
   EXPECT_EQ("/getsomething", headers.get_("x-envoy-original-path"));
 }
@@ -274,7 +274,7 @@ TEST_F(AWSLambdaFilterTest, DontPersistOriginalHeaders) {
                                          {":path", "/getsomething"}};
 
 
-  setup_func();
+  setupRoute();
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));
   EXPECT_EQ("", headers.get_("x-envoy-original-path"));
