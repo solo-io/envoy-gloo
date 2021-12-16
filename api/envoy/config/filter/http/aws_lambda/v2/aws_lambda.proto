@@ -86,5 +86,5 @@ message AWSLambdaConfig {
   // Send downstream path and method as `x-envoy-original-path` and
   // `x-envoy-original-method` headers on the request to AWS lambda. 
   // Defaults to false.
-  google.protobuf.BoolValue propagate_original_routing = 3;
+  bool propagate_original_routing = 3;
 }
