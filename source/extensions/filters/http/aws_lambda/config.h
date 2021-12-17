@@ -73,6 +73,7 @@ public:
   virtual StsConnectionPool::Context *
   getCredentials(SharedAWSLambdaProtocolExtensionConfig ext_cfg,
                  StsConnectionPool::Context::Callbacks *callbacks) const PURE;
+  virtual bool propagateOriginalRouting() const PURE;
   virtual ~AWSLambdaConfig() = default;
 };
 
@@ -96,6 +97,10 @@ public:
   StsConnectionPool::Context *getCredentials(
       SharedAWSLambdaProtocolExtensionConfig ext_cfg,
       StsConnectionPool::Context::Callbacks *callbacks) const override;
+
+    bool propagateOriginalRouting() const override{
+      return propagate_original_routing_;
+    }
 
 private:
   AWSLambdaConfigImpl(
@@ -149,6 +154,8 @@ private:
 
   std::unique_ptr<StsCredentialsProviderFactory> sts_factory_;
   std::chrono::milliseconds credential_refresh_delay_;
+
+  bool propagate_original_routing_;
 };
 
 typedef std::shared_ptr<const AWSLambdaConfig> AWSLambdaConfigConstSharedPtr;

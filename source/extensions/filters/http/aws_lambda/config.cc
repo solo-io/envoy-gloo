@@ -44,7 +44,9 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls),
       credential_refresh_delay_(std::chrono::milliseconds(
         DurationUtil::durationToMilliseconds(
-          protoconfig.credential_refresh_delay()))){
+          protoconfig.credential_refresh_delay()))),
+          propagate_original_routing_(protoconfig.propagate_original_routing()){
+
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
