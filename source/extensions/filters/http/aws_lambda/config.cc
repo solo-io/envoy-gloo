@@ -158,7 +158,7 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
           ENVOY_LOG(debug, "{}: STS enabled with {} time refresh",
        __func__, shared_this->credential_refresh_delay_.count());
       shared_this->timer_->enableTimer(shared_this->credential_refresh_delay_);
-    }else{
+    } else {
         ENVOY_LOG(debug, "{}: STS enabled without time based refresh",__func__);
     }
     file_watcher_->addWatch(
