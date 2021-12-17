@@ -41,7 +41,10 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
     : stats_(generateStats(stats_prefix, scope)), api_(api),
-      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls) {
+      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls),
+      propagate_original_routing_(
+        protoconfig.propagate_original_routing()){
+
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data

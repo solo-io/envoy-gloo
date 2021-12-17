@@ -57,8 +57,8 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
                                  Api::Api &api,
                                  AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),
-      filter_config_(filter_config) {}
+    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),  
+      filter_config_(filter_config){}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
@@ -164,6 +164,12 @@ void AWSLambdaFilter::onSuccess(
     return;
   }
   aws_authenticator_.init(access_key, secret_key, session_token);
+
+  if (filter_config_->propagateOriginalRouting()){
+    request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
+    request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
+                                      request_headers_->getMethodValue());
+  }
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
 

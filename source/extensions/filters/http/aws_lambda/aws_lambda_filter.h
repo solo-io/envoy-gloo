@@ -26,7 +26,7 @@ class AWSLambdaFilter : public Http::StreamFilter,
                         StsConnectionPool::Context::Callbacks,
                         Logger::Loggable<Logger::Id::filter> {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api, 
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -59,7 +59,8 @@ public:
     return Http::FilterDataStatus::Continue;
   }
 
-  Http::FilterTrailersStatus encodeTrailers(Http::ResponseTrailerMap &) override{
+  Http::FilterTrailersStatus
+  encodeTrailers(Http::ResponseTrailerMap &) override{
     return Http::FilterTrailersStatus::Continue;
   }
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
