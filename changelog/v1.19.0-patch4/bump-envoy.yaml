@@ -1,0 +1,6 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/gloo/issues/5618
+  resolvesIssue: true
+  description: >
+    Updates lambda to correctly handle upstream errors that are not encoded in status but rather in the error header.

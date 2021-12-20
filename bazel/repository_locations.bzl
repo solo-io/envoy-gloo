@@ -1,8 +1,8 @@
 REPOSITORY_LOCATIONS = dict(
-    # we depend on envoy 1.19.0 with the cve patches applied on top (https://github.com/solo-io/envoy-fork/commits/release/v1.19.0-patch), since 1.19.1 would pick up changes that break our transformation filter and its unit tests
+    # envoy 1.19.2, commit: https://github.com/envoyproxy/envoy/commit/7f2d69f96843583d109082e89aecb6cd52365eb2
     envoy = dict(
-        commit = "a837c56012d86284b8c6a1b7da87ee7c18c23d43",
-        remote = "https://github.com/solo-io/envoy-fork",
+        commit = "7f2d69f96843583d109082e89aecb6cd52365eb2",
+        remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
         commit = "4c0ee3a46c0bbb279b0849e5a659e52684a37a98",

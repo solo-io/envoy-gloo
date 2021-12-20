@@ -43,6 +43,7 @@ public:
   const Http::LowerCaseString LogType{"x-amz-log-type"};
   const std::string LogNone{"None"};
   const Http::LowerCaseString HostHead{"x-amz-log-type"};
+  const Http::LowerCaseString FunctionError{"x-amz-function-error"};
 };
 
 typedef ConstSingleton<AWSLambdaHeaderValues> AWSLambdaHeaderNames;
@@ -56,8 +57,8 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
                                  Api::Api &api,
                                  AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),
-      filter_config_(filter_config) {}
+    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),  
+      filter_config_(filter_config){}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}
 
@@ -120,6 +121,17 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   return Http::FilterHeadersStatus::StopIteration;
 }
 
+
+Http::FilterHeadersStatus 
+AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
+
+  if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
+    // We treat upstream function errors as if it was any other upstream error
+    headers.setStatus(504);
+  }
+  return Http::FilterHeadersStatus::Continue;
+}
+
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
@@ -151,8 +163,13 @@ void AWSLambdaFilter::onSuccess(
                                        RcDetails::get().CredentialsNotFound);
     return;
   }
-
   aws_authenticator_.init(access_key, secret_key, session_token);
+
+  if (filter_config_->propagateOriginalRouting()){
+    request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
+    request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
+                                      request_headers_->getMethodValue());
+  }
 
   request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
 
@@ -223,7 +240,6 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
 }
 
 void AWSLambdaFilter::lambdafy() {
-
   handleDefaultBody();
 
   const std::string &invocation_type =

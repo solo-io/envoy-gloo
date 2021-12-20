@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 
+#include "envoy/server/filter_config.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
 
@@ -21,11 +22,11 @@ namespace AwsLambda {
  * A filter to make calls to AWS Lambda. Note that as a functional filter,
  * it expects retrieveFunction to be called before decodeHeaders.
  */
-class AWSLambdaFilter : public Http::StreamDecoderFilter,
+class AWSLambdaFilter : public Http::StreamFilter,
                         StsConnectionPool::Context::Callbacks,
                         Logger::Loggable<Logger::Id::filter> {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api, 
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -46,6 +47,28 @@ public:
       Http::StreamDecoderFilterCallbacks &decoder_callbacks) override {
     decoder_callbacks_ = &decoder_callbacks;
   }
+
+   // Http::StreamEncoderFilter
+  Http::FilterHeadersStatus
+  encode100ContinueHeaders(Http::ResponseHeaderMap &) override {
+    return Http::FilterHeadersStatus::Continue;
+  }
+  Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap &headers,
+                                          bool end_stream) override;
+  Http::FilterDataStatus encodeData(Buffer::Instance &, bool ) override{
+    return Http::FilterDataStatus::Continue;
+  }
+
+  Http::FilterTrailersStatus
+  encodeTrailers(Http::ResponseTrailerMap &) override{
+    return Http::FilterTrailersStatus::Continue;
+  }
+  Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
+    return Http::FilterMetadataStatus::Continue;
+  }
+
+  void setEncoderFilterCallbacks(
+      Http::StreamEncoderFilterCallbacks &) override {  };
 
   void
   onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>

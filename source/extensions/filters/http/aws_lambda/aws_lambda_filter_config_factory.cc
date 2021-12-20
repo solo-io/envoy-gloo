@@ -26,10 +26,10 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
                                             context.clusterManager()),
       context.dispatcher(), context.api(), context.threadLocal(), stats_prefix,
       context.scope(), proto_config);
-
   return
-      [&context, config](Http::FilterChainFactoryCallbacks &callbacks) -> void {
-        callbacks.addStreamDecoderFilter(std::make_shared<AWSLambdaFilter>(
+      [&context, config]
+      (Http::FilterChainFactoryCallbacks &callbacks) -> void {
+        callbacks.addStreamFilter(std::make_shared<AWSLambdaFilter>(
             context.clusterManager(), context.api(), config));
       };
 }
