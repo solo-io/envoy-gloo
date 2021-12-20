@@ -12,8 +12,8 @@ steps:
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
-  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_release_stripped/envoy ci/envoy.stripped && make docker-release']
-  env: 
+  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
+  env:
   - 'TAGGED_VERSION=$TAG_NAME'
   - 'COMMIT_SHA=$COMMIT_SHA'
   - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
@@ -30,9 +30,9 @@ steps:
   - '-ec'
   - |
     if [ -z "$$TAGGED_VERSION" ]; then exit 0; fi
-    gsutil cp ./linux/amd64/build_release_stripped/envoy gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
+    gsutil cp ./linux/amd64/build_envoy_release_stripped/envoy gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
   id: 'save-tagged-version'
-  env: 
+  env:
   - 'TAGGED_VERSION=$TAG_NAME'
 
 options:
@@ -42,7 +42,7 @@ timeout: 7200s
 artifacts:
   objects:
     location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
-    paths: ['linux/amd64/build_release/envoy']
+    paths: ['linux/amd64/build_envoy_release/envoy']
 
 availableSecrets:
   inline:

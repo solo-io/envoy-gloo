@@ -1,6 +1,5 @@
 #pragma once
 
-#include "envoy/api/v2/route/route.pb.h"
 #include "envoy/config/route/v3/route.pb.h"
 #include "envoy/http/header_map.h"
 
@@ -34,8 +33,6 @@ public:
    * @return the matcher instance.
    */
 
-  static MatcherConstPtr
-  create(const ::envoy::api::v2::route::RouteMatch &match);
   static MatcherConstPtr
   create(const ::envoy::config::route::v3::RouteMatch &match);
 };
