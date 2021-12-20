@@ -3,6 +3,7 @@ changelog:
   issueLink: https://github.com/solo-io/gloo/issues/5253
   resolvesIssue: false
   description: >
-    Add new sts refresh timer in addition to filewatch.
-    The extra overhead is countered by the fact that file events sometimes seem to be lost.
-    Should mitigate users having stale credentials without going full paranoia mode of refreshing on expired creds.
+    Add new sts refresh timer in addition to filewatch. The extra overhead is
+    countered by the fact that file events sometimes seem to be lost. The
+    new behavior is only applied if the refresh time is set and should mitigate
+    instances of stale credentials.
