@@ -75,7 +75,7 @@ public:
     config_helper_.addConfigModifier(
         [](envoy::extensions::filters::network::http_connection_manager::v3::
                HttpConnectionManager &hcm) {
-          auto &perFilterConfig = (*hcm.mutable_route_config()
+          auto &mostSpecificPerFilterConfig = (*hcm.mutable_route_config()
                                         ->mutable_virtual_hosts(0)
                                         ->mutable_routes(0)
                                         ->mutable_typed_per_filter_config())
@@ -85,7 +85,7 @@ public:
               proto_config;
           proto_config.set_name("FunctionName");
           proto_config.set_qualifier("v1");
-          perFilterConfig.PackFrom(proto_config);
+          mostSpecificPerFilterConfig.PackFrom(proto_config);
         });
 
     HttpIntegrationTest::initialize();

@@ -41,6 +41,11 @@ public:
 
   CredentialsConstSharedPtr credentials_;
   mutable bool called_{};
+
+  bool propagateOriginalRouting() const override{
+    return propagate_original_routing_;
+  }
+  bool propagate_original_routing_;
 };
 
 class AWSLambdaFilterTest : public testing::Test {
@@ -50,7 +55,8 @@ public:
 protected:
   void SetUp() override { setupRoute(); }
 
-  void setupRoute(bool sessionToken = false, bool noCredentials = false) {
+  void setupRoute(bool sessionToken = false, bool noCredentials = false,
+                  bool persistOriginalHeaders = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
@@ -77,6 +83,8 @@ protected:
                 "access key", "secret key");
       }
     }
+    
+    filter_config_->propagate_original_routing_=persistOriginalHeaders;
 
     ON_CALL(
         *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
@@ -95,8 +103,8 @@ protected:
 
     filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
 
-    ON_CALL(filter_callbacks_.route_->route_entry_,
-            perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+    ON_CALL(*filter_callbacks_.route_,
+            mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
@@ -257,6 +265,27 @@ TEST_F(AWSLambdaFilterTest, SyncCalled) {
   EXPECT_EQ("RequestResponse", headers.get_("x-amz-invocation-type"));
 }
 
+TEST_F(AWSLambdaFilterTest, PropagateOriginalHeaders) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+  setupRoute(false, false, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(headers, true));
+  EXPECT_EQ("/getsomething", headers.get_("x-envoy-original-path"));
+}
+TEST_F(AWSLambdaFilterTest, DontPropagateOriginalHeaders) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+
+
+  setupRoute();
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+  EXPECT_EQ("", headers.get_("x-envoy-original-path"));
+}
+
 TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
@@ -279,8 +308,8 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {
   // invalid function
-  EXPECT_CALL(filter_callbacks_.route_->route_entry_,
-              perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+  EXPECT_CALL(*filter_callbacks_.route_,
+              mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillRepeatedly(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
@@ -371,8 +400,8 @@ TEST_F(AWSLambdaFilterTest, EmptyBodyWithTrailersGetsOverriden) {
 }
 
 TEST_F(AWSLambdaFilterTest, NoFunctionOnRoute) {
-  ON_CALL(filter_callbacks_.route_->route_entry_,
-          perFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+  ON_CALL(*filter_callbacks_.route_,
+          mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
       .WillByDefault(Return(nullptr));
 
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
@@ -400,6 +429,22 @@ TEST_F(AWSLambdaFilterTest, NoCredsAvailable) {
 
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, true));
+}
+
+TEST_F(AWSLambdaFilterTest, UpstreamErrorSetTo504) {
+  setup_func();
+
+  Http::TestResponseHeaderMapImpl response_headers{
+    {"content-type", "test"},
+    {":method", "GET"},
+    {":authority", "www.solo.io"},
+    {":status", "200"},
+    {"x-amz-function-error", "fakerr"},
+    {":path", "/path"}};
+  auto res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(response_headers.getStatusValue(), "504");
+  
 }
 
 } // namespace AwsLambda

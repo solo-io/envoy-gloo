@@ -24,7 +24,6 @@ envoy_gloo_cc_test(
     tags = ["manual"],
     deps = [
         "//test/common/buffer:buffer_utility_test_lib_internal_only",
-        "//test/common/http:solo_filter_utility_test_lib_internal_only",
         "//test/common/nats:codec_impl_test_lib_internal_only",
         "//test/common/nats:message_builder_test_lib_internal_only",
         "//test/common/nats:subject_utility_test_lib_internal_only",
@@ -41,7 +40,6 @@ envoy_gloo_cc_test(
         "//test/extensions/filters/http/nats/streaming:nats_streaming_filter_test_lib_internal_only",
         "//test/extensions/filters/http/transformation:body_header_transformer_test_lib_internal_only",
         "//test/extensions/filters/http/transformation:transformation_filter_test_lib_internal_only",
-        "//test/extensions/filters/http/transformation:transformer_test_lib_internal_only",
         "//test/integration:aws_lambda_filter_integration_test_lib_internal_only",
         "//test/integration:transformation_filter_integration_test_lib_internal_only",
     ],
