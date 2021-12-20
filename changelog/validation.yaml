@@ -1,5 +1,5 @@
 relaxSemverValidation: true
 allowedLabels:
-  - rc
   - patch
+  - rc
   - beta 
