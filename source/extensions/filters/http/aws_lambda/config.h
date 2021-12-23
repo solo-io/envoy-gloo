@@ -130,7 +130,7 @@ private:
 
   void timerCallback();
 
-  void init();
+  void init(Event::Dispatcher &dispatcher);
 
   void loadSTSData();
 
@@ -147,12 +147,13 @@ private:
   std::string token_file_;
   std::string web_token_;
   std::string role_arn_;
-
+  
   ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;
 
   Event::TimerPtr timer_;
 
   std::unique_ptr<StsCredentialsProviderFactory> sts_factory_;
+  std::chrono::milliseconds credential_refresh_delay_;
 
   bool propagate_original_routing_;
 };

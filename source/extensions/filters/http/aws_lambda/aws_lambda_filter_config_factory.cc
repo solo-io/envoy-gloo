@@ -24,7 +24,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
           context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
       StsCredentialsProviderFactory::create(context.api(),
                                             context.clusterManager()),
-      context.dispatcher(), context.api(), context.threadLocal(), stats_prefix,
+      context.mainThreadDispatcher(), context.api(), context.threadLocal(), stats_prefix,
       context.scope(), proto_config);
   return
       [&context, config]

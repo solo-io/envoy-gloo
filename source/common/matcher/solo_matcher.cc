@@ -2,7 +2,6 @@
 
 #include "source/common/common/logger.h"
 #include "source/common/common/regex.h"
-#include "source/common/config/version_converter.h"
 #include "source/common/router/config_impl.h"
 
 #include "absl/strings/match.h"
@@ -120,16 +119,9 @@ private:
 class RegexMatcherImpl : public BaseMatcherImpl {
 public:
   RegexMatcherImpl(const RouteMatch &match) : BaseMatcherImpl(match) {
-    if (match.path_specifier_case() ==
-        RouteMatch::kHiddenEnvoyDeprecatedRegex) {
-      regex_ = parseStdRegexAsCompiledMatcher(
-          match.hidden_envoy_deprecated_regex());
-      regex_str_ = match.hidden_envoy_deprecated_regex();
-    } else {
-      ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
-      regex_ = Regex::Utility::parseRegex(match.safe_regex());
-      regex_str_ = match.safe_regex().regex();
-    }
+    ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
+    regex_ = Regex::Utility::parseRegex(match.safe_regex());
+    regex_str_ = match.safe_regex().regex();
   }
 
   bool matches(const Http::RequestHeaderMap &headers) const override {
@@ -182,19 +174,7 @@ private:
   const std::regex regex_;
 };
 
-Regex::CompiledMatcherPtr RegexMatcherImpl::parseStdRegexAsCompiledMatcher(const std::string& regex,
-                                                           std::regex::flag_type flags) {
-  return std::make_unique<CompiledStdMatcher>(Regex::Utility::parseStdRegex(regex, flags));
-}
-
 } // namespace
-
-MatcherConstPtr
-Matcher::create(const ::envoy::api::v2::route::RouteMatch &match) {
-  RouteMatch match2;
-  Config::VersionConverter::upgrade(match, match2);
-  return create(match2);
-}
 
 MatcherConstPtr Matcher::create(const RouteMatch &match) {
   switch (match.path_specifier_case()) {
@@ -202,7 +182,6 @@ MatcherConstPtr Matcher::create(const RouteMatch &match) {
     return std::make_shared<PrefixMatcherImpl>(match);
   case RouteMatch::PathSpecifierCase::kPath:
     return std::make_shared<PathMatcherImpl>(match);
-  case RouteMatch::PathSpecifierCase::kHiddenEnvoyDeprecatedRegex:
   case RouteMatch::PathSpecifierCase::kSafeRegex:
     return std::make_shared<RegexMatcherImpl>(match);
   // path specifier is required.
