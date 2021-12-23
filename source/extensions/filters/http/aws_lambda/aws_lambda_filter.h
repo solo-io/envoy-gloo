@@ -33,6 +33,7 @@ public:
 
   // Http::StreamFilterBase
   void onDestroy() override {
+    state_ = State::Destroyed;
     // If context is still around, make sure to cancel it
     if (context_ != nullptr) {
       context_->cancel();
@@ -109,7 +110,7 @@ private:
 
   StsConnectionPool::Context *context_{};
   // The state of the request
-  enum State { Init, Calling, Responded, Complete };
+  enum State { Init, Calling, Responded, Complete, Destroyed};
   // The state of the get credentials request.
   State state_ = Init;
   // Whether or not iteration has been stopped to wait for the credentials

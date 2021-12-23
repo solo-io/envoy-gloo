@@ -136,6 +136,14 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
 
 Http::FilterDataStatus AWSLambdaFilter::encodeData(
                                       Buffer::Instance &data, bool end_stream ){  
+
+  if (state_ == State::Destroyed){
+    // Safety against use after free if we exceed buffer limit 
+    // during modifications. This should never happen as we only shrink.
+    ENVOY_LOG(debug, "{}: attempted operations while destroyed", __func__);
+    return Http::FilterDataStatus::StopIterationNoBuffer;
+  }
+
   if (functionOnRoute() == nullptr || !functionOnRoute()->unwrapAsAlb()){
     // return response as is if not configured for alb mode
     return Http::FilterDataStatus::Continue;
