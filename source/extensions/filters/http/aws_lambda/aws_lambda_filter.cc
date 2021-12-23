@@ -144,7 +144,9 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     // we need the entire response prior to parsing and unwrapping the json
     return Http::FilterDataStatus::StopIterationAndBuffer;
   }
-  
+
+  // Now that the response is finished we know that the following is safe
+  // as the following options will only make the resulting buffer smaller.
   encoder_callbacks_->addEncodedData(data, false);
 
   const Buffer::Instance&  buff = *encoder_callbacks_->encodingBuffer();
