@@ -24,6 +24,7 @@ envoy_cc_library(
         "@envoy//source/common/common:hex_lib",
         "@envoy//source/common/http:headers_lib",
         "@envoy//source/common/http:utility_lib",
+        "@envoy//source/common/common:base64_lib",
     ],
 )
 
@@ -78,6 +79,7 @@ envoy_cc_library(
         ":aws_lambda_filter_lib",
         "@envoy//envoy/server:filter_config_interface",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
+        "@envoy//source/common/common:base64_lib",
     ],
 )
 

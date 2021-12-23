@@ -1,0 +1,8 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/5635
+  resolvesIssue: false
+  description: >
+    Adds lambda per route option to treat the responses from the lambda as if 
+    envoy is an aws alb. This means parsing the json response appropriately 
+    in the encoding step.

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "envoy/http/header_map.h"
+#include "source/common/common/base64.h"
 
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/empty_string.h"
@@ -129,12 +130,95 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
     // We treat upstream function errors as if it was any other upstream error
     headers.setStatus(504);
   }
+  response_headers_ = &headers;
   return Http::FilterHeadersStatus::Continue;
 }
 
-Http::FilterDataStatus AWSLambdaFilter::encodeData(Buffer::Instance &, bool ){  
+Http::FilterDataStatus AWSLambdaFilter::encodeData(
+                                      Buffer::Instance &data, bool end_stream ){  
+  if (functionOnRoute() == nullptr || !functionOnRoute()->unwrapAsAlb()){
+    // return response as is if not configured for alb mode
+    return Http::FilterDataStatus::Continue;
+  }
+  if (!end_stream) {
+    // we need the entire response prior to parsing and unwrapping the json
+    return Http::FilterDataStatus::StopIterationAndBuffer;
+  }
+  
+  encoder_callbacks_->addEncodedData(data, false);
+
+  const Buffer::Instance&  buff = *encoder_callbacks_->encodingBuffer();
+  encoder_callbacks_->modifyEncodingBuffer([this](Buffer::Instance& enc_buf) {
+    Buffer::OwnedImpl body;
+    parseResponseAsALB(*response_headers_, enc_buf, body);
+    enc_buf.drain(enc_buf.length());
+    enc_buf.move(body);
+  });
+  response_headers_->setContentLength(buff.length());
   return Http::FilterDataStatus::Continue;
 }
+
+void AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers, 
+                    const Buffer::Instance& json_buf, Buffer::Instance& body) {
+
+  ProtobufWkt::Struct alb_response;                
+  try {
+    MessageUtil::loadFromJson(json_buf.toString(), alb_response);
+  } catch (EnvoyException& ex) {
+    ENVOY_LOG(warn, "{}: alb_unwrap set but did not recieve a json payload", 
+                                                   functionOnRoute()->path());
+    headers.setStatus(static_cast<int>(Http::Code::InternalServerError));
+    return;
+  }
+  
+  bool is_bad_format = false;
+  const auto& flds = alb_response.fields();
+  if (flds.contains("body")) {
+    auto rawBody = flds.at("body").string_value();
+    if (flds.contains("isBase64Encoded")){
+      is_bad_format = is_bad_format ||
+                             !flds.at("isBase64Encoded").has_bool_value();
+      if (flds.at("isBase64Encoded").bool_value()){
+        rawBody = Base64::decode(rawBody);
+      }
+    }
+    body.add(rawBody);
+  }
+
+  if (flds.contains("statusCode")){
+    headers.setStatus(flds.at("statusCode").number_value());
+    is_bad_format= is_bad_format || !flds.at("statusCode").has_number_value();
+  }
+  if (flds.contains("headers")){
+    auto hds = flds.at("headers").struct_value();
+    auto hdsFields = hds.fields();
+    for (auto const& hdrEntry : hdsFields) { 
+      headers.addCopy(Http::LowerCaseString(hdrEntry.first),
+                             hdrEntry.second.string_value());
+    }
+  }
+  // While ALB would refuse to parse something with headers + multivalue
+  // Being more permissive in this case was determined to be better.
+  if (flds.contains("multiValueHeaders")){
+     auto hds = flds.at("multiValueHeaders").struct_value();
+    auto hdsFields = hds.fields();
+    for (auto const& hdrEntry : hdsFields) { 
+      auto list = hdrEntry.second.list_value();
+      for (auto const& val : list.values()){
+        headers.addCopy(Http::LowerCaseString(hdrEntry.first),
+                                                            val.string_value());
+      }
+    }
+  }
+  if (!is_bad_format){
+    return;
+  }
+
+  headers.setStatus(static_cast<int>(Http::Code::InternalServerError));
+  body.drain(body.length());
+}
+
+
 
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>

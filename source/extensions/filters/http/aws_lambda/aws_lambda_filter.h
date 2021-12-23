@@ -6,6 +6,7 @@
 #include "envoy/server/filter_config.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
+#include "source/common/common/base64.h"
 
 #include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "source/extensions/filters/http/aws_lambda/config.h"
@@ -66,12 +67,18 @@ public:
   }
 
   void setEncoderFilterCallbacks(
-      Http::StreamEncoderFilterCallbacks &) override {  };
+              Http::StreamEncoderFilterCallbacks &encoder_callbacks) override { 
+    encoder_callbacks_ = &encoder_callbacks;
+  }
 
   void
   onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
                 credential) override;
   void onFailure(CredentialsFailureStatus status) override;
+
+  const AWSLambdaRouteConfig  * functionOnRoute() {
+    return function_on_route_;
+  }
 
 private:
   static const HeaderList HeadersToSign;
@@ -79,11 +86,15 @@ private:
   void handleDefaultBody();
 
   void lambdafy();
+  void parseResponseAsALB(Http::ResponseHeaderMap&, 
+                          const Buffer::Instance&, Buffer::Instance&);
 
   Http::RequestHeaderMap *request_headers_{};
+  Http::ResponseHeaderMap *response_headers_{};
   AwsAuthenticator aws_authenticator_;
 
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
+  Http::StreamEncoderFilterCallbacks *encoder_callbacks_{};
 
   Upstream::ClusterManager &cluster_manager_;
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> protocol_options_;
