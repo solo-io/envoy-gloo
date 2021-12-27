@@ -124,13 +124,17 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
 
 Http::FilterHeadersStatus 
-AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool ) {
+AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool) {
 
   if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
     // We treat upstream function errors as if it was any other upstream error
     headers.setStatus(504);
   }
   response_headers_ = &headers;
+  if (functionOnRoute() != nullptr && functionOnRoute()->unwrapAsAlb()){
+    // Stop iteration so that encodedata can mutate headers from alb json
+    return Http::FilterHeadersStatus::StopIteration;
+  }
   return Http::FilterHeadersStatus::Continue;
 }
 
@@ -148,6 +152,10 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     // return response as is if not configured for alb mode
     return Http::FilterDataStatus::Continue;
   }
+
+  // support for streaming and http2 for future proofing
+  encoder_callbacks_->addEncodedData(data, false);
+
   if (!end_stream) {
     // we need the entire response prior to parsing and unwrapping the json
     return Http::FilterDataStatus::StopIterationAndBuffer;
@@ -155,8 +163,6 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
 
   // Now that the response is finished we know that the following is safe
   // as the following options will only make the resulting buffer smaller.
-  encoder_callbacks_->addEncodedData(data, false);
-
   const Buffer::Instance&  buff = *encoder_callbacks_->encodingBuffer();
   encoder_callbacks_->modifyEncodingBuffer([this](Buffer::Instance& enc_buf) {
     Buffer::OwnedImpl body;
@@ -167,6 +173,25 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
   response_headers_->setContentLength(buff.length());
   return Http::FilterDataStatus::Continue;
 }
+
+Http::FilterTrailersStatus 
+AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
+
+  if (functionOnRoute() == nullptr || !functionOnRoute()->unwrapAsAlb()){
+   return Http::FilterTrailersStatus::Continue;
+  }
+  // Future proof against alb http2 support and finalize the data transform
+  const Buffer::Instance&  buff = *encoder_callbacks_->encodingBuffer();
+  encoder_callbacks_->modifyEncodingBuffer([this](Buffer::Instance& enc_buf) {
+    Buffer::OwnedImpl body;
+    parseResponseAsALB(*response_headers_, enc_buf, body);
+    enc_buf.drain(enc_buf.length());
+    enc_buf.move(body);
+  });
+  response_headers_->setContentLength(buff.length());
+  return Http::FilterTrailersStatus::Continue;
+}
+
 
 void AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers, 
                     const Buffer::Instance& json_buf, Buffer::Instance& body) {

@@ -473,30 +473,35 @@ TEST_F(AWSLambdaFilterTest, ALBDecodingBasic) {
 
   filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
   auto res = filter_->encodeHeaders(response_headers, true);
-  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
+  
 
   Buffer::OwnedImpl buf{};
   // Based off the following split url.
   //https://docs.aws.amazon.com/elasticloadbalancing/latest/
   //                  application/lambda-functions.html#respond-to-load-balancer
+  buf.add("{ \"isBase64Encoded\": false, \"statusCode\": 200,");
+   
+
+  auto edResult = filter_->encodeData(buf, false);
   buf.add(
-    "{ \"isBase64Encoded\": false, \"statusCode\": 200,"
-    "\"statusDescription\": \"200 OK\","
+   "\"statusDescription\": \"200 OK\","
     "\"headers\": {"
     "   \"Set-cookie\": \"cookies\", \"Content-Type\": \"application/json\""
     "},"
     "\"body\": \"Hello from Lambda (optional)\""
     "}");
-
-  auto edResult = filter_->encodeData(buf, false);
   EXPECT_EQ(Http::FilterDataStatus::StopIterationAndBuffer, edResult);
   auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
   EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
   EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
       .WillOnce(Invoke(on_buf_mod));
 
-  auto edResult2 = filter_->encodeData(buf, true);
-  EXPECT_EQ(Http::FilterDataStatus::Continue, edResult2);
+  auto edResult2 = filter_->encodeData(buf, false);
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationAndBuffer, edResult2);
+  Http::TestResponseTrailerMapImpl response_trailers_;
+  auto etResult = filter_->encodeTrailers(response_trailers_);
+  EXPECT_EQ(Http::FilterTrailersStatus::Continue, etResult);
   EXPECT_STREQ("Hello from Lambda (optional)", buf.toString().c_str());
   EXPECT_EQ("200", response_headers.getStatusValue());
   ASSERT_NE(response_headers.ContentType(), nullptr);

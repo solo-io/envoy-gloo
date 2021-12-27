@@ -60,9 +60,8 @@ public:
   Http::FilterDataStatus encodeData(Buffer::Instance &, bool ) override;
 
   Http::FilterTrailersStatus
-  encodeTrailers(Http::ResponseTrailerMap &) override{
-    return Http::FilterTrailersStatus::Continue;
-  }
+  encodeTrailers(Http::ResponseTrailerMap &) override;
+  
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
