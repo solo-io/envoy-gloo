@@ -86,7 +86,8 @@ private:
   void handleDefaultBody();
 
   void lambdafy();
-  void parseResponseAsALB(Http::ResponseHeaderMap&, 
+  void finalizeResponse();
+  bool parseResponseAsALB(Http::ResponseHeaderMap&, 
                           const Buffer::Instance&, Buffer::Instance&);
 
   Http::RequestHeaderMap *request_headers_{};
