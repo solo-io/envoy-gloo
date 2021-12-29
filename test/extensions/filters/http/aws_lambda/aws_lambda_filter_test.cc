@@ -56,13 +56,14 @@ protected:
   void SetUp() override { setupRoute(); }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
-                  bool persistOriginalHeaders = false) {
+                bool persistOriginalHeaders = false, bool unwrapAsAlb = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
     routeconfig_.set_async(false);
+    routeconfig_.set_unwrap_as_alb(unwrapAsAlb);
 
     setup_func();
 
@@ -108,7 +109,20 @@ protected:
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
+  Http::TestResponseHeaderMapImpl setup_encode(){
+    // Run normal operations for side-effects e.g.: setting function_on_route_
+    Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                     {":authority", "www.solo.io"}, {":path", "/getsomething"}};
+    filter_->decodeHeaders(headers, true);
+    Http::TestResponseHeaderMapImpl response_headers{
+                    {":method", "GET"}, {":status", "200"}, {":path", "/path"}};
+    filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
+    filter_->encodeHeaders(response_headers, true);
+    return response_headers;
+  }
+
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
+  NiceMock<Http::MockStreamEncoderFilterCallbacks> filter_encode_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
   std::unique_ptr<AWSLambdaFilter> filter_;
@@ -445,6 +459,146 @@ TEST_F(AWSLambdaFilterTest, UpstreamErrorSetTo504) {
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   EXPECT_EQ(response_headers.getStatusValue(), "504");
   
+}
+
+TEST_F(AWSLambdaFilterTest, ALBDecodingBasic) {
+  setupRoute(false, false, false, true);
+  
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                     {":authority", "www.solo.io"}, {":path", "/getsomething"}};
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+                filter_->decodeHeaders(headers, true));
+  Http::TestResponseHeaderMapImpl response_headers{
+                    {":method", "GET"}, {":status", "200"}, {":path", "/path"}};
+
+  filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
+  auto res = filter_->encodeHeaders(response_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
+  
+
+  Buffer::OwnedImpl buf{};
+  // Based off the following split url.
+  //https://docs.aws.amazon.com/elasticloadbalancing/latest/
+  //                  application/lambda-functions.html#respond-to-load-balancer
+  buf.add("{ \"isBase64Encoded\": false, \"statusCode\": 200,");
+   
+
+  auto edResult = filter_->encodeData(buf, false);
+  buf.add(
+   "\"statusDescription\": \"200 OK\","
+    "\"headers\": {"
+    "   \"Set-cookie\": \"cookies\", \"Content-Type\": \"application/json\""
+    "},"
+    "\"body\": \"Hello from Lambda (optional)\""
+    "}");
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationAndBuffer, edResult);
+  auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
+  EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
+  EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
+      .WillOnce(Invoke(on_buf_mod));
+
+  auto edResult2 = filter_->encodeData(buf, false);
+  EXPECT_EQ(Http::FilterDataStatus::StopIterationAndBuffer, edResult2);
+  Http::TestResponseTrailerMapImpl response_trailers_;
+  auto etResult = filter_->encodeTrailers(response_trailers_);
+  EXPECT_EQ(Http::FilterTrailersStatus::Continue, etResult);
+  EXPECT_STREQ("Hello from Lambda (optional)", buf.toString().c_str());
+  EXPECT_EQ("200", response_headers.getStatusValue());
+  ASSERT_NE(response_headers.ContentType(), nullptr);
+  EXPECT_EQ("application/json", response_headers.getContentTypeValue());
+  auto cookieHeader = response_headers.get(Http::LowerCaseString("set-cookie"));
+  EXPECT_EQ("cookies", cookieHeader[0]->value().getStringView());
+}
+
+TEST_F(AWSLambdaFilterTest, ALBDecodingMultiValueHeaders) {
+  setupRoute(false, false, false, true);
+  auto response_headers = setup_encode();
+
+  Buffer::OwnedImpl buf{};
+  buf.add("{\"multiValueHeaders\": {"
+      "\"Set-cookie\":"
+      "[\"cookie-name=cookie-value;Domain=myweb.com;Secure;HttpOnly\","
+      "\"cookie-name=cookie-value;Expires=May 8, 2019\"],"
+      "\"Content-Type\": [\"application/json\"]"
+      "},}");
+
+  auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
+  EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
+  EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
+      .WillOnce(Invoke(on_buf_mod));
+
+  auto edResult2 = filter_->encodeData(buf, true);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, edResult2);
+  EXPECT_STREQ("", buf.toString().c_str());
+  EXPECT_EQ("200", response_headers.getStatusValue());
+  EXPECT_EQ("application/json", response_headers.getContentTypeValue());
+  auto cookieHeader = response_headers.get(Http::LowerCaseString("set-cookie"));
+  EXPECT_EQ("cookie-name=cookie-value;Domain=myweb.com;Secure;HttpOnly",
+                                      cookieHeader[0]->value().getStringView());
+  EXPECT_EQ("cookie-name=cookie-value;Expires=May 8, 2019", 
+                                      cookieHeader[1]->value().getStringView());
+}
+
+TEST_F(AWSLambdaFilterTest, ALBDecodingBase64) {
+  setupRoute(false, false, false, true);
+  auto response_headers = setup_encode();
+
+  Buffer::OwnedImpl buf{};
+  buf.add("{ \"isBase64Encoded\": true, \"statusCode\": 201,"
+            "\"body\": \"SGVsbG8gZnJvbSBMYW1iZGEgKG9wdGlvbmFsKQ==\"}");
+
+  auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
+  EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
+  EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
+      .WillOnce(Invoke(on_buf_mod));
+
+
+  auto edResult2 = filter_->encodeData(buf, true);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, edResult2);
+  EXPECT_STREQ("Hello from Lambda (optional)", buf.toString().c_str());
+  EXPECT_EQ("201", response_headers.getStatusValue());
+}
+
+TEST_F(AWSLambdaFilterTest, ALBDecodingInvalidTypes) {
+  setupRoute(false, false, false, true);
+  auto response_headers = setup_encode();
+
+  Buffer::OwnedImpl buf{};
+  buf.add("{ \"isBase64Encoded\": \"notabool\", \"statusCode\": 201,"
+            "\"body\": \"else==\"}");
+
+  auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
+
+  EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
+  EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
+      .WillOnce(Invoke(on_buf_mod));
+
+  auto edResult2 = filter_->encodeData(buf, true);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, edResult2);
+  EXPECT_STREQ("", buf.toString().c_str());
+  EXPECT_EQ("500", response_headers.getStatusValue());
+}
+
+TEST_F(AWSLambdaFilterTest, ALBDecodingInvalidJSON) {
+  setupRoute(false, false, false, true);
+  auto response_headers = setup_encode();
+
+  Buffer::OwnedImpl buf{};
+  buf.add("{ \"isBase64Encoded\": floof, \"statusCode\": 201,"
+            "\"body\": \"something\"}"
+            "\"body\": \"else==\"}");
+
+  auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
+
+  EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
+  EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
+      .WillOnce(Invoke(on_buf_mod));
+
+
+  auto edResult2 = filter_->encodeData(buf, true);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, edResult2);
+  EXPECT_STREQ("", buf.toString().c_str());
+  EXPECT_EQ("500", response_headers.getStatusValue());
 }
 
 } // namespace AwsLambda

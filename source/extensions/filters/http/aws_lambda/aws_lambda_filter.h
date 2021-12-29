@@ -6,6 +6,7 @@
 #include "envoy/server/filter_config.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
+#include "source/common/common/base64.h"
 
 #include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "source/extensions/filters/http/aws_lambda/config.h"
@@ -32,6 +33,7 @@ public:
 
   // Http::StreamFilterBase
   void onDestroy() override {
+    state_ = State::Destroyed;
     // If context is still around, make sure to cancel it
     if (context_ != nullptr) {
       context_->cancel();
@@ -55,25 +57,28 @@ public:
   }
   Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap &headers,
                                           bool end_stream) override;
-  Http::FilterDataStatus encodeData(Buffer::Instance &, bool ) override{
-    return Http::FilterDataStatus::Continue;
-  }
+  Http::FilterDataStatus encodeData(Buffer::Instance &, bool ) override;
 
   Http::FilterTrailersStatus
-  encodeTrailers(Http::ResponseTrailerMap &) override{
-    return Http::FilterTrailersStatus::Continue;
-  }
+  encodeTrailers(Http::ResponseTrailerMap &) override;
+  
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
 
   void setEncoderFilterCallbacks(
-      Http::StreamEncoderFilterCallbacks &) override {  };
+              Http::StreamEncoderFilterCallbacks &encoder_callbacks) override { 
+    encoder_callbacks_ = &encoder_callbacks;
+  }
 
   void
   onSuccess(std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
                 credential) override;
   void onFailure(CredentialsFailureStatus status) override;
+
+  const AWSLambdaRouteConfig  * functionOnRoute() {
+    return function_on_route_;
+  }
 
 private:
   static const HeaderList HeadersToSign;
@@ -81,11 +86,16 @@ private:
   void handleDefaultBody();
 
   void lambdafy();
+  void finalizeResponse();
+  bool parseResponseAsALB(Http::ResponseHeaderMap&, 
+                          const Buffer::Instance&, Buffer::Instance&);
 
   Http::RequestHeaderMap *request_headers_{};
+  Http::ResponseHeaderMap *response_headers_{};
   AwsAuthenticator aws_authenticator_;
 
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
+  Http::StreamEncoderFilterCallbacks *encoder_callbacks_{};
 
   Upstream::ClusterManager &cluster_manager_;
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> protocol_options_;
@@ -100,7 +110,7 @@ private:
 
   StsConnectionPool::Context *context_{};
   // The state of the request
-  enum State { Init, Calling, Responded, Complete };
+  enum State { Init, Calling, Responded, Complete, Destroyed};
   // The state of the get credentials request.
   State state_ = Init;
   // Whether or not iteration has been stopped to wait for the credentials
