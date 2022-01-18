@@ -15,10 +15,12 @@ namespace {
 
 class StsFetcherImpl : public StsFetcher,
                        public Logger::Loggable<Logger::Id::aws>,
-                       public Http::AsyncClient::Callbacks {
+                       public Http::AsyncClient::Callbacks,
+                       public StsChainedFetcher::ChainedCallback {
 public:
-  StsFetcherImpl(Upstream::ClusterManager &cm, Api::Api &api)
-      : cm_(cm), api_(api) {
+  StsFetcherImpl(Upstream::ClusterManager &cm, Api::Api &api, 
+                                          const absl::string_view base_role_arn)
+      : cm_(cm), api_(api), base_role_arn_(base_role_arn){
     ENVOY_LOG(trace, "{}", __func__);
   }
 
@@ -30,11 +32,14 @@ public:
       ENVOY_LOG(debug, "assume role with token [uri = {}]: canceled",
                 uri_->uri());
     }
+    if (!complete_){
+      // TODO: cancel chained
+    }
     reset();
   }
 
   void fetch(const envoy::config::core::v3::HttpUri &uri,
-             const absl::string_view role_arn,
+             const  absl::string_view role_arn,
              const absl::string_view web_token,
              StsFetcher::Callbacks *callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
@@ -43,6 +48,8 @@ public:
     complete_ = false;
     callbacks_ = callbacks;
     uri_ = &uri;
+    set_role(role_arn);
+    
 
     // Check if cluster is configured, fail the request if not.
     // Otherwise cm_.httpAsyncClientForCluster will throw exception.
@@ -91,12 +98,52 @@ public:
         const auto len = response->body().length();
         const auto body = absl::string_view(
             static_cast<char *>(response->body().linearize(len)), len);
-        callbacks_->onSuccess(body);
+
+      // CONSIDER: moving this to a better function loction
+      // ripped from sts_connection
+      #define GET_PARAM(X)                                                         \
+      std::string X;                                                               \
+      {                                                                            \
+        std::match_results<absl::string_view::const_iterator> matched;             \
+        bool result = std::regex_search(body.begin(), body.end(), matched,         \
+                                        DUPEStsResponseRegex::get().regex_##X);    \
+        if (!result || !(matched.size() != 1)) {                                   \
+          ENVOY_LOG(trace, "response body did not contain " #X);                   \
+          onChainedFailure(CredentialsFailureStatus::InvalidSts);                  \
+          return;                                                                  \
+        }                                                                          \
+        const auto &sub_match = matched[1];                                        \
+        decltype(X) matched_sv(sub_match.first, sub_match.length());               \
+        X = std::move(matched_sv);                                                 \
+      }
+
+      GET_PARAM(access_key);
+      GET_PARAM(secret_key);
+      GET_PARAM(session_token);
+      GET_PARAM(expiration);
+
+      
+      ENVOY_LOG( debug,"acKey:{} secKey:{} seshKey:{},exp:{}", access_key, secret_key, session_token, expiration);
+
+
+        // For the default user (ie the one on the annotation
+        // no need for chaining so return as is
+        // if (role_arn_ == base_role_arn_){
+        if(true){
+    
+
+          onChainedSuccess(access_key, secret_key, session_token, expiration);
+        }else{
+          // TODO: attempt to chain assume the role specified in the upstream
+          // chained_fetcher_->fetch(*uri_, role_arn_, body, this);
+
+          // onChainedSuccess(body);
+        }
 
       } else {
         ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: body is empty",
                   __func__, uri_->uri());
-        callbacks_->onFailure(CredentialsFailureStatus::Network);
+        onChainedFailure(CredentialsFailureStatus::Network);
       }
     } else {
       if ((status_code >= 400) && (status_code <= 403) && (response->body().length() > 0)) {
@@ -107,9 +154,9 @@ public:
                   status_code, body);
         // TODO: cover more AWS error cases
         if (body.find(ExpiredTokenError) != std::string::npos) {
-          callbacks_->onFailure(CredentialsFailureStatus::ExpiredToken);
+          onChainedFailure(CredentialsFailureStatus::ExpiredToken);
         } else {
-          callbacks_->onFailure(CredentialsFailureStatus::Network);
+          onChainedFailure(CredentialsFailureStatus::Network);
         }
         // TODO: parse the error string. Example:
         /*
@@ -129,9 +176,10 @@ public:
             "{}: assume role with token [uri = {}]: response status code {}",
             __func__, uri_->uri(), status_code);
         ENVOY_LOG(trace, "{}: headers: {}", __func__, response->headers());
-        callbacks_->onFailure(CredentialsFailureStatus::Network);
+        onChainedFailure(CredentialsFailureStatus::Network);
       }
     }
+    // onChain calls as well but future proof against forgetfulness for paranoia
     reset();
   }
 
@@ -139,10 +187,42 @@ public:
                  Http::AsyncClient::FailureReason reason) override {
     ENVOY_LOG(debug, "{}: assume role with token [uri = {}]: network error {}",
               __func__, uri_->uri(), enumToInt(reason));
+    onChainedFailure(CredentialsFailureStatus::Network);
+   
+  }
+
+
+    // HTTP async receive methods
+  void onChainedSuccess(const std::string access_key, 
+   const std::string secret_key, 
+   const std::string session_token, 
+   const std::string expiration)  {
     complete_ = true;
-    callbacks_->onFailure(CredentialsFailureStatus::Network);
+    SystemTime expiration_time;
+      absl::Time absl_expiration_time;
+      std::string error;
+      if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
+                          &error)) {
+        ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
+        expiration_time = absl::ToChronoTime(absl_expiration_time);
+      } else {
+        expiration_time = api_.timeSource().systemTime() + DUPE_REFRESH_STS_CREDS;
+        ENVOY_LOG(trace,
+                  "Unable to determine expiration time from STS credentials "
+                  "result (error: {}), using default",
+                  error);
+      }
+    callbacks_->onSuccess(access_key,secret_key, session_token, expiration_time);
     reset();
   }
+
+  void onChainedFailure(CredentialsFailureStatus reason)  {
+    complete_ = true;
+    callbacks_->onFailure(reason);
+     reset();
+  }
+
+
 
   void onBeforeFinalizeUpstreamSpan(Tracing::Span &,
                                     const Http::ResponseHeaderMap *) override {}
@@ -150,10 +230,18 @@ public:
 private:
   Upstream::ClusterManager &cm_;
   Api::Api &api_;
+  const absl::string_view base_role_arn_;
   bool complete_{};
   StsFetcher::Callbacks *callbacks_{};
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
+  absl::string_view role_arn_;
+  StsChainedFetcherPtr chained_fetcher_;
+
+  // work around having consts being passed around.
+  void set_role(const absl::string_view role_arn){
+    role_arn_ = role_arn;
+  }
 
   void reset() {
     request_ = nullptr;
@@ -163,8 +251,9 @@ private:
 };
 } // namespace
 
-StsFetcherPtr StsFetcher::create(Upstream::ClusterManager &cm, Api::Api &api) {
-  return std::make_unique<StsFetcherImpl>(cm, api);
+StsFetcherPtr StsFetcher::create(Upstream::ClusterManager &cm, Api::Api &api,
+                                             const absl::string_view base_role_arn) {
+  return std::make_unique<StsFetcherImpl>(cm, api, base_role_arn);
 }
 
 } // namespace AwsLambda

@@ -27,7 +27,10 @@ public:
 
 class MockStsFetcherCallbacks : public StsFetcher::Callbacks {
 public:
-  MOCK_METHOD(void, onSuccess, (const absl::string_view body));
+  MOCK_METHOD(void, onSuccess, (const std::string access_key, 
+   const std::string secret_key, 
+   const std::string session_token, 
+   const SystemTime expiration));
   MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status));
 };
 

@@ -29,7 +29,7 @@ public:
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
-       StsConnectionPool::Context::Callbacks *callbacks) override;
+        StsConnectionPool::Context::Callbacks *callbacks) override;
 
   void setWebToken(std::string_view web_token) override;
 
@@ -126,7 +126,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   auto conn_pool =
       connection_pools_
           .emplace(role_arn, conn_pool_factory_->build(
-                                 role_arn, this, StsFetcher::create(cm_, api_)))
+                  role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
           .first;
   // initialize the connection
   conn_pool->second->init(uri_, web_token_);

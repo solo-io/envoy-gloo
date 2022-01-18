@@ -7,6 +7,8 @@
 
 #include "source/extensions/common/aws/credentials_provider.h"
 #include "source/extensions/filters/http/aws_lambda/sts_status.h"
+#include "source/extensions/filters/http/aws_lambda/sts_response_parser.h"
+#include "source/extensions/filters/http/aws_lambda/sts_chained_fetcher.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -46,7 +48,9 @@ using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;
 /**
  * StsFetcher interface can be used to retrieve STS credentials
  * An instance of this interface is designed to retrieve one set of credentials
- * at a time.
+ * at a time and is therefore scoped to a give role.
+ * If provided with a role that is not the base role then it will delegate
+ * to the StsChainedFetcher after assuming the base role.
  */
 class StsFetcher {
 public:
@@ -61,10 +65,13 @@ public:
      *
      * @param body the request body
      */
-    virtual void onSuccess(const absl::string_view body) PURE;
+    virtual void onSuccess(   const std::string access_key, 
+   const std::string secret_key, 
+   const std::string session_token, 
+   const SystemTime expiration) PURE;
 
     /**
-     * Called on completion of request.
+     * Called on completion of a failed request.
      *
      * @param status the status of the request.
      */
@@ -89,7 +96,7 @@ public:
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
                      const absl::string_view role_arn,
                      const absl::string_view web_token,
-                     StsFetcher::Callbacks *callbacks) PURE;
+                     StsFetcher::Callbacks *callbacks)  PURE;
 
   /*
    * Factory method for creating a StsFetcher.
@@ -97,7 +104,8 @@ public:
    * @param api the api instance
    * @return a StsFetcher instance
    */
-  static StsFetcherPtr create(Upstream::ClusterManager &cm, Api::Api &api);
+  static StsFetcherPtr create(Upstream::ClusterManager &cm, Api::Api &api,
+                                        const absl::string_view base_role_arn );
 };
 
 } // namespace AwsLambda
