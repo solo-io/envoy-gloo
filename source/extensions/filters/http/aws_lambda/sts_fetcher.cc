@@ -188,7 +188,7 @@ public:
     // HTTP async receive methods
   void onChainedSuccess(const std::string access_key, 
         const std::string secret_key, const std::string session_token,
-                                              const std::string expiration)  {
+                                   const std::string expiration)  override {
     complete_ = true;
     SystemTime expiration_time;
     absl::Time absl_expiration_time;
@@ -208,7 +208,7 @@ public:
     reset();
   }
 
-  void onChainedFailure(CredentialsFailureStatus reason)  {
+  void onChainedFailure(CredentialsFailureStatus reason)  override {
     complete_ = true;
     callbacks_->onFailure(reason);
      reset();
