@@ -1,0 +1,7 @@
+changelog:
+- type: FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/5639
+  resolvesIssue: false
+  description: >
+    Allow for roles to chain assume up to 1 deep. 
+    This enables cross account role assumption
