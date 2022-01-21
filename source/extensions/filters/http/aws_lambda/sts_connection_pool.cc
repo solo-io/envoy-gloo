@@ -127,7 +127,8 @@ void StsConnectionPoolImpl::onSuccess(
 
   StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(
       access_key, secret_key, session_token, expiration_time);
-
+  ENVOY_LOG(trace, "{} sts connection success",
+                     api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
   callbacks_->onResult(result, role_arn_);
   // Send result back to all contexts waiting in list
