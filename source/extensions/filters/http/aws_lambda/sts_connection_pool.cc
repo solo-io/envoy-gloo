@@ -170,7 +170,6 @@ public:
   };
 
 private:
-  Api::Api &api_;
   Event::Dispatcher &dispatcher_;
 };
 
