@@ -26,9 +26,9 @@ constexpr std::chrono::milliseconds DUPE_REFRESH_STS_CREDS =
 } // namespace
 
 
-class DUPEStsResponseRegexValues {
+class StsResponseRegexValues {
 public:
-  DUPEStsResponseRegexValues() {
+  StsResponseRegexValues() {
 
     // Initialize regex strings, should never fail
     regex_access_key =
@@ -50,7 +50,7 @@ public:
   std::regex regex_expiration;
 };
 
-using DUPEStsResponseRegex = ConstSingleton<DUPEStsResponseRegexValues>;
+using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
 
 
 } // namespace AwsLambda

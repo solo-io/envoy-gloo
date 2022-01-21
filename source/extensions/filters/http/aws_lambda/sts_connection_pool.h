@@ -34,32 +34,6 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 
 } // namespace
 
-class StsResponseRegexValues {
-public:
-  StsResponseRegexValues() {
-
-    // Initialize regex strings, should never fail
-    regex_access_key =
-        Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-    regex_secret_key = Regex::Utility::parseStdRegex(
-        "<SecretAccessKey>(.*?)</SecretAccessKey>");
-    regex_session_token =
-        Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
-    regex_expiration =
-        Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
-  };
-
-  std::regex regex_access_key;
-
-  std::regex regex_secret_key;
-
-  std::regex regex_session_token;
-
-  std::regex regex_expiration;
-};
-
-using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
-
 class StsConnectionPool;
 using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
 

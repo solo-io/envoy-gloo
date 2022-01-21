@@ -120,7 +120,7 @@ public:
       {                                                                        \
         std::match_results<absl::string_view::const_iterator> matched;         \
         bool result = std::regex_search(body.begin(), body.end(), matched,     \
-                                        DUPEStsResponseRegex::get().regex_##X);\
+                                        StsResponseRegex::get().regex_##X);\
         if (!result || !(matched.size() != 1)) {                               \
           ENVOY_LOG(trace, "response body did not contain " #X);               \
           callback_-> onChainedFailure(CredentialsFailureStatus::InvalidSts);  \

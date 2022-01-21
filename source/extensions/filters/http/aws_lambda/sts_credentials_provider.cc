@@ -57,19 +57,23 @@ private:
 };
 
 StsCredentialsProviderImpl::StsCredentialsProviderImpl(
-    const envoy::config::filter::http::aws_lambda::v2::
-        AWSLambdaConfig_ServiceAccountCredentials &config,
-    Api::Api &api, Upstream::ClusterManager &cm,
-    StsConnectionPoolFactoryPtr conn_pool_factory, std::string_view web_token,
-    std::string_view role_arn)
-    : api_(api), cm_(cm), config_(config), default_role_arn_(role_arn),
-      conn_pool_factory_(std::move(conn_pool_factory)), web_token_(web_token) {
-  // file_watcher_(dispatcher.createFilesystemWatcher()) {
+  const envoy::config::filter::http::aws_lambda::v2::
+      AWSLambdaConfig_ServiceAccountCredentials &config,
+  Api::Api &api, Upstream::ClusterManager &cm,
+  StsConnectionPoolFactoryPtr conn_pool_factory, std::string_view web_token,
+  std::string_view role_arn)
+  : api_(api), cm_(cm), config_(config), default_role_arn_(role_arn),
+    conn_pool_factory_(std::move(conn_pool_factory)), web_token_(web_token) {
+  
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
   // TODO: Figure out how to get this to compile, timeout is not all that
   // important right now uri_.set_allocated_timeout(config_.mutable_timeout())
+  // Consider if this is still reasonable. We have a timeout configuration for
+  // base webtoken handled in a filewatch in the config init.
+  // We do want to decide about whether it matters to pass for chained.
+  // Though chained can only have expiry of 15m to 60m and defaults to 60m.
 }
 
 void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
@@ -122,12 +126,37 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     return existing_pool->second->add(callbacks);
   }
 
+  //TODO:NOW  create fetcher type based on role_arn
+
   // Add the new pool to our list of active pools
   auto conn_pool =
       connection_pools_
           .emplace(role_arn, conn_pool_factory_->build(
-                  role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
+              role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
           .first;
+  
+  /*
+  // If chaining check to see if we need to get the base token in addition.
+  // Chained role expiration is not linked to base expiration so we just 
+  // need to make sure the creds are good for the duration of our sts call.
+  if (role_arn != default_role_arn_) {
+    const auto existing_base_token = credentials_cache_.find(default_role_arn_); 
+    if (existing_base_token != credentials_cache_.end()) {
+      const auto now = api_.timeSource().systemTime();
+      auto time_left = existing_base_token->second->expirationTime() - now;
+      if (time_left > REFRESH_GRACE_PERIOD) {
+        // TODO(nfudenberg) Call just the chained assumption
+         conn_pool->second->init(uri_, web_token_);
+        return conn_pool->second->add(callbacks);
+      }
+    }
+    // TODO:NOW sub to base fetcher and set our pool in flight
+    // so that it doesnt get emplaced/
+    // TODO(nfudenberg) subscribe to the base role's fetcher.
+  }
+  */
+
+ 
   // initialize the connection
   conn_pool->second->init(uri_, web_token_);
   // generate and return a context with the current callbacks
