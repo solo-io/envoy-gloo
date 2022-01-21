@@ -20,7 +20,8 @@ class StsFetcherImpl : public StsFetcher,
 public:
   StsFetcherImpl(Upstream::ClusterManager &cm, Api::Api &api, 
                                           const absl::string_view base_role_arn)
-      : cm_(cm), api_(api), base_role_arn_(base_role_arn){
+      : cm_(cm), api_(api), base_role_arn_(base_role_arn),
+      chained_fetcher_(StsChainedFetcher::create(cm, api, base_role_arn)) {
     ENVOY_LOG(trace, "{}", __func__);
   }
 
@@ -32,8 +33,8 @@ public:
       ENVOY_LOG(debug, "assume role with token [uri = {}]: canceled",
                 uri_->uri());
     }
-    if (!complete_){
-      // TODO: cancel chained
+    if (chained_fetcher_ != nullptr && !complete_){    
+      chained_fetcher_->cancel();
     }
     reset();
   }
@@ -75,7 +76,7 @@ public:
                          api_.timeSource().systemTime().time_since_epoch())
                          .count();
     const std::string body =
-        fmt::format(StsFormatString, role_arn, now, web_token);
+        fmt::format(StsFormatString, base_role_arn_, now, web_token);
     message->body().add(body);
     ENVOY_LOG(debug, "assume role with token from [uri = {}]: start",
               uri_->uri());
@@ -122,22 +123,14 @@ public:
       GET_PARAM(session_token);
       GET_PARAM(expiration);
 
-      
-      ENVOY_LOG( debug,"acKey:{} secKey:{} seshKey:{},exp:{}", access_key, secret_key, session_token, expiration);
-
-
         // For the default user (ie the one on the annotation
         // no need for chaining so return as is
-        // if (role_arn_ == base_role_arn_){
-        if(true){
-    
-
+        if (role_arn_ == base_role_arn_){
+          
           onChainedSuccess(access_key, secret_key, session_token, expiration);
         }else{
-          // TODO: attempt to chain assume the role specified in the upstream
-          // chained_fetcher_->fetch(*uri_, role_arn_, body, this);
-
-          // onChainedSuccess(body);
+          chained_fetcher_->fetch(*uri_, role_arn_, access_key, secret_key,
+                                                         session_token,  this);
         }
 
       } else {
@@ -179,8 +172,7 @@ public:
         onChainedFailure(CredentialsFailureStatus::Network);
       }
     }
-    // onChain calls as well but future proof against forgetfulness for paranoia
-    reset();
+
   }
 
   void onFailure(const Http::AsyncClient::Request &,
