@@ -83,7 +83,8 @@ public:
     auto options = Http::AsyncClient::RequestOptions().setTimeout(
         std::chrono::milliseconds(
             DurationUtil::durationToMilliseconds(uri.timeout())));
-    request_ = thread_local_cluster->httpAsyncClient().send(std::move(message), *this, options);
+    request_ = thread_local_cluster->httpAsyncClient().send(std::move(message),
+                                                                *this, options);
   }
 
   // HTTP async receive methods
@@ -102,20 +103,20 @@ public:
 
       // CONSIDER: moving this to a better function loction
       // ripped from sts_connection
-      #define GET_PARAM(X)                                                         \
-      std::string X;                                                               \
-      {                                                                            \
-        std::match_results<absl::string_view::const_iterator> matched;             \
-        bool result = std::regex_search(body.begin(), body.end(), matched,         \
-                                        DUPEStsResponseRegex::get().regex_##X);    \
-        if (!result || !(matched.size() != 1)) {                                   \
-          ENVOY_LOG(trace, "response body did not contain " #X);                   \
-          onChainedFailure(CredentialsFailureStatus::InvalidSts);                  \
-          return;                                                                  \
-        }                                                                          \
-        const auto &sub_match = matched[1];                                        \
-        decltype(X) matched_sv(sub_match.first, sub_match.length());               \
-        X = std::move(matched_sv);                                                 \
+      #define GET_PARAM(X)                                                     \
+      std::string X;                                                           \
+      {                                                                        \
+        std::match_results<absl::string_view::const_iterator> matched;         \
+        bool result = std::regex_search(body.begin(), body.end(), matched,     \
+                                      DUPEStsResponseRegex::get().regex_##X);  \
+        if (!result || !(matched.size() != 1)) {                               \
+          ENVOY_LOG(trace, "response body did not contain " #X);               \
+          onChainedFailure(CredentialsFailureStatus::InvalidSts);              \
+          return;                                                              \
+        }                                                                      \
+        const auto &sub_match = matched[1];                                    \
+        decltype(X) matched_sv(sub_match.first, sub_match.length());           \
+        X = std::move(matched_sv);                                             \
       }
 
       GET_PARAM(access_key);
@@ -186,25 +187,24 @@ public:
 
     // HTTP async receive methods
   void onChainedSuccess(const std::string access_key, 
-   const std::string secret_key, 
-   const std::string session_token, 
-   const std::string expiration)  {
+        const std::string secret_key, const std::string session_token,
+                                              const std::string expiration)  {
     complete_ = true;
     SystemTime expiration_time;
-      absl::Time absl_expiration_time;
-      std::string error;
-      if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
-                          &error)) {
-        ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
-        expiration_time = absl::ToChronoTime(absl_expiration_time);
-      } else {
-        expiration_time = api_.timeSource().systemTime() + DUPE_REFRESH_STS_CREDS;
-        ENVOY_LOG(trace,
-                  "Unable to determine expiration time from STS credentials "
-                  "result (error: {}), using default",
-                  error);
-      }
-    callbacks_->onSuccess(access_key,secret_key, session_token, expiration_time);
+    absl::Time absl_expiration_time;
+    std::string error;
+    if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
+                        &error)) {
+      ENVOY_LOG(trace, "Determined expiration time via STS credentials result");
+      expiration_time = absl::ToChronoTime(absl_expiration_time);
+    } else {
+      expiration_time = api_.timeSource().systemTime() + DUPE_REFRESH_STS_CREDS;
+      ENVOY_LOG(trace,
+                "Unable to determine expiration time from STS credentials "
+                "result (error: {}), using default",
+                error);
+    }
+    callbacks_->onSuccess(access_key,secret_key,session_token, expiration_time);
     reset();
   }
 
@@ -244,7 +244,7 @@ private:
 } // namespace
 
 StsFetcherPtr StsFetcher::create(Upstream::ClusterManager &cm, Api::Api &api,
-                                             const absl::string_view base_role_arn) {
+                                        const absl::string_view base_role_arn) {
   return std::make_unique<StsFetcherImpl>(cm, api, base_role_arn);
 }
 

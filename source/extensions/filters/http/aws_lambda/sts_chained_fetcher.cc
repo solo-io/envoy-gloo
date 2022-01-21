@@ -93,11 +93,13 @@ public:
 
     // TODO(nfudenberg) dont do this silly dereference if possible
     auto& hdrs = message->headers();
-    // TODO(nfudenberg) allow for Region this to be overridable. DefaultRegion is gauranteed to be available 
+    // TODO(nfudenberg) allow for Region this to be overridable. 
+    // DefaultRegion is gauranteed to be available 
     // Configured override region may be faster.
     aws_authenticator_.sign(&hdrs, HeadersToSign, DefaultRegion);
 
-    request_ = thread_local_cluster->httpAsyncClient().send(std::move(message), *this, options);
+    request_ = thread_local_cluster->httpAsyncClient().send(
+                                            std::move(message), *this, options);
   }
 
   // HTTP async receive methods
@@ -113,27 +115,28 @@ public:
      ENVOY_LOG(debug, "{}: chained body ", body);
       // CONSIDER: moving this to a better function loction
       // ripped from sts_connection
-      #define GET_PARAM(X)                                                         \
-      std::string X;                                                               \
-      {                                                                            \
-        std::match_results<absl::string_view::const_iterator> matched;             \
-        bool result = std::regex_search(body.begin(), body.end(), matched,         \
-                                        DUPEStsResponseRegex::get().regex_##X);    \
-        if (!result || !(matched.size() != 1)) {                                   \
-          ENVOY_LOG(trace, "response body did not contain " #X);                   \
-          callback_-> onChainedFailure(CredentialsFailureStatus::InvalidSts);      \
-          return;                                                                  \
-        }                                                                          \
-        const auto &sub_match = matched[1];                                        \
-        decltype(X) matched_sv(sub_match.first, sub_match.length());               \
-        X = std::move(matched_sv);                                                 \
+      #define GET_PARAM(X)                                                     \
+      std::string X;                                                           \
+      {                                                                        \
+        std::match_results<absl::string_view::const_iterator> matched;         \
+        bool result = std::regex_search(body.begin(), body.end(), matched,     \
+                                        DUPEStsResponseRegex::get().regex_##X);\
+        if (!result || !(matched.size() != 1)) {                               \
+          ENVOY_LOG(trace, "response body did not contain " #X);               \
+          callback_-> onChainedFailure(CredentialsFailureStatus::InvalidSts);  \
+          return;                                                              \
+        }                                                                      \
+        const auto &sub_match = matched[1];                                    \
+        decltype(X) matched_sv(sub_match.first, sub_match.length());           \
+        X = std::move(matched_sv);                                             \
       }
 
       GET_PARAM(access_key);
       GET_PARAM(secret_key);
       GET_PARAM(session_token);
       GET_PARAM(expiration);
-      callback_->onChainedSuccess(access_key, secret_key, session_token, expiration);
+      callback_->onChainedSuccess(access_key, secret_key, 
+                                                    session_token, expiration);
    }else{
       callback_->onChainedFailure(CredentialsFailureStatus::Network);
    }

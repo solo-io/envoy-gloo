@@ -30,9 +30,13 @@ using StsChainedFetcherPtr = std::unique_ptr<StsChainedFetcher>;
 /**
  * StsChainedFetcher interface can be used to retrieve STS credentials 
  * for a new account if you already have assumed a role.
- * An instance of this interface is designed to retrieve one set of credentialssess
+ * An instance of this interface is designed to retrieve one set of credentials
  * at a time and is scoped to a given role.
  * Does not currently support multi-chaining.
+ * A chained role assumption is not allowed to be for more than 1 hour.
+ * So we for now do not change the default 1 hour assumption.
+ * https://docs.aws.amazon.com
+ * /IAM/latest/UserGuide/id_roles_terms-and-concepts.html
  */
 class StsChainedFetcher {
 public:
@@ -108,8 +112,8 @@ public:
     * @param api the api instance
     * @return a StsChainedFetcher instance
     */
-    static StsChainedFetcherPtr create(Upstream::ClusterManager &cm, Api::Api &api,
-                                          const absl::string_view base_role_arn );
+    static StsChainedFetcherPtr create(Upstream::ClusterManager &cm, 
+                         Api::Api &api, const absl::string_view base_role_arn );
   };
  
 } // namespace AwsLambda
