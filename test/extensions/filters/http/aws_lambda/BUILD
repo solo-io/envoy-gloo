@@ -70,19 +70,19 @@ envoy_gloo_cc_test(
     ],
 )
 
-envoy_gloo_cc_test(
-    name = "sts_connection_pool_test",
-    srcs = ["sts_connection_pool_test.cc"],
-    repository = "@envoy",
-    deps = [
-        ":aws_mocks",
-        "//source/extensions/filters/http/aws_lambda:sts_connection_pool_lib",
-        "@envoy//test/extensions/filters/http/common:mock_lib",
-        "@envoy//test/test_common:utility_lib",
-        "@envoy//test/mocks/server:factory_context_mocks",
-        "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
-    ],
-)
+-- envoy_gloo_cc_test(
+--     name = "sts_connection_pool_test",
+--     srcs = ["sts_connection_pool_test.cc"],
+--     repository = "@envoy",
+--     deps = [
+--         ":aws_mocks",
+--         "//source/extensions/filters/http/aws_lambda:sts_connection_pool_lib",
+--         "@envoy//test/extensions/filters/http/common:mock_lib",
+--         "@envoy//test/test_common:utility_lib",
+--         "@envoy//test/mocks/server:factory_context_mocks",
+--         "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
+--     ],
+-- )
 
 envoy_cc_mock(
     name = "aws_mocks",
