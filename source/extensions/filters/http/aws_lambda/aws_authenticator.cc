@@ -29,6 +29,11 @@ AwsAuthenticator::AwsAuthenticator(TimeSource &time_source)
   service_ = &AwsAuthenticatorConsts::get().Service;
   method_ = &Http::Headers::get().MethodValues.Post;
 }
+AwsAuthenticator::AwsAuthenticator(TimeSource &time_source,
+                                      const std::string *service)
+    : time_source_(time_source), service_(service) {
+  method_ = &Http::Headers::get().MethodValues.Post;
+}
 
 void AwsAuthenticator::init(const std::string *access_key,
                             const std::string *secret_key,
@@ -196,7 +201,6 @@ std::string AwsAuthenticator::computeSignature(
   recusiveHmacHelper(sighmac, out.begin(), out_len, region);
   recusiveHmacHelper(sighmac, out.begin(), out_len, *service_);
   recusiveHmacHelper(sighmac, out.begin(), out_len, aws_request);
-
   const auto &nl = AwsAuthenticatorConsts::get().Newline;
 
   recusiveHmacHelper<std::initializer_list<const std::string *>>(
@@ -239,12 +243,14 @@ std::string AwsAuthenticator::signWithTime(
   std::string signed_headers = std::move(preparedHeaders.second);
 
   std::string hexpayload = getBodyHexSha();
-
+ 
   fetchUrl();
 
   std::string hashed_canonical_request = computeCanonicalRequestHash(
       *method_, canonical_headers, signed_headers, hexpayload);
+
   std::string credentials_scope_date = getCredntialScopeDate(now);
+
   std::string CredentialScope =
       getCredntialScope(region, credentials_scope_date);
 
@@ -252,7 +258,7 @@ std::string AwsAuthenticator::signWithTime(
       computeSignature(region, credentials_scope_date, CredentialScope,
                        request_date_time, hashed_canonical_request);
 
-  std::stringstream authorizationvalue;
+ std::stringstream authorizationvalue;
 
   // TODO(talnordan): Provide `DETAILS`.
   RELEASE_ASSERT(access_key_, "");
