@@ -33,7 +33,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-// const std::string valid_access, valid_secret, valid_session, valid_expiration = R"(
+// const std::string valid_response = R"(
 // <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
 //   <AssumeRoleWithWebIdentityResult>
 //     <Credentials>

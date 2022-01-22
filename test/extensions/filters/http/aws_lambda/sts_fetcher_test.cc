@@ -29,18 +29,22 @@ namespace HttpFilters {
 namespace AwsLambda {
 namespace {
 
-const std::string valid_response = R"(
-<AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
-  <AssumeRoleWithWebIdentityResult>
-    <Credentials>
-      <AccessKeyId>some_access_key</AccessKeyId>
-      <SecretAccessKey>some_secret_key</SecretAccessKey>
-      <SessionToken>some_session_token</SessionToken>
-      <Expiration>3000-07-28T21:20:25Z</Expiration>
-    </Credentials>
-  </AssumeRoleWithWebIdentityResult>
-</AssumeRoleWithWebIdentityResponse>
-)";
+// const std::string valid_response = R"(
+// <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+//   <AssumeRoleWithWebIdentityResult>
+//     <Credentials>
+//       <AccessKeyId>some_access_key</AccessKeyId>
+//       <SecretAccessKey>some_secret_key</SecretAccessKey>
+//       <SessionToken>some_session_token</SessionToken>
+//       <Expiration>3000-07-28T21:20:25Z</Expiration>
+//     </Credentials>
+//   </AssumeRoleWithWebIdentityResult>
+// </AssumeRoleWithWebIdentityResponse>
+// )";
+const std::string valid_access = "some_access_key";
+const std::string valid_secret = "some_secret_key";
+const std::string valid_session = "some_session_token";
+const std::string valid_expiration = "2100-07-28T21:20:25Z";
 
 const std::string expired_token_response = R"(
 <ErrorResponse xmlns="http://webservices.amazon.com/AWSFault/2005-15-09">
@@ -78,13 +82,13 @@ public:
 TEST_F(StsFetcherTest, TestGetSuccess) {
   // Setup
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200",
-                        valid_response);
+                        valid_access, valid_secret, valid_session, valid_expiration);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
       mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_, role_arn));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
-  EXPECT_CALL(callbacks, onSuccess(valid_response)).Times(1);
+  EXPECT_CALL(callbacks, onSuccess(valid_access, valid_secret, valid_session, valid_expiration)).Times(1);
   // Act
   fetcher->fetch(uri_, role_arn, web_token, &callbacks);
 }
@@ -92,13 +96,13 @@ TEST_F(StsFetcherTest, TestGetSuccess) {
 TEST_F(StsFetcherTest, TestChainedSts) {
   // Setup
   MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200",
-                        valid_response);
+                        valid_access, valid_secret, valid_session, valid_expiration);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
       mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_, role_arn));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
-  EXPECT_CALL(callbacks, onSuccess(valid_response)).Times(1);
+  EXPECT_CALL(callbacks, onSuccess(valid_access, valid_secret, valid_session, valid_expiration)).Times(1);
   // Act
   fetcher->fetch(uri_, to_chain_role_arn, web_token, &callbacks);
 }
