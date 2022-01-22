@@ -33,18 +33,23 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-const std::string valid_response = R"(
-<AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
-  <AssumeRoleWithWebIdentityResult>
-    <Credentials>
-      <AccessKeyId>some_access_key</AccessKeyId>
-      <SecretAccessKey>some_secret_key</SecretAccessKey>
-      <SessionToken>some_session_token</SessionToken>
-      <Expiration>2100-07-28T21:20:25Z</Expiration>
-    </Credentials>
-  </AssumeRoleWithWebIdentityResult>
-</AssumeRoleWithWebIdentityResponse>
-)";
+// const std::string valid_access, valid_secret, valid_session, valid_expiration = R"(
+// <AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+//   <AssumeRoleWithWebIdentityResult>
+//     <Credentials>
+//       <AccessKeyId>some_access_key</AccessKeyId>
+//       <SecretAccessKey>some_secret_key</SecretAccessKey>
+//       <SessionToken>some_session_token</SessionToken>
+//       <Expiration>2100-07-28T21:20:25Z</Expiration>
+//     </Credentials>
+//   </AssumeRoleWithWebIdentityResult>
+// </AssumeRoleWithWebIdentityResponse>
+// )";
+
+const std::string valid_access = "some_access_key";
+const std::string valid_secret = "some_secret_key";
+const std::string valid_session = "some_session_token";
+const std::string valid_expiration = "2100-07-28T21:20:25Z";
 
 const std::string service_account_credentials_config = R"(
 cluster: test
@@ -105,7 +110,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
               EXPECT_EQ(role_arn, inner_role_arn);
             }));
 
-        callbacks->onSuccess(valid_response);
+        callbacks->onSuccess(valid_access, valid_secret, valid_session, valid_expiration);
       }));
 
   sts_conn_pool->add(&ctx_callbacks);
@@ -166,7 +171,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
         EXPECT_EQ(role_arn, inner_role_arn);
       }));
 
-  lambda_callbacks->onSuccess(valid_response);
+  lambda_callbacks->onSuccess(valid_access, valid_secret, valid_session, valid_expiration);
 }
 
 TEST_F(StsConnectionPoolTest, TestFailure) {
