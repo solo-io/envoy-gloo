@@ -49,7 +49,9 @@ namespace AwsLambda {
 const std::string valid_access = "some_access_key";
 const std::string valid_secret = "some_secret_key";
 const std::string valid_session = "some_session_token";
-const std::string valid_expiration = "2100-07-28T21:20:25Z";
+// const std::string valid_expiration = "2100-07-28T21:20:25Z";
+ 
+const SystemTime valid_expiration(std::chrono::microseconds(1522796769123456));
 
 const std::string service_account_credentials_config = R"(
 cluster: test
