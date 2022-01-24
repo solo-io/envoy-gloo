@@ -96,6 +96,7 @@ public:
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
                      const absl::string_view role_arn,
                      const absl::string_view web_token,
+                     StsCredentialsConstSharedPtr creds,
                      StsFetcher::Callbacks *callbacks)  PURE;
 
   /*

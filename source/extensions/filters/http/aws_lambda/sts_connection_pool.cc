@@ -28,7 +28,8 @@ public:
   ~StsConnectionPoolImpl();
 
   void init(const envoy::config::core::v3::HttpUri &uri,
-            const absl::string_view web_token) override;
+            const absl::string_view web_token,
+            StsCredentialsConstSharedPtr creds) override;
 
   StsConnectionPool::Context *
   add(StsConnectionPool::Context::Callbacks *callbacks) override;
@@ -103,9 +104,9 @@ StsConnectionPoolImpl::~StsConnectionPoolImpl() {
 };
 
 void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
-                                 const absl::string_view web_token) {
+        const absl::string_view web_token, StsCredentialsConstSharedPtr creds) {
   request_in_flight_ = true;
-  fetcher_->fetch(uri, role_arn_, web_token, this);
+  fetcher_->fetch(uri, role_arn_, web_token, creds, this);
 }
 
 StsConnectionPool::Context *
@@ -152,7 +153,7 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
                           const absl::string_view role_arn,
                           StsConnectionPool::Callbacks *callbacks,
                           StsFetcherPtr fetcher) {
-
+                              
   return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, role_arn,
                                                  callbacks, std::move(fetcher));
 }

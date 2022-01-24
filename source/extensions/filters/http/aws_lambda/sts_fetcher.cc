@@ -42,6 +42,7 @@ public:
   void fetch(const envoy::config::core::v3::HttpUri &uri,
              const  absl::string_view role_arn,
              const absl::string_view web_token,
+             StsCredentialsConstSharedPtr creds,
              StsFetcher::Callbacks *callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
     ASSERT(callbacks_ == nullptr);
@@ -50,6 +51,14 @@ public:
     callbacks_ = callbacks;
     uri_ = &uri;
     set_role(role_arn);
+    if (creds != nullptr){
+      ENVOY_LOG(debug, "creds found skipping straight to chained");
+     
+      chained_fetcher_->fetch(*uri_, role_arn_, 
+       creds->accessKeyId().value(),  creds->secretAccessKey().value(),
+                          creds->sessionToken().value(),  this);
+      return;
+    }
     
 
     // Check if cluster is configured, fail the request if not.

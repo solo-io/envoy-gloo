@@ -113,52 +113,65 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   // Look for active connection pool for given role_arn
-  const auto existing_pool = connection_pools_.find(role_arn);
-  if (existing_pool != connection_pools_.end()) {
+   auto conn_pool = connection_pools_.find(role_arn);
+  if (conn_pool != connection_pools_.end()) {
     // We have an existing connection pool, check if there is already a request
     // in flight
-    if (!existing_pool->second->requestInFlight()) {
-      // If the request is not in flight, start a new fetch
-      // initialize the connection
-      existing_pool->second->init(uri_, web_token_);
+    if (conn_pool->second->requestInFlight()) {
+     // add new context to connection pool and return it to the caller
+     return conn_pool->second->add(callbacks);
     }
-    // add new context to connection pool and return it to the caller
-    return existing_pool->second->add(callbacks);
+    
+  }else{
+     conn_pool =  connection_pools_
+          .emplace(role_arn, conn_pool_factory_->build(
+              role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
+          .first;
   }
 
   //TODO:NOW  create fetcher type based on role_arn
 
-  // Add the new pool to our list of active pools
-  auto conn_pool =
-      connection_pools_
-          .emplace(role_arn, conn_pool_factory_->build(
-              role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
-          .first;
+  //  if (role_arn == default_role_arn_) {
+  //    auto conn_pool_for_default =
+  //       connection_pools_
+  //           .emplace(role_arn, conn_pool_factory_->build(
+  //               role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
+  //           .first;
+  //     conn_pool_for_default->second->init(uri_, web_token_);
+  //     return conn_pool_for_default->second->add(callbacks);
+  //   }
+    // Add the new pool to our list of active pools
+  // auto conn_pool =
+     
   
-  /*
+  
   // If chaining check to see if we need to get the base token in addition.
   // Chained role expiration is not linked to base expiration so we just 
   // need to make sure the creds are good for the duration of our sts call.
-  if (role_arn != default_role_arn_) {
+  
     const auto existing_base_token = credentials_cache_.find(default_role_arn_); 
     if (existing_base_token != credentials_cache_.end()) {
+      ENVOY_LOG(debug,"Found base token");
       const auto now = api_.timeSource().systemTime();
       auto time_left = existing_base_token->second->expirationTime() - now;
       if (time_left > REFRESH_GRACE_PERIOD) {
         // TODO(nfudenberg) Call just the chained assumption
-         conn_pool->second->init(uri_, web_token_);
+        ENVOY_LOG(debug,"Found base token with remaining time");
+         conn_pool->second->init(uri_, web_token_, existing_base_token->second);
         return conn_pool->second->add(callbacks);
       }
+    }else{
+       ENVOY_LOG(debug,"No base token");
     }
     // TODO:NOW sub to base fetcher and set our pool in flight
     // so that it doesnt get emplaced/
     // TODO(nfudenberg) subscribe to the base role's fetcher.
-  }
-  */
-
+  
+  
+ 
  
   // initialize the connection
-  conn_pool->second->init(uri_, web_token_);
+  conn_pool->second->init(uri_, web_token_, NULL);
   // generate and return a context with the current callbacks
   return conn_pool->second->add(callbacks);
 };
