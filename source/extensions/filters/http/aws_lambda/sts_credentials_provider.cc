@@ -145,7 +145,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
      // since there is no existing connection pool then we need to create one
      conn_pool =  connection_pools_
           .emplace(role_arn, conn_pool_factory_->build(
-              role_arn, this, StsFetcher::create(cm_, api_, default_role_arn_)))
+              role_arn, this, StsFetcher::create(cm_, api_)))
           .first;
   }
 
@@ -164,7 +164,6 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     const auto now = api_.timeSource().systemTime();
     auto time_left = existing_base_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
-      // TODO(nfuden) Call just the chained assumption
       ENVOY_LOG(trace,"found base token with remaining time");
       conn_pool->second->init(uri_, web_token_, existing_base_token->second);
       return conn_pool->second->add(callbacks);
@@ -177,7 +176,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
      base_conn_pool =  connection_pools_
           .emplace(default_role_arn_, conn_pool_factory_->build(
             default_role_arn_, this, 
-            StsFetcher::create(cm_, api_, default_role_arn_))).first;
+            StsFetcher::create(cm_, api_))).first;
   }
   // only recreate base request if its not in flight
   if (!base_conn_pool->second->requestInFlight()) {
@@ -231,8 +230,8 @@ StsCredentialsProviderPtr StsCredentialsProvider::create(
 }
 
 StsCredentialsProviderFactoryPtr
-StsCredentialsProviderFactory::create(Api::Api &api,
-                                      Upstream::ClusterManager &cm) {
+StsCredentialsProviderFactory::create(Api::Api &api, 
+                                              Upstream::ClusterManager &cm) {
   return std::make_unique<StsCredentialsProviderFactoryImpl>(api, cm);
 }
 
