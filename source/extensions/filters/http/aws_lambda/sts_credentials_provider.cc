@@ -179,16 +179,15 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
             default_role_arn_, this, 
             StsFetcher::create(cm_, api_, default_role_arn_))).first;
   }
-  // only recreate if its not in flight
+  // only recreate base request if its not in flight
   if (!base_conn_pool->second->requestInFlight()) {
    base_conn_pool->second->init(uri_, web_token_, NULL);
   }
   base_conn_pool->second->addChained(role_arn);
 
 
-  // initialize the connection
+  // initialize the connection but dont fetch as we are waiting on base conn
   conn_pool->second->initWithoutFetch();
-  // conn_pool->second->init(uri_, web_token_, NULL);
   // generate and return a context with the current callbacks
   return conn_pool->second->add(callbacks);
 };
