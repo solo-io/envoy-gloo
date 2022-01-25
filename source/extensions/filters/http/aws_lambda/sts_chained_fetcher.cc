@@ -91,9 +91,9 @@ public:
 
     ENVOY_LOG(debug, " chained auth payload {}", message->body().length());
 
-    // TODO(nfudenberg) dont do this silly dereference if possible
+    // TODO(nfuden) dont do this silly dereference if possible
     auto& hdrs = message->headers();
-    // TODO(nfudenberg) allow for Region this to be overridable. 
+    // TODO(nfuden) allow for Region this to be overridable. 
     // DefaultRegion is gauranteed to be available 
     // Configured override region may be faster.
     aws_authenticator_.sign(&hdrs, HeadersToSign, DefaultRegion);
@@ -174,7 +174,7 @@ private:
   class AWSStsHeaderValues {
   public:
     const std::string Service{"sts"};
-     const Http::LowerCaseString DateHeader{"x-amz-date"};
+    const Http::LowerCaseString DateHeader{"x-amz-date"};
     const Http::LowerCaseString FunctionError{"x-amz-function-error"};
   };
   typedef ConstSingleton<AWSStsHeaderValues> AWSStsHeaderNames;

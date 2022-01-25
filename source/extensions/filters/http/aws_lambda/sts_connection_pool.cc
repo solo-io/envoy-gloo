@@ -17,8 +17,7 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 class StsConnectionPoolImpl : public StsConnectionPool,
-                              public StsFetcher::Callbacks,
-                              public Logger::Loggable<Logger::Id::aws> {
+                              public StsFetcher::Callbacks {
 public:
   StsConnectionPoolImpl(Api::Api &api, Event::Dispatcher &dispatcher,
                         const absl::string_view role_arn,
@@ -31,13 +30,20 @@ public:
             const absl::string_view web_token,
             StsCredentialsConstSharedPtr creds) override;
 
+  void initWithoutFetch() override;
+
   StsConnectionPool::Context *
   add(StsConnectionPool::Context::Callbacks *callbacks) override;
+  void addChained( std::string role_arn ) override;
 
   void onSuccess( const std::string access_key, 
    const std::string secret_key, 
    const std::string session_token, 
   const SystemTime expiration) override;
+  
+  void onSuccess( 
+    std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+                                      credential ) ;
 
   void onFailure(CredentialsFailureStatus status) override;
 
@@ -72,6 +78,7 @@ private:
   };
 
   using ContextImplPtr = std::unique_ptr<ContextImpl>;
+  using PoolImplPtr = std::unique_ptr<StsConnectionPool>;
 
   StsFetcherPtr fetcher_;
   Api::Api &api_;
@@ -80,6 +87,7 @@ private:
   StsConnectionPool::Callbacks *callbacks_;
 
   std::list<ContextImplPtr> connection_list_;
+  std::list<std::string> chained_requests_;
 
   bool request_in_flight_ = false;
 };
@@ -106,8 +114,14 @@ StsConnectionPoolImpl::~StsConnectionPoolImpl() {
 void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
         const absl::string_view web_token, StsCredentialsConstSharedPtr creds) {
   request_in_flight_ = true;
+
   fetcher_->fetch(uri, role_arn_, web_token, creds, this);
 }
+void StsConnectionPoolImpl::initWithoutFetch() {
+  request_in_flight_ = true;
+}
+
+
 
 StsConnectionPool::Context *
 StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
@@ -116,6 +130,12 @@ StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
 
   LinkedList::moveIntoList(std::move(ctx), connection_list_);
   return ctx_ptr;
+};
+
+void StsConnectionPoolImpl::addChained( std::string role_arn) {
+  chained_requests_.emplace_back(role_arn);
+  // LinkedList::moveIntoList(std::move(pool), chained_requests_);
+  return ;
 };
 
 void StsConnectionPoolImpl::onSuccess(
@@ -131,13 +151,15 @@ void StsConnectionPoolImpl::onSuccess(
   ENVOY_LOG(trace, "{} sts connection success",
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
-  callbacks_->onResult(result, role_arn_);
+  // callbacks_->onResult(result, role_arn_);
+  callbacks_->onResultWithChained(result, role_arn_, chained_requests_);
   // Send result back to all contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);
     connection_list_.pop_back();
   }
 };
+
 
 void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
   request_in_flight_ = false;

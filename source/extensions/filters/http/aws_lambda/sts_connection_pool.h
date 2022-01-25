@@ -37,7 +37,7 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 class StsConnectionPool;
 using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
 
-class StsConnectionPool {
+class StsConnectionPool :  public Logger::Loggable<Logger::Id::aws> {
 public:
   virtual ~StsConnectionPool() = default;
 
@@ -53,6 +53,16 @@ public:
      */
     virtual void onResult(std::shared_ptr<const StsCredentials>,
                           std::string_view role_arn) PURE;
+
+    /**
+     * Called on successful request
+     *
+     * @param credential the credentials
+     * @param role_arn the role_arn used to create these credentials
+     * @param chained_requests the list of arns that rely on this result
+     */
+    virtual void onResultWithChained(std::shared_ptr<const StsCredentials>,
+       std::string role_arn, std::list<std::string> chained_requests) PURE;
   };
 
   // Context object to hold data needed for verifier.
@@ -89,9 +99,7 @@ public:
     virtual StsConnectionPool::Context::Callbacks *callbacks() const PURE;
 
     /**
-     * Returns the request callback wrapped in this context.
-     *
-     * @returns the request callback.
+     * Cancels the request if it is in flight
      */
     virtual void cancel() PURE;
   };
@@ -100,8 +108,10 @@ public:
 
   virtual void init(const envoy::config::core::v3::HttpUri &uri,
     const absl::string_view web_token, StsCredentialsConstSharedPtr creds) PURE;
-
+  virtual void initWithoutFetch() PURE;
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
+
+  virtual void addChained( std::string role_arn)PURE;
 
   virtual bool requestInFlight() PURE;
 

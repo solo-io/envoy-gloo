@@ -52,7 +52,7 @@ public:
     uri_ = &uri;
     set_role(role_arn);
     if (creds != nullptr){
-      ENVOY_LOG(debug, "creds found skipping straight to chained");
+      ENVOY_LOG(debug, "Found existing creds skipping straight to chained");
      
       chained_fetcher_->fetch(*uri_, role_arn_, 
        creds->accessKeyId().value(),  creds->secretAccessKey().value(),
