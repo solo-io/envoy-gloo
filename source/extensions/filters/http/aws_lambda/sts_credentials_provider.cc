@@ -95,7 +95,7 @@ void StsCredentialsProviderImpl::onResultWithChained(
   credentials_cache_.emplace(role_arn, result);
    while( !chained_requests.empty()){
     auto chained_role = chained_requests.back();
-    ENVOY_LOG(debug, "Now do chained for {}", chained_role);
+    ENVOY_LOG(trace, "calling sts chained for {}", chained_role);
     auto conn_pool = connection_pools_.find(chained_role);
     if (conn_pool != connection_pools_.end()) {
       conn_pool->second->init(uri_, "", result);
@@ -149,10 +149,6 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
           .first;
   }
 
-  // Consider short circuit here for default arn 
-
-  //TODO:NOW  create fetcher type based on role_arn
-
   // Short circuit any additional checks if we are the base arn
   if (role_arn == default_role_arn_) {
     // initialize the connection and subscribe to the callbacks
@@ -165,18 +161,14 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // need to make sure the creds are good for the duration of our sts call.
   const auto existing_base_token = credentials_cache_.find(default_role_arn_); 
   if (existing_base_token != credentials_cache_.end()) {
-    ENVOY_LOG(debug,"Found base token");
     const auto now = api_.timeSource().systemTime();
     auto time_left = existing_base_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
       // TODO(nfuden) Call just the chained assumption
-      ENVOY_LOG(debug,"Found base token with remaining time");
+      ENVOY_LOG(trace,"found base token with remaining time");
       conn_pool->second->init(uri_, web_token_, existing_base_token->second);
       return conn_pool->second->add(callbacks);
     }
-  }else{
-    // TODO(nfuden) remove this extra little comment
-      ENVOY_LOG(debug,"No base token found ");
   }
   
   // find/create default connection pool

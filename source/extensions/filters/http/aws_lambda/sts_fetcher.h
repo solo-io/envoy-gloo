@@ -66,9 +66,9 @@ public:
      * @param body the request body
      */
     virtual void onSuccess(   const std::string access_key, 
-   const std::string secret_key, 
-   const std::string session_token, 
-   const SystemTime expiration) PURE;
+    const std::string secret_key, 
+    const std::string session_token, 
+    const SystemTime expiration) PURE;
 
     /**
      * Called on completion of a failed request.
