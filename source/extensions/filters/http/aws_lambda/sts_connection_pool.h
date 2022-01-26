@@ -50,18 +50,9 @@ public:
      *
      * @param credential the credentials
      * @param role_arn the role_arn used to create these credentials
-     */
-    virtual void onResult(std::shared_ptr<const StsCredentials>,
-                          std::string_view role_arn) PURE;
-
-    /**
-     * Called on successful request
-     *
-     * @param credential the credentials
-     * @param role_arn the role_arn used to create these credentials
      * @param chained_requests the list of arns that rely on this result
      */
-    virtual void onResultWithChained(std::shared_ptr<const StsCredentials>,
+    virtual void onResult(std::shared_ptr<const StsCredentials>,
        std::string role_arn, std::list<std::string> chained_requests) PURE;
   };
 
@@ -108,7 +99,7 @@ public:
 
   virtual void init(const envoy::config::core::v3::HttpUri &uri,
     const absl::string_view web_token, StsCredentialsConstSharedPtr creds) PURE;
-  virtual void initWithoutFetch() PURE;
+  virtual void setInFlight() PURE;
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
 
   virtual void addChained( std::string role_arn)PURE;

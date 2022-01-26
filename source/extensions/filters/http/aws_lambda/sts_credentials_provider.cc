@@ -34,9 +34,6 @@ public:
   void setWebToken(std::string_view web_token) override;
 
   void onResult(std::shared_ptr<const StsCredentials>,
-                std::string_view role_arn) override;
-
-  void onResultWithChained(std::shared_ptr<const StsCredentials>,
               std::string role_arn, 
               std::list<std::string>  chained_requests) override;            
 
@@ -85,11 +82,6 @@ void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
 }
 
 void StsCredentialsProviderImpl::onResult(
-    std::shared_ptr<const StsCredentials> result, std::string_view role_arn) {
-  credentials_cache_.emplace(role_arn, result);
-}
-
-void StsCredentialsProviderImpl::onResultWithChained(
     std::shared_ptr<const StsCredentials> result, std::string role_arn,
     std::list<std::string> chained_requests) {
   credentials_cache_.emplace(role_arn, result);
@@ -186,7 +178,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
 
 
   // initialize the connection but dont fetch as we are waiting on base conn
-  conn_pool->second->initWithoutFetch();
+  conn_pool->second->setInFlight();
   // generate and return a context with the current callbacks
   return conn_pool->second->add(callbacks);
 };

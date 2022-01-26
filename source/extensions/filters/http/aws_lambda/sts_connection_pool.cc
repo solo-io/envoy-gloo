@@ -30,7 +30,7 @@ public:
             const absl::string_view web_token,
             StsCredentialsConstSharedPtr creds) override;
 
-  void initWithoutFetch() override;
+  void setInFlight() override;
 
   StsConnectionPool::Context *
   add(StsConnectionPool::Context::Callbacks *callbacks) override;
@@ -114,7 +114,7 @@ void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
 
   fetcher_->fetch(uri, role_arn_, web_token, creds, this);
 }
-void StsConnectionPoolImpl::initWithoutFetch() {
+void StsConnectionPoolImpl::setInFlight() {
   request_in_flight_ = true;
 }
 
@@ -184,9 +184,9 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ENVOY_LOG(trace, "{} sts connection success",
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
-  // callbacks_->onResult(result, role_arn_);
-  callbacks_->onResultWithChained(result, role_arn_, chained_requests_);
-  // Send result back to all contexts waiting in list
+  // Report the existence of this credential to any pools that may be waitin
+  callbacks_->onResult(result, role_arn_, chained_requests_);
+  // Send result back to all lambda filter contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);
     connection_list_.pop_back();
