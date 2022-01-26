@@ -1,0 +1,5 @@
+changelog:
+  - type: NON_USER_FACING
+    issueLink: https://github.com/solo-io/envoy-gloo/issues/112
+    resolvesIssue: true
+    description: Comment out non-functional line in docker script

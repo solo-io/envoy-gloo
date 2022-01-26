@@ -24,7 +24,7 @@ export ENVOY_BUILD_IMAGE="${IMAGE_NAME}:${IMAGE_ID}"
 
 mkdir -p "${ENVOY_DOCKER_BUILD_DIR}"
 
-Since we specify an explicit hash, docker-run will pull from the remote repo if missing.
+# Since we specify an explicit hash, docker-run will pull from the remote repo if missing.
 docker run --rm ${ENVOY_DOCKER_OPTIONS} -e HTTP_PROXY=${http_proxy} -e HTTPS_PROXY=${https_proxy} -e NO_PROXY=${no_proxy} \
   -u "${USER}":"${USER_GROUP}" -v "${ENVOY_DOCKER_BUILD_DIR}":/build -v /var/run/docker.sock:/var/run/docker.sock  \
   -e BAZEL_BUILD_EXTRA_OPTIONS -e BAZEL_EXTRA_TEST_OPTIONS -e BAZEL_REMOTE_CACHE -e ENVOY_STDLIB -e BUILD_REASON \
