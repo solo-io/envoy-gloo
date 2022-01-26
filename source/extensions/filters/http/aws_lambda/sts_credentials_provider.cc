@@ -5,7 +5,7 @@
 #include "envoy/common/time.h"
 
 #include "source/common/common/linked_object.h"
-
+#include "source/common/runtime/runtime_features.h"
 #include "source/extensions/common/aws/credentials_provider.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -36,6 +36,8 @@ public:
   void onResult(std::shared_ptr<const StsCredentials>,
               std::string role_arn, 
               std::list<std::string>  chained_requests) override;            
+  void onFailure(CredentialsFailureStatus status, 
+              std::list<std::string>  chained_requests) override; 
 
 private:
   Api::Api &api_;
@@ -48,7 +50,6 @@ private:
   StsConnectionPoolFactoryPtr conn_pool_factory_;
 
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
-  // TODO: udpate this file, inotify or timer
   std::string web_token_;
   // Credentials storage map, keyed by arn
   std::unordered_map<std::string, StsCredentialsConstSharedPtr>
@@ -85,14 +86,30 @@ void StsCredentialsProviderImpl::onResult(
     std::shared_ptr<const StsCredentials> result, std::string role_arn,
     std::list<std::string> chained_requests) {
   credentials_cache_.emplace(role_arn, result);
-   while( !chained_requests.empty()){
+
+  // kick off any waiting chained assumption roles relying on this credential
+  while( !chained_requests.empty()){
     auto chained_role = chained_requests.back();
     ENVOY_LOG(trace, "calling sts chained for {}", chained_role);
     auto conn_pool = connection_pools_.find(chained_role);
     if (conn_pool != connection_pools_.end()) {
       conn_pool->second->init(uri_, "", result);
     }
-    
+    chained_requests.pop_back();
+  }
+}
+
+void StsCredentialsProviderImpl::onFailure(CredentialsFailureStatus status,
+                                      std::list<std::string> chained_requests) {
+ 
+  // pass failure on to any waiting chained assumption roles
+  while( !chained_requests.empty()){
+    auto chained_role = chained_requests.back();
+    ENVOY_LOG(trace, "propagate failure of sts chained for {}", chained_role);
+    auto conn_pool = connection_pools_.find(chained_role);
+    if (conn_pool != connection_pools_.end()) {
+      conn_pool->second->markFailed(status);
+    }
     chained_requests.pop_back();
   }
 }
@@ -142,7 +159,11 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   // Short circuit any additional checks if we are the base arn
-  if (role_arn == default_role_arn_) {
+  // Use getInteger as it doesnt check against default runtime and
+  // So that runtime enablement is not decided at per filter runtime
+  // via a proto based flag. 
+  if (role_arn == default_role_arn_  || Runtime::getInteger(
+                "envoy.reloadable_features.aws_lambda.sts_chaining", 1) ==0 ){
     // initialize the connection and subscribe to the callbacks
     conn_pool->second->init(uri_, web_token_, NULL);
     return conn_pool->second->add(callbacks);

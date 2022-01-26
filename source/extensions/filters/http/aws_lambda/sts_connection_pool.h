@@ -54,6 +54,14 @@ public:
      */
     virtual void onResult(std::shared_ptr<const StsCredentials>,
        std::string role_arn, std::list<std::string> chained_requests) PURE;
+
+    /**
+     * Called on a failed request
+     *
+     * @param chained_requests the list of arns that rely on this result
+     */
+    virtual void onFailure( CredentialsFailureStatus status,
+                              std::list<std::string> chained_requests) PURE;
   };
 
   // Context object to hold data needed for verifier.
@@ -103,7 +111,7 @@ public:
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
 
   virtual void addChained( std::string role_arn)PURE;
-
+  virtual void markFailed(CredentialsFailureStatus status)PURE;
   virtual bool requestInFlight() PURE;
 
   static StsConnectionPoolPtr create(Api::Api &api,

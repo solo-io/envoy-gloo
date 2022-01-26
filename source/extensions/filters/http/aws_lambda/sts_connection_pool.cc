@@ -35,7 +35,7 @@ public:
   StsConnectionPool::Context *
   add(StsConnectionPool::Context::Callbacks *callbacks) override;
   void addChained( std::string role_arn ) override;
-
+  void markFailed( CredentialsFailureStatus status) override;
   void onSuccess(const absl::string_view body)override;
   
   void onSuccess( 
@@ -133,6 +133,10 @@ void StsConnectionPoolImpl::addChained( std::string role_arn) {
   return ;
 };
 
+void StsConnectionPoolImpl::markFailed( CredentialsFailureStatus status) {
+  onFailure(status);
+};
+
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(!body.empty());
   
@@ -194,7 +198,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
 
 void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
   request_in_flight_ = false;
-
+  callbacks_->onFailure(status, chained_requests_);
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onFailure(status);
     connection_list_.pop_back();

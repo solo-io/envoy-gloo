@@ -93,6 +93,7 @@ public:
   MOCK_METHOD(void, addChained, (std::string role_arn));
   MOCK_METHOD(void, setInFlight, ());
   MOCK_METHOD(bool, requestInFlight, ());
+    MOCK_METHOD(void, markFailed, (CredentialsFailureStatus status));
 };
 
 class MockStsContext : public StsConnectionPool::Context {
