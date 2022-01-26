@@ -111,7 +111,6 @@ StsConnectionPoolImpl::~StsConnectionPoolImpl() {
 void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
         const absl::string_view web_token, StsCredentialsConstSharedPtr creds) {
   request_in_flight_ = true;
-
   fetcher_->fetch(uri, role_arn_, web_token, creds, this);
 }
 void StsConnectionPoolImpl::setInFlight() {
@@ -131,7 +130,6 @@ StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
 
 void StsConnectionPoolImpl::addChained( std::string role_arn) {
   chained_requests_.emplace_back(role_arn);
-  // LinkedList::moveIntoList(std::move(pool), chained_requests_);
   return ;
 };
 
@@ -169,7 +167,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
     std::string error;
     if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
                         &error)) {
-      ENVOY_LOG(trace, "Determined expiration time from STS credentials result");
+      ENVOY_LOG(trace, "Determined expiration from STS credentials result");
       expiration_time = absl::ToChronoTime(absl_expiration_time);
     } else {
       expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
