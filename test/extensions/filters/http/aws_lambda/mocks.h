@@ -22,15 +22,13 @@ public:
               (const envoy::config::core::v3::HttpUri &uri,
                const absl::string_view role_arn,
                const absl::string_view web_token,
+               StsCredentialsConstSharedPtr creds,
                StsFetcher::Callbacks *callbacks));
 };
 
 class MockStsFetcherCallbacks : public StsFetcher::Callbacks {
 public:
-  MOCK_METHOD(void, onSuccess, (const std::string access_key, 
-   const std::string secret_key, 
-   const std::string session_token, 
-   const SystemTime expiration));
+  MOCK_METHOD(void, onSuccess, (const absl::string_view body));
   MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status));
 };
 
@@ -46,7 +44,7 @@ class MockStsConnectionPoolCallbacks : public StsConnectionPool::Callbacks {
 public:
   MOCK_METHOD(void, onResult,
               (std::shared_ptr<const StsCredentials> result,
-               std::string_view role_arn));
+               std::string role_arn, std::list<std::string> chained_req));
 };
 
 class MockStsCredentialsProviderFactory : public StsCredentialsProviderFactory {
@@ -90,7 +88,8 @@ public:
               (StsConnectionPool::Context::Callbacks * callback));
   MOCK_METHOD(void, init,
               (const envoy::config::core::v3::HttpUri &uri,
-               const absl::string_view web_token));
+               const absl::string_view web_token,
+               StsCredentialsConstSharedPtr creds));
   MOCK_METHOD(bool, requestInFlight, ());
 };
 
