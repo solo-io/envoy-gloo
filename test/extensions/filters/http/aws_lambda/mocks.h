@@ -45,6 +45,8 @@ public:
   MOCK_METHOD(void, onResult,
               (std::shared_ptr<const StsCredentials> result,
                std::string role_arn, std::list<std::string> chained_req));
+  MOCK_METHOD(void, onFailure, (CredentialsFailureStatus status, 
+              std::list<std::string>  chained_requests)); 
 };
 
 class MockStsCredentialsProviderFactory : public StsCredentialsProviderFactory {
@@ -93,7 +95,7 @@ public:
   MOCK_METHOD(void, addChained, (std::string role_arn));
   MOCK_METHOD(void, setInFlight, ());
   MOCK_METHOD(bool, requestInFlight, ());
-    MOCK_METHOD(void, markFailed, (CredentialsFailureStatus status));
+  MOCK_METHOD(void, markFailed, (CredentialsFailureStatus status));
 };
 
 class MockStsContext : public StsConnectionPool::Context {
