@@ -90,6 +90,8 @@ public:
               (const envoy::config::core::v3::HttpUri &uri,
                const absl::string_view web_token,
                StsCredentialsConstSharedPtr creds));
+  MOCK_METHOD(void, addChained, (std::string role_arn));
+  MOCK_METHOD(void, setInFlight, ());
   MOCK_METHOD(bool, requestInFlight, ());
 };
 

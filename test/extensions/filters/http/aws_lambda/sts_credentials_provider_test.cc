@@ -92,9 +92,10 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool_, init(_, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
-                           const absl::string_view web_token) {
+                           const absl::string_view web_token,
+                           StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
@@ -114,7 +115,8 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   auto credentials = std::make_shared<const StsCredentials>(
       "access_key", "secret_key", "session_token",
       SystemTime(expiry_time - std::chrono::minutes(5)));
-  credentials_provider_callbacks->onResult(credentials, role_arn);
+  std::list<std::string> to_chain;
+  credentials_provider_callbacks->onResult(credentials, role_arn, to_chain);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
   EXPECT_CALL(ctx_callbacks_3, onSuccess(_))
@@ -127,6 +129,74 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
           }));
   sts_provider->find(role_arn, &ctx_callbacks_3);
 }
+
+// TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
+//   // Setup
+//   std::string base_role_arn = "test_arn";
+//   std::string role_arn = "test_arn_chained";
+//   std::string token = "test_token";
+//   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
+//       sts_connection_pool_factory_};
+//   auto sts_provider = StsCredentialsProvider::create(
+//       config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
+//       std::move(factory_), token, role_arn);
+//   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
+
+//   std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool{
+//       sts_connection_pool_};
+//   StsConnectionPool::Callbacks *credentials_provider_callbacks;
+
+//   EXPECT_CALL(*sts_connection_pool_factory_, build(_, _, _))
+//       .WillOnce(Invoke([&](const absl::string_view role_arn_arg,
+//                            StsConnectionPool::Callbacks *callbacks,
+//                            StsFetcherPtr) -> StsConnectionPoolPtr {
+//         EXPECT_EQ(role_arn_arg, base_role_arn);
+//         credentials_provider_callbacks = callbacks;
+//         return std::move(unique_pool);
+//       }));
+
+//   EXPECT_CALL(*sts_connection_pool_, init(_, _))
+//       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+//                            const absl::string_view web_token) {
+//         EXPECT_EQ(web_token, token);
+//         EXPECT_EQ(uri.uri(), config_.uri());
+//         EXPECT_EQ(uri.cluster(), config_.cluster());
+//       }));
+
+//   EXPECT_CALL(*sts_connection_pool_, add(_));
+
+//   sts_provider->find(role_arn, &ctx_callbacks_1);
+
+//   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
+
+//   EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
+//   EXPECT_CALL(*sts_connection_pool_, add(_));
+
+//   sts_provider->find(role_arn, &ctx_callbacks_2);
+
+
+
+
+
+
+
+//   // place credentials in the cache
+//   auto credentials = std::make_shared<const StsCredentials>(
+//       "access_key", "secret_key", "session_token",
+//       SystemTime(expiry_time - std::chrono::minutes(5)));
+//   credentials_provider_callbacks->onResult(credentials, role_arn, NULL );
+
+//   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
+//   EXPECT_CALL(ctx_callbacks_3, onSuccess(_))
+//       .WillOnce(Invoke(
+//           [&](std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+//                   success_creds) {
+//             EXPECT_EQ(success_creds->accessKeyId(), "access_key");
+//             EXPECT_EQ(success_creds->secretAccessKey(), "secret_key");
+//             EXPECT_EQ(success_creds->sessionToken(), "session_token");
+//           }));
+//   sts_provider->find(role_arn, &ctx_callbacks_3);
+// }
 
 } // namespace AwsLambda
 } // namespace HttpFilters
