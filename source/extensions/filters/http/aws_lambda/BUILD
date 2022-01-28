@@ -26,7 +26,6 @@ envoy_cc_library(
         "@envoy//source/common/http:headers_lib",
         "@envoy//source/common/http:utility_lib",
         "@envoy//source/common/common:base64_lib",
-        
     ],
 )
 

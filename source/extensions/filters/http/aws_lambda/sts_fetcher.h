@@ -58,7 +58,6 @@ using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;
  * So we for now do not change the default 1 hour assumption if this is chained.
  * https://docs.aws.amazon.com
  * /IAM/latest/UserGuide/id_roles_terms-and-concepts.html
- 
  */
 class StsFetcher {
 public:

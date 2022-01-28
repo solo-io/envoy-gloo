@@ -243,14 +243,12 @@ std::string AwsAuthenticator::signWithTime(
   std::string signed_headers = std::move(preparedHeaders.second);
 
   std::string hexpayload = getBodyHexSha();
- 
+
   fetchUrl();
 
   std::string hashed_canonical_request = computeCanonicalRequestHash(
       *method_, canonical_headers, signed_headers, hexpayload);
-
   std::string credentials_scope_date = getCredntialScopeDate(now);
-
   std::string CredentialScope =
       getCredntialScope(region, credentials_scope_date);
 
@@ -258,7 +256,7 @@ std::string AwsAuthenticator::signWithTime(
       computeSignature(region, credentials_scope_date, CredentialScope,
                        request_date_time, hashed_canonical_request);
 
- std::stringstream authorizationvalue;
+  std::stringstream authorizationvalue;
 
   // TODO(talnordan): Provide `DETAILS`.
   RELEASE_ASSERT(access_key_, "");

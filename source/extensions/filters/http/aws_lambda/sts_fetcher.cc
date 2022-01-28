@@ -35,7 +35,7 @@ public:
   }
 
   void fetch(const envoy::config::core::v3::HttpUri &uri,
-             const  absl::string_view role_arn,
+             const absl::string_view role_arn,
              const absl::string_view web_token,
              StsCredentialsConstSharedPtr creds,
              StsFetcher::Callbacks *callbacks) override {
@@ -45,6 +45,7 @@ public:
     complete_ = false;
     callbacks_ = callbacks;
     uri_ = &uri;
+
     set_role(role_arn);
   
     // Check if cluster is configured, fail the request if not.
@@ -101,7 +102,7 @@ public:
                                             std::move(message), *this, options);
   }
 
-    // HTTP async receive methods
+  // HTTP async receive methods
   void onSuccess(const Http::AsyncClient::Request &,
                  Http::ResponseMessagePtr &&response) override {
     complete_ = true;
@@ -166,8 +167,6 @@ public:
     callbacks_->onFailure(CredentialsFailureStatus::Network);
     reset();
   }
-
-
 
   void onBeforeFinalizeUpstreamSpan(Tracing::Span &,
                                     const Http::ResponseHeaderMap *) override {}

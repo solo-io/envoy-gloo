@@ -29,14 +29,14 @@ public:
   void init(const envoy::config::core::v3::HttpUri &uri,
             const absl::string_view web_token,
             StsCredentialsConstSharedPtr creds) override;
-
   void setInFlight() override;
 
   StsConnectionPool::Context *
   add(StsConnectionPool::Context::Callbacks *callbacks) override;
+
+  void onSuccess(const absl::string_view body)override;
   void addChained( std::string role_arn ) override;
   void markFailed( CredentialsFailureStatus status) override;
-  void onSuccess(const absl::string_view body)override;
   
   void onSuccess( 
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
@@ -117,8 +117,6 @@ void StsConnectionPoolImpl::setInFlight() {
   request_in_flight_ = true;
 }
 
-
-
 StsConnectionPool::Context *
 StsConnectionPoolImpl::add(StsConnectionPool::Context::Callbacks *callbacks) {
   ContextImpl *ctx_ptr{new ContextImpl(callbacks, *this, dispatcher_)};
@@ -139,50 +137,50 @@ void StsConnectionPoolImpl::markFailed( CredentialsFailureStatus status) {
 
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(!body.empty());
-  
   request_in_flight_ = false;
 
-  // using a macro as we need to return on error
-  // TODO(yuval-k): we can use string_view instead of string when we upgrade to
-  // newer absl.
-  #define GET_PARAM(X)                                                           \
-    std::string X;                                                               \
-    {                                                                            \
-      std::match_results<absl::string_view::const_iterator> matched;             \
-      bool result = std::regex_search(body.begin(), body.end(), matched,         \
-                                      StsResponseRegex::get().regex_##X);        \
-      if (!result || !(matched.size() != 1)) {                                   \
-        ENVOY_LOG(trace, "response body did not contain " #X);                   \
-        onFailure(CredentialsFailureStatus::InvalidSts);                         \
-        return;                                                                  \
-      }                                                                          \
-      const auto &sub_match = matched[1];                                        \
-      decltype(X) matched_sv(sub_match.first, sub_match.length());               \
-      X = std::move(matched_sv);                                                 \
-    }
+// using a macro as we need to return on error
+// TODO(yuval-k): we can use string_view instead of string when we upgrade to
+// newer absl.
+#define GET_PARAM(X)                                                           \
+  std::string X;                                                               \
+  {                                                                            \
+    std::match_results<absl::string_view::const_iterator> matched;             \
+    bool result = std::regex_search(body.begin(), body.end(), matched,         \
+                                    StsResponseRegex::get().regex_##X);        \
+    if (!result || !(matched.size() != 1)) {                                   \
+      ENVOY_LOG(trace, "response body did not contain " #X);                   \
+      onFailure(CredentialsFailureStatus::InvalidSts);                         \
+      return;                                                                  \
+    }                                                                          \
+    const auto &sub_match = matched[1];                                        \
+    decltype(X) matched_sv(sub_match.first, sub_match.length());               \
+    X = std::move(matched_sv);                                                 \
+  }
 
-    GET_PARAM(access_key);
-    GET_PARAM(secret_key);
-    GET_PARAM(session_token);
-    GET_PARAM(expiration);
+  GET_PARAM(access_key);
+  GET_PARAM(secret_key);
+  GET_PARAM(session_token);
+  GET_PARAM(expiration);
 
-    SystemTime expiration_time;
-    absl::Time absl_expiration_time;
-    std::string error;
-    if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
-                        &error)) {
-      ENVOY_LOG(trace, "Determined expiration from STS credentials result");
-      expiration_time = absl::ToChronoTime(absl_expiration_time);
-    } else {
-      expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
-      ENVOY_LOG(trace,
-                "Unable to determine expiration time from STS credentials "
-                "result (error: {}), using default",
-                error);
-    }
+  SystemTime expiration_time;
+  absl::Time absl_expiration_time;
+  std::string error;
+  if (absl::ParseTime(absl::RFC3339_sec, expiration, &absl_expiration_time,
+                      &error)) {
+    ENVOY_LOG(trace, "Determined expiration from STS credentials result");
+    expiration_time = absl::ToChronoTime(absl_expiration_time);
+  } else {
+    expiration_time = api_.timeSource().systemTime() + REFRESH_STS_CREDS;
+    ENVOY_LOG(trace,
+              "Unable to determine expiration time from STS credentials "
+              "result (error: {}), using default",
+              error);
+  }
 
   StsCredentialsConstSharedPtr result = std::make_shared<const StsCredentials>(
       access_key, secret_key, session_token, expiration_time);
+
   ENVOY_LOG(trace, "{} sts connection success",
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
@@ -198,6 +196,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
 
 void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
   request_in_flight_ = false;
+
   callbacks_->onFailure(status, chained_requests_);
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onFailure(status);
@@ -210,7 +209,7 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
                           const absl::string_view role_arn,
                           StsConnectionPool::Callbacks *callbacks,
                           StsFetcherPtr fetcher) {
-                              
+
   return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, role_arn,
                                                  callbacks, std::move(fetcher));
 }

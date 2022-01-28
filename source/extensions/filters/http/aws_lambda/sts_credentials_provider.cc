@@ -5,6 +5,7 @@
 #include "envoy/common/time.h"
 
 #include "source/common/common/linked_object.h"
+
 #include "source/common/runtime/runtime_features.h"
 #include "source/extensions/common/aws/credentials_provider.h"
 
@@ -66,7 +67,6 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
   std::string_view role_arn)
   : api_(api), cm_(cm), config_(config), default_role_arn_(role_arn),
     conn_pool_factory_(std::move(conn_pool_factory)), web_token_(web_token) {
-  
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
