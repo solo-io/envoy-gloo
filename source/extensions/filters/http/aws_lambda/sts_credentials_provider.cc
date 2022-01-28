@@ -36,9 +36,9 @@ public:
 
   void onResult(std::shared_ptr<const StsCredentials>,
               std::string role_arn, 
-              std::list<std::string>  chained_requests) override;            
+              std::list<std::string>  &chained_requests) override;            
   void onFailure(CredentialsFailureStatus status, 
-              std::list<std::string>  chained_requests) override; 
+              std::list<std::string>  &chained_requests) override; 
 
 private:
   Api::Api &api_;
@@ -84,7 +84,7 @@ void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
 
 void StsCredentialsProviderImpl::onResult(
     std::shared_ptr<const StsCredentials> result, std::string role_arn,
-    std::list<std::string> chained_requests) {
+    std::list<std::string> &chained_requests) {
   credentials_cache_.emplace(role_arn, result);
 
   // kick off any waiting chained assumption roles relying on this credential
@@ -100,12 +100,11 @@ void StsCredentialsProviderImpl::onResult(
 }
 
 void StsCredentialsProviderImpl::onFailure(CredentialsFailureStatus status,
-                                      std::list<std::string> chained_requests) {
- 
+                                      std::list<std::string> &chained_requests) {
   // pass failure on to any waiting chained assumption roles
   while( !chained_requests.empty()){
     auto chained_role = chained_requests.back();
-    ENVOY_LOG(trace, "propagate failure of sts chained for {}", chained_role);
+    ENVOY_LOG(info, "propagate failure of sts chained for {}", chained_role);
     auto conn_pool = connection_pools_.find(chained_role);
     if (conn_pool != connection_pools_.end()) {
       conn_pool->second->markFailed(status);

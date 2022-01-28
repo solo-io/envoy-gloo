@@ -53,7 +53,7 @@ public:
      * @param chained_requests the list of arns that rely on this result
      */
     virtual void onResult(std::shared_ptr<const StsCredentials>,
-       std::string role_arn, std::list<std::string> chained_requests) PURE;
+       std::string role_arn, std::list<std::string> &chained_requests) PURE;
 
     /**
      * Called on a failed request
@@ -61,7 +61,7 @@ public:
      * @param chained_requests the list of arns that rely on this result
      */
     virtual void onFailure( CredentialsFailureStatus status,
-                              std::list<std::string> chained_requests) PURE;
+                              std::list<std::string> &chained_requests) PURE;
   };
 
   // Context object to hold data needed for verifier.
