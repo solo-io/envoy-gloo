@@ -139,24 +139,24 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(!body.empty());
   request_in_flight_ = false;
 
-// using a macro as we need to return on error
-// TODO(yuval-k): we can use string_view instead of string when we upgrade to
-// newer absl.
-#define GET_PARAM(X)                                                           \
-  std::string X;                                                               \
-  {                                                                            \
-    std::match_results<absl::string_view::const_iterator> matched;             \
-    bool result = std::regex_search(body.begin(), body.end(), matched,         \
-                                    StsResponseRegex::get().regex_##X);        \
-    if (!result || !(matched.size() != 1)) {                                   \
-      ENVOY_LOG(trace, "response body did not contain " #X);                   \
-      onFailure(CredentialsFailureStatus::InvalidSts);                         \
-      return;                                                                  \
-    }                                                                          \
-    const auto &sub_match = matched[1];                                        \
-    decltype(X) matched_sv(sub_match.first, sub_match.length());               \
-    X = std::move(matched_sv);                                                 \
-  }
+  // using a macro as we need to return on error
+  // TODO(yuval-k): we can use string_view instead of string when we upgrade to
+  // newer absl.
+  #define GET_PARAM(X)                                                         \
+    std::string X;                                                             \
+    {                                                                          \
+      std::match_results<absl::string_view::const_iterator> matched;           \
+      bool result = std::regex_search(body.begin(), body.end(), matched,       \
+                                      StsResponseRegex::get().regex_##X);      \
+      if (!result || !(matched.size() != 1)) {                                 \
+        ENVOY_LOG(trace, "response body did not contain " #X);                 \
+        onFailure(CredentialsFailureStatus::InvalidSts);                       \
+        return;                                                                \
+      }                                                                        \
+      const auto &sub_match = matched[1];                                      \
+      decltype(X) matched_sv(sub_match.first, sub_match.length());             \
+      X = std::move(matched_sv);                                               \
+    }
 
   GET_PARAM(access_key);
   GET_PARAM(secret_key);
