@@ -34,36 +34,10 @@ constexpr std::chrono::milliseconds REFRESH_STS_CREDS =
 
 } // namespace
 
-class StsResponseRegexValues {
-public:
-  StsResponseRegexValues() {
-
-    // Initialize regex strings, should never fail
-    regex_access_key =
-        Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-    regex_secret_key = Regex::Utility::parseStdRegex(
-        "<SecretAccessKey>(.*?)</SecretAccessKey>");
-    regex_session_token =
-        Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
-    regex_expiration =
-        Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
-  };
-
-  std::regex regex_access_key;
-
-  std::regex regex_secret_key;
-
-  std::regex regex_session_token;
-
-  std::regex regex_expiration;
-};
-
-using StsResponseRegex = ConstSingleton<StsResponseRegexValues>;
-
 class StsConnectionPool;
 using StsConnectionPoolPtr = std::unique_ptr<StsConnectionPool>;
 
-class StsConnectionPool {
+class StsConnectionPool :  public Logger::Loggable<Logger::Id::aws> {
 public:
   virtual ~StsConnectionPool() = default;
 
@@ -76,9 +50,18 @@ public:
      *
      * @param credential the credentials
      * @param role_arn the role_arn used to create these credentials
+     * @param chained_requests the list of arns that rely on this result
      */
     virtual void onResult(std::shared_ptr<const StsCredentials>,
-                          std::string_view role_arn) PURE;
+       std::string role_arn, std::list<std::string> &chained_requests) PURE;
+
+    /**
+     * Called on a failed request
+     *
+     * @param chained_requests the list of arns that rely on this result
+     */
+    virtual void onFailure( CredentialsFailureStatus status,
+                              std::list<std::string> &chained_requests) PURE;
   };
 
   // Context object to hold data needed for verifier.
@@ -115,9 +98,7 @@ public:
     virtual StsConnectionPool::Context::Callbacks *callbacks() const PURE;
 
     /**
-     * Returns the request callback wrapped in this context.
-     *
-     * @returns the request callback.
+     * Cancels the request if it is in flight
      */
     virtual void cancel() PURE;
   };
@@ -125,10 +106,12 @@ public:
   using ContextPtr = std::unique_ptr<Context>;
 
   virtual void init(const envoy::config::core::v3::HttpUri &uri,
-                    const absl::string_view web_token) PURE;
-
+    const absl::string_view web_token, StsCredentialsConstSharedPtr creds) PURE;
+  virtual void setInFlight() PURE;
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
 
+  virtual void addChained( std::string role_arn)PURE;
+  virtual void markFailed(CredentialsFailureStatus status)PURE;
   virtual bool requestInFlight() PURE;
 
   static StsConnectionPoolPtr create(Api::Api &api,

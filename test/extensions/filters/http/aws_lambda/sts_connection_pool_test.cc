@@ -79,9 +79,10 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
                            const absl::string_view, const absl::string_view,
+                            StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
         // Check that context callback is made correctly
         EXPECT_CALL(ctx_callbacks, onSuccess(_))
@@ -96,9 +97,10 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
                             "some_session_token");
                 }));
         // Check that credentials provider callback is made correctly
-        EXPECT_CALL(pool_callbacks, onResult(_, _))
+        EXPECT_CALL(pool_callbacks, onResult(_, _, _))
             .WillOnce(Invoke([&](std::shared_ptr<const StsCredentials> result,
-                                 std::string_view inner_role_arn) -> void {
+                                 std::string_view inner_role_arn,
+                                  std::list<std::string>) -> void {
               EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
               EXPECT_EQ(result->secretAccessKey().value(), "some_secret_key");
               EXPECT_EQ(result->sessionToken().value(), "some_session_token");
@@ -110,7 +112,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token);
+  sts_conn_pool->init(uri_, web_token, NULL);
 }
 
 TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
@@ -127,16 +129,17 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
 
   StsFetcher::Callbacks *lambda_callbacks;
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
                            const absl::string_view, const absl::string_view,
+                           StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
         lambda_callbacks = callbacks;
       }));
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token);
+  sts_conn_pool->init(uri_, web_token, NULL);
 
   auto context_1 = sts_conn_pool->add(&ctx_callbacks);
 
@@ -157,9 +160,10 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
             EXPECT_EQ(result->sessionToken().value(), "some_session_token");
           }));
   // Check that credentials provider callback is made correctly
-  EXPECT_CALL(pool_callbacks, onResult(_, _))
+  EXPECT_CALL(pool_callbacks, onResult(_, _, _))
       .WillOnce(Invoke([&](std::shared_ptr<const StsCredentials> result,
-                           std::string_view inner_role_arn) -> void {
+                           std::string_view inner_role_arn,
+                            std::list<std::string> ) -> void {
         EXPECT_EQ(result->accessKeyId().value(), "some_access_key");
         EXPECT_EQ(result->secretAccessKey().value(), "some_secret_key");
         EXPECT_EQ(result->sessionToken().value(), "some_session_token");
@@ -183,9 +187,10 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
                            const absl::string_view, const absl::string_view,
+                           StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
         // Check that context callback is made correctly
         EXPECT_CALL(ctx_callbacks, onFailure(_))
@@ -202,7 +207,7 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token);
+  sts_conn_pool->init(uri_, web_token, NULL);
 }
 
 } // namespace AwsLambda

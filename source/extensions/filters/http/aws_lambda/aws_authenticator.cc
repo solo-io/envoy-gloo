@@ -29,6 +29,11 @@ AwsAuthenticator::AwsAuthenticator(TimeSource &time_source)
   service_ = &AwsAuthenticatorConsts::get().Service;
   method_ = &Http::Headers::get().MethodValues.Post;
 }
+AwsAuthenticator::AwsAuthenticator(TimeSource &time_source,
+                                      const std::string *service)
+    : time_source_(time_source), service_(service) {
+  method_ = &Http::Headers::get().MethodValues.Post;
+}
 
 void AwsAuthenticator::init(const std::string *access_key,
                             const std::string *secret_key,
@@ -196,7 +201,6 @@ std::string AwsAuthenticator::computeSignature(
   recusiveHmacHelper(sighmac, out.begin(), out_len, region);
   recusiveHmacHelper(sighmac, out.begin(), out_len, *service_);
   recusiveHmacHelper(sighmac, out.begin(), out_len, aws_request);
-
   const auto &nl = AwsAuthenticatorConsts::get().Newline;
 
   recusiveHmacHelper<std::initializer_list<const std::string *>>(

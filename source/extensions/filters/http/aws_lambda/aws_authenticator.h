@@ -37,6 +37,7 @@ typedef std::set<Http::LowerCaseString, LowerCaseStringCompareFunc> HeaderList;
 class AwsAuthenticator {
 public:
   AwsAuthenticator(TimeSource &time_source);
+  AwsAuthenticator(TimeSource &time_source, const std::string *service);
 
   ~AwsAuthenticator();
 
