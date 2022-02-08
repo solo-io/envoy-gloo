@@ -14,7 +14,6 @@ for EXTENSION in $ALL_EXTENSIONS; do
     echo "Did not find $EXTENSION in $MD_FILE, please add it."
     echo "You can use \"$0 template\" command to get you started."
     exit 1
-    # exit 1
   fi
 done
 }
