@@ -4,6 +4,7 @@ bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
 
+$SOURCE_DIR/ci/verify_posture.sh verify
 
 export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
