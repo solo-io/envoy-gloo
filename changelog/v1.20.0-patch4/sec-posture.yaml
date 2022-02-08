@@ -1,0 +1,8 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/gloo/issues/5650
+  resolvesIssue: false
+  description: >
+    Replicate work from closed source to add security
+    posture to ci. This makes sure that our security 
+    posture is available at security_posture.yaml

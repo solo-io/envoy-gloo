@@ -1,0 +1,13 @@
+# options are:
+# - data_plane_agnostic
+# - requires_trusted_downstream_and_upstream
+# - robust_to_untrusted_downstream
+# - robust_to_untrusted_downstream_and_upstream
+# - unknown
+extensions:
+- name: filters/http/aws_lambda
+  security_posture: robust_to_untrusted_downstream
+- name: filters/http/nats/streaming
+  security_posture: robust_to_untrusted_downstream
+- name: filters/http/transformation
+  security_posture: robust_to_untrusted_downstream
