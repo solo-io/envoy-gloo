@@ -17,6 +17,7 @@ envoy_cc_library(
     external_deps = ["ssl"],
     repository = "@envoy",
     deps = [
+        "@envoy//source/common/common:minimal_logger_lib",
         "@envoy//envoy/buffer:buffer_interface",
         "@envoy//envoy/http:header_map_interface",
         "@envoy//source/common/common:assert_lib",
@@ -121,9 +122,10 @@ envoy_cc_library(
 envoy_cc_library(
     name = "sts_fetcher_lib",
     srcs = ["sts_fetcher.cc"],
-    hdrs = ["sts_fetcher.h", "sts_status.h"],
+    hdrs = ["sts_fetcher.h", "sts_status.h", "sts_response_parser.h"],
     repository = "@envoy",
     deps = [
+        ":aws_authenticator_lib",
         "@envoy//source/common/common:minimal_logger_lib",
         "@envoy//source/common/config:datasource_lib",
         "@envoy//source/common/protobuf:utility_lib",

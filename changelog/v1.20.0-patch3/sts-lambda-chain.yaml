@@ -1,0 +1,9 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/5639
+  resolvesIssue: false
+  description: >
+    Allow for roles to chain assume up to 1 deep. 
+    This enables cross account role assumption
+    The runtime gaurd `envoy.reloadable_features.aws_lambda.sts_chaining` can 
+    be set to 0 to reinstate prior behavior and to never chain.

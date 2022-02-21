@@ -6,7 +6,9 @@
 #include "envoy/upstream/cluster_manager.h"
 
 #include "source/extensions/common/aws/credentials_provider.h"
+#include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "source/extensions/filters/http/aws_lambda/sts_status.h"
+#include "source/extensions/filters/http/aws_lambda/sts_response_parser.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -14,9 +16,13 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 namespace {
-constexpr char StsFormatString[] =
+  constexpr char StsFormatString[] =
     "Action=AssumeRoleWithWebIdentity&RoleArn={}&RoleSessionName={}&"
     "WebIdentityToken={}&Version=2011-06-15";
+
+  constexpr char StsChainedFormatString[] =
+    "Action=AssumeRole&RoleArn={}&RoleSessionName={}&"
+    "Version=2011-06-15";
 
 constexpr char ExpiredTokenError[] = "ExpiredTokenException";
 } // namespace
@@ -46,7 +52,12 @@ using StsCredentialsConstSharedPtr = std::shared_ptr<const StsCredentials>;
 /**
  * StsFetcher interface can be used to retrieve STS credentials
  * An instance of this interface is designed to retrieve one set of credentials
- * at a time.
+ * at a time and is therefore scoped to a give role.
+ * If provided with existing credentials it will use them to chain assume a role
+ * A chained role assumption is not allowed to be for more than 1 hour.
+ * So we for now do not change the default 1 hour assumption if this is chained.
+ * https://docs.aws.amazon.com
+ * /IAM/latest/UserGuide/id_roles_terms-and-concepts.html
  */
 class StsFetcher {
 public:
@@ -64,7 +75,7 @@ public:
     virtual void onSuccess(const absl::string_view body) PURE;
 
     /**
-     * Called on completion of request.
+     * Called on completion of a failed request.
      *
      * @param status the status of the request.
      */
@@ -89,7 +100,8 @@ public:
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
                      const absl::string_view role_arn,
                      const absl::string_view web_token,
-                     StsFetcher::Callbacks *callbacks) PURE;
+                     StsCredentialsConstSharedPtr creds,
+                     StsFetcher::Callbacks *callbacks)  PURE;
 
   /*
    * Factory method for creating a StsFetcher.

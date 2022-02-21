@@ -18,7 +18,8 @@ class StsFetcherImpl : public StsFetcher,
                        public Http::AsyncClient::Callbacks {
 public:
   StsFetcherImpl(Upstream::ClusterManager &cm, Api::Api &api)
-      : cm_(cm), api_(api) {
+      : cm_(cm), api_(api), 
+      aws_authenticator_(api.timeSource(), &AWSStsHeaderNames::get().Service){
     ENVOY_LOG(trace, "{}", __func__);
   }
 
@@ -36,6 +37,7 @@ public:
   void fetch(const envoy::config::core::v3::HttpUri &uri,
              const absl::string_view role_arn,
              const absl::string_view web_token,
+             StsCredentialsConstSharedPtr creds,
              StsFetcher::Callbacks *callbacks) override {
     ENVOY_LOG(trace, "{}", __func__);
     ASSERT(callbacks_ == nullptr);
@@ -44,6 +46,8 @@ public:
     callbacks_ = callbacks;
     uri_ = &uri;
 
+    set_role(role_arn);
+  
     // Check if cluster is configured, fail the request if not.
     // Otherwise cm_.httpAsyncClientForCluster will throw exception.
     const auto thread_local_cluster = cm_.getThreadLocalCluster(uri.cluster());
@@ -67,15 +71,35 @@ public:
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
                          api_.timeSource().systemTime().time_since_epoch())
                          .count();
-    const std::string body =
-        fmt::format(StsFormatString, role_arn, now, web_token);
-    message->body().add(body);
-    ENVOY_LOG(debug, "assume role with token from [uri = {}]: start",
-              uri_->uri());
     auto options = Http::AsyncClient::RequestOptions().setTimeout(
         std::chrono::milliseconds(
             DurationUtil::durationToMilliseconds(uri.timeout())));
-    request_ = thread_local_cluster->httpAsyncClient().send(std::move(message), *this, options);
+
+    // Short form for web_token assume role
+    if (creds == nullptr){
+       const std::string body =
+        fmt::format(StsFormatString, role_arn, now, web_token);
+      message->body().add(body);
+      ENVOY_LOG(debug, "assume role with token from [uri = {}]: start",
+                                                                uri_->uri());
+      request_ = thread_local_cluster->httpAsyncClient().send(
+                                           std::move(message),*this, options);
+      return;
+    }
+    
+    // Chained assumption specifics 
+    const std::string body = fmt::format(StsChainedFormatString, role_arn, now);
+    message->body().add(body);
+    aws_authenticator_.init(&creds->accessKeyId().value(), 
+        &creds->secretAccessKey().value(), &creds->sessionToken().value());
+    aws_authenticator_.updatePayloadHash(message->body());
+    auto& hdrs = message->headers();
+    // TODO(nfuden) allow for Region this to be overridable. 
+    // DefaultRegion is gauranteed to be available but an override may be faster
+    aws_authenticator_.sign(&hdrs, HeadersToSign, DefaultRegion);
+    ENVOY_LOG(debug, "assume chained role from [uri = {}]: start", uri_->uri());
+    request_ = thread_local_cluster->httpAsyncClient().send(
+                                            std::move(message), *this, options);
   }
 
   // HTTP async receive methods
@@ -154,6 +178,31 @@ private:
   StsFetcher::Callbacks *callbacks_{};
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
+  absl::string_view role_arn_;
+  AwsAuthenticator aws_authenticator_;
+
+  class AWSStsHeaderValues {
+  public:
+    const std::string Service{"sts"};
+    const Http::LowerCaseString DateHeader{"x-amz-date"};
+    const Http::LowerCaseString FunctionError{"x-amz-function-error"};
+  };
+  typedef ConstSingleton<AWSStsHeaderValues> AWSStsHeaderNames;
+  const HeaderList HeadersToSign =
+    AwsAuthenticator::createHeaderToSign(
+        { 
+        Http::Headers::get().ContentType,
+        AWSStsHeaderNames::get().DateHeader,
+        Http::Headers::get().HostLegacy,
+        }
+      );
+
+  // work around having consts being passed around.
+  void set_role(const absl::string_view role_arn){
+    role_arn_ = role_arn;
+  }
+
+  const std::string DefaultRegion = "us-east-1";
 
   void reset() {
     request_ = nullptr;
