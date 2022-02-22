@@ -1,8 +1,8 @@
 REPOSITORY_LOCATIONS = dict(
-    # envoy 1.19.2, commit: https://github.com/envoyproxy/envoy/commit/7f2d69f96843583d109082e89aecb6cd52365eb2
+    # envoy-fork 1.19.0-cve0222-rc1, commit: https://github.com/solo-io/envoy-fork/commit/8930222c787a2453c581a0a19e1054b09a918b6c
     envoy = dict(
-        commit = "7f2d69f96843583d109082e89aecb6cd52365eb2",
-        remote = "https://github.com/envoyproxy/envoy",
+        commit = "8930222c787a2453c581a0a19e1054b09a918b6c",
+        remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
         commit = "4c0ee3a46c0bbb279b0849e5a659e52684a37a98",
