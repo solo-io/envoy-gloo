@@ -253,10 +253,12 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTS) {
   // second request is lambda
   waitForNextUpstreamRequest(0, timeout);
 
-  // make sure we have a body
+  // make sure we have a body (i.e. make sure transformation filter worked)
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ(body, "abc /");
 
+  // make sure that the transformation filter after the lambda was called and observed the authorization header:
+  // ** THIS IS THE MANIFESTATION OF THE BUG **
   const auto& auth_header = upstream_request_->headers()
                    .get(Http::LowerCaseString("x-authorization"))[0]
                    ->value();
