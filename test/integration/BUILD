@@ -16,8 +16,12 @@ envoy_gloo_cc_test(
     name = "aws_lambda_filter_integration_test",
     srcs = ["aws_lambda_filter_integration_test.cc"],
     repository = "@envoy",
+    data = [
+        "fakejwt.txt",
+    ],
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
     ],
