@@ -153,12 +153,11 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     return Http::FilterDataStatus::Continue;
   }
 
-  encoder_callbacks_->addEncodedData(data, false);
-
   if (!end_stream) {
     // we need the entire response prior to parsing and unwrapping the json
     return Http::FilterDataStatus::StopIterationAndBuffer;
   }
+  encoder_callbacks_->addEncodedData(data, false);
   finalizeResponse();
   
  
