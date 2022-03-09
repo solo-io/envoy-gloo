@@ -110,7 +110,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
       ENVOY_LOG(trace, "{}: stopping iteration to wait for STS credentials",
                 __func__);
       stopped_ = true;
-      return Http::FilterHeadersStatus::StopAllIterationAndBuffer;
+      return Http::FilterHeadersStatus::StopIteration;
     }
   }
 
@@ -249,8 +249,6 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
   }
   return false;
 }
-
-
 
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
