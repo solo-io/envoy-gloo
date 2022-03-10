@@ -2,4 +2,4 @@
 // so that other go projects can pull in the .proto files through the module path
 module github.com/solo-io/envoy-gloo
 
-go 1.17
+go 1.16.3
