@@ -1,8 +1,0 @@
-changelog:
-- type: NON_USER_FACING
-  issueLink: https://github.com/solo-io/gloo-mesh-enterprise/issues/533
-  resolvesIssue: false
-  description: >
-    Adds a no-op go file that allows other projects to require envoy-gloo 
-    via go.mod, for the sake of pulling in the .proto files from the 
-    specific tag or commit maintained in go.mod 
