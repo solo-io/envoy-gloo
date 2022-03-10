@@ -241,19 +241,16 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTS) {
 
   auto timeout = TestUtility::DefaultTimeout;
 
-  // first request is sts request; return sts response
+  // first request is sts request; return sts response.
   waitForNextUpstreamRequest(0, timeout);
-  // Send response headers, and end_stream if there is no response body.
   upstream_request_->encodeHeaders(default_response_headers_, false);
-  // Send any response data, with end_stream true.
   upstream_request_->encodeData(VALID_CHAINED_RESPONSE, true);
   upstream_request_.reset();
 
-  // second upstream request is the "lambda" request
-  // second request is lambda
+  // second upstream request is the "lambda" request.
   waitForNextUpstreamRequest(0, timeout);
 
-  // make sure we have a body (i.e. make sure transformation filter worked)
+  // make sure we have a body (i.e. make sure transformation filter worked).
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ(body, "abc /");
 
@@ -264,13 +261,12 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTS) {
                    ->value();
   EXPECT_NE(0, auth_header.size());
 
-  // Send response headers, and end_stream if there is no response body.
+  // wrap up the test nicely:
   upstream_request_->encodeHeaders(default_response_headers_, false);
-  // Send any response data, with end_stream true.
   upstream_request_->encodeData(10, true);
+
   // Wait for the response to be read by the codec client.
   RELEASE_ASSERT(response->waitForEndStream(timeout), "unexpected timeout");
-
 }
 
 
