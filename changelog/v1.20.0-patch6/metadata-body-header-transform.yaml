@@ -1,0 +1,6 @@
+changelog:
+- type: NON_USER_FACING
+  description: >
+    To create a separate transformation stage for aws, we need it to have one transform that it can
+    use. This adds the missing features that made it need 2 transforms.
+    See https://github.com/solo-io/gloo/pull/5308 for why this is added.

@@ -11,11 +11,16 @@ namespace Transformation {
 
 class BodyHeaderTransformer : public Transformer {
 public:
+  BodyHeaderTransformer(bool add_request_metadata);
   void transform(Http::RequestOrResponseHeaderMap &map,
                  Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return false; };
+
+private:
+  bool add_request_metadata_{};
+
 };
 
 } // namespace Transformation

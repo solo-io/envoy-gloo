@@ -5,6 +5,7 @@
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
+#include "nlohmann/json.hpp"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 #include "fmt/printf.h"
@@ -424,6 +425,67 @@ TEST_P(TransformationFilterIntegrationTest, PassthroughBody) {
                          .getStringView());
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ(origBody, body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  transformations:
+  - request_match:
+      request_transformation:
+        header_body_transform:
+          add_request_metadata: true
+      response_transformation:
+        header_body_transform:
+          add_request_metadata: true
+)EOF";
+  initialize();
+  std::string origBody = "{\"abc\":\"efg\"}";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/12347"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response);
+
+  json actual_request = json::parse(upstream_request_->body().toString());
+  actual_request["headers"]["x-request-id"] = ""; // zero out random headers
+  auto expected_request = R"( 
+  {
+   "body":"{\"abc\":\"efg\"}",
+   "headers": {
+     ":authority":"www.solo.io",
+     ":method":"GET",":path":"/users/12347",":scheme":"http",
+     "x-forwarded-proto":"http","x-request-id":""
+   },
+   "httpMethod":"GET",
+   "path":"/users/12347",
+   "queryString":""
+   }
+)"_json;
+
+  // make sure response works as well, with no metadata set:
+  EXPECT_EQ(expected_request, actual_request);
+
+  json actual_response = json::parse(response->body());
+  auto expected_response = R"( 
+  {
+    "headers": {
+      ":status":"200",
+      "content-length":"0",
+      "x-envoy-upstream-service-time":"0"
+   }
+   }
+)"_json;
+  EXPECT_EQ(expected_response, actual_response);
+
 }
 
 } // namespace Envoy

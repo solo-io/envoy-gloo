@@ -1,6 +1,7 @@
 #include "source/extensions/filters/http/transformation/body_header_transformer.h"
 
 #include "source/common/http/headers.h"
+#include "source/common/http/utility.h"
 
 #include "nlohmann/json.hpp"
 
@@ -12,9 +13,11 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+BodyHeaderTransformer::BodyHeaderTransformer(bool add_request_metadata):add_request_metadata_(add_request_metadata){}
+
 void BodyHeaderTransformer::transform(
     Http::RequestOrResponseHeaderMap &header_map,
-    Http::RequestHeaderMap *, Buffer::Instance &body,
+    Http::RequestHeaderMap *request_headers, Buffer::Instance &body,
     Http::StreamFilterCallbacks &) const {
   json json_body;
   if (body.length() > 0) {
@@ -28,6 +31,23 @@ void BodyHeaderTransformer::transform(
             std::string(header.value().getStringView());
         return Http::HeaderMap::Iterate::Continue;
       });
+
+  if (add_request_metadata_) {
+    if (request_headers == (&header_map)){
+      // this is a request!
+      const Http::HeaderString& path = request_headers->Path()->value();
+      absl::string_view query_string = Http::Utility::findQueryStringStart(path);
+      absl::string_view path_view = path.getStringView();
+      path_view.remove_suffix(query_string.length());
+      if (query_string.size() > 0) {
+        // remove the question mark
+        query_string.remove_prefix(1);
+      }
+      json_body["queryString"] = query_string;
+      json_body["httpMethod"] = request_headers->Method()->value().getStringView();
+      json_body["path"] = path_view;
+    }
+  }
 
   // remove content length, as we have new body.
   header_map.removeContentLength();

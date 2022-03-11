@@ -34,7 +34,7 @@ TEST(BodyHeaderTransformer, transform) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer;
+  BodyHeaderTransformer transformer(false);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -49,6 +49,68 @@ TEST(BodyHeaderTransformer, transform) {
       ":path": "/users/123"
     },
     "body": "testbody"
+  }
+)"_json;
+
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(BodyHeaderTransformer, transformWithExtraAndQuery) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123?key=value"}};
+  Buffer::OwnedImpl body("testbody");
+
+  BodyHeaderTransformer transformer(true);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, &headers, body, filter_callbacks_);
+
+  std::string res = body.toString();
+  json actual = json::parse(res);
+  auto expected = R"(
+  {
+    "headers" : {
+      ":method": "GET",
+      ":authority": "www.solo.io",
+      "x-test": "789",
+      ":path": "/users/123?key=value"
+    },
+    "body": "testbody",
+    "queryString":"key=value",
+    "httpMethod":"GET",
+    "path":"/users/123"
+  }
+)"_json;
+
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(BodyHeaderTransformer, transformWithExtraNoQuery) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body("testbody");
+
+  BodyHeaderTransformer transformer(true);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(headers, &headers, body, filter_callbacks_);
+
+  std::string res = body.toString();
+  json actual = json::parse(res);
+  auto expected = R"(
+  {
+    "headers" : {
+      ":method": "GET",
+      ":authority": "www.solo.io",
+      "x-test": "789",
+      ":path": "/users/123"
+    },
+    "body": "testbody",
+    "queryString":"",
+    "httpMethod":"GET",
+    "path":"/users/123"
   }
 )"_json;
 
