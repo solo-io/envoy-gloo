@@ -1,0 +1,4 @@
+changelog:
+- type: NON_USER_FACING
+  description: >
+    To create a consistent CI, adjust base image of docker build to reference a fixed-in-time version of `frolvlad/alpine-glibc`, rather than simply "latest"
