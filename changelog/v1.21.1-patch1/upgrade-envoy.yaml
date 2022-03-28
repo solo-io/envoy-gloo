@@ -3,4 +3,4 @@ changelog:
   description: Update envoy to 1.21.1
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
-  dependencyTag: 96701cb24611b0f3aac1cc0dd8bf8589fbdf8e9e
+  dependencyTag: af50070ee60866874b0a9383daf9364e884ded22
