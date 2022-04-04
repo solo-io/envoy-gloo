@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update to envoy-fork for a caching callback commit
+  dependencyOwner: solo.io
+  dependencyRepo: envoy-fork
+  dependancyTag: 1.21.1-caching
+  dependencyTag: 584a730c320c80e44514450f71344549c01722a6
