@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.21.3.  This addresses a number of CVE's, including [CVE-2022-29225, CVE-2022-29224, CVE-2022-29226, CVE-2022-29228, CVE-2022-29227]
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependancyTag: 1.21.3
+  dependencyTag: 8c8c75fe7a2d3d2844da1de4cf66b09abf8e8227
