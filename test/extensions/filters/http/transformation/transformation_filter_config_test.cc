@@ -32,7 +32,7 @@ TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
   envoy::api::v2::filter::http::Transformation transformation;
   auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
-  auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+  auto &factory = Config::Utility::getAndCheckFactoryByName<TransformerExtensionFactory>(transformation.transformer_config());
   EXPECT_EQ(factory.name(), "io.solo.transformer.fake");
 }
 
