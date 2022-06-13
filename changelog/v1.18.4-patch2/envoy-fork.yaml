@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to fork to pick up the backported cve changes
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: 1a0ea7b8a1cdecfa9e0b9d0e720dde5b5f088dec
