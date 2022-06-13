@@ -32,7 +32,9 @@ TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
   envoy::api::v2::filter::http::Transformation transformation;
   auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
-  auto &factory = Config::Utility::getAndCheckFactoryByName<TransformerExtensionFactory>(transformation.transformer_config());
+  auto any = factoryConfig->mutable_typed_config();
+  any->set_type_url("type.googleapis.com/envoy.config.transformer.xslt.v2.XsltTransformation");
+  auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
   EXPECT_EQ(factory.name(), "io.solo.transformer.fake");
 }
 
