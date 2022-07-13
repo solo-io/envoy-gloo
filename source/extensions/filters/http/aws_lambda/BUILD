@@ -39,6 +39,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":api_gateway_transformer_lib",
         ":aws_authenticator_lib",
         ":config_lib",
         ":sts_credentials_provider_lib",
@@ -64,6 +65,9 @@ envoy_cc_library(
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
+        "//source/extensions/filters/http/transformation:transformation_filter_config",
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
+        "@envoy//source/common/protobuf:utility_lib",
         "@envoy//source/common/http:utility_lib",
         "@envoy//source/extensions/common/aws:credentials_provider_impl_lib",
         "@envoy//source/extensions/common/aws:credentials_provider_interface",
@@ -131,5 +135,27 @@ envoy_cc_library(
         "@envoy//source/common/protobuf:utility_lib",
         "@envoy//source/extensions/common/aws:credentials_provider_interface",
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
+    ],
+)
+
+envoy_cc_library(
+    name = "api_gateway_transformer_lib",
+    srcs = [
+        "api_gateway_transformer.cc",
+    ],
+    hdrs = [
+        "api_gateway_transformer.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:transformer_lib",
+        "@envoy//envoy/buffer:buffer_interface",
+        "@envoy//source/common/http:header_map_lib",
+        "@json//:json-lib",
+        "@envoy//source/common/common:minimal_logger_lib",
+        "@envoy//source/common/common:base64_lib",
+        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
+        "//source/extensions/filters/http/transformation:transformation_filter_config",
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
     ],
 )
