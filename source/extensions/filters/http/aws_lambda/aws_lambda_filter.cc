@@ -131,7 +131,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool) {
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (functionOnRoute() != nullptr && functionOnRoute()->unwrapAsAlb()){
+  if (functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig())){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
@@ -148,8 +148,8 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (functionOnRoute() == nullptr || !functionOnRoute()->unwrapAsAlb()){
-    // return response as is if not configured for alb mode
+  if (functionOnRoute() == nullptr || (!functionOnRoute()->unwrapAsAlb() && !functionOnRoute()->hasTransformerConfig())){
+    // return response as is if not configured for alb mode/transformation
     return Http::FilterDataStatus::Continue;
   }
 
@@ -167,7 +167,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
 Http::FilterTrailersStatus 
 AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
-  if (functionOnRoute() == nullptr || !functionOnRoute()->unwrapAsAlb()){
+  if (functionOnRoute() == nullptr || (!functionOnRoute()->unwrapAsAlb() && !functionOnRoute()->hasTransformerConfig())){
    return Http::FilterTrailersStatus::Continue;
   }
   // Future proof against alb http2 support and finalize the data transform
@@ -182,9 +182,21 @@ void AWSLambdaFilter::finalizeResponse(){
   const Buffer::Instance&  buff = *encoder_callbacks_->encodingBuffer();
   encoder_callbacks_->modifyEncodingBuffer([this](Buffer::Instance& enc_buf) {
     Buffer::OwnedImpl body;
-    if (parseResponseAsALB(*response_headers_, enc_buf, body)){
-      response_headers_->setStatus(static_cast<int>(Http::Code::InternalServerError));
-      body.drain(body.length());
+    if (functionOnRoute()->unwrapAsAlb()) {
+      if (parseResponseAsALB(*response_headers_, enc_buf, body)){
+        response_headers_->setStatus(static_cast<int>(Http::Code::InternalServerError));
+        body.drain(body.length());
+      }
+    } else if (functionOnRoute()->hasTransformerConfig()) {
+      auto transformer_config = functionOnRoute()->transformerConfig();
+      transformer_config->transform(
+        *response_headers_,
+        request_headers_,
+        enc_buf,
+        *encoder_callbacks_
+      );
+
+      body.add(enc_buf.toString().c_str());
     }
     enc_buf.drain(enc_buf.length());
     enc_buf.move(body);
