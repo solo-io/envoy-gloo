@@ -52,8 +52,8 @@ public:
                  Buffer::Instance &body,
                  ApiGatewayError &error) const;
   bool passthrough_body() const override { return false; };
-
-  uint64_t DEFAULT_STATUS_VALUE = 200;
+private:
+  static constexpr uint64_t DEFAULT_STATUS_VALUE = 200;
 
 };
 
