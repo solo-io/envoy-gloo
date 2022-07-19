@@ -493,7 +493,7 @@ TEST_F(AWSLambdaFilterTest, ALBDecodingBasic) {
 
   filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
   auto res = filter_->encodeHeaders(response_headers, true);
-  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   
 
   Buffer::OwnedImpl buf{};
@@ -633,7 +633,7 @@ TEST_F(AWSLambdaFilterTest, ApiGatewayDecodingBasic) {
 
   filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
   auto res = filter_->encodeHeaders(response_headers, true);
-  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   
 
   Buffer::OwnedImpl buf{};

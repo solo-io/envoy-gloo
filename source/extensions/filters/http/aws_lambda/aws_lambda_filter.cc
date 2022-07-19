@@ -131,7 +131,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool) {
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (isTransformationNeeded()){
+  if (isTransformationNeeded() && !end_stream_){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
