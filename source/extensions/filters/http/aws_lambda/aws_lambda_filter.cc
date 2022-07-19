@@ -131,7 +131,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool) {
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig())){
+  if (isTransformationNeeded()){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
@@ -148,7 +148,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (functionOnRoute() == nullptr || (!functionOnRoute()->unwrapAsAlb() && !functionOnRoute()->hasTransformerConfig())){
+  if (!isTransformationNeeded()){
     // return response as is if not configured for alb mode/transformation
     return Http::FilterDataStatus::Continue;
   }
@@ -167,7 +167,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
 Http::FilterTrailersStatus 
 AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
-  if (functionOnRoute() == nullptr || (!functionOnRoute()->unwrapAsAlb() && !functionOnRoute()->hasTransformerConfig())){
+  if (!isTransformationNeeded()){
    return Http::FilterTrailersStatus::Continue;
   }
   // Future proof against alb http2 support and finalize the data transform
@@ -259,6 +259,10 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
     }
   }
   return false;
+}
+
+bool AWSLambdaFilter::isTransformationNeeded() {
+  return functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig());
 }
 
 void AWSLambdaFilter::onSuccess(
