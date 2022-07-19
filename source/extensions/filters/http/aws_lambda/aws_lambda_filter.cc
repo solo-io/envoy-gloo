@@ -124,14 +124,14 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 
 
 Http::FilterHeadersStatus 
-AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool) {
+AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool end_stream) {
 
   if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
     // We treat upstream function errors as if it was any other upstream error
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (isTransformationNeeded() && !end_stream_){
+  if (isTransformationNeeded() && !end_stream){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
