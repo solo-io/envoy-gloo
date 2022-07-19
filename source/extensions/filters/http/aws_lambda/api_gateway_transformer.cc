@@ -128,9 +128,9 @@ void ApiGatewayTransformer::transform(
   body.drain(body.length());
   if (json_body.contains("body")) {
     std::string body_dump;
-    try {
-      body_dump = json_body["body"];
-    } catch (std::exception& exception){
+    if (json_body["body"].is_string()) {
+      body_dump = json_body["body"].get<std::string>();
+    } else {
       body_dump = json_body["body"].dump();
     }
     if (json_body.contains("isBase64Encoded")) {
