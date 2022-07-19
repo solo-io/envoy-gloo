@@ -55,8 +55,8 @@ public:
 private:
   static constexpr uint64_t DEFAULT_STATUS_VALUE = 200;
   static void add_response_header(Http::ResponseHeaderMap &response_headers,
-                        std::string header_key,
-                        std::string header_value,
+                        absl::string_view header_key,
+                        absl::string_view header_value,
                         bool append = false);
 };
 

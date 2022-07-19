@@ -147,11 +147,11 @@ void ApiGatewayTransformer::transform(
 
 void ApiGatewayTransformer::add_response_header(
   Http::ResponseHeaderMap &response_headers,
-  std::string header_key,
-  std::string header_value,
+  absl::string_view header_key,
+  absl::string_view header_value,
   bool append) {
     auto lower_case_header_key = Envoy::Http::LowerCaseString(header_key);
-    auto string_header_value = absl::string_view(header_value);
+    auto string_header_value = header_value;
     if (append) {
       response_headers.appendCopy(lower_case_header_key, string_header_value);
     } else {
