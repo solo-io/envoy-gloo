@@ -141,7 +141,7 @@ void ApiGatewayTransformer::transform(
   header_map.setContentLength(body.length());
 }
 
-void add_response_header(
+void ApiGatewayTransformer::add_response_header(
   Http::ResponseHeaderMap &response_headers,
   std::string header_key,
   std::string header_value,
