@@ -21,7 +21,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
   auto config = AWSLambdaConfigImpl::create(
       std::make_unique<
           Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-          context.api(), Extensions::Common::Aws::Utility::metadataFetcher),
+          context.api(), Extensions::Common::Aws::Utility::fetchMetadata),
       StsCredentialsProviderFactory::create(context.api(),
                                             context.clusterManager()),
       context.mainThreadDispatcher(), context.api(), context.threadLocal(), stats_prefix,
