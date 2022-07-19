@@ -65,7 +65,7 @@ void ApiGatewayTransformer::transform(
   nlohmann::json json_body;
   try {
     json_body = json::parse(bodystring);
-  } catch (json::exception exception){
+  } catch (std::exception& exception){
     ApiGatewayError error = {400, "400", "failed to parse response body as JSON"};
     return ApiGatewayTransformer::format_error(*response_headers, body, error);
   }
@@ -75,7 +75,7 @@ void ApiGatewayTransformer::transform(
     uint64_t status_value;
     try {
       status_value = json_body["statusCode"].get<uint64_t>();
-    } catch (json::exception exception){
+    } catch (std::exception& exception){
       ApiGatewayError error = {400, "400", "Non-integer status code"};
       return ApiGatewayTransformer::format_error(*response_headers, body, error);
     }
@@ -126,7 +126,7 @@ void ApiGatewayTransformer::transform(
     std::string body_dump;
     try {
       body_dump = json_body["body"];
-    } catch (json::exception exception){
+    } catch (std::exception& exception){
       body_dump = json_body["body"].dump();
     }
     if (json_body.contains("isBase64Encoded")) {
