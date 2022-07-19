@@ -233,6 +233,25 @@ TEST(ApiGatewayTransformer, request_path) {
   EXPECT_ANY_THROW(transformer.transform(request_headers, &headers, body, filter_callbacks_));
 }
 
+TEST(ApiGatewayTransformer, error) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body("{invalid json}");
+  ApiGatewayTransformer transformer;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  EXPECT_ANY_THROW(transformer.transform(request_headers, &headers, body, filter_callbacks_));
+
+  EXPECT_EQ(response_headers.getStatusValue(), "500");
+  EXPECT_EQ(response_headers.get(Http::LowerCaseString("content-type")), "text/plain");
+  EXPECT_EQ(response_headers.get(Http::LowerCaseString("x-amzn-errortype")), "500");
+}
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions

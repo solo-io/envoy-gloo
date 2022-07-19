@@ -29,6 +29,10 @@ void ApiGatewayTransformer::format_error(
   Buffer::Instance &body,
   ApiGatewayError &error) const {
     ENVOY_LOG(debug, "Returning error with message: {}", error.message);
+    
+    // clear existing response headers
+    response_headers.clear();
+
     response_headers.setStatus(error.status_code);
     response_headers.setContentType("text/plain");
     
