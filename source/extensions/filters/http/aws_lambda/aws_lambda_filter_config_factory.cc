@@ -54,9 +54,9 @@ Router::RouteSpecificFilterConfigConstSharedPtr
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
         &proto_config,
-    Server::Configuration::ServerFactoryContext &,
+    Server::Configuration::ServerFactoryContext &context,
     ProtobufMessage::ValidationVisitor &) {
-  return std::make_shared<const AWSLambdaRouteConfig>(proto_config);
+  return std::make_shared<const AWSLambdaRouteConfig>(proto_config, context);
 }
 
 /**

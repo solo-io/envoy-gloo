@@ -9,4 +9,8 @@ envoy_package()
 
 load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
-api_proto_package()
+api_proto_package(
+    deps = [
+        "@envoy_api//envoy/config/core/v3:pkg",
+    ]
+)

@@ -10,6 +10,7 @@
 
 #include "source/extensions/common/aws/credentials_provider.h"
 #include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
+#include "source/extensions/filters/http/transformation/transformer.h"
 
 #include "absl/types/optional.h"
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
@@ -163,8 +164,9 @@ typedef std::shared_ptr<const AWSLambdaConfig> AWSLambdaConfigConstSharedPtr;
 class AWSLambdaRouteConfig : public Router::RouteSpecificFilterConfig {
 public:
   AWSLambdaRouteConfig(
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
-          &protoconfig);
+      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &protoconfig,
+      Server::Configuration::ServerFactoryContext &context
+    );
 
   const std::string &path() const { return path_; }
   bool async() const { return async_; }
@@ -172,11 +174,14 @@ public:
     return default_body_;
   }
   bool unwrapAsAlb() const { return unwrap_as_alb_; }
-
+  Transformation::TransformerConstSharedPtr transformerConfig() const { return transformer_config_; }
+  bool hasTransformerConfig() const { return has_transformer_config_; }
 private:
   std::string path_;
   bool async_;
   bool unwrap_as_alb_;
+  Transformation::TransformerConstSharedPtr transformer_config_;
+  bool has_transformer_config_;
   absl::optional<std::string> default_body_;
 
   static std::string functionUrlPath(const std::string &name,

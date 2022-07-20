@@ -1,0 +1,5 @@
+changelog:
+- type: NEW_FEATURE
+  description:  Creates the ApiGatewayTransformer class, which can be used to transform an upstream response according to the AWS API Gateway spec
+  issueLink: https://github.com/solo-io/gloo/issues/6143
+  resolvesIssue: false

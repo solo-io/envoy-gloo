@@ -1,8 +1,11 @@
 #include "source/extensions/filters/http/aws_lambda/config.h"
 
+#include "source/extensions/filters/http/transformation/transformation_filter_config.h"
+
 #include "envoy/thread_local/thread_local.h"
 
 #include "source/common/common/regex.h"
+#include "source/common/config/utility.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -272,13 +275,23 @@ AWSLambdaConfigImpl::generateStats(const std::string &prefix,
 }
 
 AWSLambdaRouteConfig::AWSLambdaRouteConfig(
-    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
-        &protoconfig)
+    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &protoconfig,
+    Server::Configuration::ServerFactoryContext &context
+    )
     : path_(functionUrlPath(protoconfig.name(), protoconfig.qualifier())),
-      async_(protoconfig.async()), unwrap_as_alb_(protoconfig.unwrap_as_alb()) {
+      async_(protoconfig.async()),
+      unwrap_as_alb_(protoconfig.unwrap_as_alb()),
+      has_transformer_config_(protoconfig.has_transformer_config())
+    {
 
   if (protoconfig.has_empty_body_override()) {
     default_body_ = protoconfig.empty_body_override().value();
+  }
+
+  if (protoconfig.has_transformer_config()) {
+    auto &factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(protoconfig.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
+    transformer_config_ = factory.createTransformer(*config, context);
   }
 }
 

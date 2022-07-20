@@ -9,6 +9,8 @@ import "google/protobuf/wrappers.proto";
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
+import "envoy/config/core/v3/extension.proto";
+
 // [#protodoc-title: AWS Lambda]
 // AWS Lambda
 
@@ -33,6 +35,11 @@ message AWSLambdaPerRoute {
   // When set on a route the filter will not stream data on the encoding step. 
   // Defaults to false.
   bool unwrap_as_alb = 5;
+
+  // This is a transformer config, as defined in api.envoy.config.filter.http.transformation.v2
+  // used to process response data.
+  // This config cannot be configured simultaneously with unwrap_as_alb
+  envoy.config.core.v3.TypedExtensionConfig transformer_config = 6;
 }
 
 message AWSLambdaProtocolExtension {

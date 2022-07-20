@@ -102,7 +102,7 @@ protected:
 
   void setup_func() {
 
-    filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_));
+    filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_, server_factory_context_));
 
     ON_CALL(*filter_callbacks_.route_,
             mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
@@ -124,6 +124,7 @@ protected:
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_;
   NiceMock<Http::MockStreamEncoderFilterCallbacks> filter_encode_callbacks_;
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+  NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
 
   std::unique_ptr<AWSLambdaFilter> filter_;
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute routeconfig_;
@@ -473,7 +474,7 @@ TEST_F(AWSLambdaFilterTest, ALBDecodingBasic) {
 
   filter_->setEncoderFilterCallbacks(filter_encode_callbacks_);
   auto res = filter_->encodeHeaders(response_headers, true);
-  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, res);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   
 
   Buffer::OwnedImpl buf{};
