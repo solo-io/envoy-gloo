@@ -39,7 +39,6 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        ":api_gateway_transformer_lib",
         ":aws_authenticator_lib",
         ":config_lib",
         ":sts_credentials_provider_lib",
