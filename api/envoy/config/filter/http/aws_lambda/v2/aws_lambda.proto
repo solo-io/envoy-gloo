@@ -107,6 +107,3 @@ message AWSLambdaConfig {
   // Defaults to not refreshing on time period. Suggested is 15 minutes.
   google.protobuf.Duration credential_refresh_delay = 4;
 }
-
-message ApiGatewayTransformation {
-}

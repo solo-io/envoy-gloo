@@ -137,25 +137,3 @@ envoy_cc_library(
         "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
     ],
 )
-
-envoy_cc_library(
-    name = "api_gateway_transformer_lib",
-    srcs = [
-        "api_gateway_transformer.cc",
-    ],
-    hdrs = [
-        "api_gateway_transformer.h",
-    ],
-    repository = "@envoy",
-    deps = [
-        "//source/extensions/filters/http/transformation:transformer_lib",
-        "@envoy//envoy/buffer:buffer_interface",
-        "@envoy//source/common/http:header_map_lib",
-        "@json//:json-lib",
-        "@envoy//source/common/common:minimal_logger_lib",
-        "@envoy//source/common/common:base64_lib",
-        "//api/envoy/config/filter/http/aws_lambda/v2:pkg_cc_proto",
-        "//source/extensions/filters/http/transformation:transformation_filter_config",
-        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
-    ],
-)
