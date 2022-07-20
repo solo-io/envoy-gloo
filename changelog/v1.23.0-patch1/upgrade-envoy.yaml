@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to stable pre 1.23
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: 44634cc608f11bed6852c67f40902cea0d5c9554
