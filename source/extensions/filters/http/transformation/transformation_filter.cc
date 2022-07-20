@@ -252,7 +252,6 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
-    // NTS: -- here is where the transformation actually happens....
     transformation->transform(header_map, request_headers_, body, callbacks);
 
     if (body.length() > 0) {

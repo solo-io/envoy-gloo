@@ -63,9 +63,7 @@ protected:
   )EOF";
 
   void setupApiGateway() {
-    // NTS: will this live for long enough?
     TestUtility::loadFromYaml(TRANSFORMATION_YAML, *routeconfig_.mutable_transformer_config());
-    // routeconfig_.set_allocated_transformer_config(&transformer_config_);
   }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
