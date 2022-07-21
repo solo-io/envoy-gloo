@@ -1,6 +1,6 @@
 changelog:
   - type: DEPENDENCY_BUMP
-    description: Update alpine to fix CVE-2022-2097
+    description: Update alpine to fix CVE-2022-2097.
     dependencyOwner: frolvlad
     dependencyRepo: alpine-glibc
     dependencyTag: alpine-3.15
