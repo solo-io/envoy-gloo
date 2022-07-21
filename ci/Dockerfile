@@ -7,7 +7,11 @@ ENV loglevel=info
 
 RUN apk upgrade --update-cache \
     && apk add dumb-init ca-certificates \
+    && apk add --no-cache \
+    && apk add libcrypto1.1=1.1.1q-r0 \
+    && apk add libssl1.1=1.1.1q-r0 \
     && rm -rf /var/cache/apk/*
+
 
 RUN mkdir -p /etc/envoy
 
