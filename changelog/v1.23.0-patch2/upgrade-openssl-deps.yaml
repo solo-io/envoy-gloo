@@ -1,0 +1,9 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: openssl
+    dependencyRepo: libcrypto1.1
+    dependencyTag: 1.1.1q-r0
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: openssl
+    dependencyRepo: libssl1.1
+    dependencyTag: 1.1.1q-r0
