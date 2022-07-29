@@ -71,9 +71,8 @@ message AWSLambdaConfig {
 
     // Use projected service account token, and role arn to create reate temporary
     // credentials with which to authenticate lambda requests.
-    // This functionality is meant to work along side EKS service account to IAM
-    // binding functionality as outlined here:
-    // https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.htmll
+    // This functionality is meant to work alongside EKS service account to IAM
+    // binding functionality as described in the [AWS docs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html).
     //
     // If the following environment values are not present, this option cannot be used.
     //   1. AWS_WEB_IDENTITY_TOKEN_FILE
