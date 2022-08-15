@@ -30,6 +30,7 @@ public:
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
+       const absl::optional<bool> &role_arn_arg,
         StsConnectionPool::Context::Callbacks *callbacks) override;
 
   void setWebToken(std::string_view web_token) override;
@@ -113,21 +114,32 @@ void StsCredentialsProviderImpl::onFailure(CredentialsFailureStatus status,
   }
 }
 
+// for a lambda call check for credentials on the given role_arg,
+// if not the same role as the default one then chain assuming roles
+// unless explicitly told not to.
 StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     const absl::optional<std::string> &role_arn_arg,
+    const absl::optional<bool> &no_chaining,
     StsConnectionPool::Context::Callbacks *callbacks) {
 
   std::string role_arn = default_role_arn_;
+ 
   // If role_arn_arg is present, use that, otherwise use env
   if (role_arn_arg.has_value()) {
     role_arn = role_arn_arg.value();
   }
 
+  std::string role_arn_lookup = role_arn;
+  if (no_chaining.has_value() && no_chaining.value()) {
+    role_arn_lookup = "no-chain" + role_arn;
+  }
+      
+
   ASSERT(!role_arn.empty());
 
   ENVOY_LOG(trace, "{}: Attempting to assume role ({})", __func__, role_arn);
 
-  const auto existing_token = credentials_cache_.find(role_arn);
+  const auto existing_token = credentials_cache_.find(role_arn_lookup);
   if (existing_token != credentials_cache_.end()) {
     // thing  exists
     const auto now = api_.timeSource().systemTime();
@@ -141,7 +153,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   // Look for active connection pool for given role_arn
-  auto conn_pool = connection_pools_.find(role_arn);
+  auto conn_pool = connection_pools_.find(role_arn_lookup);
   if (conn_pool != connection_pools_.end()) {
     // We have an existing connection pool, 
     // check if there is already a request in flight
@@ -152,7 +164,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }else{
      // since there is no existing connection pool then we need to create one
      conn_pool =  connection_pools_
-          .emplace(role_arn, conn_pool_factory_->build(
+          .emplace(role_arn_lookup, conn_pool_factory_->build(
               role_arn, this, StsFetcher::create(cm_, api_)))
           .first;
   }
@@ -161,8 +173,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // Use getInteger as it doesnt check against default runtime and
   // So that runtime enablement is not decided at per filter runtime
   // via a proto based flag. 
-  if (role_arn == default_role_arn_  || Runtime::getInteger(
-                "envoy.reloadable_features.aws_lambda.sts_chaining", 1) ==0 ){
+  if (role_arn == default_role_arn_  ||  no_chaining.value()) {
     // initialize the connection and subscribe to the callbacks
     conn_pool->second->init(uri_, web_token_, NULL);
     return conn_pool->second->add(callbacks);
