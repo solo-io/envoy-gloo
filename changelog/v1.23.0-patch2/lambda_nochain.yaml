@@ -1,5 +1,7 @@
 changelog:
 - type: NEW_FEATURE
+  issuelink: https://github.com/solo-io/gloo/issues/6912
+  resolvesIssue: false
   description: >
     AWS lambda sts chaining is a powerful tool that enables stronger and more durable 
     cross account and region usage. However this means that we need to mantain
