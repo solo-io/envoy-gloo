@@ -30,7 +30,7 @@ public:
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
-       const absl::optional<bool> &role_arn_arg,
+       const absl::optional<bool> &no_chaining,
         StsConnectionPool::Context::Callbacks *callbacks) override;
 
   void setWebToken(std::string_view web_token) override;
