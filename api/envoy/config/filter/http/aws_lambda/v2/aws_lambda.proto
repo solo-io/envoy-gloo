@@ -56,7 +56,7 @@ message AWSLambdaProtocolExtension {
   // The role_arn to use when generating credentials for the mounted projected SA token
   string role_arn = 6;
   // Optional override to disable role chaining;
-  bool no_chain = 7;
+  bool disable_role_chaining = 7;
 }
 
 message AWSLambdaConfig {

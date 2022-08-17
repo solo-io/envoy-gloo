@@ -30,7 +30,7 @@ public:
 
   StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn_arg,
-       const absl::optional<bool> &no_chaining,
+       const absl::optional<bool> &disable_role_chaining,
         StsConnectionPool::Context::Callbacks *callbacks) override;
 
   void setWebToken(std::string_view web_token) override;
@@ -119,7 +119,7 @@ void StsCredentialsProviderImpl::onFailure(CredentialsFailureStatus status,
 // unless explicitly told not to.
 StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     const absl::optional<std::string> &role_arn_arg,
-    const absl::optional<bool> &no_chaining,
+    const absl::optional<bool> &disable_role_chaining,
     StsConnectionPool::Context::Callbacks *callbacks) {
 
   std::string role_arn = default_role_arn_;
@@ -130,7 +130,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   std::string role_arn_lookup = role_arn;
-  if (no_chaining.has_value() && no_chaining.value()) {
+  if (disable_role_chaining.has_value() && disable_role_chaining.value()) {
     role_arn_lookup = "no-chain" + role_arn;
   }
       
@@ -173,7 +173,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // Use getInteger as it doesnt check against default runtime and
   // So that runtime enablement is not decided at per filter runtime
   // via a proto based flag. 
-  if (role_arn == default_role_arn_  ||  no_chaining.value()) {
+  if (role_arn == default_role_arn_  ||  disable_role_chaining.value()) {
     // initialize the connection and subscribe to the callbacks
     conn_pool->second->init(uri_, web_token_, NULL);
     return conn_pool->second->add(callbacks);

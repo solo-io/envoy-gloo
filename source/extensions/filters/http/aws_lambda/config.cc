@@ -210,7 +210,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     return tls_->sts_credentials_->find(ext_cfg->roleArn(),
-                                        ext_cfg->noChain(), callbacks);
+                                        ext_cfg->disableRoleChaining(), callbacks);
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
@@ -322,6 +322,9 @@ AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
   }
   if (!protoconfig.role_arn().empty()) {
     role_arn_ = protoconfig.role_arn();
+  }
+  if (protoconfig.disable_role_chaining()) {
+    disable_role_chaining_ = protoconfig.disable_role_chaining();
   }
 }
 
