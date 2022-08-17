@@ -732,6 +732,48 @@ TEST(InjaTransformer, ParseFromNilClusterInfo) {
   EXPECT_EQ(body.toString(), "");
 }
 
+TEST(Transformer, transformHeaderAndHeadersToRemove) {
+  Http::TestRequestHeaderMapImpl headers{
+    {"x-custom-header1", "custom-value1"},
+    {"x-custom-header2-repeated", "custom-value2"},
+    {"x-custom-header3", "custom-value3"},
+    {"x-custom-header2-repeated", "custom-value4"},
+  };
+  Buffer::OwnedImpl body;
+  TransformationTemplate transformation;
+
+  // check that all headers are present
+  auto lowerkey1 = Http::LowerCaseString("x-custom-header1");
+  auto lowerkey2 = Http::LowerCaseString("x-custom-header2-repeated");
+  auto lowerkey3 = Http::LowerCaseString("x-custom-header3");
+  auto result1 = headers.get(lowerkey1);
+  auto result2 = headers.get(lowerkey2);
+  auto result3 = headers.get(lowerkey3);
+  EXPECT_EQ(1, result1.size());
+  EXPECT_EQ(2, result2.size());
+  EXPECT_EQ(1, result3.size());
+  EXPECT_EQ("custom-value1", result1[0]->value().getStringView());
+  EXPECT_EQ("custom-value2", result2[0]->value().getStringView());
+  EXPECT_EQ("custom-value4", result2[1]->value().getStringView());
+  EXPECT_EQ("custom-value3", result3[0]->value().getStringView());
+
+  // perform the removal of header2 only
+  transformation.add_headers_to_remove("x-custom-header2-repeated");
+  transformation.add_headers_to_remove("x-custom-header1");
+  InjaTransformer transformer(transformation);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+
+  // ensure that x-custom-header2-repeated is removed
+  auto result1_postremoval = headers.get(lowerkey1);
+  auto result2_postremoval = headers.get(lowerkey2);
+  auto result3_postremoval = headers.get(lowerkey3);
+  EXPECT_EQ(0, result1_postremoval.size());
+  EXPECT_EQ(0, result2_postremoval.size());
+  EXPECT_EQ(1, result3_postremoval.size());
+  EXPECT_EQ("custom-value3", result3[0]->value().getStringView());
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
