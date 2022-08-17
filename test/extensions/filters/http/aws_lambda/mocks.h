@@ -80,6 +80,7 @@ public:
 
   MOCK_METHOD(StsConnectionPool::Context *, find,
               (const absl::optional<std::string> &role_arn,
+               const absl::optional<bool> &disable_role_chaining,
                StsConnectionPool::Context::Callbacks *callbacks));
   MOCK_METHOD(void, setWebToken, (std::string_view web_token));
 };
