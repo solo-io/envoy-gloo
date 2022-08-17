@@ -210,7 +210,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     return tls_->sts_credentials_->find(ext_cfg->roleArn(),
-                                              ext_cfg->dontChain(), callbacks);
+                                        ext_cfg->noChain(), callbacks);
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);

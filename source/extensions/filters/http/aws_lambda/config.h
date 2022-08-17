@@ -56,6 +56,7 @@ public:
     return session_token_;
   }
   const absl::optional<std::string> &roleArn() const { return role_arn_; }
+  const absl::optional<std::bool> &noChain() const { return no_chain_; }
 
 private:
   std::string host_;
@@ -64,6 +65,7 @@ private:
   absl::optional<std::string> secret_key_;
   absl::optional<std::string> session_token_;
   absl::optional<std::string> role_arn_;
+  absl::optional<std::bool> no_chain_;
 };
 
 using SharedAWSLambdaProtocolExtensionConfig =
