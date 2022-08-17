@@ -193,7 +193,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
   EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
   EXPECT_CALL(*sts_connection_pool_, add(_));
-  sts_provider->find(base_role_arn, &ctx_callbacks_3);
+  sts_provider->find(base_role_arn, false, &ctx_callbacks_3);
 
   // place credentials in the cache
   auto credentials = std::make_shared<const StsCredentials>(
