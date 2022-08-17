@@ -197,6 +197,8 @@ message TransformationTemplate {
   // existing headers with the same header name, not replace existing ones.
   repeated HeaderToAppend headers_to_append = 10;
 
+  repeated string headers_to_remove = 11;
+
   // Determines the type of transformation to apply to the request/response body
   oneof body_transformation {
     // Apply a template to the body
