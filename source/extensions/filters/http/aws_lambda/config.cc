@@ -323,9 +323,9 @@ AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
   if (!protoconfig.role_arn().empty()) {
     role_arn_ = protoconfig.role_arn();
   }
-  if (protoconfig.disable_role_chaining()) {
-    disable_role_chaining_ = protoconfig.disable_role_chaining();
-  }
+
+  disable_role_chaining_ = protoconfig.disable_role_chaining();
+  
 }
 
 } // namespace AwsLambda
