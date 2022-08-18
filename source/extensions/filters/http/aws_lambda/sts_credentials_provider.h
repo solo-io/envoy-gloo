@@ -33,7 +33,7 @@ public:
   // Lookup credentials cache map.
   virtual StsConnectionPool::Context *
   find(const absl::optional<std::string> &role_arn,
-       const absl::optional<bool> &disable_role_chaining,
+      bool disable_role_chaining,
        StsConnectionPool::Context::Callbacks *callbacks) PURE;
 
   virtual void setWebToken(std::string_view web_token) PURE;
