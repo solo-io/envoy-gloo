@@ -137,10 +137,12 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
         try {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
-            shared_this->tls_.runOnAllThreads(
-                [web_token](OptRef<ThreadLocalCredentials> prev_config) {
-                  prev_config->sts_credentials_->setWebToken(web_token);
-                });
+            if (web_token != "") {
+              shared_this->tls_.runOnAllThreads(
+                  [web_token](OptRef<ThreadLocalCredentials> prev_config) {
+                    prev_config->sts_credentials_->setWebToken(web_token);
+                  });
+            }
             // TODO: check if web_token is valid
             // TODO: stats here
           } catch (const EnvoyException &e) {

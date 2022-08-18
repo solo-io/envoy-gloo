@@ -114,12 +114,12 @@ void StsCredentialsProviderImpl::onFailure(CredentialsFailureStatus status,
   }
 }
 
-// for a lambda call check for credentials on the given role_arg,
+// for a lambda call check for credentials on the given role_arn_arg,
 // if not the same role as the default one then chain assuming roles
 // unless explicitly told not to.
 StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     const absl::optional<std::string> &role_arn_arg,
-   bool disable_role_chaining,
+    bool disable_role_chaining,
     StsConnectionPool::Context::Callbacks *callbacks) {
 
   std::string role_arn = default_role_arn_;
@@ -131,6 +131,8 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
 
   std::string role_arn_lookup = role_arn;
   if (disable_role_chaining) {
+    // if disable_role_chaining is set on an upstream we need a distinction 
+    // so that we can serve both chained and non-chained as needed
     role_arn_lookup = "no-chain" + role_arn;
   }
       
@@ -169,10 +171,9 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
           .first;
   }
 
-  // Short circuit any additional checks if we are the base arn
-  // Use getInteger as it doesnt check against default runtime and
-  // So that runtime enablement is not decided at per filter runtime
-  // via a proto based flag. 
+  // Short circuit any additional checks if we are the base arn 
+  // or are on an upstream that disables chaining so we can go ahead
+  //  and use webtoken.
   if (role_arn == default_role_arn_  ||  disable_role_chaining) {
     // initialize the connection and subscribe to the callbacks
     conn_pool->second->init(uri_, web_token_, NULL);
