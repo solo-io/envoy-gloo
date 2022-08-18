@@ -283,6 +283,16 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
   }
+  const auto &headers_to_remove = transformation.headers_to_remove();
+  for (auto idx : headers_to_remove) {
+    Http::LowerCaseString header_name(idx);
+    try {
+      headers_to_remove_.push_back(header_name);
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header to remove '{}': {}", idx, e.what()));
+      }
+  }
   const auto &headers_to_append = transformation.headers_to_append();
   for (auto idx = 0; idx < transformation.headers_to_append_size(); idx++) {
     const auto &it = headers_to_append.Get(idx);
@@ -452,6 +462,10 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       // route's
       header_map.addReferenceKey(templated_header.first, output);
     }
+  }
+
+  for (const auto &header_to_remove : headers_to_remove_) {
+    header_map.remove(header_to_remove);
   }
 
   // Headers to Append Values transform:

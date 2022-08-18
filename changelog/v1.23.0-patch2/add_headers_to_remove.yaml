@@ -1,0 +1,5 @@
+changelog:
+  - type: NEW_FEATURE
+    description: Adds a `header_to_remove` field to the transformation filter plugin
+    issueLink: https://github.com/solo-io/gloo/issues/6539
+    resolvesIssue: False
