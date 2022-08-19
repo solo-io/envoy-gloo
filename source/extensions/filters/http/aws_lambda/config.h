@@ -27,6 +27,9 @@ namespace AwsLambda {
   COUNTER(fetch_failed)                                                        \
   COUNTER(fetch_success)                                                       \
   COUNTER(creds_rotated)                                                       \
+  COUNTER(webtoken_rotated)                                                    \
+  COUNTER(webtoken_failure)                                                    \
+  GAUGE(webtoken_state, NeverImport)                                           \
   GAUGE(current_state, NeverImport)
 
 /**
@@ -56,6 +59,7 @@ public:
     return session_token_;
   }
   const absl::optional<std::string> &roleArn() const { return role_arn_; }
+  const bool &disableRoleChaining() const { return disable_role_chaining_; }
 
 private:
   std::string host_;
@@ -64,6 +68,7 @@ private:
   absl::optional<std::string> secret_key_;
   absl::optional<std::string> session_token_;
   absl::optional<std::string> role_arn_;
+  bool disable_role_chaining_;
 };
 
 using SharedAWSLambdaProtocolExtensionConfig =

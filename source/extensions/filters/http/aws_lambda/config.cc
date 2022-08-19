@@ -124,6 +124,7 @@ void AWSLambdaConfigImpl::loadSTSData() {
     throw EnvoyException(
         fmt::format("Web token file {} exists but is empty", token_file_));
   }
+  this->stats_.webtoken_state_.set(1);
 }
 
 void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
@@ -135,14 +136,24 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
     // Given the usual usage of sts this should only be of concern when web token is self managed.
     shared_this->timer_ = dispatcher.createTimer([shared_this] { 
         try {
+           
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
-            shared_this->tls_.runOnAllThreads(
-                [web_token](OptRef<ThreadLocalCredentials> prev_config) {
-                  prev_config->sts_credentials_->setWebToken(web_token);
-                });
+             shared_this->stats_.webtoken_rotated_.inc();
+             // We enforce that it should not be empty at start up
+             // but are more lenient at this point.
+            if (web_token == "") {
+              shared_this->stats_.webtoken_state_.set(0);
+              shared_this->stats_.webtoken_failure_.inc();
+            }else{
+              shared_this->stats_.webtoken_state_.set(1);
+              shared_this->tls_.runOnAllThreads(
+                  [web_token](OptRef<ThreadLocalCredentials> prev_config) {
+                    prev_config->sts_credentials_->setWebToken(web_token);
+                  });
+            }
             // TODO: check if web_token is valid
-            // TODO: stats here
+            // TODO: stats here 
           } catch (const EnvoyException &e) {
             ENVOY_LOG_TO_LOGGER(
                 Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
@@ -210,7 +221,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     return tls_->sts_credentials_->find(ext_cfg->roleArn(),
-                                                           callbacks);
+                             ext_cfg->disableRoleChaining(), callbacks);
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
@@ -323,6 +334,7 @@ AWSLambdaProtocolExtensionConfig::AWSLambdaProtocolExtensionConfig(
   if (!protoconfig.role_arn().empty()) {
     role_arn_ = protoconfig.role_arn();
   }
+  disable_role_chaining_ = protoconfig.disable_role_chaining();
 }
 
 } // namespace AwsLambda

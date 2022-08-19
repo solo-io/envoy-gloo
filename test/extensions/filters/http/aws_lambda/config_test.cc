@@ -288,8 +288,9 @@ TEST_F(ConfigTest, WithStsCreds) {
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config =
       std::make_shared<const AWSLambdaProtocolExtensionConfig>(protoextconfig);
 
-  EXPECT_CALL(*sts_cred_provider_, find(_, _))
+  EXPECT_CALL(*sts_cred_provider_, find(_, _, _))
       .WillOnce(Invoke([&](const absl::optional<std::string> &role_arn_arg,
+                        bool,
                            StsConnectionPool::Context::Callbacks *)
                            -> StsConnectionPool::Context * {
         EXPECT_EQ(ext_config->roleArn().value(), role_arn_arg);

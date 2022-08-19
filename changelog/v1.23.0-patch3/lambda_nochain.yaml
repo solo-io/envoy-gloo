@@ -1,0 +1,10 @@
+changelog:
+- type: NEW_FEATURE
+  issuelink: https://github.com/solo-io/gloo/issues/6912
+  resolvesIssue: false
+  description: >
+    AWS lambda sts chaining is a powerful tool that enables stronger and more durable 
+    cross account and region usage. However this means that we need to mantain
+    more connections and have a more intense overhead in trust relationships.
+    Given this it turns out that it is valid for a given upstream to sometimes
+    not want to actually chain roles. This will allow for fine grained decisions.

@@ -105,14 +105,14 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
       }));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 
-  sts_provider->find(role_arn, &ctx_callbacks_1);
+  sts_provider->find(role_arn, false, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
   EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 
-  sts_provider->find(role_arn, &ctx_callbacks_2);
+  sts_provider->find(role_arn, false, &ctx_callbacks_2);
 
   // place credentials in the cache
   auto credentials = std::make_shared<const StsCredentials>(
@@ -130,7 +130,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
             EXPECT_EQ(success_creds->secretAccessKey(), "secret_key");
             EXPECT_EQ(success_creds->sessionToken(), "session_token");
           }));
-  sts_provider->find(role_arn, &ctx_callbacks_3);
+  sts_provider->find(role_arn, false, &ctx_callbacks_3);
 }
 
 TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
@@ -181,19 +181,19 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   EXPECT_CALL(*sts_chained_connection_pool_, setInFlight());
   EXPECT_CALL(*sts_chained_connection_pool_, add(_));
 
-  sts_provider->find(role_arn, &ctx_callbacks_1);
+  sts_provider->find(role_arn, false, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
   EXPECT_CALL(*sts_chained_connection_pool_, 
     requestInFlight()).WillOnce(Return(true));
   EXPECT_CALL(*sts_chained_connection_pool_, add(_));
-  sts_provider->find(role_arn, &ctx_callbacks_2);
+  sts_provider->find(role_arn, false, &ctx_callbacks_2);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
   EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
   EXPECT_CALL(*sts_connection_pool_, add(_));
-  sts_provider->find(base_role_arn, &ctx_callbacks_3);
+  sts_provider->find(base_role_arn, false, &ctx_callbacks_3);
 
   // place credentials in the cache
   auto credentials = std::make_shared<const StsCredentials>(
@@ -211,7 +211,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
             EXPECT_EQ(success_creds->secretAccessKey(), "secret_key");
             EXPECT_EQ(success_creds->sessionToken(), "session_token");
           }));
-  sts_provider->find(role_arn, &ctx_callbacks_4);
+  sts_provider->find(role_arn, false, &ctx_callbacks_4);
 }
 
 } // namespace AwsLambda
