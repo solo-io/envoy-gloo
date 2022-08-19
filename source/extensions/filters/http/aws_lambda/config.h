@@ -29,6 +29,7 @@ namespace AwsLambda {
   COUNTER(creds_rotated)                                                       \
   COUNTER(webtoken_rotated)                                                    \
   COUNTER(webtoken_failure)                                                    \
+  GAUGE(webtoken_state, NeverImport)                                           \
   GAUGE(current_state, NeverImport)
 
 /**

@@ -135,6 +135,7 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
     // Given the usual usage of sts this should only be of concern when web token is self managed.
     shared_this->timer_ = dispatcher.createTimer([shared_this] { 
         try {
+            shared_this->stats_.webtoken_state_.set(0);
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
              shared_this->stats_.webtoken_rotated_.inc();
@@ -143,6 +144,7 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
             if (web_token == "") {
               shared_this->stats_.webtoken_failure_.inc();
             }else{
+               shared_this->stats_.webtoken_state_.set(1);
               shared_this->tls_.runOnAllThreads(
                   [web_token](OptRef<ThreadLocalCredentials> prev_config) {
                     prev_config->sts_credentials_->setWebToken(web_token);
