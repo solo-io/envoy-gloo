@@ -133,7 +133,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   if (disable_role_chaining) {
     // if disable_role_chaining is set on an upstream we need a distinction 
     // so that we can serve both chained and non-chained as needed
-    role_arn_lookup = "no-chain" + role_arn;
+    role_arn_lookup = "no-chain-" + role_arn;
   }
       
 
