@@ -138,6 +138,8 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
              shared_this->stats_.webtoken_rotated_.inc();
+             // We enforce that it should not be empty at start up
+             // but are more lenient at this point.
             if (web_token == "") {
               shared_this->stats_.webtoken_failure_.inc();
             }else{
