@@ -137,7 +137,10 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
         try {
             const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
                 shared_this->token_file_);
-            if (web_token != "") {
+             shared_this->stats_.webtoken_rotated_.inc();
+            if (web_token == "") {
+              shared_this->stats_.webtoken_failure_.inc();
+            }else{
               shared_this->tls_.runOnAllThreads(
                   [web_token](OptRef<ThreadLocalCredentials> prev_config) {
                     prev_config->sts_credentials_->setWebToken(web_token);
@@ -212,7 +215,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     return tls_->sts_credentials_->find(ext_cfg->roleArn(),
-                             ext_cfg->disableRoleChaining().value(), callbacks);
+                             ext_cfg->disableRoleChaining(), callbacks);
   }
 
   ENVOY_LOG(debug, "{}: No valid credentials source found", __func__);
