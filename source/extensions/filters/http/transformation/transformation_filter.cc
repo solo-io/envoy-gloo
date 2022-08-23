@@ -158,11 +158,9 @@ TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
 // Creates pair of request and response transformation per route
 void TransformationFilter::setupTransformationPair() {
-  route_ = decoder_callbacks_->route();
-
   route_config_ =
       Http::Utility::resolveMostSpecificPerFilterConfig<RouteFilterConfig>(
-          filter_config_->name(), route_);
+          decoder_callbacks_);
   TransformerPairConstSharedPtr active_transformer_pair;
   // if there is a route level config present, automatically disregard
   // header_matching rules
