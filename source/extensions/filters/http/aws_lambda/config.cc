@@ -281,7 +281,8 @@ AWSLambdaRouteConfig::AWSLambdaRouteConfig(
     : path_(functionUrlPath(protoconfig.name(), protoconfig.qualifier())),
       async_(protoconfig.async()),
       unwrap_as_alb_(protoconfig.unwrap_as_alb()),
-      has_transformer_config_(protoconfig.has_transformer_config())
+      has_transformer_config_(protoconfig.has_transformer_config()),
+      has_request_transformer_config_(protoconfig.has_request_transformer_config())
     {
 
   if (protoconfig.has_empty_body_override()) {
@@ -292,6 +293,12 @@ AWSLambdaRouteConfig::AWSLambdaRouteConfig(
     auto &factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(protoconfig.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
     transformer_config_ = factory.createTransformer(*config, context);
+  }
+
+  if (protoconfig.has_request_transformer_config()) {
+    auto &request_transformer_factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.request_transformer_config());
+    auto request_transformer_config = Config::Utility::translateAnyToFactoryConfig(protoconfig.request_transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), request_transformer_factory);
+    request_transformer_config_ = request_transformer_factory.createTransformer(*request_transformer_config, context);
   }
 }
 
