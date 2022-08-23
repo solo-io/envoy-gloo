@@ -19,6 +19,10 @@
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
+#include "nlohmann/json.hpp"
+// For convenience
+using json = nlohmann::json;
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -346,6 +350,16 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     return Http::FilterDataStatus::StopIterationAndBuffer;
   } else if (state_ == Responded) {
     return Http::FilterDataStatus::StopIterationNoBuffer;
+  }
+
+  if (function_on_route_->hasRequestTransformerConfig()) {
+    auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+    request_transformer_config->transform(
+      *response_headers_,
+      request_headers_,
+      data,
+      *encoder_callbacks_
+    );
   }
 
   if (end_stream) {
