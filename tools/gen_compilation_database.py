@@ -122,6 +122,8 @@ if __name__ == "__main__":
         nargs='*',
         default=[
             "//source/...",
+            "//test/extensions/...",
+            "//test/integration/...",
         ])
     args = parser.parse_args()
     fix_compilation_database(args, generate_compilation_database(args))
