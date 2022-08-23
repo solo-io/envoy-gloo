@@ -180,13 +180,17 @@ public:
   }
   bool unwrapAsAlb() const { return unwrap_as_alb_; }
   Transformation::TransformerConstSharedPtr transformerConfig() const { return transformer_config_; }
+  Transformation::TransformerConstSharedPtr requestTransformerConfig() const { return request_transformer_config_; }
   bool hasTransformerConfig() const { return has_transformer_config_; }
+  bool hasRequestTransformerConfig() const { return has_request_transformer_config_; }
 private:
   std::string path_;
   bool async_;
   bool unwrap_as_alb_;
   Transformation::TransformerConstSharedPtr transformer_config_;
   bool has_transformer_config_;
+  Transformation::TransformerConstSharedPtr request_transformer_config_;
+  bool has_request_transformer_config_;
   absl::optional<std::string> default_body_;
 
   static std::string functionUrlPath(const std::string &name,
