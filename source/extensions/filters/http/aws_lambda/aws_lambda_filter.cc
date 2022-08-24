@@ -353,21 +353,13 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (function_on_route_ != nullptr && function_on_route_->hasRequestTransformerConfig()) {
-    std::cout << "request transformer config present in decodeData\n ";
     auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
-    std::cout << "obtained request transformer config\n ";
-
-    std::cout << "logging request_headers_: " << request_headers_->getPathValue() << "\n";
-
-    std::cout << "Logging data: " << data.toString() << "\n";
-
     request_transformer_config->transform(
       *request_headers_,
       request_headers_,
       data,
-      *encoder_callbacks_
+      *decoder_callbacks_
     );
-    std::cout << "successfully transformed body\n ";
   }
 
   if (end_stream) {
