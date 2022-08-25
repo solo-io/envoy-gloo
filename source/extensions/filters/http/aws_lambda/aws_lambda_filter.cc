@@ -354,7 +354,9 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (isRequestTransformationNeeded()) {
+    std::cout << "request transformation needed in decodeData" << std::endl;
     transformRequest(data);
+    std::cout << "request transformation done in decodeData" << std::endl;
   }
 
   if (end_stream) {
@@ -415,6 +417,7 @@ void AWSLambdaFilter::handleDefaultBody() {
 
 void AWSLambdaFilter::transformRequest(Buffer::Instance &data) {
   auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+  std::cout << "obtained request transformer config" << std::endl;
   request_transformer_config->transform(
     *request_headers_,
     request_headers_,
