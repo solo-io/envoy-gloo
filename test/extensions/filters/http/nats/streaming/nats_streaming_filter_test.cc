@@ -139,10 +139,9 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
                            Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
+  ON_CALL(callbacks_, mostSpecificPerFilterConfig())
       .WillByDefault(Return(&config));
 
   Http::TestRequestHeaderMapImpl headers;
@@ -159,10 +158,9 @@ TEST_F(NatsStreamingFilterTest, RequestWithData) {
                            Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
+  ON_CALL(callbacks_, mostSpecificPerFilterConfig())
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
@@ -195,10 +193,9 @@ TEST_F(NatsStreamingFilterTest, RequestWithHeadersAndOneChunkOfData) {
                            Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
+  ON_CALL(callbacks_, mostSpecificPerFilterConfig())
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
@@ -228,10 +225,9 @@ TEST_F(NatsStreamingFilterTest, RequestWithTrailers) {
                            Ref(*filter_)))
       .Times(1);
 
-  const auto &name = SoloHttpFilterNames::get().NatsStreaming;
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(*callbacks_.route_, mostSpecificPerFilterConfig(name))
+  ON_CALL(callbacks_, mostSpecificPerFilterConfig())
       .WillByDefault(Return(&config));
 
   callbacks_.buffer_.reset(new Buffer::OwnedImpl);
