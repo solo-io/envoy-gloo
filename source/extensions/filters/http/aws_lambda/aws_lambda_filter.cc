@@ -270,7 +270,7 @@ bool AWSLambdaFilter::isTransformationNeeded() {
 }
 
 bool AWSLambdaFilter::isRequestTransformationNeeded() {
-  return functionOnRoute() != nullptr && functionOnRoute()->hasRequestTransformerConfig()
+  return functionOnRoute() != nullptr && functionOnRoute()->hasRequestTransformerConfig();
 }
 
 void AWSLambdaFilter::onSuccess(
