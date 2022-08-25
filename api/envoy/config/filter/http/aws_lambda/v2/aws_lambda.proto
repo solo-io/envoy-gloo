@@ -29,6 +29,7 @@ message AWSLambdaPerRoute {
   // body is used if the body empty, and an empty body will be sent upstream.
   google.protobuf.StringValue empty_body_override = 4;
 
+  // Deprecated. Use transformer_config to specify an AWS Lambda response transformer instead.
   // Unwrap responses as AWS ALB does.
   // Expects json lambda responses to construct response.
   // Intended to ease migration when previously using alb to invoke Lambdas.

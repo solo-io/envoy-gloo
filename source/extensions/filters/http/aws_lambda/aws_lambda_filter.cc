@@ -19,9 +19,6 @@
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
-#include "nlohmann/json.hpp"
-// For convenience
-using json = nlohmann::json;
 
 namespace Envoy {
 namespace Extensions {
@@ -135,7 +132,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool end_stream
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (isTransformationNeeded() && !end_stream){
+  if (isResponseTransformationNeeded() && !end_stream){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
@@ -152,7 +149,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (!isTransformationNeeded()){
+  if (!isResponseTransformationNeeded()){
     // return response as is if not configured for alb mode/transformation
     return Http::FilterDataStatus::Continue;
   }
@@ -171,7 +168,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
 Http::FilterTrailersStatus 
 AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
-  if (!isTransformationNeeded()){
+  if (!isResponseTransformationNeeded()){
    return Http::FilterTrailersStatus::Continue;
   }
   // Future proof against alb http2 support and finalize the data transform
@@ -265,7 +262,7 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
   return false;
 }
 
-bool AWSLambdaFilter::isTransformationNeeded() {
+bool AWSLambdaFilter::isResponseTransformationNeeded() {
   return functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig());
 }
 

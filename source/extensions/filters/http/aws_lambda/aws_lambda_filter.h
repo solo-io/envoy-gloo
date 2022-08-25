@@ -90,7 +90,7 @@ private:
   void finalizeResponse();
   bool parseResponseAsALB(Http::ResponseHeaderMap&, 
                           const Buffer::Instance&, Buffer::Instance&);
-  bool isTransformationNeeded();
+  bool isResponseTransformationNeeded();
   bool isRequestTransformationNeeded();
   void transformRequest(Buffer::Instance&);
 
