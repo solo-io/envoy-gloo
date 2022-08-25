@@ -141,7 +141,7 @@ TEST_F(NatsStreamingFilterTest, HeaderOnlyRequest) {
 
   const auto &&config =
       routeSpecificFilterConfig("Subject1", "cluster_id", "discover_prefix1");
-  ON_CALL(*callbacks_, mostSpecificPerFilterConfig())
+  ON_CALL(callbacks_, mostSpecificPerFilterConfig())
       .WillByDefault(Return(&config));
 
   Http::TestRequestHeaderMapImpl headers;
