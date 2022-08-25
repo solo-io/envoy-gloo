@@ -269,6 +269,10 @@ bool AWSLambdaFilter::isTransformationNeeded() {
   return functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig());
 }
 
+bool AWSLambdaFilter::isRequestTransformationNeeded() {
+  return functionOnRoute() != nullptr && functionOnRoute()->hasRequestTransformerConfig()
+}
+
 void AWSLambdaFilter::onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
         credentials) {
@@ -352,14 +356,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (function_on_route_ != nullptr && function_on_route_->hasRequestTransformerConfig()) {
-    auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
-    request_transformer_config->transform(
-      *request_headers_,
-      request_headers_,
-      data,
-      *decoder_callbacks_
-    );
+  if (isRequestTransformationNeeded()) {
+    transformRequest(data);
   }
 
   if (end_stream) {
@@ -406,6 +404,9 @@ void AWSLambdaFilter::lambdafy() {
 void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
+    if (isRequestTransformationNeeded()) {
+      transformRequest(data);
+    }
 
     request_headers_->setReferenceContentType(
         Http::Headers::get().ContentTypeValues.Json);
@@ -413,6 +414,16 @@ void AWSLambdaFilter::handleDefaultBody() {
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }
+}
+
+void AWSLambdaFilter::transformRequest(Buffer::Instance &data) {
+  auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+  request_transformer_config->transform(
+    *request_headers_,
+    request_headers_,
+    data,
+    *decoder_callbacks_
+  );
 }
 
 } // namespace AwsLambda

@@ -91,6 +91,8 @@ private:
   bool parseResponseAsALB(Http::ResponseHeaderMap&, 
                           const Buffer::Instance&, Buffer::Instance&);
   bool isTransformationNeeded();
+  bool isRequestTransformationNeeded();
+  void transformRequest(Buffer::Instance&);
 
   Http::RequestHeaderMap *request_headers_{};
   Http::ResponseHeaderMap *response_headers_{};
