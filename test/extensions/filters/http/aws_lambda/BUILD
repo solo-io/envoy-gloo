@@ -9,6 +9,7 @@ load(
     "//bazel:envoy_test.bzl",
     "envoy_gloo_cc_test",
 )
+load("@envoy_api//bazel:api_build_system.bzl", "api_proto_package")
 
 envoy_package()
 
@@ -22,6 +23,21 @@ envoy_gloo_cc_test(
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
         "@envoy//test/test_common:utility_lib",
+    ],
+)
+
+envoy_gloo_cc_test(
+    name = "aws_lambda_transformer_test",
+    srcs = ["test_transformer.h", "aws_lambda_transformer_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
+        "//source/extensions/filters/http/transformation:transformation_filter_lib",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks",
+        "@envoy//test/test_common:utility_lib",
+        ":pkg_cc_proto",
     ],
 )
 
@@ -113,4 +129,8 @@ envoy_gloo_cc_test(
         "@envoy//test/test_common:utility_lib",
         "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
     ],
+)
+
+api_proto_package(
+    visibility = ["//visibility:public"],
 )
