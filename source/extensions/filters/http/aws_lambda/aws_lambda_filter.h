@@ -13,7 +13,6 @@
 #include "source/extensions/filters/http/aws_lambda/sts_credentials_provider.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
-#include "nlohmann/json.hpp"
 
 namespace Envoy {
 namespace Extensions {

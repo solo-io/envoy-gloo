@@ -35,7 +35,7 @@ message AWSLambdaPerRoute {
   // Intended to ease migration when previously using alb to invoke Lambdas.
   // When set on a route the filter will not stream data on the encoding step. 
   // Defaults to false.
-  bool unwrap_as_alb = 5;
+  bool unwrap_as_alb = 5 [deprecated=true];
 
   // This is a transformer config, as defined in api.envoy.config.filter.http.transformation.v2
   // used to process response data.
