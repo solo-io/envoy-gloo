@@ -161,7 +161,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
   encoder_callbacks_->addEncodedData(data, false);
   finalizeResponse();
   
- 
+
   return Http::FilterDataStatus::Continue;
 }
 
@@ -353,11 +353,11 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (isRequestTransformationNeeded()) {
-    transformRequest(data);
-  }
 
   if (end_stream) {
+    if (isRequestTransformationNeeded() && data.length() > 0) {
+      transformRequest(data);
+    }
     lambdafy();
     return Http::FilterDataStatus::Continue;
   }
