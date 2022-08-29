@@ -83,7 +83,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   // great! this is an aws cluster. get the function information:
   function_on_route_ =
       Http::Utility::resolveMostSpecificPerFilterConfig<AWSLambdaRouteConfig>(
-          SoloHttpFilterNames::get().AwsLambda, route_);
+          decoder_callbacks_);
 
   if (!function_on_route_) {
     state_ = State::Responded;
