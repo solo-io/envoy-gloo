@@ -336,6 +336,7 @@ void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
+  std::cout << "AWS Lambda Filter: decodeData" << std::endl;
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
   }
@@ -353,10 +354,11 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-
   if (end_stream) {
-    if (isRequestTransformationNeeded() && data.length() > 0) {
+    std::cout << "AWS Lambda Filter: decodeData: end_stream" << std::endl;
+    if (isRequestTransformationNeeded() && has_body_) {
       transformRequest(data);
+      aws_authenticator_.updatePayloadHash(data);
     }
     lambdafy();
     return Http::FilterDataStatus::Continue;
@@ -414,6 +416,7 @@ void AWSLambdaFilter::handleDefaultBody() {
 }
 
 void AWSLambdaFilter::transformRequest(Buffer::Instance &data) {
+  std::cout << "Tranforming request in AWS lambda filter" << std::endl;
   auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
   request_transformer_config->transform(
     *request_headers_,
