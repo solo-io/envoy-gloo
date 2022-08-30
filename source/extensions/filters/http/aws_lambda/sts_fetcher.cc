@@ -97,6 +97,10 @@ public:
     // TODO(nfuden) allow for Region this to be overridable. 
     // DefaultRegion is gauranteed to be available but an override may be faster
     aws_authenticator_.sign(&hdrs, HeadersToSign, DefaultRegion);
+    // Log the accessKey but not the secret. This is to show that we have valid 
+    // credentials but does not leak anything secret.
+    ENVOY_LOG(trace, "assume chained [accesskey={}] [sessiontoken={}]",
+                creds->accessKeyId().value(),  creds->sessionToken().value());
     ENVOY_LOG(debug, "assume chained role from [uri = {}]: start", uri_->uri());
     request_ = thread_local_cluster->httpAsyncClient().send(
                                             std::move(message), *this, options);
