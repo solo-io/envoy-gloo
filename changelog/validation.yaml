@@ -1,5 +1,5 @@
-relaxSemverValidation: true
-allowedLabels:
-  - patch
-  - rc
-  - beta 
+changelog:
+- type: NEW_FEATURE
+  description: Update API, Lambda filter to support an optional request transformation, used to modify the request sent to upstream Lambdas.
+  issueLink: https://github.com/solo-io/gloo/issues/6162
+  resolvesIssue: false 

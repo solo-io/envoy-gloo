@@ -20,6 +20,7 @@ class StsConnectionPoolImpl : public StsConnectionPool,
                               public StsFetcher::Callbacks {
 public:
   StsConnectionPoolImpl(Api::Api &api, Event::Dispatcher &dispatcher,
+                        const absl::string_view cache_key_arn,
                         const absl::string_view role_arn,
                         StsConnectionPool::Callbacks *callbacks,
                         StsFetcherPtr fetcher);
@@ -80,6 +81,7 @@ private:
   StsFetcherPtr fetcher_;
   Api::Api &api_;
   Event::Dispatcher &dispatcher_;
+  std::string cache_key_arn_;
   std::string role_arn_;
   StsConnectionPool::Callbacks *callbacks_;
 
@@ -93,10 +95,11 @@ private:
 
 StsConnectionPoolImpl::StsConnectionPoolImpl(
     Api::Api &api, Event::Dispatcher &dispatcher,
-    const absl::string_view role_arn, StsConnectionPool::Callbacks *callbacks,
-    StsFetcherPtr fetcher)
+     const absl::string_view cache_key_arn, const absl::string_view role_arn,
+     StsConnectionPool::Callbacks *callbacks, StsFetcherPtr fetcher)
     : fetcher_(std::move(fetcher)), api_(api), dispatcher_(dispatcher),
-      role_arn_(role_arn), callbacks_(callbacks){};
+      cache_key_arn_(cache_key_arn), role_arn_(role_arn), 
+      callbacks_(callbacks){};
 
 StsConnectionPoolImpl::~StsConnectionPoolImpl() {
   // When the conn pool is being destructed, make sure to inform all of the
@@ -185,7 +188,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
   // Report the existence of this credential to any pools that may be waitin
-  callbacks_->onResult(result, role_arn_, chained_requests_);
+  callbacks_->onResult(result, cache_key_arn_, chained_requests_);
   // Send result back to all lambda filter contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);
@@ -206,12 +209,13 @@ void StsConnectionPoolImpl::onFailure(CredentialsFailureStatus status) {
 
 StsConnectionPoolPtr
 StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
+                          const absl::string_view cache_key_arn,
                           const absl::string_view role_arn,
                           StsConnectionPool::Callbacks *callbacks,
                           StsFetcherPtr fetcher) {
 
-  return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, role_arn,
-                                                 callbacks, std::move(fetcher));
+  return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, cache_key_arn, 
+                                       role_arn, callbacks, std::move(fetcher));
 }
 
 class StsConnectionPoolFactoryImpl : public StsConnectionPoolFactory {
@@ -219,12 +223,13 @@ public:
   StsConnectionPoolFactoryImpl(Api::Api &api, Event::Dispatcher &dispatcher)
       : api_(api), dispatcher_(dispatcher) {}
 
-  StsConnectionPoolPtr build(const absl::string_view role_arn,
+  StsConnectionPoolPtr build(const absl::string_view cache_key_arn,
+                             const absl::string_view role_arn,
                              StsConnectionPool::Callbacks *callbacks,
                              StsFetcherPtr fetcher) const override {
 
-    return StsConnectionPool::create(api_, dispatcher_, role_arn, callbacks,
-                                     std::move(fetcher));
+    return StsConnectionPool::create(api_, dispatcher_, cache_key_arn, role_arn, 
+                                      callbacks,std::move(fetcher));
   };
 
 private:
