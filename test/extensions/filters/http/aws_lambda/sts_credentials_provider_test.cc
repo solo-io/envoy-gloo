@@ -164,10 +164,12 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
         EXPECT_EQ(cache_lookup_arg, role_arn);
         credentials_provider_callbacks_chained = callbacks;
         return std::move(unique_chained_pool);
-      })).WillOnce(Invoke([&](const absl::string_view role_arn_arg,
+      })).WillOnce(Invoke([&](const absl::string_view cache_lookup_arg,
+                           const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
                            StsFetcherPtr) -> StsConnectionPoolPtr {
         EXPECT_EQ(role_arn_arg, base_role_arn);
+        EXPECT_EQ(cache_lookup_arg, base_role_arn);
         credentials_provider_callbacks = callbacks;
         return std::move(unique_pool);
       }));
