@@ -346,7 +346,9 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     has_body_ = true;
   }
 
-  aws_authenticator_.updatePayloadHash(data);
+  if (!isRequestTransformationNeeded()) {
+    aws_authenticator_.updatePayloadHash(data);
+  }
 
   if (state_ == Calling) {
     return Http::FilterDataStatus::StopIterationAndBuffer;
