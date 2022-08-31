@@ -54,6 +54,7 @@ public:
    */
   static HeaderList
   createHeaderToSign(std::initializer_list<Http::LowerCaseString> headers);
+  void resetBodySha();
 
 private:
   // TODO(yuval-k) can I refactor our the friendliness?

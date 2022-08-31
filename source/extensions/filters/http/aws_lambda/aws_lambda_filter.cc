@@ -357,8 +357,15 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   if (end_stream) {
     std::cout << "AWS Lambda Filter: decodeData: end_stream" << std::endl;
     if (isRequestTransformationNeeded() && has_body_) {
+      std::cout << "AWS Lambda Filter: transforming request" << std::endl;
       transformRequest(data);
+      std::cout << "AWS Lambda Filter: successfully transformed request" << std::endl;
+      std::cout << "AWS Lambda filter: attempting to reset body_sha256" << std::endl;
+      aws_authenticator_.resetBodySha();
+      std::cout << "AWS Lambda filter: should have reset body sha" << std::endl;
+      std::cout << "AWS Lambda filter: attempting to reset payload_hash" << std::endl;
       aws_authenticator_.updatePayloadHash(data);
+      std::cout << "AWS Lambda filter: should have reset payload hash" << std::endl;
     }
     lambdafy();
     return Http::FilterDataStatus::Continue;
