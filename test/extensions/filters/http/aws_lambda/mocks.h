@@ -68,7 +68,8 @@ public:
   ~MockStsConnectionPoolFactory() override;
 
   MOCK_METHOD(StsConnectionPoolPtr, build,
-              (const absl::string_view role_arn,
+              ( const absl::string_view cache_lookup_arn,
+                const absl::string_view role_arn,
                StsConnectionPool::Callbacks *callbacks, StsFetcherPtr fetcher),
               (const, override));
 };

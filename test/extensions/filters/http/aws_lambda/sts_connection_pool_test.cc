@@ -75,7 +75,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn,
+      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
@@ -124,7 +124,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn,
+      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   StsFetcher::Callbacks *lambda_callbacks;
@@ -183,7 +183,7 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn,
+      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
