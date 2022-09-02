@@ -61,7 +61,7 @@ public:
 };
 const std::string AwsAuthenticatorTest::SERVICE = "service";
 
-TEST_F(AwsAuthenticatorTest, BodyHash) {
+TEST_F(AwsAuthenticatorTest, RepeatedlyBodyHash) {
   DangerousDeprecatedTestTime time;
   AwsAuthenticator aws(time.timeSystem());
 
@@ -73,7 +73,15 @@ TEST_F(AwsAuthenticatorTest, BodyHash) {
   std::string hexsha = getBodyHexSha(aws);
   EXPECT_EQ("6cc43f858fbb763301637b5af970e2a46b46f461f27e5a0f41e009c59b827b25",
             hexsha);
+
+  // can reuse the authenticator
+  aws.init(&accesskey, &secretkey, nullptr);
+  updatePayloadHash(aws, "\"abc\"");
+  hexsha = getBodyHexSha(aws);
+  EXPECT_EQ("6cc43f858fbb763301637b5af970e2a46b46f461f27e5a0f41e009c59b827b25",
+            hexsha);
 }
+
 
 TEST_F(AwsAuthenticatorTest, UrlQuery) {
   DangerousDeprecatedTestTime time;
