@@ -42,6 +42,7 @@ void AwsAuthenticator::init(const std::string *access_key,
   session_token_ = session_token;
   const std::string &secret_key_ref = *secret_key;
   first_key_ = "AWS4" + secret_key_ref;
+  body_sha_ = Sha256{};
 }
 
 AwsAuthenticator::~AwsAuthenticator() {}
