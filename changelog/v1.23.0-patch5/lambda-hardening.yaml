@@ -1,0 +1,5 @@
+changelog:
+- type: FIX
+  description: Harden the lambda functionality for sts. Reduce churn and invalid chained signatures after initial timeout.
+  issueLink: https://github.com/solo-io/gloo/issues/6912
+  resolvesIssue: false 

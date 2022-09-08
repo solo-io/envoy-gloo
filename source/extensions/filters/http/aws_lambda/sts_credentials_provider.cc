@@ -86,7 +86,10 @@ void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
 void StsCredentialsProviderImpl::onResult(
     std::shared_ptr<const StsCredentials> result, std::string role_arn,
     std::list<std::string> &chained_requests) {
-  credentials_cache_.emplace(role_arn, result);
+    auto updated = credentials_cache_.emplace(role_arn, result);
+    if (updated.second){
+      credentials_cache_[role_arn] = result;
+    }
 
   // kick off any waiting chained assumption roles relying on this credential
   while( !chained_requests.empty()){
@@ -167,7 +170,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
      // since there is no existing connection pool then we need to create one
      conn_pool =  connection_pools_
           .emplace(role_arn_lookup, conn_pool_factory_->build(
-              role_arn, this, StsFetcher::create(cm_, api_)))
+            role_arn_lookup, role_arn, this, StsFetcher::create(cm_, api_)))
           .first;
   }
 
@@ -199,7 +202,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   if (base_conn_pool == connection_pools_.end()) {
      base_conn_pool =  connection_pools_
           .emplace(default_role_arn_, conn_pool_factory_->build(
-            default_role_arn_, this, 
+            default_role_arn_, default_role_arn_, this, 
             StsFetcher::create(cm_, api_))).first;
   }
   // only recreate base request if its not in flight

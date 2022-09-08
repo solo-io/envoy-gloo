@@ -116,6 +116,7 @@ public:
 
   static StsConnectionPoolPtr create(Api::Api &api,
                                      Event::Dispatcher &dispatcher,
+                                     const absl::string_view cache_key_arn,
                                      const absl::string_view role_arn,
                                      StsConnectionPool::Callbacks *callbacks,
                                      StsFetcherPtr fetcher);
@@ -130,7 +131,8 @@ class StsConnectionPoolFactory {
 public:
   virtual ~StsConnectionPoolFactory() = default;
 
-  virtual StsConnectionPoolPtr build(const absl::string_view role_arn,
+  virtual StsConnectionPoolPtr build(const absl::string_view cache_key_arn,
+                                     const absl::string_view role_arn,
                                      StsConnectionPool::Callbacks *callbacks,
                                      StsFetcherPtr fetcher) const PURE;
 
