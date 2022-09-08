@@ -406,8 +406,8 @@ void AWSLambdaFilter::lambdafy() {
 void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
-    request_body_.move(data);
     if (isRequestTransformationNeeded()) {
+      request_body_.move(data);
       transformRequest();
     }
 
