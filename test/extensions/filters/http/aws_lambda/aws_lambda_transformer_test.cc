@@ -8,6 +8,7 @@
 #include "test/mocks/common.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
+#include "test/test_common/simulated_time_system.h"
 #include "test/test_common/utility.h"
 
 #include "fmt/format.h"
@@ -51,7 +52,8 @@ public:
   bool propagate_original_routing_;
 };
 
-class AWSLambdaTransformerTest : public testing::Test {
+class AWSLambdaTransformerTest : public testing::Test,
+                                 public Event::TestUsingSimulatedTime {
 public:
   AWSLambdaTransformerTest() {}
 
@@ -117,11 +119,10 @@ protected:
   }
 
   void setup_func() {
-
     filter_route_config_.reset(new AWSLambdaRouteConfig(routeconfig_, server_factory_context_));
 
-    ON_CALL(*filter_callbacks_.route_,
-            mostSpecificPerFilterConfig(SoloHttpFilterNames::get().AwsLambda))
+    ON_CALL(filter_callbacks_,
+            mostSpecificPerFilterConfig())
         .WillByDefault(Return(filter_route_config_.get()));
   }
 
@@ -146,6 +147,8 @@ protected:
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute routeconfig_;
   std::unique_ptr<AWSLambdaRouteConfig> filter_route_config_;
   std::shared_ptr<AWSLambdaConfigTestImpl> filter_config_;
+
+  Event::SimulatedTimeSystem time_system_;
 };
 
 TEST_F(AWSLambdaTransformerTest, SignsOnHeadersEndStream) {
@@ -171,10 +174,57 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformer){
 
   Buffer::OwnedImpl data("hello");
 
-  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
 
   // Confirm that the body is transformed to the hardcoded string.
-  EXPECT_EQ(data.toString(), "test body from fake transformer");
+  std::string upstream_body;
+  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
+      .WillOnce(Invoke(
+          [&](Buffer::Instance &b, bool) { upstream_body = b.toString(); }));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
+
+  EXPECT_EQ(upstream_body, "test body from fake transformer");
+}
+
+TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
+  // setup to use the request transformer
+  setupRoute(false, true);
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+    
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, false));
+
+  Buffer::OwnedImpl data("hello");
+
+  time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
+
+  auto transformedAuthorizationHeader = headers.get(Http::LowerCaseString("authorization"));
+  auto transformedxAmzDateHeader = headers.get(Http::LowerCaseString("x-amz-date"));
+
+  EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=ccd0d6501e444866e4dd148f738994b186ff926adcea80909ecfeb99171b304c");
+
+  // now, setup to use no transformer
+  setupRoute(false, false);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, false));
+
+  // make sure the payload sent to lambda is the same as that created in the transformer case
+  Buffer::OwnedImpl data2("test body from fake transformer");
+
+  time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data2, true));
+
+  EXPECT_EQ(
+    transformedxAmzDateHeader[0]->value().getStringView(),
+    headers.get(Http::LowerCaseString("x-amz-date"))[0]->value().getStringView()
+  );
+  EXPECT_EQ(
+    transformedAuthorizationHeader[0]->value().getStringView(),
+    headers.get(Http::LowerCaseString("authorization"))[0]->value().getStringView()
+  );
 }
 
 TEST_F(AWSLambdaTransformerTest, TestConfigureResponseTransformer){

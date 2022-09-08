@@ -7,6 +7,7 @@
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
 #include "source/common/common/base64.h"
+#include "source/common/buffer/buffer_impl.h"
 
 #include "source/extensions/filters/http/aws_lambda/aws_authenticator.h"
 #include "source/extensions/filters/http/aws_lambda/config.h"
@@ -79,6 +80,7 @@ public:
   const AWSLambdaRouteConfig  * functionOnRoute() {
     return function_on_route_;
   }
+  Buffer::OwnedImpl request_body_{};
 
 private:
   static const HeaderList HeadersToSign;
@@ -91,7 +93,7 @@ private:
                           const Buffer::Instance&, Buffer::Instance&);
   bool isResponseTransformationNeeded();
   bool isRequestTransformationNeeded();
-  void transformRequest(Buffer::Instance&);
+  void transformRequest();
 
   Http::RequestHeaderMap *request_headers_{};
   Http::ResponseHeaderMap *response_headers_{};

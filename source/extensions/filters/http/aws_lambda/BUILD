@@ -46,6 +46,7 @@ envoy_cc_library(
         "//source/common/http:solo_filter_utility_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/http:utility_lib",
+        "@envoy//envoy/buffer:buffer_interface",
     ],
 )
 

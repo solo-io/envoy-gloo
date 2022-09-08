@@ -336,7 +336,6 @@ void AWSLambdaFilter::onFailure(CredentialsFailureStatus) {
 
 Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
                                                    bool end_stream) {
-  std::cout << "AWS Lambda Filter: decodeData" << std::endl;
   if (!function_on_route_) {
     return Http::FilterDataStatus::Continue;
   }
@@ -346,8 +345,12 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     has_body_ = true;
   }
 
+  // If we are not transforming the request, then update the payload hash according to the incoming data
+  // If we are transforming the request, then we will update the payload hash after the transformation
   if (!isRequestTransformationNeeded()) {
     aws_authenticator_.updatePayloadHash(data);
+  } else {
+    request_body_.move(data);
   }
 
   if (state_ == Calling) {
@@ -357,17 +360,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (end_stream) {
-    std::cout << "AWS Lambda Filter: decodeData: end_stream" << std::endl;
     if (isRequestTransformationNeeded() && has_body_) {
-      std::cout << "AWS Lambda Filter: transforming request" << std::endl;
-      transformRequest(data);
-      std::cout << "AWS Lambda Filter: successfully transformed request" << std::endl;
-      std::cout << "AWS Lambda filter: attempting to reset body_sha256" << std::endl;
-      aws_authenticator_.resetBodySha();
-      std::cout << "AWS Lambda filter: should have reset body sha" << std::endl;
-      std::cout << "AWS Lambda filter: attempting to reset payload_hash" << std::endl;
-      aws_authenticator_.updatePayloadHash(data);
-      std::cout << "AWS Lambda filter: should have reset payload hash" << std::endl;
+      transformRequest();
     }
     lambdafy();
     return Http::FilterDataStatus::Continue;
@@ -412,8 +406,9 @@ void AWSLambdaFilter::lambdafy() {
 void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
+    request_body_.move(data);
     if (isRequestTransformationNeeded()) {
-      transformRequest(data);
+      transformRequest();
     }
 
     request_headers_->setReferenceContentType(
@@ -424,15 +419,17 @@ void AWSLambdaFilter::handleDefaultBody() {
   }
 }
 
-void AWSLambdaFilter::transformRequest(Buffer::Instance &data) {
-  std::cout << "Tranforming request in AWS lambda filter" << std::endl;
+void AWSLambdaFilter::transformRequest() {
   auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
   request_transformer_config->transform(
     *request_headers_,
     request_headers_,
-    data,
+    request_body_,
     *decoder_callbacks_
   );
+  request_headers_->setContentLength(request_body_.length());
+  aws_authenticator_.updatePayloadHash(request_body_);
+  decoder_callbacks_->addDecodedData(request_body_, false);
 }
 
 } // namespace AwsLambda
