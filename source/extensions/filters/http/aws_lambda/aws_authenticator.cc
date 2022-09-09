@@ -60,11 +60,6 @@ void AwsAuthenticator::updatePayloadHash(const Buffer::Instance &data) {
   body_sha_.update(data);
 }
 
-void AwsAuthenticator::resetBodySha() { 
-  Sha256 new_body_sha;
-  body_sha_ = std::move(new_body_sha);
-}
-
 bool AwsAuthenticator::lowercasecompare(const Http::LowerCaseString &i,
                                         const Http::LowerCaseString &j) {
   return (i.get() < j.get());
