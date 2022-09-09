@@ -80,7 +80,6 @@ public:
   const AWSLambdaRouteConfig  * functionOnRoute() {
     return function_on_route_;
   }
-  Buffer::OwnedImpl request_body_{};
 
 private:
   static const HeaderList HeadersToSign;

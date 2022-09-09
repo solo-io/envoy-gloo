@@ -349,8 +349,6 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   // If we are transforming the request, then we will update the payload hash after the transformation
   if (!isRequestTransformationNeeded()) {
     aws_authenticator_.updatePayloadHash(data);
-  } else {
-    request_body_.move(data);
   }
 
   if (state_ == Calling) {
@@ -361,6 +359,7 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 
   if (end_stream) {
     if (isRequestTransformationNeeded() && has_body_) {
+      decoder_callbacks_->addDecodedData(data, false);
       transformRequest();
     }
     lambdafy();
@@ -407,7 +406,7 @@ void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
     if (isRequestTransformationNeeded()) {
-      request_body_.move(data);
+      decoder_callbacks_->addDecodedData(data, true);
       transformRequest();
     }
 
@@ -420,16 +419,19 @@ void AWSLambdaFilter::handleDefaultBody() {
 }
 
 void AWSLambdaFilter::transformRequest() {
-  auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
-  request_transformer_config->transform(
-    *request_headers_,
-    request_headers_,
-    request_body_,
-    *decoder_callbacks_
-  );
-  request_headers_->setContentLength(request_body_.length());
-  aws_authenticator_.updatePayloadHash(request_body_);
-  decoder_callbacks_->addDecodedData(request_body_, false);
+  decoder_callbacks_->modifyDecodingBuffer([this](Buffer::Instance &buffer) {
+    auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+    request_transformer_config->transform(
+      *request_headers_,
+      request_headers_,
+      buffer,
+      *decoder_callbacks_
+    );
+    request_headers_->setContentLength(buffer.length());
+    aws_authenticator_.updatePayloadHash(buffer);
+  });
+
+
 }
 
 } // namespace AwsLambda
