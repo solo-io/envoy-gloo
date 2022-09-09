@@ -174,14 +174,17 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformer){
 
   Buffer::OwnedImpl data("hello");
 
-
-  // Confirm that the body is transformed to the hardcoded string.
+  // When the request is transformed, record the transformed data into upstream_body
   std::string upstream_body;
-  EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
-      .WillOnce(Invoke(
-          [&](Buffer::Instance &b, bool) { upstream_body = b.toString(); }));
-  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
+  EXPECT_CALL(filter_callbacks_, modifyDecodingBuffer).WillOnce(Invoke(
+      [&](std::function<void(Buffer::Instance &)> transformer_callback) {
+        Buffer::OwnedImpl buffer;
+        transformer_callback(buffer);
+        upstream_body = buffer.toString();
+      }));
 
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
+  // Confirm that the body is transformed to the hardcoded string.
   EXPECT_EQ(upstream_body, "test body from fake transformer");
 }
 
@@ -204,7 +207,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
   auto transformedxAmzDateHeader = headers.get(Http::LowerCaseString("x-amz-date"));
 
   EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
-  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=ccd0d6501e444866e4dd148f738994b186ff926adcea80909ecfeb99171b304c");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=11ab46120ad6385e8e8cc9142b4cf419a929d338e6c04ce428596f138136abf3");
 
   // now, setup to use no transformer
   setupRoute(false, false);
