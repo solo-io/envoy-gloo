@@ -358,7 +358,7 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (end_stream) {
-    if (isRequestTransformationNeeded() && has_body_) {
+    if (isRequestTransformationNeeded()) {
       decoder_callbacks_->addDecodedData(data, false);
       transformRequest();
     }
