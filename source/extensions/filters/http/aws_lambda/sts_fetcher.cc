@@ -91,7 +91,7 @@ public:
     message->body().add(body);
     // this call resets the sha so that our authenticator is in a fresh state
     // to be reused.
-    auto aws_authenticator = AwsAuthenticator(api_.timeSource(),
+    AwsAuthenticator aws_authenticator(api_.timeSource(),
                                              &AWSStsHeaderNames::get().Service);
     aws_authenticator.init(&creds->accessKeyId().value(), 
         &creds->secretAccessKey().value(), &creds->sessionToken().value());
