@@ -288,7 +288,8 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureResponseTransformer){
   EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
       .WillOnce(Invoke(on_buf_mod));
 
-  auto edResult = filter_->encodeData(buf, true);
+  Buffer::OwnedImpl dataBuf;
+  auto edResult = filter_->encodeData(dataBuf, true);
 
   EXPECT_EQ(Http::FilterDataStatus::Continue, edResult);
   EXPECT_STREQ("test body from fake transformer", buf.toString().c_str());
