@@ -79,6 +79,11 @@ public:
   const AWSLambdaRouteConfig  * functionOnRoute() {
     return function_on_route_;
   }
+  
+
+  const AwsAuthenticator  aws_authenticator() {
+    return aws_authenticator_;
+  }
 
 private:
   static const HeaderList HeadersToSign;

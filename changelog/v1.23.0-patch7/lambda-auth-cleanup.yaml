@@ -1,0 +1,5 @@
+changelog:
+- type: FIX
+  description: Check that we cache auth correctly and handle out of band data updates
+  issueLink: https://github.com/solo-io/gloo/issues/6912
+  resolvesIssue: false

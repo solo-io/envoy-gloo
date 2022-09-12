@@ -140,8 +140,7 @@ void StsConnectionPoolImpl::markFailed( CredentialsFailureStatus status) {
 
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(!body.empty());
-  request_in_flight_ = false;
-
+ 
   // using a macro as we need to return on error
   // TODO(yuval-k): we can use string_view instead of string when we upgrade to
   // newer absl.
@@ -189,6 +188,8 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   // Send result back to Credential Provider to store in cache
   // Report the existence of this credential to any pools that may be waitin
   callbacks_->onResult(result, cache_key_arn_, chained_requests_);
+  request_in_flight_ = false;
+  
   // Send result back to all lambda filter contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);
