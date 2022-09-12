@@ -243,7 +243,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody)
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
-  Buffer::OwnedImpl data("");
+  Buffer::OwnedImpl data;
 
 
   time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
