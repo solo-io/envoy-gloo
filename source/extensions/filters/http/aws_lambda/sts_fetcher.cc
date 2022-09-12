@@ -18,8 +18,7 @@ class StsFetcherImpl : public StsFetcher,
                        public Http::AsyncClient::Callbacks {
 public:
   StsFetcherImpl(Upstream::ClusterManager &cm, Api::Api &api)
-      : cm_(cm), api_(api), 
-      aws_authenticator_(api.timeSource(), &AWSStsHeaderNames::get().Service){
+      : cm_(cm), api_(api){
     ENVOY_LOG(trace, "{}", __func__);
   }
 
@@ -92,14 +91,15 @@ public:
     message->body().add(body);
     // this call resets the sha so that our authenticator is in a fresh state
     // to be reused.
-    aws_authenticator_.resetSHA(); 
-    aws_authenticator_.init(&creds->accessKeyId().value(), 
+    auto aws_authenticator = AwsAuthenticator(api_.timeSource(),
+                                             &AWSStsHeaderNames::get().Service);
+    aws_authenticator.init(&creds->accessKeyId().value(), 
         &creds->secretAccessKey().value(), &creds->sessionToken().value());
-    aws_authenticator_.updatePayloadHash(message->body());
+    aws_authenticator.updatePayloadHash(message->body());
     auto& hdrs = message->headers();
     // TODO(nfuden) allow for Region this to be overridable. 
     // DefaultRegion is gauranteed to be available but an override may be faster
-    aws_authenticator_.sign(&hdrs, HeadersToSign, DefaultRegion);
+    aws_authenticator.sign(&hdrs, HeadersToSign, DefaultRegion);
     // Log the accessKey but not the secret. This is to show that we have valid 
     // credentials but does not leak anything secret. This is due to our
     // sessions being 
@@ -187,7 +187,6 @@ private:
   const envoy::config::core::v3::HttpUri *uri_{};
   Http::AsyncClient::Request *request_{};
   absl::string_view role_arn_;
-  AwsAuthenticator aws_authenticator_;
 
   class AWSStsHeaderValues {
   public:

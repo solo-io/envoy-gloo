@@ -55,7 +55,6 @@ public:
   static HeaderList
   createHeaderToSign(std::initializer_list<Http::LowerCaseString> headers);
 
-  void resetSHA();
   std::string getBodyHexSha();
 
 private:
