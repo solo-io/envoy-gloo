@@ -358,9 +358,8 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (end_stream) {
-    if (isRequestTransformationNeeded()) {
+    if (has_body_ && isRequestTransformationNeeded()) {
       decoder_callbacks_->addDecodedData(data, false);
-      transformRequest();
     }
     lambdafy();
     return Http::FilterDataStatus::Continue;
@@ -387,6 +386,9 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
 
 void AWSLambdaFilter::lambdafy() {
   handleDefaultBody();
+  if (isRequestTransformationNeeded()) {
+      transformRequest();
+  }
 
   const std::string &invocation_type =
       function_on_route_->async()
@@ -405,11 +407,6 @@ void AWSLambdaFilter::lambdafy() {
 void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
-    if (isRequestTransformationNeeded()) {
-      decoder_callbacks_->addDecodedData(data, true);
-      transformRequest();
-    }
-
     request_headers_->setReferenceContentType(
         Http::Headers::get().ContentTypeValues.Json);
     request_headers_->setContentLength(data.length());

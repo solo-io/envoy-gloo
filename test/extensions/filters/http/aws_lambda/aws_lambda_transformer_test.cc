@@ -83,6 +83,9 @@ protected:
     routeconfig_.set_qualifier("v1");
     routeconfig_.set_async(false);
 
+    // set default body value
+    routeconfig_.mutable_empty_body_override()->set_value("default_body_value");
+
     if (unwrapAsApiGateway) {
       setupApiGatewayResponseTransformation();
     }
@@ -224,6 +227,51 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
     transformedxAmzDateHeader[0]->value().getStringView(),
     headers.get(Http::LowerCaseString("x-amz-date"))[0]->value().getStringView()
   );
+  EXPECT_EQ(
+    transformedAuthorizationHeader[0]->value().getStringView(),
+    headers.get(Http::LowerCaseString("authorization"))[0]->value().getStringView()
+  );
+}
+
+TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody) {
+  // setup to use the request transformer
+  setupRoute(false, true);
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, false));
+
+  Buffer::OwnedImpl data("");
+
+
+  time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
+
+  auto transformedAuthorizationHeader = headers.get(Http::LowerCaseString("authorization"));
+  auto transformedxAmzDateHeader = headers.get(Http::LowerCaseString("x-amz-date"));
+
+
+  EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=6ac2a229351a686ff5a93deb46896f2128a6800a885ef5324c0c0685aa21d786");
+
+  // now, setup to use no transformer
+  setupRoute(false, false);
+  EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
+            filter_->decodeHeaders(headers, false));
+
+  // the body will be the same as the post-transformer body
+  Buffer::OwnedImpl data2("test body from fake transformer");
+
+  time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
+  EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data2, true));
+
+  EXPECT_EQ(
+    transformedxAmzDateHeader[0]->value().getStringView(),
+    headers.get(Http::LowerCaseString("x-amz-date"))[0]->value().getStringView()
+  );
+
   EXPECT_EQ(
     transformedAuthorizationHeader[0]->value().getStringView(),
     headers.get(Http::LowerCaseString("authorization"))[0]->value().getStringView()
