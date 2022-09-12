@@ -32,8 +32,7 @@ public:
       SharedAWSLambdaProtocolExtensionConfig,
       StsConnectionPool::Context::Callbacks *callbacks) const override {
     called_ = true;
-    getCreds(callbacks);
-    return nullptr;
+    return getCreds(callbacks);
   }
 
   CredentialsConstSharedPtr credentials_;
@@ -43,11 +42,23 @@ public:
     return propagate_original_routing_;
   }
 
-  MOCK_METHOD(void, getCreds, (StsConnectionPool::Context::Callbacks *callbacks), (const));
-
-  
+  MOCK_METHOD(StsConnectionPool::Context *, getCreds,  
+                   (StsConnectionPool::Context::Callbacks *callbacks), (const));
 
   bool propagate_original_routing_;
+};
+
+class StsContextStub : public StsConnectionPool::Context {
+      StsConnectionPool::Context::Callbacks *callbacks() const override{
+        return nullptr;
+      };
+
+    /**
+     * Cancels the request if it is in flight
+     */
+    void cancel() override{
+      return;
+    }
 };
 
 class AWSLambdaFilterTest : public testing::Test {
@@ -96,6 +107,7 @@ protected:
           } else {
             callbacks->onSuccess(filter_config_->credentials_);
           }
+          return nullptr;
         }
       );
     }
@@ -347,32 +359,35 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   // we will manage credentials callbacks ourselves for this test
   setupRoute(false, false, false, false, true);
 
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+  Http::TestRequestHeaderMapImpl headers_1{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  Buffer::OwnedImpl data("data");
-  Http::TestRequestTrailerMapImpl trailers;
+  Buffer::OwnedImpl data_1("data");
+  Http::TestRequestTrailerMapImpl trailers_1;
 
 
   StsConnectionPool::Context::Callbacks *callbackReference;
   EXPECT_CALL(*filter_config_, getCreds).WillRepeatedly(
-     [&](StsConnectionPool::Context::Callbacks *callbacks){
+     [&](StsConnectionPool::Context::Callbacks *callbacks) ->
+                                         StsConnectionPool::Context*{
         callbackReference = callbacks;
+        // context is used for evaluating if we are in async
+        // only other use is cancel so just use stub.
+        return new StsContextStub();
      }
   );
 
-  filter_->decodeHeaders(headers, false);
+  filter_->decodeHeaders(headers_1, false);
   callbackReference->onSuccess(filter_config_->credentials_);
-  filter_->decodeData(data, false);
-  filter_->decodeTrailers(trailers);
-  auto auth = filter_->awsAuthenticator();
-  auto hex_sha1 = auth.getBodyHexSha();
+  filter_->decodeData(data_1, false);
+  filter_->decodeTrailers(trailers_1);
+  auto auth1 = filter_->awsAuthenticator();
+  auto hex_sha1 = auth1.getBodyHexSha();
 
   filter_ = std::make_unique<AWSLambdaFilter>(
       factory_context_.cluster_manager_, factory_context_.api_,
       filter_config_);
   filter_->setDecoderFilterCallbacks(filter_callbacks_);
-
 
   // Pointers are a thing so lets just restate the above values
   Http::TestRequestHeaderMapImpl headers_2{{":method", "GET"},
@@ -381,20 +396,37 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   Buffer::OwnedImpl data_2("data");
   Http::TestRequestTrailerMapImpl trailers_2;
 
-  Buffer::OwnedImpl diff_data("different");
-
-
-
   // intentionally misorder our on success to simulate a long sts call.
   filter_->decodeHeaders(headers_2, false);
   filter_->decodeData(data_2, false);
-  
   callbackReference->onSuccess(filter_config_->credentials_);
   filter_->decodeTrailers(trailers_2);
   auto auth2 = filter_->awsAuthenticator();
   auto hex_sha2 = auth2.getBodyHexSha();
-
   EXPECT_EQ(hex_sha1, hex_sha2);
+
+  filter_ = std::make_unique<AWSLambdaFilter>(
+      factory_context_.cluster_manager_, factory_context_.api_,
+      filter_config_);
+  filter_->setDecoderFilterCallbacks(filter_callbacks_);
+
+
+
+  Http::TestRequestHeaderMapImpl headers_3{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  Buffer::OwnedImpl data_3("data");
+  Http::TestRequestTrailerMapImpl trailers_3;
+
+  // intentionally misorder our on success to simulate a long sts call 
+  // where data is sent with end stream true
+  filter_->decodeHeaders(headers_3, false);
+  filter_->decodeData(data_3, true);
+  callbackReference->onSuccess(filter_config_->credentials_);
+  auto auth3 = filter_->awsAuthenticator();
+  auto hex_sha3 = auth3.getBodyHexSha();
+
+  EXPECT_EQ(hex_sha1, hex_sha3);
 }
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {

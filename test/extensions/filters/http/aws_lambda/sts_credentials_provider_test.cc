@@ -133,6 +133,24 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
             EXPECT_EQ(success_creds->sessionToken(), "session_token");
           }));
   sts_provider->find(role_arn, false, &ctx_callbacks_3);
+
+  // overwrite the original creds
+  testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_4;
+  auto credentials2 = std::make_shared<const StsCredentials>(
+    "access_key2", "secret_key2", "session_token2",
+    SystemTime(expiry_time - std::chrono::minutes(5)));
+  credentials_provider_callbacks->onResult(credentials2, role_arn, to_chain);
+
+    EXPECT_CALL(ctx_callbacks_4, onSuccess(_))
+      .WillOnce(Invoke(
+          [&](std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
+                  success_creds) {
+            EXPECT_EQ(success_creds->accessKeyId(), "access_key2");
+            EXPECT_EQ(success_creds->secretAccessKey(), "secret_key2");
+            EXPECT_EQ(success_creds->sessionToken(), "session_token2");
+          }));
+  sts_provider->find(role_arn, false, &ctx_callbacks_4);
+  
 }
 
 TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
