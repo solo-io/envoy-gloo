@@ -90,7 +90,8 @@ public:
     // Chained assumption specifics 
     const std::string body = fmt::format(StsChainedFormatString, role_arn, now);
     message->body().add(body);
-    // this call resets the sha as nothing should be added prior to this.
+    // this call resets the sha so that our authenticator is in a fresh state
+    // to be reused.
     aws_authenticator_.resetSHA(); 
     aws_authenticator_.init(&creds->accessKeyId().value(), 
         &creds->secretAccessKey().value(), &creds->sessionToken().value());
