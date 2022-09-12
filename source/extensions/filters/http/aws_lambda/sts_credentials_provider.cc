@@ -84,12 +84,13 @@ void StsCredentialsProviderImpl::setWebToken(std::string_view web_token) {
 }
 
 void StsCredentialsProviderImpl::onResult(
-    std::shared_ptr<const StsCredentials> result, std::string role_arn,
-    std::list<std::string> &chained_requests) {
-    auto updated = credentials_cache_.emplace(role_arn, result);
-    if (updated.second){
-      credentials_cache_[role_arn] = result;
-    }
+  std::shared_ptr<const StsCredentials> result, std::string role_arn,
+  std::list<std::string> &chained_requests) {
+  auto inserted = credentials_cache_.emplace(role_arn, result);
+  // emplace does not override so check if inserted and if not then overrid
+  if (!inserted.second){
+    credentials_cache_[role_arn] = result;
+  }
 
   // kick off any waiting chained assumption roles relying on this credential
   while( !chained_requests.empty()){

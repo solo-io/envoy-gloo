@@ -35,6 +35,9 @@ AwsAuthenticator::AwsAuthenticator(TimeSource &time_source,
   method_ = &Http::Headers::get().MethodValues.Post;
 }
 
+// init sets up some needed tools for the authenticator 
+// but does not clean state and does not need to be the first
+// call to authenticator. Data may be added prior to this call.
 void AwsAuthenticator::init(const std::string *access_key,
                             const std::string *secret_key,
                             const std::string *session_token) {
@@ -42,7 +45,6 @@ void AwsAuthenticator::init(const std::string *access_key,
   session_token_ = session_token;
   const std::string &secret_key_ref = *secret_key;
   first_key_ = "AWS4" + secret_key_ref;
-  body_sha_ = Sha256{};
 }
 
 AwsAuthenticator::~AwsAuthenticator() {}
