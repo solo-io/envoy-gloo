@@ -282,7 +282,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureResponseTransformer){
   setupRoute(true, false);
   auto request_headers = setup_encode();
 
-  Buffer::OwnedImpl buf{};
+  Buffer::OwnedImpl buf;
   auto on_buf_mod = [&buf](std::function<void(Buffer::Instance&)> cb){cb(buf);};
   EXPECT_CALL(filter_encode_callbacks_, encodingBuffer).WillOnce(Return(&buf));
   EXPECT_CALL(filter_encode_callbacks_, modifyEncodingBuffer)
