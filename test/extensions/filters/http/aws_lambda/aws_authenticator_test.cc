@@ -74,7 +74,6 @@ TEST_F(AwsAuthenticatorTest, RepeatedlyBodyHash) {
   EXPECT_EQ("6cc43f858fbb763301637b5af970e2a46b46f461f27e5a0f41e009c59b827b25",
             hexsha);
 
-
   // can reuse the authenticator after reset
   aws.resetSHA();
   updatePayloadHash(aws, "\"abc\"");
