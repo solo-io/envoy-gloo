@@ -80,7 +80,7 @@ public:
     return function_on_route_;
   }
   
-
+  // Used by unit tests to gain access to the authenticator
   const AwsAuthenticator  awsAuthenticator() {
     return aws_authenticator_;
   }
