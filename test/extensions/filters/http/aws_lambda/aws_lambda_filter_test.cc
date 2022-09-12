@@ -358,14 +358,14 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   EXPECT_CALL(*filter_config_, getCreds).WillRepeatedly(
      [&](StsConnectionPool::Context::Callbacks *callbacks){
         callbackReference = callbacks;
-     })
+     }
   );
 
   filter_->decodeHeaders(headers, false);
   callbackReference->onSuccess(filter_config_->credentials_);
   filter_->decodeData(data, false);
   filter_->decodeTrailers(trailers);
-  auto auth = filter_->aws_authenticator();
+  auto auth = filter_->awsAuthenticator();
   auto hex_sha1 = auth.getBodyHexSha();
 
   filter_ = std::make_unique<AWSLambdaFilter>(
@@ -391,7 +391,7 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   
   callbackReference->onSuccess(filter_config_->credentials_);
   filter_->decodeTrailers(trailers_2);
-  auto auth2 = filter_->aws_authenticator();
+  auto auth2 = filter_->awsAuthenticator();
   auto hex_sha2 = auth2.getBodyHexSha();
 
   EXPECT_EQ(hex_sha1, hex_sha2);

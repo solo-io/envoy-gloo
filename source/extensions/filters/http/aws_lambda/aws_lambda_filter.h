@@ -81,7 +81,7 @@ public:
   }
   
 
-  const AwsAuthenticator  aws_authenticator() {
+  const AwsAuthenticator  awsAuthenticator() {
     return aws_authenticator_;
   }
 
