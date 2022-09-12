@@ -7,6 +7,7 @@
 #include "test/mocks/upstream/mocks.h"
 #include "test/test_common/utility.h"
 
+
 #include "fmt/format.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -31,12 +32,7 @@ public:
       SharedAWSLambdaProtocolExtensionConfig,
       StsConnectionPool::Context::Callbacks *callbacks) const override {
     called_ = true;
-    if (credentials_ == nullptr) {
-      callbacks->onFailure(CredentialsFailureStatus::Network);
-    } else {
-      callbacks->onSuccess(credentials_);
-    }
-    return nullptr;
+    return getCreds(callbacks);
   }
 
   CredentialsConstSharedPtr credentials_;
@@ -45,7 +41,24 @@ public:
   bool propagateOriginalRouting() const override{
     return propagate_original_routing_;
   }
+
+  MOCK_METHOD(StsConnectionPool::Context *, getCreds,  
+                   (StsConnectionPool::Context::Callbacks *callbacks), (const));
+
   bool propagate_original_routing_;
+};
+
+class StsContextStub : public StsConnectionPool::Context {
+      StsConnectionPool::Context::Callbacks *callbacks() const override{
+        return nullptr;
+      };
+
+    /**
+     * Cancels the request if it is in flight
+     */
+    void cancel() override{
+      return;
+    }
 };
 
 class AWSLambdaFilterTest : public testing::Test {
@@ -56,7 +69,8 @@ protected:
   void SetUp() override { setupRoute(); }
 
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
-                bool persistOriginalHeaders = false, bool unwrapAsAlb = false) {
+                bool persistOriginalHeaders = false, bool unwrapAsAlb = false,
+                bool unmanagedCredentials = false) {
     factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
     factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
@@ -71,7 +85,8 @@ protected:
         protoextconfig;
     protoextconfig.set_host("lambda.us-east-1.amazonaws.com");
     protoextconfig.set_region("us-east-1");
-    filter_config_ = std::make_shared<AWSLambdaConfigTestImpl>();
+    filter_config_ = std::make_shared<testing::NiceMock<
+                                      AWSLambdaConfigTestImpl>>();
 
     if (!noCredentials) {
       if (sessionToken) {
@@ -84,6 +99,18 @@ protected:
                 "access key", "secret key");
       }
     }
+    if (!unmanagedCredentials){
+      ON_CALL(*filter_config_, getCreds).WillByDefault(
+                        [this](StsConnectionPool::Context::Callbacks *callbacks){
+          if (filter_config_->credentials_ == nullptr) {
+              callbacks->onFailure(CredentialsFailureStatus::Network);
+          } else {
+            callbacks->onSuccess(filter_config_->credentials_);
+          }
+          return nullptr;
+        }
+      );
+    }
     
     filter_config_->propagate_original_routing_=persistOriginalHeaders;
 
@@ -94,10 +121,13 @@ protected:
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
                 protoextconfig)));
 
+
     filter_ = std::make_unique<AWSLambdaFilter>(
         factory_context_.cluster_manager_, factory_context_.api_,
         filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
+
+    
   }
 
   void setup_func() {
@@ -129,7 +159,7 @@ protected:
   std::unique_ptr<AWSLambdaFilter> filter_;
   envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute routeconfig_;
   std::unique_ptr<AWSLambdaRouteConfig> filter_route_config_;
-  std::shared_ptr<AWSLambdaConfigTestImpl> filter_config_;
+  std::shared_ptr<NiceMock<AWSLambdaConfigTestImpl>> filter_config_;
 };
 
 // see:
@@ -319,6 +349,85 @@ TEST_F(AWSLambdaFilterTest, SignOnTrailedEndStream) {
             filter_->decodeTrailers(trailers));
 
   EXPECT_TRUE(headers.has("Authorization"));
+}
+
+TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
+  // there are cases where even if our filter is waiting on decode headers
+  // decode data can still happen. We need to verify that bodysha is still
+  // handled appropriately.
+
+  // we will manage credentials callbacks ourselves for this test
+  setupRoute(false, false, false, false, true);
+
+  Http::TestRequestHeaderMapImpl headers_1{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  Buffer::OwnedImpl data_1("data");
+  Http::TestRequestTrailerMapImpl trailers_1;
+
+
+  StsConnectionPool::Context::Callbacks *callbackReference;
+  StsContextStub fakeContext;
+  EXPECT_CALL(*filter_config_, getCreds).WillRepeatedly(
+     [&](StsConnectionPool::Context::Callbacks *callbacks) ->
+                                         StsConnectionPool::Context*{
+        callbackReference = callbacks;
+        // context is used for evaluating if we are in async
+        // only other use is cancel so just use stub.
+        return &fakeContext;
+     }
+  );
+
+  filter_->decodeHeaders(headers_1, false);
+  callbackReference->onSuccess(filter_config_->credentials_);
+  filter_->decodeData(data_1, false);
+  filter_->decodeTrailers(trailers_1);
+  auto auth1 = filter_->awsAuthenticator();
+  auto hex_sha1 = auth1.getBodyHexSha();
+
+  filter_ = std::make_unique<AWSLambdaFilter>(
+      factory_context_.cluster_manager_, factory_context_.api_,
+      filter_config_);
+  filter_->setDecoderFilterCallbacks(filter_callbacks_);
+
+  // Pointers are a thing so lets just restate the above values
+  Http::TestRequestHeaderMapImpl headers_2{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  Buffer::OwnedImpl data_2("data");
+  Http::TestRequestTrailerMapImpl trailers_2;
+
+  // intentionally misorder our on success to simulate a long sts call.
+  filter_->decodeHeaders(headers_2, false);
+  filter_->decodeData(data_2, false);
+  callbackReference->onSuccess(filter_config_->credentials_);
+  filter_->decodeTrailers(trailers_2);
+  auto auth2 = filter_->awsAuthenticator();
+  auto hex_sha2 = auth2.getBodyHexSha();
+  EXPECT_EQ(hex_sha1, hex_sha2);
+
+  filter_ = std::make_unique<AWSLambdaFilter>(
+      factory_context_.cluster_manager_, factory_context_.api_,
+      filter_config_);
+  filter_->setDecoderFilterCallbacks(filter_callbacks_);
+
+
+
+  Http::TestRequestHeaderMapImpl headers_3{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  Buffer::OwnedImpl data_3("data");
+  Http::TestRequestTrailerMapImpl trailers_3;
+
+  // intentionally misorder our on success to simulate a long sts call 
+  // where data is sent with end stream true
+  filter_->decodeHeaders(headers_3, false);
+  filter_->decodeData(data_3, true);
+  callbackReference->onSuccess(filter_config_->credentials_);
+  auto auth3 = filter_->awsAuthenticator();
+  auto hex_sha3 = auth3.getBodyHexSha();
+
+  EXPECT_EQ(hex_sha1, hex_sha3);
 }
 
 TEST_F(AWSLambdaFilterTest, InvalidFunction) {

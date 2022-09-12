@@ -55,6 +55,8 @@ public:
   static HeaderList
   createHeaderToSign(std::initializer_list<Http::LowerCaseString> headers);
 
+  std::string getBodyHexSha();
+
 private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
@@ -68,7 +70,6 @@ private:
   std::pair<std::string, std::string>
   prepareHeaders(const HeaderList &headers_to_sign);
 
-  std::string getBodyHexSha();
   void fetchUrl();
   std::string computeCanonicalRequestHash(const std::string &request_method,
                                           const std::string &canonical_Headers,
