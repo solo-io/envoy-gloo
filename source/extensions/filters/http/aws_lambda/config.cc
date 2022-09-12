@@ -304,6 +304,12 @@ AWSLambdaRouteConfig::AWSLambdaRouteConfig(
     auto config = Config::Utility::translateAnyToFactoryConfig(protoconfig.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
     transformer_config_ = factory.createTransformer(*config, context);
   }
+
+  if (protoconfig.has_request_transformer_config()) {
+    auto &request_transformer_factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.request_transformer_config());
+    auto request_transformer_config = Config::Utility::translateAnyToFactoryConfig(protoconfig.request_transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), request_transformer_factory);
+    request_transformer_config_ = request_transformer_factory.createTransformer(*request_transformer_config, context);
+  }
 }
 
 std::string

@@ -19,6 +19,7 @@
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -131,7 +132,7 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool end_stream
     headers.setStatus(504);
   }
   response_headers_ = &headers;
-  if (isTransformationNeeded() && !end_stream){
+  if (isResponseTransformationNeeded() && !end_stream){
     // Stop iteration so that encodedata can mutate headers from alb json
     return Http::FilterHeadersStatus::StopIteration;
   }
@@ -148,7 +149,7 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
     return Http::FilterDataStatus::StopIterationNoBuffer;
   }
 
-  if (!isTransformationNeeded()){
+  if (!isResponseTransformationNeeded()){
     // return response as is if not configured for alb mode/transformation
     return Http::FilterDataStatus::Continue;
   }
@@ -160,14 +161,14 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
   encoder_callbacks_->addEncodedData(data, false);
   finalizeResponse();
   
- 
+
   return Http::FilterDataStatus::Continue;
 }
 
 Http::FilterTrailersStatus 
 AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
-  if (!isTransformationNeeded()){
+  if (!isResponseTransformationNeeded()){
    return Http::FilterTrailersStatus::Continue;
   }
   // Future proof against alb http2 support and finalize the data transform
@@ -261,8 +262,12 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
   return false;
 }
 
-bool AWSLambdaFilter::isTransformationNeeded() {
+bool AWSLambdaFilter::isResponseTransformationNeeded() {
   return functionOnRoute() != nullptr && (functionOnRoute()->unwrapAsAlb() || functionOnRoute()->hasTransformerConfig());
+}
+
+bool AWSLambdaFilter::isRequestTransformationNeeded() {
+  return functionOnRoute() != nullptr && functionOnRoute()->hasRequestTransformerConfig();
 }
 
 void AWSLambdaFilter::onSuccess(
@@ -340,7 +345,11 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     has_body_ = true;
   }
 
-  aws_authenticator_.updatePayloadHash(data);
+  // If we are not transforming the request, then update the payload hash according to the incoming data
+  // If we are transforming the request, then we will update the payload hash after the transformation
+  if (!isRequestTransformationNeeded()) {
+    aws_authenticator_.updatePayloadHash(data);
+  }
 
   if (state_ == Calling) {
     return Http::FilterDataStatus::StopIterationAndBuffer;
@@ -349,6 +358,9 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
   }
 
   if (end_stream) {
+    if (has_body_ && isRequestTransformationNeeded()) {
+      decoder_callbacks_->addDecodedData(data, false);
+    }
     lambdafy();
     return Http::FilterDataStatus::Continue;
   }
@@ -374,6 +386,9 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
 
 void AWSLambdaFilter::lambdafy() {
   handleDefaultBody();
+  if (isRequestTransformationNeeded()) {
+      transformRequest();
+  }
 
   const std::string &invocation_type =
       function_on_route_->async()
@@ -392,13 +407,28 @@ void AWSLambdaFilter::lambdafy() {
 void AWSLambdaFilter::handleDefaultBody() {
   if ((!has_body_) && function_on_route_->defaultBody()) {
     Buffer::OwnedImpl data(function_on_route_->defaultBody().value());
-
     request_headers_->setReferenceContentType(
         Http::Headers::get().ContentTypeValues.Json);
     request_headers_->setContentLength(data.length());
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }
+}
+
+void AWSLambdaFilter::transformRequest() {
+  decoder_callbacks_->modifyDecodingBuffer([this](Buffer::Instance &buffer) {
+    auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+    request_transformer_config->transform(
+      *request_headers_,
+      request_headers_,
+      buffer,
+      *decoder_callbacks_
+    );
+    request_headers_->setContentLength(buffer.length());
+    aws_authenticator_.updatePayloadHash(buffer);
+  });
+
+
 }
 
 } // namespace AwsLambda
