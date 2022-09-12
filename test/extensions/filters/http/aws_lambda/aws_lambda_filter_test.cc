@@ -367,14 +367,14 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
 
 
   StsConnectionPool::Context::Callbacks *callbackReference;
-  auto fakeContext = new StsContextStub();
+  StsContextStub fakeContext;
   EXPECT_CALL(*filter_config_, getCreds).WillRepeatedly(
      [&](StsConnectionPool::Context::Callbacks *callbacks) ->
                                          StsConnectionPool::Context*{
         callbackReference = callbacks;
         // context is used for evaluating if we are in async
         // only other use is cancel so just use stub.
-        return fakeContext;
+        return &fakeContext;
      }
   );
 
