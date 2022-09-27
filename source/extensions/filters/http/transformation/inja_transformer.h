@@ -5,6 +5,8 @@
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
 
+#include "source/common/common/base64.h"
+
 #include "source/extensions/filters/http/transformation/transformer.h"
 
 // clang-format off
@@ -42,6 +44,8 @@ private:
   nlohmann::json dynamic_metadata(const inja::Arguments &args) const;
   nlohmann::json env(const inja::Arguments &args) const;
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
+  nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
+  nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;

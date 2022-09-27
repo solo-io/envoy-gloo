@@ -126,6 +126,14 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
+  // NTS: does the order these callbacks are added affect anything?
+  // I assume that they're transposable and that the order doesn't matter.
+  env_.add_callback("base64Encode", 1, [this](Arguments &args) {
+    return base64_encode_callback(args); 
+  });
+  env_.add_callback("base64Decode", 1, [this](Arguments &args) {
+    return base64_decode_callback(args); 
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -242,6 +250,16 @@ json TransformerInstance::cluster_metadata_callback(
   }
   }
   return "";
+}
+
+json TransformerInstance::base64_encode_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  return Base64::encode(input.c_str(), input.length());
+}
+
+json TransformerInstance::base64_decode_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  return Base64::decode(input);
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {

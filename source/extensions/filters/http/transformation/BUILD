@@ -86,6 +86,7 @@ envoy_cc_library(
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//envoy/buffer:buffer_interface",
         "@envoy//envoy/http:header_map_interface",
+        "@envoy//source/common/common:base64_lib",
         "@envoy//source/common/common:macros",
         "@envoy//source/common/common:regex_lib",
         "@envoy//source/common/common:utility_lib",
