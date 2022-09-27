@@ -126,8 +126,6 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
-  // NTS: does the order these callbacks are added affect anything?
-  // I assume that they're transposable and that the order doesn't matter.
   env_.add_callback("base64Encode", 1, [this](Arguments &args) {
     return base64_encode_callback(args); 
   });
