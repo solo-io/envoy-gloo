@@ -736,6 +736,21 @@ TEST(InjaTransformer, Base64Composed) {
   EXPECT_EQ(body.toString(), test_string);
 }
 
+TEST(InjaTransformer, DecodeInvalidBase64) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{base64_decode(\"INVALID BASE64\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+}
+
 TEST(InjaTransformer, Substring) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
