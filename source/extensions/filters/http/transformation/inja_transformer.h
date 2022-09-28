@@ -46,6 +46,7 @@ private:
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
+  nlohmann::json substring_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;

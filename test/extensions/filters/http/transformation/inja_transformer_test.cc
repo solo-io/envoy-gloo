@@ -736,6 +736,59 @@ TEST(InjaTransformer, Base64Composed) {
   EXPECT_EQ(body.toString(), test_string);
 }
 
+TEST(InjaTransformer, Substring) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{substring(body(), 1, 2)}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "23");
+}
+
+TEST(InjaTransformer, SubstringOutOfBounds) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+
+  // case: start index is greater than string length
+  transformation.mutable_body()->set_text("{{substring(body(), 10, 1)}}");
+  InjaTransformer transformer(transformation);
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: start index is negative
+  transformation.mutable_body()->set_text("{{substring(body(), -1, 1)}}");
+  InjaTransformer transformer2(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer2.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: transformation length is greater than string length
+  transformation.mutable_body()->set_text("{{substring(body(), 0, 10)}}");
+  InjaTransformer transformer3(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer3.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "123");
+
+  // case: transformation length is negative
+  transformation.mutable_body()->set_text("{{substring(body(), 0, -1)}}");
+  InjaTransformer transformer4(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer4.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+}
+
 TEST(InjaTransformer, ParseBodyListUsingContext) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;

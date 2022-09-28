@@ -132,6 +132,9 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("base64Decode", 1, [this](Arguments &args) {
     return base64_decode_callback(args); 
   });
+  env_.add_callback("substring", 3, [this](Arguments &args) {
+    return substring_callback(args); 
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -258,6 +261,30 @@ json TransformerInstance::base64_encode_callback(const inja::Arguments &args) co
 json TransformerInstance::base64_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   return Base64::decode(input);
+}
+
+json TransformerInstance::substring_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  const int64_t start = args.at(1)->get_ref<const int64_t &>();
+  const int64_t substring_len = args.at(2)->get_ref<const int64_t &>();
+
+  // store input length 
+  const int64_t input_len = input.length();
+
+  // if start is negative, substring_len is non-positive, or 
+  // start is greater than the length of the string, return empty string
+  if (start < 0 || substring_len <= 0 || start >= input_len) {
+    return "";
+  }
+
+  // if start + len is greater than the length of the string, return the substring
+  // from start to the end of the string
+  if (start + substring_len > input_len) {
+    return input.substr(start);
+  }
+
+  // otherwise, return the substring from start to start + len
+  return input.substr(start, substring_len);
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {
