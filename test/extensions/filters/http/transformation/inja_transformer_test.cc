@@ -774,19 +774,19 @@ TEST(InjaTransformer, SubstringOutOfBounds) {
   transformer2.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
-  // case: transformation length is greater than string length
+  // case: substring length is greater than string length
   transformation.mutable_body()->set_text("{{substring(body(), 0, 10)}}");
   InjaTransformer transformer3(transformation);
   body = Buffer::OwnedImpl(test_string);
   transformer3.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "123");
 
-  // case: transformation length is negative
+  // case: substring length is negative
   transformation.mutable_body()->set_text("{{substring(body(), 0, -1)}}");
   InjaTransformer transformer4(transformation);
   body = Buffer::OwnedImpl(test_string);
   transformer4.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), "");
+  EXPECT_EQ(body.toString(), "123");
 }
 
 TEST(InjaTransformer, ParseBodyListUsingContext) {

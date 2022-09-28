@@ -267,19 +267,16 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   const int64_t start = args.at(1)->get_ref<const int64_t &>();
   const int64_t substring_len = args.at(2)->get_ref<const int64_t &>();
-
-  // store input length 
   const int64_t input_len = input.length();
 
-  // if start is negative, substring_len is non-positive, or 
-  // start is greater than the length of the string, return empty string
-  if (start < 0 || substring_len <= 0 || start >= input_len) {
+  // if start is negative, or start is greater than the length of the string, return empty string
+  if (start < 0 ||  start >= input_len) {
     return "";
   }
 
-  // if start + len is greater than the length of the string, return the substring
-  // from start to the end of the string
-  if (start + substring_len > input_len) {
+  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string, 
+  // return the substring from start to the end of the string
+  if (substring_len <= 0 || start + substring_len > input_len) {
     return input.substr(start);
   }
 
