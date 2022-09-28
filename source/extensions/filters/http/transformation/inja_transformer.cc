@@ -126,10 +126,10 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
-  env_.add_callback("base64Encode", 1, [this](Arguments &args) {
+  env_.add_callback("base64_encode", 1, [this](Arguments &args) {
     return base64_encode_callback(args); 
   });
-  env_.add_callback("base64Decode", 1, [this](Arguments &args) {
+  env_.add_callback("base64_decode", 1, [this](Arguments &args) {
     return base64_decode_callback(args); 
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {

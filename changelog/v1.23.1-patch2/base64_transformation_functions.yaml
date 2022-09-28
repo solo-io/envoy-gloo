@@ -1,7 +1,7 @@
 changelog:
 - type: NEW_FEATURE
   description: >
-    Creates base64Encode and base64Decode Inja functions, which can be used in
+    Creates base64_encode and base64_decode Inja functions, which can be used in
     transformation templates.
   issueLink: https://github.com/solo-io/gloo/issues/3597
   resolvesIssue: false

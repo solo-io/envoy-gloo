@@ -687,7 +687,7 @@ TEST(InjaTransformer, Base64EncodeTestString) {
   TransformationTemplate transformation;
 
   auto test_string = "test";
-  auto formatted_string = fmt::format("{{{{base64Encode(\"{}\")}}}}", test_string);
+  auto formatted_string = fmt::format("{{{{base64_encode(\"{}\")}}}}", test_string);
 
   transformation.mutable_body()->set_text(formatted_string);
 
@@ -707,7 +707,7 @@ TEST(InjaTransformer, Base64DecodeTestString) {
   std::string test_string = "test";
   auto encoded_string = Base64::encode(test_string.c_str(), test_string.length());
 
-  auto formatted_string = fmt::format("{{{{base64Decode(\"{}\")}}}}", encoded_string);
+  auto formatted_string = fmt::format("{{{{base64_decode(\"{}\")}}}}", encoded_string);
 
   transformation.mutable_body()->set_text(formatted_string);
 
@@ -724,7 +724,7 @@ TEST(InjaTransformer, Base64Composed) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
-  transformation.mutable_body()->set_text("{{base64Decode(base64Encode(body()))}}");
+  transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
 
   InjaTransformer transformer(transformation);
 
