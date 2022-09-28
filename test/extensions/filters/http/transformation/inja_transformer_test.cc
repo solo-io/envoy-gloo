@@ -752,6 +752,22 @@ TEST(InjaTransformer, Substring) {
   EXPECT_EQ(body.toString(), "23");
 }
 
+TEST(InjaTransformer, SubstringTwoArguments) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{substring(body(), 1)}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "23");
+}
+
 TEST(InjaTransformer, SubstringOutOfBounds) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
