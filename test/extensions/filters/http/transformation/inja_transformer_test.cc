@@ -805,6 +805,29 @@ TEST(InjaTransformer, SubstringOutOfBounds) {
   EXPECT_EQ(body.toString(), "123");
 }
 
+TEST(InjaTransformer, SubstringNonIntegerArguments) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+
+  // case: start index is not an integer
+  transformation.mutable_body()->set_text("{{substring(body(), \"a\", 1)}}");
+  InjaTransformer transformer(transformation);
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: substring length is not an integer
+  transformation.mutable_body()->set_text("{{substring(body(), 0, \"a\")}}");
+  InjaTransformer transformer2(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer2.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+}
+
 TEST(InjaTransformer, ParseBodyListUsingContext) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;

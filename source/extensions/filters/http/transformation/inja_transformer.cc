@@ -132,9 +132,10 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
     return base64_decode_callback(args); 
   });
-  // Substring can be called with either two or three arguments --
+  // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
+  // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
     return substring_callback(args); 
   });
@@ -269,13 +270,29 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
   return Base64::decode(input);
 }
 
+// return a substring of the input string, starting at the start position
+// and extending for length characters. If length is not provided, the
+// substring will extend to the end of the string.
 json TransformerInstance::substring_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
-  const int64_t start = args.at(1)->get_ref<const int64_t &>();
-  // get optional substring_len argument
+  // try to get first argument (start position) as an int64_t
+  int start = 0;
+  try {
+    start = args.at(1)->get_ref<const int64_t &>();
+  } catch (const std::exception &e) {
+    // if it can't be converted to an int64_t, return an empty string
+    return "";
+  }
+
+  // try to get optional substring_len argument
   int64_t substring_len = -1;
   if (args.size() == 3) {
-    substring_len = args.at(2)->get_ref<const int64_t &>();
+    try {
+      substring_len = args.at(2)->get_ref<const int64_t &>();
+    } catch (const std::exception &e) {
+      // if it can't be converted to an int64_t, return an empty string
+      return "";
+    }
   }
   const int64_t input_len = input.length();
 
