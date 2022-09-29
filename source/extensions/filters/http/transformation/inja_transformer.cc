@@ -274,8 +274,10 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 // and extending for length characters. If length is not provided, the
 // substring will extend to the end of the string.
 json TransformerInstance::substring_callback(const inja::Arguments &args) const {
+  // get first argument, which is the string to be modified
   const std::string &input = args.at(0)->get_ref<const std::string &>();
-  // try to get first argument (start position) as an int64_t
+  
+  // try to get second argument (start position) as an int64_t
   int start = 0;
   try {
     start = args.at(1)->get_ref<const int64_t &>();
@@ -284,7 +286,7 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
     return "";
   }
 
-  // try to get optional substring_len argument
+  // try to get optional third argument (length) as an int64_t
   int64_t substring_len = -1;
   if (args.size() == 3) {
     try {
