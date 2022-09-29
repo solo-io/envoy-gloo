@@ -19,6 +19,7 @@ envoy_gloo_cc_test(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:inja_transformer_lib",
+        "@envoy//source/common/common:base64_lib",
         "@envoy//test/test_common:environment_lib",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",

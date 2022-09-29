@@ -1,0 +1,7 @@
+changelog:
+- type: NEW_FEATURE
+  description: >
+    Creates base64_encode, base64_decode, and substring Inja functions, which can be used in
+    transformation templates.
+  issueLink: https://github.com/solo-io/gloo/issues/3597
+  resolvesIssue: false
