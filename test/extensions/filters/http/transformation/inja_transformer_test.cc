@@ -1,5 +1,6 @@
 #include "source/extensions/filters/http/solo_well_known_names.h"
 #include "source/extensions/filters/http/transformation/inja_transformer.h"
+#include "source/common/common/base64.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
@@ -679,6 +680,167 @@ TEST(InjaTransformer, UseEnvVar) {
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "BAR");
+}
+
+TEST(InjaTransformer, Base64EncodeTestString) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto test_string = "test";
+  auto formatted_string = fmt::format("{{{{base64_encode(\"{}\")}}}}", test_string);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(Base64::decode(body.toString()), test_string);
+}
+
+TEST(InjaTransformer, Base64DecodeTestString) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  std::string test_string = "test";
+  auto encoded_string = Base64::encode(test_string.c_str(), test_string.length());
+
+  auto formatted_string = fmt::format("{{{{base64_decode(\"{}\")}}}}", encoded_string);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), test_string);
+}
+
+TEST(InjaTransformer, Base64Composed) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "1";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), test_string);
+}
+
+TEST(InjaTransformer, DecodeInvalidBase64) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{base64_decode(\"INVALID BASE64\")}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+}
+
+TEST(InjaTransformer, Substring) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{substring(body(), 1, 2)}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "23");
+}
+
+TEST(InjaTransformer, SubstringTwoArguments) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{substring(body(), 1)}}");
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "23");
+}
+
+TEST(InjaTransformer, SubstringOutOfBounds) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+
+  // case: start index is greater than string length
+  transformation.mutable_body()->set_text("{{substring(body(), 10, 1)}}");
+  InjaTransformer transformer(transformation);
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: start index is negative
+  transformation.mutable_body()->set_text("{{substring(body(), -1, 1)}}");
+  InjaTransformer transformer2(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer2.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: substring length is greater than string length
+  transformation.mutable_body()->set_text("{{substring(body(), 0, 10)}}");
+  InjaTransformer transformer3(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer3.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "123");
+
+  // case: substring length is negative
+  transformation.mutable_body()->set_text("{{substring(body(), 0, -1)}}");
+  InjaTransformer transformer4(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer4.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "123");
+}
+
+TEST(InjaTransformer, SubstringNonIntegerArguments) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "123";
+
+  // case: start index is not an integer
+  transformation.mutable_body()->set_text("{{substring(body(), \"a\", 1)}}");
+  InjaTransformer transformer(transformation);
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
+
+  // case: substring length is not an integer
+  transformation.mutable_body()->set_text("{{substring(body(), 0, \"a\")}}");
+  InjaTransformer transformer2(transformation);
+  body = Buffer::OwnedImpl(test_string);
+  transformer2.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "");
 }
 
 TEST(InjaTransformer, ParseBodyListUsingContext) {
