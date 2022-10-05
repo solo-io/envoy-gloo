@@ -1,5 +1,5 @@
 changelog:
-- type: NEW_FEATURE
+- type: NON_USER_FACING
   description: >
     Creates base64_encode, base64_decode, and substring Inja functions, which can be used in
     transformation templates.
