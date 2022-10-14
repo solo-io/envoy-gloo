@@ -416,19 +416,24 @@ void AWSLambdaFilter::handleDefaultBody() {
 }
 
 void AWSLambdaFilter::transformRequest() {
-  decoder_callbacks_->modifyDecodingBuffer([this](Buffer::Instance &buffer) {
-    auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
-    request_transformer_config->transform(
-      *request_headers_,
-      request_headers_,
-      buffer,
-      *decoder_callbacks_
-    );
+  auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
+  // if we're processing a headers-only request, the decoding buffer does not exist,
+  // so we need to transform an empty buffer and then add it to the decoding buffer
+  if (!has_body_) {
+    Buffer::OwnedImpl body_buffer("");
+    request_transformer_config->transform(*request_headers_, request_headers_, body_buffer, *decoder_callbacks_);
+    decoder_callbacks_->addDecodedData(body_buffer, false); // set the decoding buffer to the transformed buffer
+    request_headers_->setContentLength(body_buffer.length());
+    aws_authenticator_.updatePayloadHash(body_buffer);
+    return;
+  }
+
+  // if we're processing a request with a body, we modify the decoding buffer directly
+  decoder_callbacks_->modifyDecodingBuffer([this, &request_transformer_config](Buffer::Instance &buffer) {
+    request_transformer_config->transform(*request_headers_, request_headers_, buffer, *decoder_callbacks_);
     request_headers_->setContentLength(buffer.length());
     aws_authenticator_.updatePayloadHash(buffer);
   });
-
-
 }
 
 } // namespace AwsLambda
