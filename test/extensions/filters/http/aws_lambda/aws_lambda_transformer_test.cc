@@ -254,7 +254,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody)
 
 
   EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
-  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=6ac2a229351a686ff5a93deb46896f2128a6800a885ef5324c0c0685aa21d786");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=561409e1250c56044b11a3d6eaed9f3d3d9467f3214dfec4786a65381bdab23e");
 
   // now, setup to use no transformer
   setupRoute(false, false);
@@ -293,6 +293,24 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureResponseTransformer){
 
   EXPECT_EQ(Http::FilterDataStatus::Continue, edResult);
   EXPECT_STREQ("test body from fake transformer", buf.toString().c_str());
+}
+
+TEST_F(AWSLambdaTransformerTest, TestNoBodyRequestTransformation){
+  setupRoute(false, true);
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {":path", "/getsomething"}};
+  
+  time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue,
+            filter_->decodeHeaders(headers, true));
+
+
+  auto transformedAuthorizationHeader = headers.get(Http::LowerCaseString("authorization"));
+  auto transformedxAmzDateHeader = headers.get(Http::LowerCaseString("x-amz-date"));
+
+  EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=561409e1250c56044b11a3d6eaed9f3d3d9467f3214dfec4786a65381bdab23e");
 }
 
 } // namespace AwsLambda
