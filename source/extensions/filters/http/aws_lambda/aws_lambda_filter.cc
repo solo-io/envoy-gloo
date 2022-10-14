@@ -418,7 +418,7 @@ void AWSLambdaFilter::handleDefaultBody() {
 void AWSLambdaFilter::transformRequest() {
   auto request_transformer_config = functionOnRoute()->requestTransformerConfig();
   // if we're processing a headers-only request, the decoding buffer does not exist,
-  // so we need to transform an empty buffer and then add it to the decoding buffer
+  // so we need to transform an empty buffer and then create the decoding buffer from it
   if (!has_body_) {
     Buffer::OwnedImpl body_buffer("");
     request_transformer_config->transform(*request_headers_, request_headers_, body_buffer, *decoder_callbacks_);
