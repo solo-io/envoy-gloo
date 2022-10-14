@@ -1,0 +1,7 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/gloo/issues/7307
+  resolvesIssue: false
+  description: >
+    Resolves a bug which caused envoy to crash when a headers-only request was sent
+    to an AWS Lambda upstream with wrapAsApiGateway enabled.
