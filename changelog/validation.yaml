@@ -1,4 +1,14 @@
+# disables automatic changelog increment on release (bot committing "helpful" next changelogs)
+# since next release version is ambiguous with label and cannot be derived from semver changelog
+# type and the current version alone.
 relaxSemverValidation: true
+# our envoy changelogs / releases have the format $UPSTREAM_ENVOY_VERSION_$PATCH_NUM
+# where the patch number is the number of releases on top of that upstream envoy version.
+# as such, all changelogs should have a suffix in allowedLabels.
+requireLabel: true
+# use patch suffix when building on top of upstream LTS envoy version.
+# use rc / beta if building on top of unreleated upstream envoy (i.e. main) depending
+# on how well tested / supported the upstream envoy commit is.
 allowedLabels:
   - patch
   - rc
