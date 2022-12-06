@@ -230,7 +230,7 @@ public:
     int decoded_data_calls = val == 0 ? 0 : 1;
     EXPECT_CALL(filter_callbacks_, addDecodedData(_, false))
         .Times(decoded_data_calls);
-    EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(0);
+    EXPECT_CALL(filter_callbacks_.downstream_callbacks_, clearRouteCache()).Times(0);
     auto res = filter_->decodeHeaders(headers_, true);
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
     EXPECT_EQ(val, config_->stats().request_header_transformations_.value());
@@ -243,7 +243,7 @@ public:
     initFilter(); // Re-load config.
 
     EXPECT_CALL(filter_callbacks_, addDecodedData(_, false)).Times(1);
-    EXPECT_CALL(filter_callbacks_, clearRouteCache()).Times(1);
+    EXPECT_CALL(filter_callbacks_.downstream_callbacks_, clearRouteCache()).Times(1);
     auto res = filter_->decodeHeaders(headers_, true);
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
     EXPECT_EQ(val, config_->stats().request_header_transformations_.value());
