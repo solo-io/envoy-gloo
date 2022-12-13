@@ -5,3 +5,6 @@ changelog:
   dependencyRepo: envoy
   dependancyTag: 1.22.6
   dependencyTag: f2404ab4c067be83101a26d9b94ebe9d152bd033
+- type: NON_USER_FACING
+  description: Add require label to changelog validation to ensure we have valid version
+  issueLink: https://github.com/solo-io/go-utils/issues/503 
