@@ -189,6 +189,10 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformer){
   EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
   // Confirm that the body contains the expected value as a substring
   EXPECT_THAT(upstream_body, testing::HasSubstr("test body from fake transformer"));
+  // Confirm that the headers are present in the response body
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":method; GET"));
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":authority; www.solo.io"));
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":path; /getsomething"));
 }
 
 TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){

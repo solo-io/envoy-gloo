@@ -22,6 +22,7 @@ public:
                                 [headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
                                     auto key = std::string(header.key().getStringView());
                                     auto value = std::string(header.value().getStringView());
+                                    // use semicolon as a separator, because pseudo-headers (e.g. :path) have colons (":") in them
                                     *headers_string += "\t" + key + "; " + value + "\n";
                                     return Http::HeaderMap::Iterate::Continue;
                                 });
