@@ -13,12 +13,23 @@ class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
-  void transform (Http::RequestOrResponseHeaderMap &,
+  void transform (Http::RequestOrResponseHeaderMap &headers,
                          Http::RequestHeaderMap *,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &) const override {
+                            std::string *headers_string = new std::string("headers:\n");
+                            headers.iterate(
+                                [headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
+                                    auto key = std::string(header.key().getStringView());
+                                    auto value = std::string(header.value().getStringView());
+                                    // use semicolon as a separator, because pseudo-headers (e.g. :path) have colons (":") in them
+                                    *headers_string += "\t" + key + "; " + value + "\n";
+                                    return Http::HeaderMap::Iterate::Continue;
+                                });
+
+                            std::string bodyString = "test body from fake transformer\n" + *headers_string;
                             body.drain(body.length());
-                            body.add("test body from fake transformer");
+                            body.add(bodyString);
   }
 
 };
