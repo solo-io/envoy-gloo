@@ -1,0 +1,10 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/solo-projects/issues/4353
+  resolvesIssue: false
+  description: >
+    Resolves an error when processing request transformations in the AWS lambda
+    filter. Prior to this change, the AWS lambda filter would modify the :path
+    and :method pseudo-headers before the request transformation was
+    processed, resulting in the upstream receiving invalid values of these
+    headers.
