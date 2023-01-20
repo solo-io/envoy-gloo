@@ -303,16 +303,6 @@ void AWSLambdaFilter::onSuccess(
   }
   aws_authenticator_.init(access_key, secret_key, session_token);
 
-  if (filter_config_->propagateOriginalRouting()){
-    request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
-    request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
-                                      request_headers_->getMethodValue());
-  }
-
-  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
-
-  request_headers_->setReferencePath(function_on_route_->path());
-
   if (stopped_) {
     if (end_stream_) {
       // edge case where header only request was stopped, but now needs to be
@@ -389,16 +379,7 @@ void AWSLambdaFilter::lambdafy() {
   if (isRequestTransformationNeeded()) {
       transformRequest();
   }
-
-  const std::string &invocation_type =
-      function_on_route_->async()
-          ? AWSLambdaHeaderNames::get().InvocationTypeEvent
-          : AWSLambdaHeaderNames::get().InvocationTypeRequestResponse;
-  request_headers_->addReference(AWSLambdaHeaderNames::get().InvocationType,
-                                 invocation_type);
-  request_headers_->addReference(AWSLambdaHeaderNames::get().LogType,
-                                 AWSLambdaHeaderNames::get().LogNone);
-  request_headers_->setReferenceHost(protocol_options_->host());
+  updateHeaders();
 
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
@@ -413,6 +394,30 @@ void AWSLambdaFilter::handleDefaultBody() {
     aws_authenticator_.updatePayloadHash(data);
     decoder_callbacks_->addDecodedData(data, false);
   }
+}
+
+// update headers before sending to AWS
+// must be called after any request transformations are processed
+void AWSLambdaFilter::updateHeaders() {
+  if (filter_config_->propagateOriginalRouting()){
+    request_headers_->setEnvoyOriginalPath(request_headers_->getPathValue());
+    request_headers_->addReferenceKey(Http::Headers::get().EnvoyOriginalMethod,
+                                      request_headers_->getMethodValue());
+  }
+
+  request_headers_->setReferenceMethod(Http::Headers::get().MethodValues.Post);
+
+  request_headers_->setReferencePath(function_on_route_->path());
+
+  const std::string &invocation_type =
+      function_on_route_->async()
+          ? AWSLambdaHeaderNames::get().InvocationTypeEvent
+          : AWSLambdaHeaderNames::get().InvocationTypeRequestResponse;
+  request_headers_->addReference(AWSLambdaHeaderNames::get().InvocationType,
+                                 invocation_type);
+  request_headers_->addReference(AWSLambdaHeaderNames::get().LogType,
+                                 AWSLambdaHeaderNames::get().LogNone);
+  request_headers_->setReferenceHost(protocol_options_->host());
 }
 
 void AWSLambdaFilter::transformRequest() {

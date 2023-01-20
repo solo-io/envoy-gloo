@@ -97,6 +97,7 @@ private:
                           const Buffer::Instance&, Buffer::Instance&);
   bool isResponseTransformationNeeded();
   bool isRequestTransformationNeeded();
+  void updateHeaders();
   void transformRequest();
 
   Http::RequestHeaderMap *request_headers_{};
