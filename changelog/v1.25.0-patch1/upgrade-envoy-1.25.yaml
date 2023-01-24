@@ -1,0 +1,6 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy
+    dependencyOwner: envoyproxy
+    dependencyTag: v1.25.0
+    description: Bump Envoy to v1.25.0 and update signatures accordingly
