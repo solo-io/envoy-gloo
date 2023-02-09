@@ -192,7 +192,7 @@ void TransformationFilter::transformRequest() {
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
   if (should_clear_cache_) {
-    decoder_callbacks_->clearRouteCache();
+    decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
   }
 }
 

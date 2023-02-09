@@ -89,7 +89,7 @@ public:
 
     client_ = ClientImpl<T>::create(host_, dispatcher_, EncoderPtr<T>{encoder_},
                                     *this, pool_callbacks_, *config_);
-    EXPECT_EQ(1UL, host_->cluster_.stats_.upstream_cx_total_.value());
+    EXPECT_EQ(1UL, host_->cluster_.trafficStats()->upstream_cx_total_.value());
     EXPECT_EQ(1UL, host_->stats_.cx_total_.value());
   }
 
@@ -125,11 +125,11 @@ TEST_F(TcpClientImplTest, Basic) {
   EXPECT_CALL(*encoder_, encode(Ref(request2), _));
   client_->makeRequest(request2);
 
-  EXPECT_EQ(2UL, host_->cluster_.stats_.upstream_rq_total_.value());
+  EXPECT_EQ(2UL, host_->cluster_.trafficStats()->upstream_rq_total_.value());
   EXPECT_EQ(2UL, host_->stats_.rq_total_.value());
 
   // TODO(talnordan): What should be counted as an active request?
-  EXPECT_EQ(0UL, host_->cluster_.stats_.upstream_rq_active_.value());
+  EXPECT_EQ(0UL, host_->cluster_.trafficStats()->upstream_rq_active_.value());
   EXPECT_EQ(0UL, host_->stats_.rq_active_.value());
 
   Buffer::OwnedImpl fake_data;
@@ -201,7 +201,7 @@ TEST_F(TcpClientImplTest, Cancel) {
   client_->close();
 
   // TODO(talnordan): What should be counted as a canceled request?
-  EXPECT_EQ(0UL, host_->cluster_.stats_.upstream_rq_cancelled_.value());
+  EXPECT_EQ(0UL, host_->cluster_.trafficStats()->upstream_rq_cancelled_.value());
 }
 
 TEST_F(TcpClientImplTest, FailAll) {
@@ -227,9 +227,9 @@ TEST_F(TcpClientImplTest, FailAll) {
 
   // TODO(talnordan): What should be counted as an active request?
   EXPECT_EQ(0UL,
-            host_->cluster_.stats_.upstream_cx_destroy_with_active_rq_.value());
-  EXPECT_EQ(0UL, host_->cluster_.stats_
-                     .upstream_cx_destroy_remote_with_active_rq_.value());
+            host_->cluster_.trafficStats()->upstream_cx_destroy_with_active_rq_.value());
+  EXPECT_EQ(0UL, host_->cluster_.trafficStats()
+                     ->upstream_cx_destroy_remote_with_active_rq_.value());
 }
 
 TEST_F(TcpClientImplTest, FailAllWithCancel) {
@@ -255,11 +255,11 @@ TEST_F(TcpClientImplTest, FailAllWithCancel) {
   // TODO(talnordan): What should be counted as an active request or a canceled
   // one?
   EXPECT_EQ(0UL,
-            host_->cluster_.stats_.upstream_cx_destroy_with_active_rq_.value());
+            host_->cluster_.trafficStats()->upstream_cx_destroy_with_active_rq_.value());
   EXPECT_EQ(
       0UL,
-      host_->cluster_.stats_.upstream_cx_destroy_local_with_active_rq_.value());
-  EXPECT_EQ(0UL, host_->cluster_.stats_.upstream_rq_cancelled_.value());
+      host_->cluster_.trafficStats()->upstream_cx_destroy_local_with_active_rq_.value());
+  EXPECT_EQ(0UL, host_->cluster_.trafficStats()->upstream_rq_cancelled_.value());
 }
 
 TEST_F(TcpClientImplTest, ProtocolError) {
@@ -286,7 +286,7 @@ TEST_F(TcpClientImplTest, ProtocolError) {
 
   upstream_read_filter_->onData(fake_data, false);
 
-  EXPECT_EQ(1UL, host_->cluster_.stats_.upstream_cx_protocol_error_.value());
+  EXPECT_EQ(1UL, host_->cluster_.trafficStats()->upstream_cx_protocol_error_.value());
 }
 
 TEST_F(TcpClientImplTest, ConnectFail) {
@@ -305,7 +305,7 @@ TEST_F(TcpClientImplTest, ConnectFail) {
 
   upstream_connection_->raiseEvent(Network::ConnectionEvent::RemoteClose);
 
-  EXPECT_EQ(1UL, host_->cluster_.stats_.upstream_cx_connect_fail_.value());
+  EXPECT_EQ(1UL, host_->cluster_.trafficStats()->upstream_cx_connect_fail_.value());
   EXPECT_EQ(1UL, host_->stats_.cx_connect_fail_.value());
 }
 
@@ -328,7 +328,7 @@ TEST_F(TcpClientImplTest, OutlierDisabled) {
 
   upstream_connection_->raiseEvent(Network::ConnectionEvent::RemoteClose);
 
-  EXPECT_EQ(1UL, host_->cluster_.stats_.upstream_cx_connect_fail_.value());
+  EXPECT_EQ(1UL, host_->cluster_.trafficStats()->upstream_cx_connect_fail_.value());
   EXPECT_EQ(1UL, host_->stats_.cx_connect_fail_.value());
 }
 
