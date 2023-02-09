@@ -29,8 +29,7 @@ fi
 
 export ENVOY_SRCDIR=$SOURCE_DIR
 
-# google cloud build times out when using full throttle.
-export NUM_CPUS=10
+# google cloud build times out when using full throttle. export NUM_CPUS=10
 
 # google cloud build doesn't like ipv6
 export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --jobs=${NUM_CPUS}"
@@ -48,3 +47,5 @@ sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools
 sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
+
+$SOURCE_DIR/ci/static_analysis.sh
