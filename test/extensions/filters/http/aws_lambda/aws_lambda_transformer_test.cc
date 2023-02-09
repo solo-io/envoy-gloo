@@ -187,8 +187,12 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformer){
       }));
 
   EXPECT_EQ(Http::FilterDataStatus::Continue, filter_->decodeData(data, true));
-  // Confirm that the body is transformed to the hardcoded string.
-  EXPECT_EQ(upstream_body, "test body from fake transformer");
+  // Confirm that the body contains the expected value as a substring
+  EXPECT_THAT(upstream_body, testing::HasSubstr("test body from fake transformer"));
+  // Confirm that the headers are present in the response body
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":method; GET"));
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":authority; www.solo.io"));
+  EXPECT_THAT(upstream_body, testing::HasSubstr(":path; /getsomething"));
 }
 
 TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
@@ -254,7 +258,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody)
 
 
   EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
-  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=561409e1250c56044b11a3d6eaed9f3d3d9467f3214dfec4786a65381bdab23e");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=31e8a35e5818a5a1b969bc5d80e48d10f5478c12d67cbbace4472a1566ede502");
 
   // now, setup to use no transformer
   setupRoute(false, false);
@@ -292,7 +296,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureResponseTransformer){
   auto edResult = filter_->encodeData(dataBuf, true);
 
   EXPECT_EQ(Http::FilterDataStatus::Continue, edResult);
-  EXPECT_STREQ("test body from fake transformer", buf.toString().c_str());
+  EXPECT_THAT(buf.toString().c_str(), testing::HasSubstr("test body from fake transformer"));
 }
 
 TEST_F(AWSLambdaTransformerTest, TestNoBodyRequestTransformation){
@@ -310,7 +314,7 @@ TEST_F(AWSLambdaTransformerTest, TestNoBodyRequestTransformation){
   auto transformedxAmzDateHeader = headers.get(Http::LowerCaseString("x-amz-date"));
 
   EXPECT_EQ(transformedxAmzDateHeader[0]->value().getStringView(), "20010909T014640Z");
-  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=561409e1250c56044b11a3d6eaed9f3d3d9467f3214dfec4786a65381bdab23e");
+  EXPECT_EQ(transformedAuthorizationHeader[0]->value().getStringView(), "AWS4-HMAC-SHA256 Credential=access key/20010909/us-east-1/lambda/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-invocation-type;x-amz-log-type, Signature=31e8a35e5818a5a1b969bc5d80e48d10f5478c12d67cbbace4472a1566ede502");
 }
 
 } // namespace AwsLambda

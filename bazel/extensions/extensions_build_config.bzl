@@ -1,4 +1,5 @@
 # See bazel/README.md for details on how this system works.
+MOBILE_PACKAGE_VISIBILITY = ["@envoy//:mobile_library"]
 EXTENSIONS = {
     #
     # Access loggers
@@ -229,7 +230,7 @@ EXTENSIONS = {
     #
     # CacheFilter plugins
     #
-    "envoy.extensions.http.cache.simple":               "//source/extensions/filters/http/cache/simple_http_cache:config",
+    "envoy.extensions.http.cache.simple":               "//source/extensions/http/cache/simple_http_cache:config",
 
     #
     # Internal redirect predicates
@@ -367,3 +368,4 @@ EXTENSIONS = {
 EXTENSION_CONFIG_VISIBILITY = ["//visibility:public"]
 EXTENSION_PACKAGE_VISIBILITY = ["//visibility:public"]
 CONTRIB_EXTENSION_PACKAGE_VISIBILITY = ["//visibility:public"]
+LEGACY_ALWAYSLINK = 1

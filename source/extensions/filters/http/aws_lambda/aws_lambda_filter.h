@@ -52,9 +52,9 @@ public:
   }
 
    // Http::StreamEncoderFilter
-  Http::FilterHeadersStatus
+  Http::Filter1xxHeadersStatus
   encode1xxHeaders(Http::ResponseHeaderMap &) override {
-    return Http::FilterHeadersStatus::Continue;
+    return Http::Filter1xxHeadersStatus::Continue;
   }
   Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap &headers,
                                           bool end_stream) override;
@@ -97,6 +97,7 @@ private:
                           const Buffer::Instance&, Buffer::Instance&);
   bool isResponseTransformationNeeded();
   bool isRequestTransformationNeeded();
+  void updateHeaders();
   void transformRequest();
 
   Http::RequestHeaderMap *request_headers_{};

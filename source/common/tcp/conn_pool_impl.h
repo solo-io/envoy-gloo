@@ -48,7 +48,7 @@ public:
 
   ~ClientImpl() {
     ASSERT(connection_->state() == Network::Connection::State::Closed);
-    host_->cluster().stats().upstream_cx_active_.dec();
+    host_->cluster().trafficStats()->upstream_cx_active_.dec();
     host_->stats().cx_active_.dec();
   }
 
@@ -95,7 +95,7 @@ private:
   // difference is whether `PING` messages and `PONG` messages at the NATS layer
   // should be counted as requests.
   void incRequestStats() {
-    host_->cluster().stats().upstream_rq_total_.inc();
+    host_->cluster().trafficStats()->upstream_rq_total_.inc();
     host_->stats().rq_total_.inc();
   }
 
@@ -105,8 +105,8 @@ private:
       : host_(host), encoder_(std::move(encoder)),
         decoder_(decoder_factory.create(*this)), callbacks_(callbacks),
         config_(config) {
-    host->cluster().stats().upstream_cx_total_.inc();
-    host->cluster().stats().upstream_cx_active_.inc();
+    host->cluster().trafficStats()->upstream_cx_total_.inc();
+    host->cluster().trafficStats()->upstream_cx_active_.inc();
     host->stats().cx_total_.inc();
     host->stats().cx_active_.inc();
   }
@@ -115,7 +115,7 @@ private:
       decoder_->decode(data);
     } catch (ProtocolError &) {
       putOutlierEvent(Upstream::Outlier::Result::ExtOriginRequestFailed);
-      host_->cluster().stats().upstream_cx_protocol_error_.inc();
+      host_->cluster().trafficStats()->upstream_cx_protocol_error_.inc();
       connection_->close(Network::ConnectionCloseType::NoFlush);
     }
   }
@@ -175,7 +175,7 @@ private:
     }
 
     if (event == Network::ConnectionEvent::RemoteClose && !connected_) {
-      host_->cluster().stats().upstream_cx_connect_fail_.inc();
+      host_->cluster().trafficStats()->upstream_cx_connect_fail_.inc();
       host_->stats().cx_connect_fail_.inc();
     }
   }
