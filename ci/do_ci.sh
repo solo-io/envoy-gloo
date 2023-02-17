@@ -48,3 +48,5 @@ sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools
 sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
+
+$SOURCE_DIR/ci/static_analysis.sh

@@ -153,7 +153,7 @@ private:
   std::string token_file_;
   std::string web_token_;
   std::string role_arn_;
-  
+
   ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;
 
   Event::TimerPtr timer_;
