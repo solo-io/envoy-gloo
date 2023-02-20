@@ -1,0 +1,6 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/solo-projects/issues/4518
+  resolvesIssue: true
+  description: Implement static code analysis in CI pipeline
+
