@@ -33,13 +33,13 @@ void ApiGatewayTransformer::format_error(
   ApiGatewayError &error,
   Http::StreamFilterCallbacks &stream_filter_callbacks) const {
     ENVOY_STREAM_LOG(debug, "Returning error with message: " + std::string(error.message), stream_filter_callbacks);
-    
+
     // clear existing response headers
     response_headers.clear();
 
     response_headers.setStatus(error.status_code);
     response_headers.setContentType("text/plain");
-    
+
     response_headers.setReferenceKey(AMAZON_ERRORTYPE_HEADER, error.code);
     body.drain(body.length());
     auto error_message = absl::StrCat(error.code, ": ", error.message);

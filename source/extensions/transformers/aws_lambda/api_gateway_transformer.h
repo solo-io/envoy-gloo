@@ -23,6 +23,7 @@ struct ApiGatewayError {
 
 using ApiGatewayTransformerProto =
      envoy::config::transformer::aws_lambda::v2::ApiGatewayTransformation;
+
 class ApiGatewayTransformerFactory
     : public HttpFilters::Transformation::TransformerExtensionFactory {
 public:
