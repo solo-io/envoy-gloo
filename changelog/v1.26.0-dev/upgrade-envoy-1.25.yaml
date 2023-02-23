@@ -1,0 +1,6 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy
+    dependencyOwner: envoyproxy
+    dependencyTag: a26fbd70eb42287c31ef8ccdd7b2aca96748cafa
+    description: Bump Envoy to a26fbd70eb42287c31ef8ccdd7b2aca96748cafa
