@@ -117,9 +117,9 @@ void ApiGatewayTransformer::transform_response(
     for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
         const auto& header_key = it.key();
         const auto& header_value = it.value();
-        absl::string_view header_value_string;
+        std::string header_value_string;
         if (header_value.is_string()) {
-          header_value_string = it.value().get<std::string>();
+          header_value_string = header_value.get<std::string>();
         } else {
           header_value_string = it.value().dump();
         }
