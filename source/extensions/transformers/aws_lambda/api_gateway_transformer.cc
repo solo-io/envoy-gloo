@@ -87,7 +87,7 @@ void ApiGatewayTransformer::transform_response(
     json_body = json::parse(bodystring);
   } catch (std::exception& exception){
     ENVOY_STREAM_LOG(debug, "Error parsing response body as JSON: " + std::string(exception.what()), stream_filter_callbacks);
-    ApiGatewayError error = {400, "400", "failed to parse response body as JSON"};
+    ApiGatewayError error = {500, "500", "failed to parse response body as JSON"};
     return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
   }
 
@@ -98,7 +98,7 @@ void ApiGatewayTransformer::transform_response(
       status_value = json_body["statusCode"].get<uint64_t>();
     } catch (std::exception& exception){
       ENVOY_STREAM_LOG(debug, "Error parsing statusCode: " + std::string(exception.what()), stream_filter_callbacks);
-      ApiGatewayError error = {400, "400", "Non-integer status code"};
+      ApiGatewayError error = {500, "500", "Non-integer status code"};
       return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
     response_headers->setStatus(status_value);
@@ -111,7 +111,7 @@ void ApiGatewayTransformer::transform_response(
     const auto& headers = json_body["headers"];
     if (!headers.is_object()) {
         ENVOY_STREAM_LOG(debug, "invalid headers object", stream_filter_callbacks);
-        ApiGatewayError error = {400, "400", "invalid headers object"};
+        ApiGatewayError error = {500, "500", "invalid headers object"};
         return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
     for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
@@ -132,7 +132,7 @@ void ApiGatewayTransformer::transform_response(
     const auto& multi_value_headers = json_body["multiValueHeaders"];
     if (!multi_value_headers.is_object()) {
         ENVOY_STREAM_LOG(debug, "invalid multi headers object", stream_filter_callbacks);
-        ApiGatewayError error = {400, "400", "invalid multi headers object"};
+        ApiGatewayError error = {500, "500", "invalid multi headers object"};
         return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
 
@@ -156,10 +156,8 @@ void ApiGatewayTransformer::transform_response(
     } else {
       body_dump = json_body["body"].dump();
     }
-    if (json_body.contains("isBase64Encoded")) {
-      if (json_body["isBase64Encoded"]) {
-        body_dump = Base64::decode(body_dump);
-      }
+    if (json_body.contains("isBase64Encoded") && json_body["isBase64Encoded"] == true) {
+      body_dump = Base64::decode(body_dump);
     }
     body.add(body_dump);
   } else {
