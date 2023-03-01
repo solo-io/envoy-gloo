@@ -467,7 +467,10 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
    },
    "httpMethod":"GET",
    "path":"/users/12347",
-   "queryString":""
+   "queryString":"",
+    "multiValueHeaders": {},
+    "multiValueQueryStringParameters": {},
+    "queryStringParameters": {}
    }
 )"_json;
 
