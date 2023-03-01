@@ -24,6 +24,20 @@ public:
       Server::Configuration::CommonFactoryContext &context );
 };
 
+class RequestTransformation {
+public:
+  static RequestTransformerConstSharedPtr getTransformer(
+      const envoy::api::v2::filter::http::Transformation &transformation,
+      Server::Configuration::CommonFactoryContext &context );
+};
+
+class ResponseTransformation {
+public:
+  static ResponseTransformerConstSharedPtr getTransformer(
+      const envoy::api::v2::filter::http::Transformation &transformation,
+      Server::Configuration::CommonFactoryContext &context );
+};
+
 class ResponseMatcher;
 using ResponseMatcherConstPtr = std::unique_ptr<const ResponseMatcher>;
 class ResponseMatcher {
@@ -94,15 +108,15 @@ public:
  * Implemented for transformation extensions and registered via Registry::registerFactory or the
  * convenience class RegisterFactory.
  */
-class TransformerExtensionFactory :  public Config::TypedFactory{
+class TransformerExtensionFactory :  public Config::TypedFactory {
 public:
   ~TransformerExtensionFactory() override = default;
 
 /**
- * Create a particular transformation extension implementation from a config proto. If the 
+ * Create a particular transformation extension implementation from a config proto. If the
  * implementation is unable to produce a factory with the provided parameters, it should throw
  * EnvoyException. The returned pointer should never be nullptr.
- * @param config the custom configuration for this transformer exttension type.
+ * @param config the custom configuration for this transformer extension type.
  */
   virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) PURE;
@@ -110,6 +124,50 @@ public:
   virtual std::string name() const override PURE;
 
   std::string category() const override {return "io.solo.transformer"; }
+};
+
+/**
+ * Implemented for transformation extensions and registered via Registry::registerFactory or the
+ * convenience class RegisterFactory.
+ */
+class RequestTransformerExtensionFactory :  public TransformerExtensionFactory {
+public:
+  ~RequestTransformerExtensionFactory() override = default;
+
+/**
+ * Create a particular transformation extension implementation from a config proto. If the
+ * implementation is unable to produce a factory with the provided parameters, it should throw
+ * EnvoyException. The returned pointer should never be nullptr.
+ * @param config the custom configuration for this transformer extension type.
+ */
+  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) override {
+      return createRequestTransformer(config, context);
+  };
+  virtual RequestTransformerConstSharedPtr createRequestTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) PURE;
+};
+
+/**
+ * Implemented for transformation extensions and registered via Registry::registerFactory or the
+ * convenience class RegisterFactory.
+ */
+class ResponseTransformerExtensionFactory :  public TransformerExtensionFactory {
+public:
+  ~ResponseTransformerExtensionFactory() override = default;
+
+/**
+ * Create a particular transformation extension implementation from a config proto. If the
+ * implementation is unable to produce a factory with the provided parameters, it should throw
+ * EnvoyException. The returned pointer should never be nullptr.
+ * @param config the custom configuration for this transformer extension type.
+ */
+  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) override {
+      return createResponseTransformer(config, context);
+  };
+  virtual ResponseTransformerConstSharedPtr createResponseTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) PURE;
 };
 
 } // namespace Transformation
