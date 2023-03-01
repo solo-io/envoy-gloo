@@ -300,9 +300,9 @@ TEST(ApiGatewayTransformer, error) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(response_headers, &headers, body, filter_callbacks_);
 
-  EXPECT_EQ(response_headers.getStatusValue(), "400");
+  EXPECT_EQ(response_headers.getStatusValue(), "500");
   EXPECT_EQ(response_headers.get(Http::LowerCaseString("content-type"))[0]->value().getStringView(), "text/plain");
-  EXPECT_EQ(response_headers.get(Http::LowerCaseString("x-amzn-errortype"))[0]->value().getStringView(), "400");
+  EXPECT_EQ(response_headers.get(Http::LowerCaseString("x-amzn-errortype"))[0]->value().getStringView(), "500");
 }
 
 } // namespace AwsLambda
