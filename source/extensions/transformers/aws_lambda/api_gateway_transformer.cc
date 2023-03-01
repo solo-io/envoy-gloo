@@ -65,7 +65,7 @@ void ApiGatewayTransformer::transform(
         transform_response(response_headers, body, stream_filter_callbacks);
       } catch (const std::exception &e) {
         ENVOY_STREAM_LOG(debug, "Error transforming response: " + std::string(e.what()), stream_filter_callbacks);
-        ApiGatewayError error = ApiGatewayError{400, "400", "Failed to transform response"};
+        ApiGatewayError error = ApiGatewayError{500, "500", "Failed to transform response"};
         format_error(*response_headers, body, error, stream_filter_callbacks);
       }
 }
