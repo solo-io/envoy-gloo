@@ -53,10 +53,58 @@ public:
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
 
+class RequestTransformer : public Transformer {
+public:
+  virtual ~RequestTransformer() {}
+
+  virtual bool passthrough_body() const PURE;
+
+  virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map
+                         // even when transforming responses.
+                         Http::RequestHeaderMap *request_headers,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &callbacks) const PURE;
+};
+
+typedef std::shared_ptr<const RequestTransformer> RequestTransformerConstSharedPtr;
+
+class ResponseTransformer : public Transformer {
+public:
+  virtual ~ResponseTransformer() {}
+
+  virtual bool passthrough_body() const PURE;
+
+  virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map
+                         // even when transforming responses.
+                         Http::RequestHeaderMap *request_headers,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &callbacks) const PURE;
+};
+
+typedef std::shared_ptr<const ResponseTransformer> ResponseTransformerConstSharedPtr;
+
+class OnStreamCompleteTransformer : public Transformer {
+public:
+  virtual ~OnStreamCompleteTransformer() {}
+
+  virtual bool passthrough_body() const PURE;
+
+  virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map
+                         // even when transforming responses.
+                         Http::RequestHeaderMap *request_headers,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &callbacks) const PURE;
+};
+
+typedef std::shared_ptr<const OnStreamCompleteTransformer> OnStreamCompleteTransformerConstSharedPtr;
+
 class TransformerPair {
 public:
-  TransformerPair(TransformerConstSharedPtr request_transformer,
-                  TransformerConstSharedPtr response_transformer,
+  TransformerPair(RequestTransformerConstSharedPtr request_transformer,
+                  ResponseTransformerConstSharedPtr response_transformer,
                   TransformerConstSharedPtr on_stream_completion_transformer,
                   bool should_clear_cache);
 
@@ -76,8 +124,8 @@ public:
 
 private:
   bool clear_route_cache_{};
-  TransformerConstSharedPtr request_transformation_;
-  TransformerConstSharedPtr response_transformation_;
+  RequestTransformerConstSharedPtr request_transformation_;
+  ResponseTransformerConstSharedPtr response_transformation_;
   TransformerConstSharedPtr on_stream_completion_transformation_;
 };
 typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;

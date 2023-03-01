@@ -15,8 +15,8 @@ namespace Extensions {
 namespace HttpFilters {
 namespace AwsLambda {
 
-HttpFilters::Transformation::TransformerConstSharedPtr
-ApiGatewayTransformerFactory::createTransformer(
+HttpFilters::Transformation::ResponseTransformerConstSharedPtr
+ApiGatewayTransformerFactory::createResponseTransformer(
     const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) {
     MessageUtil::downcastAndValidate<const ApiGatewayTransformerProto &>(
@@ -53,12 +53,8 @@ void ApiGatewayTransformer::transform(
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
       ENVOY_STREAM_LOG(debug, "Transforming response", stream_filter_callbacks);
-      // check if request header map equals response header map
-      if (*request_headers == header_map) {
-        // we are on the request path and we don't want to be
-        ENVOY_STREAM_LOG(debug, "Api Gateway transformer cannot be used on the request path", stream_filter_callbacks);
-        return;
-      }
+      // we are on the response path and do not need to use request headers
+      (void)request_headers;
       // we know we are on the repsonse path, so downcast RequestResponseHeaderMap to ResponseHeaderMap
       Http::ResponseHeaderMap* response_headers = static_cast<Http::ResponseHeaderMap*>(&header_map);
       try {
@@ -195,7 +191,7 @@ void ApiGatewayTransformer::add_response_header(
 }
 
 REGISTER_FACTORY(ApiGatewayTransformerFactory,
-                 HttpFilters::Transformation::TransformerExtensionFactory);
+                 HttpFilters::Transformation::ResponseTransformerExtensionFactory);
 
 } // namespace AwsLambda
 } // namespace HttpFilters

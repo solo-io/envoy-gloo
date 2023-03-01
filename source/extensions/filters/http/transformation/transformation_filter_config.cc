@@ -15,21 +15,67 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-TransformerConstSharedPtr Transformation::getTransformer(
+OnStreamCompleteTransformerConstSharedPtr OnStreamCompleteTransformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    return std::make_unique<InjaTransformer>(
+    return std::make_unique<InjaOnStreamCompleteTransformer>(
+        transformation.transformation_template());
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
+    throw EnvoyException("invalid transformer configured on onstreamcomplete: HeaderBodyTransform");
+  }
+  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
+    auto &factory = Config::Utility::getAndCheckFactory<OnStreamCompleteTransformerExtensionFactory>(transformation.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
+    return factory.createOnStreamCompleteTransformer(*config, context);
+  }
+  case envoy::api::v2::filter::http::Transformation::
+      TRANSFORMATION_TYPE_NOT_SET:
+    // TODO: return null here?
+  default:
+    throw EnvoyException("non existant transformation");
+  }
+}
+
+RequestTransformerConstSharedPtr RequestTransformation::getTransformer(
+    const envoy::api::v2::filter::http::Transformation &transformation,
+    Server::Configuration::CommonFactoryContext &context) {
+  switch (transformation.transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    return std::make_unique<InjaRequestTransformer>(
         transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
     const auto& header_body_transform = transformation.header_body_transform();
-    return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata());
+    return std::make_unique<BodyHeaderRequestTransformer>(header_body_transform.add_request_metadata());
   }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
-    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+    auto &factory = Config::Utility::getAndCheckFactory<RequestTransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    return factory.createTransformer(*config, context);
+    return factory.createRequestTransformer(*config, context);
+  }
+  case envoy::api::v2::filter::http::Transformation::
+      TRANSFORMATION_TYPE_NOT_SET:
+    // TODO: return null here?
+  default:
+    throw EnvoyException("non existant transformation");
+  }
+}
+
+ResponseTransformerConstSharedPtr ResponseTransformation::getTransformer(
+    const envoy::api::v2::filter::http::Transformation &transformation,
+    Server::Configuration::CommonFactoryContext &context) {
+  switch (transformation.transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    return std::make_unique<InjaResponseTransformer>(
+        transformation.transformation_template());
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
+    throw EnvoyException("invalid transformer configured on response: HeaderBodyTransform");
+  }
+  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
+    auto &factory = Config::Utility::getAndCheckFactory<ResponseTransformerExtensionFactory>(transformation.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
+    return factory.createResponseTransformer(*config, context);
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
@@ -48,8 +94,8 @@ TransformationFilterConfig::TransformationFilterConfig(
     if (!rule.has_match()) {
       continue;
     }
-    TransformerConstSharedPtr request_transformation;
-    TransformerConstSharedPtr response_transformation;
+    RequestTransformerConstSharedPtr request_transformation;
+    ResponseTransformerConstSharedPtr response_transformation;
     TransformerConstSharedPtr on_stream_completion_transformation;
     bool clear_route_cache = false;
     if (rule.has_route_transformations()) {
@@ -57,7 +103,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       clear_route_cache = route_transformation.clear_route_cache();
       if (route_transformation.has_request_transformation()) {
         try {
-          request_transformation = Transformation::getTransformer(
+          request_transformation = RequestTransformation::getTransformer(
               route_transformation.request_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -66,7 +112,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       }
       if (route_transformation.has_response_transformation()) {
         try {
-          response_transformation = Transformation::getTransformer(
+          response_transformation = ResponseTransformation::getTransformer(
               route_transformation.response_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -75,7 +121,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       }
       if (route_transformation.has_on_stream_completion_transformation()) {
         try {
-          on_stream_completion_transformation = Transformation::getTransformer(
+          on_stream_completion_transformation = OnStreamCompleteTransformation::getTransformer(
               route_transformation.on_stream_completion_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -182,8 +228,8 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
   switch (transformation.match_case()) {
   case RouteTransformations_RouteTransformation::kRequestMatch: {
     auto &&request_match = transformation.request_match();
-    TransformerConstSharedPtr request_transformation;
-    TransformerConstSharedPtr response_transformation;
+    RequestTransformerConstSharedPtr request_transformation;
+    ResponseTransformerConstSharedPtr response_transformation;
     Matcher::MatcherConstPtr matcher;
 
     if (request_match.has_match()) {
@@ -193,7 +239,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     bool clear_route_cache = request_match.clear_route_cache();
     if (request_match.has_request_transformation()) {
       try {
-        request_transformation = Transformation::getTransformer(
+        request_transformation = RequestTransformation::getTransformer(
             request_match.request_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(
@@ -202,7 +248,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     }
     if (request_match.has_response_transformation()) {
       try {
-        response_transformation = Transformation::getTransformer(
+        response_transformation = ResponseTransformation::getTransformer(
             request_match.response_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(
@@ -231,7 +277,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     auto &&transformation = response_match.response_transformation();
     try {
       std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(
-          std::move(matcher), Transformation::getTransformer(transformation, context));
+          std::move(matcher), ResponseTransformation::getTransformer(transformation, context));
       response_transformations_.emplace_back(std::move(pair));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(

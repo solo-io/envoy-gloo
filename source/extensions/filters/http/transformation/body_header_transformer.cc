@@ -1,9 +1,12 @@
 #include "source/extensions/filters/http/transformation/body_header_transformer.h"
 
+#include "body_header_transformer.h"
 #include "source/common/http/headers.h"
 #include "source/common/http/utility.h"
 
 #include "nlohmann/json.hpp"
+#include "transformer.h"
+#include <memory>
 
 // For convenience
 using json = nlohmann::json;
@@ -61,6 +64,13 @@ void BodyHeaderTransformer::transform(
   body.add(json_body.dump());
   header_map.setContentLength(body.length());
 }
+
+//RequestTransformerConstSharedPtr BodyHeaderTransformer::asRequestTransformer() {
+//    return std::make_unique<BodyHeaderRequestTransformer>(add_request_metadata_);
+//}
+
+BodyHeaderRequestTransformer::BodyHeaderRequestTransformer(bool add_request_metadata)
+    : BodyHeaderTransformer(add_request_metadata){}
 
 } // namespace Transformation
 } // namespace HttpFilters

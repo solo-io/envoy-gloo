@@ -25,9 +25,9 @@ using ApiGatewayTransformerProto =
      envoy::config::transformer::aws_lambda::v2::ApiGatewayTransformation;
 
 class ApiGatewayTransformerFactory
-    : public HttpFilters::Transformation::TransformerExtensionFactory {
+    : public HttpFilters::Transformation::ResponseTransformerExtensionFactory {
 public:
-  HttpFilters::Transformation::TransformerConstSharedPtr createTransformer(
+  HttpFilters::Transformation::ResponseTransformerConstSharedPtr createResponseTransformer(
       const Protobuf::Message &config,
       Server::Configuration::CommonFactoryContext &context) override;
 
@@ -40,7 +40,7 @@ public:
 };
 
 
-class ApiGatewayTransformer : public Transformation::Transformer, Logger::Loggable<Logger::Id::filter> {
+class ApiGatewayTransformer : public Transformation::ResponseTransformer, Logger::Loggable<Logger::Id::filter> {
 public:
   ApiGatewayTransformer();
   void transform(Http::RequestOrResponseHeaderMap &map,
