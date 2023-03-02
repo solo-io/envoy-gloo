@@ -121,7 +121,7 @@ TransformationFilterConfig::TransformationFilterConfig(
     }
     RequestTransformerConstSharedPtr request_transformation;
     ResponseTransformerConstSharedPtr response_transformation;
-    TransformerConstSharedPtr on_stream_completion_transformation;
+    OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformation;
     bool clear_route_cache = false;
     if (rule.has_route_transformations()) {
       const auto &route_transformation = rule.route_transformations();
@@ -301,7 +301,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     }
     auto &&transformation = response_match.response_transformation();
     try {
-      std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(
+      std::pair<ResponseMatcherConstPtr, ResponseTransformerConstSharedPtr> pair(
           std::move(matcher), ResponseTransformation::getTransformer(transformation, context));
       response_transformations_.emplace_back(std::move(pair));
     } catch (const std::exception &e) {
