@@ -65,11 +65,10 @@ void BodyHeaderTransformer::transform(
   header_map.setContentLength(body.length());
 }
 
-//RequestTransformerConstSharedPtr BodyHeaderTransformer::asRequestTransformer() {
-//    return std::make_unique<BodyHeaderRequestTransformer>(add_request_metadata_);
-//}
-
 BodyHeaderRequestTransformer::BodyHeaderRequestTransformer(bool add_request_metadata)
+    : BodyHeaderTransformer(add_request_metadata){}
+
+BodyHeaderResponseTransformer::BodyHeaderResponseTransformer(bool add_request_metadata)
     : BodyHeaderTransformer(add_request_metadata){}
 
 } // namespace Transformation
