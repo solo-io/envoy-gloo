@@ -94,13 +94,13 @@ public:
 
   TransformerPairConstSharedPtr
   findTransformers(const Http::RequestHeaderMap &headers) const override;
-  TransformerConstSharedPtr
+  ResponseTransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &,
                         StreamInfo::StreamInfo &) const override;
 
 private:
   std::vector<MatcherTransformerPair> transformer_pairs_;
-  std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr>>
+  std::vector<std::pair<ResponseMatcherConstPtr, ResponseTransformerConstSharedPtr>>
       response_transformations_;
 };
 

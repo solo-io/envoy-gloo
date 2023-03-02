@@ -108,15 +108,15 @@ public:
                   OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformer,
                   bool should_clear_cache);
 
-  TransformerConstSharedPtr getRequestTranformation() const {
+  RequestTransformerConstSharedPtr getRequestTranformation() const {
     return request_transformation_;
   }
 
-  TransformerConstSharedPtr getResponseTranformation() const {
+  ResponseTransformerConstSharedPtr getResponseTranformation() const {
     return response_transformation_;
   }
 
-  TransformerConstSharedPtr getOnStreamCompletionTransformation() const {
+  OnStreamCompleteTransformerConstSharedPtr getOnStreamCompletionTransformation() const {
     return on_stream_completion_transformation_;
   }
 
@@ -135,7 +135,7 @@ public:
   virtual ~TransformConfig() {}
   virtual TransformerPairConstSharedPtr
   findTransformers(const Http::RequestHeaderMap &headers) const PURE;
-  virtual TransformerConstSharedPtr
+  virtual ResponseTransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &headers,
                         StreamInfo::StreamInfo &) const PURE;
 };
@@ -179,7 +179,7 @@ public:
   TransformerPairConstSharedPtr
   findTransformers(const Http::RequestHeaderMap &headers) const override;
 
-  TransformerConstSharedPtr
+  ResponseTransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &,
                         StreamInfo::StreamInfo &) const override {
     return nullptr;
