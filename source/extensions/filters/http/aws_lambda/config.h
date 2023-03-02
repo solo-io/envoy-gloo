@@ -179,8 +179,8 @@ public:
     return default_body_;
   }
   bool unwrapAsAlb() const { return unwrap_as_alb_; }
-  Transformation::TransformerConstSharedPtr transformerConfig() const { return transformer_config_; }
-  Transformation::TransformerConstSharedPtr requestTransformerConfig() const { return request_transformer_config_; }
+  Transformation::ResponseTransformerConstSharedPtr transformerConfig() const { return transformer_config_; }
+  Transformation::RequestTransformerConstSharedPtr requestTransformerConfig() const { return request_transformer_config_; }
   bool hasTransformerConfig() const { return has_transformer_config_; }
   bool hasRequestTransformerConfig() const { return request_transformer_config_ != nullptr; }
 private:

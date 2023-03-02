@@ -105,7 +105,7 @@ class TransformerPair {
 public:
   TransformerPair(RequestTransformerConstSharedPtr request_transformer,
                   ResponseTransformerConstSharedPtr response_transformer,
-                  TransformerConstSharedPtr on_stream_completion_transformer,
+                  OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformer,
                   bool should_clear_cache);
 
   TransformerConstSharedPtr getRequestTranformation() const {
@@ -126,7 +126,7 @@ private:
   bool clear_route_cache_{};
   RequestTransformerConstSharedPtr request_transformation_;
   ResponseTransformerConstSharedPtr response_transformation_;
-  TransformerConstSharedPtr on_stream_completion_transformation_;
+  OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformation_;
 };
 typedef std::shared_ptr<const TransformerPair> TransformerPairConstSharedPtr;
 
