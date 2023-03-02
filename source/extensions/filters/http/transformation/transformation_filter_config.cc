@@ -15,6 +15,29 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+TransformerConstSharedPtr Transformation::getTransformer(
+    const envoy::api::v2::filter::http::Transformation &transformation,
+    Server::Configuration::CommonFactoryContext &context) {
+  switch (transformation.transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    return std::make_unique<InjaTransformer>(
+        transformation.transformation_template());
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
+    throw EnvoyException("invalid transformer configured on onstreamcomplete: HeaderBodyTransform");
+  }
+  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
+    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
+    return factory.createTransformer(*config, context);
+  }
+  case envoy::api::v2::filter::http::Transformation::
+      TRANSFORMATION_TYPE_NOT_SET:
+    // TODO: return null here?
+  default:
+    throw EnvoyException("non existant transformation");
+  }
+}
+
 OnStreamCompleteTransformerConstSharedPtr OnStreamCompleteTransformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {

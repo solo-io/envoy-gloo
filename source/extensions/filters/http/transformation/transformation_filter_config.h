@@ -17,12 +17,12 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-//class Transformation {
-//public:
-//  static TransformerConstSharedPtr getTransformer(
-//      const envoy::api::v2::filter::http::Transformation &transformation,
-//      Server::Configuration::CommonFactoryContext &context );
-//};
+class Transformation {
+public:
+  static TransformerConstSharedPtr getTransformer(
+      const envoy::api::v2::filter::http::Transformation &transformation,
+      Server::Configuration::CommonFactoryContext &context );
+};
 
 class RequestTransformation {
 public:
