@@ -15,21 +15,20 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-TransformerConstSharedPtr Transformation::getTransformer(
+OnStreamCompleteTransformerConstSharedPtr OnStreamCompleteTransformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    return std::make_unique<InjaTransformer>(
+    return std::make_unique<InjaOnStreamCompleteTransformer>(
         transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
-    const auto& header_body_transform = transformation.header_body_transform();
-    return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata());
+    throw EnvoyException("invalid transformer configured on onstreamcomplete: HeaderBodyTransform");
   }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
-    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
+    auto &factory = Config::Utility::getAndCheckFactory<OnStreamCompleteTransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    return factory.createTransformer(*config, context);
+    return factory.createOnStreamCompleteTransformer(*config, context);
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
@@ -43,6 +42,13 @@ RequestTransformerConstSharedPtr RequestTransformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    return std::make_unique<InjaRequestTransformer>(
+        transformation.transformation_template());
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
+    const auto& header_body_transform = transformation.header_body_transform();
+    return std::make_unique<BodyHeaderRequestTransformer>(header_body_transform.add_request_metadata());
+  }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
     auto &factory = Config::Utility::getAndCheckFactory<RequestTransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
@@ -60,6 +66,12 @@ ResponseTransformerConstSharedPtr ResponseTransformation::getTransformer(
     const envoy::api::v2::filter::http::Transformation &transformation,
     Server::Configuration::CommonFactoryContext &context) {
   switch (transformation.transformation_type_case()) {
+  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
+    return std::make_unique<InjaResponseTransformer>(
+        transformation.transformation_template());
+  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
+    throw EnvoyException("invalid transformer configured on response: HeaderBodyTransform");
+  }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
     auto &factory = Config::Utility::getAndCheckFactory<ResponseTransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
@@ -109,7 +121,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       }
       if (route_transformation.has_on_stream_completion_transformation()) {
         try {
-          on_stream_completion_transformation = Transformation::getTransformer(
+          on_stream_completion_transformation = OnStreamCompleteTransformation::getTransformer(
               route_transformation.on_stream_completion_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -265,7 +277,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     auto &&transformation = response_match.response_transformation();
     try {
       std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr> pair(
-          std::move(matcher), Transformation::getTransformer(transformation, context));
+          std::move(matcher), ResponseTransformation::getTransformer(transformation, context));
       response_transformations_.emplace_back(std::move(pair));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(

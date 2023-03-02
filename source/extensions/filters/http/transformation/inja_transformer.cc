@@ -2,6 +2,7 @@
 
 #include <iterator>
 
+#include "inja_transformer.h"
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
 #include "source/common/common/regex.h"
@@ -127,20 +128,20 @@ TransformerInstance::TransformerInstance(
     return cluster_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
-    return base64_encode_callback(args); 
+    return base64_encode_callback(args);
   });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
-    return base64_decode_callback(args); 
+    return base64_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
   // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
 }
 
@@ -276,7 +277,7 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 json TransformerInstance::substring_callback(const inja::Arguments &args) const {
   // get first argument, which is the string to be modified
   const std::string &input = args.at(0)->get_ref<const std::string &>();
-  
+
   // try to get second argument (start position) as an int64_t
   int start = 0;
   try {
@@ -303,7 +304,7 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
     return "";
   }
 
-  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string, 
+  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string,
   // return the substring from start to the end of the string
   if (substring_len <= 0 || start + substring_len > input_len) {
     return input.substr(start);
@@ -560,6 +561,15 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     header_map.setContentLength(body.length());
   }
 }
+
+InjaRequestTransformer::InjaRequestTransformer(const TransformationTemplate &transformation)
+    : InjaTransformer(transformation) {}
+
+InjaResponseTransformer::InjaResponseTransformer(const TransformationTemplate &transformation)
+    : InjaTransformer(transformation) {}
+
+InjaOnStreamCompleteTransformer::InjaOnStreamCompleteTransformer(const TransformationTemplate &transformation)
+    : InjaTransformer(transformation) {}
 
 } // namespace Transformation
 } // namespace HttpFilters

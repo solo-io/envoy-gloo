@@ -17,12 +17,12 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-class Transformation {
-public:
-  static TransformerConstSharedPtr getTransformer(
-      const envoy::api::v2::filter::http::Transformation &transformation,
-      Server::Configuration::CommonFactoryContext &context );
-};
+//class Transformation {
+//public:
+//  static TransformerConstSharedPtr getTransformer(
+//      const envoy::api::v2::filter::http::Transformation &transformation,
+//      Server::Configuration::CommonFactoryContext &context );
+//};
 
 class RequestTransformation {
 public:
@@ -34,6 +34,13 @@ public:
 class ResponseTransformation {
 public:
   static ResponseTransformerConstSharedPtr getTransformer(
+      const envoy::api::v2::filter::http::Transformation &transformation,
+      Server::Configuration::CommonFactoryContext &context );
+};
+
+class OnStreamCompleteTransformation {
+public:
+  static OnStreamCompleteTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
@@ -167,6 +174,28 @@ public:
       return createResponseTransformer(config, context);
   };
   virtual ResponseTransformerConstSharedPtr createResponseTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) PURE;
+};
+
+/**
+ * Implemented for transformation extensions and registered via Registry::registerFactory or the
+ * convenience class RegisterFactory.
+ */
+class OnStreamCompleteTransformerExtensionFactory :  public TransformerExtensionFactory {
+public:
+  ~OnStreamCompleteTransformerExtensionFactory() override = default;
+
+/**
+ * Create a particular transformation extension implementation from a config proto. If the
+ * implementation is unable to produce a factory with the provided parameters, it should throw
+ * EnvoyException. The returned pointer should never be nullptr.
+ * @param config the custom configuration for this transformer extension type.
+ */
+  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
+    Server::Configuration::CommonFactoryContext &context) override {
+      return createOnStreamCompleteTransformer(config, context);
+  };
+  virtual OnStreamCompleteTransformerConstSharedPtr createOnStreamCompleteTransformer(const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) PURE;
 };
 

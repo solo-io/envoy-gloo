@@ -85,6 +85,22 @@ public:
 
 typedef std::shared_ptr<const ResponseTransformer> ResponseTransformerConstSharedPtr;
 
+class OnStreamCompleteTransformer : public Transformer {
+public:
+  virtual ~OnStreamCompleteTransformer() {}
+
+  virtual bool passthrough_body() const PURE;
+
+  virtual void transform(Http::RequestOrResponseHeaderMap &map,
+                         // request header map. this has the request header map
+                         // even when transforming responses.
+                         Http::RequestHeaderMap *request_headers,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &callbacks) const PURE;
+};
+
+typedef std::shared_ptr<const OnStreamCompleteTransformer> OnStreamCompleteTransformerConstSharedPtr;
+
 class TransformerPair {
 public:
   TransformerPair(RequestTransformerConstSharedPtr request_transformer,
