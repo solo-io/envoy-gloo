@@ -1,7 +1,7 @@
 changelog:
-- type: NON_USER_FACING
+- type: FIX
   issueLink: https://github.com/solo-io/envoy-gloo-ee/pull/481
   resolvesIssue: false
-  description: Fix issues identified by ASAN
-
-
+  description: >
+      Address a memory leak identified by ASAN. Additionally,
+      address several other non-serious issues raised by ASAN
