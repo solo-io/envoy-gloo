@@ -110,9 +110,9 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  RequestTransformerConstSharedPtr request_transformation_;
-  ResponseTransformerConstSharedPtr response_transformation_;
-  OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformation_;
+  TransformerConstSharedPtr request_transformation_;
+  TransformerConstSharedPtr response_transformation_;
+  TransformerConstSharedPtr on_stream_completion_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
   std::string error_messgae_;

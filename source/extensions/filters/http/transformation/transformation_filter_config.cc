@@ -9,6 +9,7 @@
 
 #include "source/extensions/filters/http/transformation/body_header_transformer.h"
 #include "source/extensions/filters/http/transformation/inja_transformer.h"
+#include "transformer.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -329,7 +330,7 @@ PerStageRouteTransformationFilterConfig::findTransformers(
   return nullptr;
 }
 
-TransformerConstSharedPtr
+ResponseTransformerConstSharedPtr
 PerStageRouteTransformationFilterConfig::findResponseTransform(
     const Http::ResponseHeaderMap &headers, StreamInfo::StreamInfo &si) const {
   for (const auto &pair : response_transformations_) {

@@ -772,10 +772,15 @@ TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
 }
 
 TEST_F(TransformationFilterTest, ErrorOnMisplacedTransformer) {
-  auto &transformation = (*route_config_.mutable_response_transformation());
+    auto &route_matcher = (*transformation_rule_.mutable_match());
+    route_matcher.set_prefix("/");
+    null_route_config_ = true;
+    auto &transformation =
+        (*transformation_rule_.mutable_route_transformations()
+            ->mutable_on_stream_completion_transformation());
   transformation.mutable_header_body_transform();
 
-  auto message = "Failed to parse response template: invalid transformer configured on response: HeaderBodyTransform";
+  auto message = "Failed to get the on stream completion transformation: invalid transformer configured on onstreamcomplete: HeaderBodyTransform";
   EXPECT_THROW_WITH_MESSAGE(initFilter(), EnvoyException, message)
 }
 

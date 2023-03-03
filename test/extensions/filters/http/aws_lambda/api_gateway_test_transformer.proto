@@ -4,3 +4,5 @@ package envoy.test.extensions.transformation;
 option go_package = "transformation";
 
 message ApiGatewayTestTransformer{}
+message ApiGatewayTestRequestTransformer{}
+message ApiGatewayTestResponseTransformer{}
