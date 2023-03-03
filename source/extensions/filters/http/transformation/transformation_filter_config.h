@@ -17,28 +17,28 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-class Transformation {
+class Transformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   static TransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
 
-class RequestTransformation {
+class RequestTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   static RequestTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
 
-class ResponseTransformation {
+class ResponseTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   static ResponseTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
 
-class OnStreamCompleteTransformation {
+class OnStreamCompleteTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   static OnStreamCompleteTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,

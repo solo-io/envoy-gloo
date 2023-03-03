@@ -18,7 +18,6 @@ public:
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return false; };
-  //RequestTransformerConstSharedPtr asRequestTransformer();
 
 protected:
   bool add_request_metadata_{};

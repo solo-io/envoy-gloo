@@ -49,12 +49,10 @@ void ApiGatewayTransformer::format_error(
 
 void ApiGatewayTransformer::transform(
     Http::RequestOrResponseHeaderMap &header_map,
-    Http::RequestHeaderMap *request_headers,
+    Http::RequestHeaderMap *,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
       ENVOY_STREAM_LOG(debug, "Transforming response", stream_filter_callbacks);
-      // we are on the response path and do not need to use request headers
-      (void)request_headers;
       // we know we are on the repsonse path, so downcast RequestResponseHeaderMap to ResponseHeaderMap
       Http::ResponseHeaderMap* response_headers = static_cast<Http::ResponseHeaderMap*>(&header_map);
       try {
@@ -153,7 +151,7 @@ void ApiGatewayTransformer::transform_response(
       body_dump = json_body["body"].dump();
     }
     if (json_body.contains("isBase64Encoded")) {
-        auto is_base64 = json_body["isBase64Encoded"];
+      auto is_base64 = json_body["isBase64Encoded"];
       if (is_base64.is_boolean() && is_base64.get<bool>() == true) {
         body_dump = Base64::decode(body_dump);
       }

@@ -29,8 +29,6 @@ class FakeRequestTransformer : public FakeTransformer, public RequestTransformer
 public:
   bool passthrough_body() const override {return false;}
   void transform (Http::RequestOrResponseHeaderMap &,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *,
                          Buffer::Instance &,
                          Http::StreamFilterCallbacks &) const override {
@@ -42,8 +40,6 @@ class FakeResponseTransformer : public FakeTransformer, public ResponseTransform
 public:
   bool passthrough_body() const override {return false;}
   void transform (Http::RequestOrResponseHeaderMap &,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *,
                          Buffer::Instance &,
                          Http::StreamFilterCallbacks &) const override {
@@ -55,8 +51,6 @@ class FakeOnStreamCompleteTransformer : public FakeTransformer, public OnStreamC
 public:
   bool passthrough_body() const override {return false;}
   void transform (Http::RequestOrResponseHeaderMap &,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *,
                          Buffer::Instance &,
                          Http::StreamFilterCallbacks &) const override {
