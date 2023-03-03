@@ -60,19 +60,26 @@ public:
 protected:
   void SetUp() override { setupRoute(); }
 
-  const std::string TRANSFORMATION_YAML =
+  const std::string REQUEST_TRANSFORMATION_YAML =
   R"EOF(
-  name: io.solo.transformer.api_gateway_test_transformer
+  name: io.solo.requesttransformer.api_gateway_test_transformer
   typed_config:
-    "@type": type.googleapis.com/envoy.test.extensions.transformation.ApiGatewayTestTransformer
+    "@type": type.googleapis.com/envoy.test.extensions.transformation.ApiGatewayTestRequestTransformer
+  )EOF";
+
+  const std::string RESPONSE_TRANSFORMATION_YAML =
+  R"EOF(
+  name: io.solo.responsetransformer.api_gateway_test_transformer
+  typed_config:
+    "@type": type.googleapis.com/envoy.test.extensions.transformation.ApiGatewayTestResponseTransformer
   )EOF";
 
   void setupApiGatewayRequestTransformation() {
-    TestUtility::loadFromYaml(TRANSFORMATION_YAML, *routeconfig_.mutable_request_transformer_config());
+    TestUtility::loadFromYaml(REQUEST_TRANSFORMATION_YAML, *routeconfig_.mutable_request_transformer_config());
   }
 
   void setupApiGatewayResponseTransformation() {
-    TestUtility::loadFromYaml(TRANSFORMATION_YAML, *routeconfig_.mutable_transformer_config());
+    TestUtility::loadFromYaml(RESPONSE_TRANSFORMATION_YAML, *routeconfig_.mutable_transformer_config());
   }
 
   void setupRoute(bool unwrapAsApiGateway = false, bool wrapAsApiGateway = false) {
@@ -105,7 +112,7 @@ protected:
     filter_config_->credentials_ =
         std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
             "access key", "secret key");
-    
+
     filter_config_->propagate_original_routing_=false;
 
     ON_CALL(
@@ -201,7 +208,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-    
+
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -243,7 +250,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody)
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  
+
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -304,7 +311,7 @@ TEST_F(AWSLambdaTransformerTest, TestNoBodyRequestTransformation){
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  
+
   time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));

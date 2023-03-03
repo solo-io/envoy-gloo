@@ -270,25 +270,6 @@ TEST(ApiGatewayTransformer, multiple_single_headers) {
   EXPECT_EQ("multi-value-1", str_header_value);
 }
 
-TEST(ApiGatewayTransformer, request_path) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Buffer::OwnedImpl body("{}");
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(request_headers, &headers, body, filter_callbacks_);
-
-  // Nothing should be transformed in this case -- confirm that the headers and body are unchanged.
-  EXPECT_EQ(headers, request_headers);
-  EXPECT_EQ(body.toString(), "{}");
-}
-
 TEST(ApiGatewayTransformer, error) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

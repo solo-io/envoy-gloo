@@ -4,10 +4,12 @@
 namespace Envoy {
 namespace Extensions {
 namespace Transformer {
-namespace Fake{ 
+namespace Fake{
 
 using namespace HttpFilters::Transformation;
 using FakeTransformerProto = envoy::test::extensions::transformation::ApiGatewayTestTransformer;
+using FakeRequestTransformerProto = envoy::test::extensions::transformation::ApiGatewayTestRequestTransformer;
+using FakeResponseTransformerProto = envoy::test::extensions::transformation::ApiGatewayTestResponseTransformer;
 
 class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
@@ -48,10 +50,76 @@ public:
   }
 };
 
+class FakeRequestTransformer : public RequestTransformer, public FakeTransformer {
+public:
+  bool passthrough_body() const override {return false;}
+  // This transformer just drains the body and replaces it with a hardcoded string.
+  void transform (Http::RequestOrResponseHeaderMap &headers,
+                         Http::RequestHeaderMap *header_map,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &cb) const override {
+      FakeTransformer::transform(headers, header_map, body, cb);
+  }
+
+};
+
+class FakeRequestTransformerFactory : public RequestTransformerExtensionFactory {
+public:
+  std::string name() const override {return "io.solo.requesttransformer.api_gateway_test_transformer";}
+
+  TransformerConstSharedPtr createTransformer(const Protobuf::Message &message,
+  Server::Configuration::CommonFactoryContext &context) override {
+    return createRequestTransformer(message, context);
+  }
+  virtual RequestTransformerConstSharedPtr createRequestTransformer(const Protobuf::Message &,
+    Server::Configuration::CommonFactoryContext &) override {
+    return std::make_shared<FakeRequestTransformer>();
+  };
+
+
+  ProtobufTypes::MessagePtr createEmptyConfigProto() override {
+    return std::make_unique<FakeRequestTransformerProto>();
+  }
+};
+
+class FakeResponseTransformer : public ResponseTransformer, public FakeTransformer {
+public:
+  bool passthrough_body() const override {return false;}
+  // This transformer just drains the body and replaces it with a hardcoded string.
+  void transform (Http::RequestOrResponseHeaderMap &headers,
+                         Http::RequestHeaderMap *header_map,
+                         Buffer::Instance &body,
+                         Http::StreamFilterCallbacks &cb) const override {
+      FakeTransformer::transform(headers, header_map, body, cb);
+  }
+
+};
+
+class FakeResponseTransformerFactory : public ResponseTransformerExtensionFactory {
+public:
+  std::string name() const override {return "io.solo.responsetransformer.api_gateway_test_transformer";}
+
+  TransformerConstSharedPtr createTransformer(const Protobuf::Message &message,
+  Server::Configuration::CommonFactoryContext &context) override {
+    return createResponseTransformer(message, context);
+  }
+  virtual ResponseTransformerConstSharedPtr createResponseTransformer(const Protobuf::Message &,
+    Server::Configuration::CommonFactoryContext &) override {
+    return std::make_shared<FakeResponseTransformer>();
+  };
+
+
+  ProtobufTypes::MessagePtr createEmptyConfigProto() override {
+    return std::make_unique<FakeResponseTransformerProto>();
+  }
+};
+
 /**
  * Static registration for Fake Transformer. @see RegisterFactory.
  */
 REGISTER_FACTORY(FakeTransformerFactory, TransformerExtensionFactory);
+REGISTER_FACTORY(FakeRequestTransformerFactory, RequestTransformerExtensionFactory);
+REGISTER_FACTORY(FakeResponseTransformerFactory, ResponseTransformerExtensionFactory);
 
 } // namespace Fake
 } // namespace Transformer
