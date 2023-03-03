@@ -60,8 +60,6 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
@@ -76,8 +74,6 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
@@ -92,8 +88,6 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
                          Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;

@@ -34,9 +34,10 @@ TransformerConstSharedPtr Transformation::getTransformer(
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
+    ENVOY_LOG(trace, "transformation type not set");
+    FALLTHRU;
   default:
-    throw EnvoyException("non existant transformation");
+    throw EnvoyException("non existent transformation");
   }
 }
 
@@ -57,9 +58,10 @@ OnStreamCompleteTransformerConstSharedPtr OnStreamCompleteTransformation::getTra
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
+    ENVOY_LOG(trace, "OnStreamCompletion transformation type not set");
+    FALLTHRU;
   default:
-    throw EnvoyException("non existant transformation");
+    throw EnvoyException("non existent transformation");
   }
 }
 
@@ -81,9 +83,10 @@ RequestTransformerConstSharedPtr RequestTransformation::getTransformer(
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
+    ENVOY_LOG(trace, "Request transformation type not set");
+    FALLTHRU;
   default:
-    throw EnvoyException("non existant transformation");
+    throw EnvoyException("non existent transformation");
   }
 }
 
@@ -105,9 +108,10 @@ ResponseTransformerConstSharedPtr ResponseTransformation::getTransformer(
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
+    ENVOY_LOG(trace, "Response transformation type not set");
+    FALLTHRU;
   default:
-    throw EnvoyException("non existant transformation");
+    throw EnvoyException("non existent transformation");
   }
 }
 
