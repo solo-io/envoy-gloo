@@ -48,29 +48,26 @@ void ApiGatewayTransformer::format_error(
   }
 
 void ApiGatewayTransformer::transform(
-    Http::RequestOrResponseHeaderMap &header_map,
-    Http::RequestHeaderMap *,
+    Http::ResponseHeaderMap &response_headers,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
       ENVOY_STREAM_LOG(debug, "Transforming response", stream_filter_callbacks);
-      // we know we are on the repsonse path, so downcast RequestResponseHeaderMap to ResponseHeaderMap
-      Http::ResponseHeaderMap* response_headers = static_cast<Http::ResponseHeaderMap*>(&header_map);
       try {
         transform_response(response_headers, body, stream_filter_callbacks);
       } catch (const std::exception &e) {
         ENVOY_STREAM_LOG(debug, "Error transforming response: " + std::string(e.what()), stream_filter_callbacks);
         ApiGatewayError error = ApiGatewayError{500, "500", "Failed to transform response"};
-        format_error(*response_headers, body, error, stream_filter_callbacks);
+        format_error(response_headers, body, error, stream_filter_callbacks);
       }
 }
 
 void ApiGatewayTransformer::transform_response(
-    Http::ResponseHeaderMap *response_headers,
+    Http::ResponseHeaderMap &response_headers,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
   // clear existing response headers before any can be set
   // please note: Envoy will crash if the ":status" header is not set
-  response_headers->clear();
+  response_headers.clear();
 
   // all information about the request format is to be contained in the response body
   // parse response body as JSON
@@ -82,7 +79,7 @@ void ApiGatewayTransformer::transform_response(
   } catch (std::exception& exception){
     ENVOY_STREAM_LOG(debug, "Error parsing response body as JSON: " + std::string(exception.what()), stream_filter_callbacks);
     ApiGatewayError error = {500, "500", "failed to parse response body as JSON"};
-    return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+    return ApiGatewayTransformer::format_error(response_headers, body, error, stream_filter_callbacks);
   }
 
   // set response status code
@@ -93,11 +90,11 @@ void ApiGatewayTransformer::transform_response(
     } catch (std::exception& exception){
       ENVOY_STREAM_LOG(debug, "Error parsing statusCode: " + std::string(exception.what()), stream_filter_callbacks);
       ApiGatewayError error = {500, "500", "Non-integer status code"};
-      return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+      return ApiGatewayTransformer::format_error(response_headers, body, error, stream_filter_callbacks);
     }
-    response_headers->setStatus(status_value);
+    response_headers.setStatus(status_value);
   } else {
-    response_headers->setStatus(DEFAULT_STATUS_VALUE);
+    response_headers.setStatus(DEFAULT_STATUS_VALUE);
   }
 
   // set response headers
@@ -106,7 +103,7 @@ void ApiGatewayTransformer::transform_response(
     if (!headers.is_object()) {
         ENVOY_STREAM_LOG(debug, "invalid headers object", stream_filter_callbacks);
         ApiGatewayError error = {500, "500", "invalid headers object"};
-        return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+        return ApiGatewayTransformer::format_error(response_headers, body, error, stream_filter_callbacks);
     }
     for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
         const auto& header_key = it.key();
@@ -117,7 +114,7 @@ void ApiGatewayTransformer::transform_response(
         } else {
           header_value_string = it.value().dump();
         }
-        add_response_header(*response_headers, header_key, header_value_string, stream_filter_callbacks, false);
+        add_response_header(response_headers, header_key, header_value_string, stream_filter_callbacks, false);
     }
   }
 
@@ -127,7 +124,7 @@ void ApiGatewayTransformer::transform_response(
     if (!multi_value_headers.is_object()) {
         ENVOY_STREAM_LOG(debug, "invalid multi headers object", stream_filter_callbacks);
         ApiGatewayError error = {500, "500", "invalid multi headers object"};
-        return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+        return ApiGatewayTransformer::format_error(response_headers, body, error, stream_filter_callbacks);
     }
 
     for (json::const_iterator it = multi_value_headers.cbegin(); it != multi_value_headers.cend(); it++) {
@@ -136,7 +133,7 @@ void ApiGatewayTransformer::transform_response(
 
         for (json::const_iterator inner_it = header_values.cbegin(); inner_it != header_values.cend(); inner_it++) {
           const auto& header_value = inner_it.value().get<std::string>();
-          add_response_header(*response_headers, header_key, header_value, stream_filter_callbacks, true);
+          add_response_header(response_headers, header_key, header_value, stream_filter_callbacks, true);
         }
     }
   }
@@ -160,9 +157,9 @@ void ApiGatewayTransformer::transform_response(
   } else {
     body.add("{}");
   }
-  response_headers->setContentLength(body.length());
+  response_headers.setContentLength(body.length());
 
-  ASSERT(response_headers->getStatusValue() != 0);
+  ASSERT(response_headers.getStatusValue() != 0);
 }
 
 void ApiGatewayTransformer::add_response_header(

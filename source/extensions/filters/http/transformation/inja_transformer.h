@@ -21,13 +21,14 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+using json = nlohmann::json;
 using GetBodyFunc = std::function<const std::string &()>;
 
 class TransformerInstance {
 public:
   TransformerInstance(
       const Http::RequestOrResponseHeaderMap &header_map,
-      const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
+      GetBodyFunc &body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
@@ -79,21 +80,17 @@ class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
                       &transformation);
-  ~InjaTransformer();
+  ~InjaTransformer() {};
 
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
-                 Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return passthrough_body_; };
 
-protected:
   struct DynamicMetadataValue {
-    std::string namespace_;
-    std::string key_;
-    inja::Template template_;
+      std::string namespace_;
+      std::string key_;
+      inja::Template template_;
   };
 
+protected:
   bool advanced_templates_{};
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
@@ -114,42 +111,34 @@ protected:
 class InjaRequestTransformer : public RequestTransformer, public InjaTransformer  {
 public:
   InjaRequestTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation);
+                      &transformation) : InjaTransformer(transformation) {};
   ~InjaRequestTransformer(){};
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
+  void transform(Http::RequestHeaderMap &request_headers,
                  Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override {
-      InjaTransformer::transform(map, request_headers, body, cb);
-  };
+                 Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return InjaTransformer::passthrough_body(); };
 };
 
 class InjaResponseTransformer : public ResponseTransformer, public InjaTransformer  {
 public:
   InjaResponseTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation);
+                      &transformation) : InjaTransformer(transformation) {};
   ~InjaResponseTransformer(){};
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
+  void transform(Http::ResponseHeaderMap &response_headers,
                  Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override {
-      InjaTransformer::transform(map, request_headers, body, cb);
-  };
+                 Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return InjaTransformer::passthrough_body(); };
 };
 
 class InjaOnStreamCompleteTransformer : public OnStreamCompleteTransformer, public InjaTransformer  {
 public:
   InjaOnStreamCompleteTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation);
+                      &transformation) : InjaTransformer(transformation) {};
   ~InjaOnStreamCompleteTransformer(){};
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
+  void transform(Http::ResponseHeaderMap &reponse_headers,
+                 Http::RequestHeaderMap &request_headers,
                  Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override {
-      InjaTransformer::transform(map, request_headers, body, cb);
-  };
+                 Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return InjaTransformer::passthrough_body(); };
 };
 } // namespace Transformation

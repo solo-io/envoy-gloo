@@ -42,13 +42,6 @@ public:
   virtual ~Transformer() {}
 
   virtual bool passthrough_body() const PURE;
-
-  virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         // request header map. this has the request header map
-                         // even when transforming responses.
-                         Http::RequestHeaderMap *request_headers,
-                         Buffer::Instance &body,
-                         Http::StreamFilterCallbacks &callbacks) const PURE;
 };
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
@@ -59,8 +52,7 @@ public:
 
   virtual bool passthrough_body() const PURE;
 
-  virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         Http::RequestHeaderMap *request_headers,
+  virtual void transform(Http::RequestHeaderMap &request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
@@ -73,8 +65,7 @@ public:
 
   virtual bool passthrough_body() const PURE;
 
-  virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         Http::RequestHeaderMap *request_headers,
+  virtual void transform(Http::ResponseHeaderMap &response_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
@@ -87,8 +78,8 @@ public:
 
   virtual bool passthrough_body() const PURE;
 
-  virtual void transform(Http::RequestOrResponseHeaderMap &map,
-                         Http::RequestHeaderMap *request_headers,
+  virtual void transform(Http::ResponseHeaderMap &response_headers,
+                         Http::RequestHeaderMap &request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };

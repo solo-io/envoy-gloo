@@ -98,8 +98,7 @@ ResponseTransformerConstSharedPtr ResponseTransformation::getTransformer(
     return std::make_unique<InjaResponseTransformer>(
         transformation.transformation_template());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
-    const auto& header_body_transform = transformation.header_body_transform();
-    return std::make_unique<BodyHeaderResponseTransformer>(header_body_transform.add_request_metadata());
+    return std::make_unique<BodyHeaderResponseTransformer>();
   }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
     auto &factory = Config::Utility::getAndCheckFactory<ResponseTransformerExtensionFactory>(transformation.transformer_config());

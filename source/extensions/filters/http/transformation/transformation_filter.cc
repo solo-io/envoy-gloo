@@ -26,9 +26,9 @@ TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
 
 TransformationFilter::~TransformationFilter() {}
 
-void TransformationFilter::onDestroy() { 
+void TransformationFilter::onDestroy() {
   destroyed_ = true;
-  resetInternalState(); 
+  resetInternalState();
 }
 
 void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
@@ -187,8 +187,8 @@ void TransformationFilter::setupTransformationPair() {
 }
 
 void TransformationFilter::transformRequest() {
-  transformSomething(*decoder_callbacks_, request_transformation_,
-                     *request_headers_, request_body_,
+  request_transformation_->transform(*request_headers_, request_body_, *decoder_callbacks_);
+  finalizeTransformation(*decoder_callbacks_, request_transformation_, *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
   if (should_clear_cache_) {
@@ -197,10 +197,10 @@ void TransformationFilter::transformRequest() {
 }
 
 void TransformationFilter::transformResponse() {
-  transformSomething(*encoder_callbacks_, response_transformation_,
-                     *response_headers_, response_body_,
-                     &TransformationFilter::responseError,
-                     &TransformationFilter::addEncoderData);
+  response_transformation_->transform(*response_headers_, request_body_, *decoder_callbacks_);
+  finalizeTransformation(*decoder_callbacks_, request_transformation_, *request_headers_, request_body_,
+                     &TransformationFilter::requestError,
+                     &TransformationFilter::addDecoderData);
 }
 
 void TransformationFilter::addDecoderData(Buffer::Instance &data) {
@@ -229,29 +229,26 @@ void TransformationFilter::transformOnStreamCompletion() {
   }
 
   try {
-    on_stream_completion_transformation_->transform(*response_headers_,
-                                                    request_headers_, 
-                                                    emptyBody, 
-                                                    *encoder_callbacks_);
+  on_stream_completion_transformation_->transform(*response_headers_,*request_headers_, emptyBody, *decoder_callbacks_);
+  finalizeTransformation(*decoder_callbacks_, request_transformation_, *request_headers_, emptyBody,
+                     &TransformationFilter::requestError,
+                     &TransformationFilter::addDecoderData);
   } catch (std::exception &e)  {
-    ENVOY_STREAM_LOG(debug, 
-                     "failure transforming on stream completion {}", 
-                     *encoder_callbacks_, 
+    ENVOY_STREAM_LOG(debug,
+                     "failure transforming on stream completion {}",
+                     *encoder_callbacks_,
                      e.what());
     filter_config_->stats().on_stream_complete_error_.inc();
   }
 }
 
-void TransformationFilter::transformSomething(
+void TransformationFilter::finalizeTransformation(
     Http::StreamFilterCallbacks &callbacks,
-    TransformerConstSharedPtr &transformation,
+    TransformerConstSharedPtr transformation,
     Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
-    void (TransformationFilter::*responeWithError)(),
+    void (TransformationFilter::*respondWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
-
   try {
-    transformation->transform(header_map, request_headers_, body, callbacks);
-
     if (body.length() > 0) {
       (this->*addData)(body);
     } else if (!transformation->passthrough_body()) {
@@ -267,7 +264,7 @@ void TransformationFilter::transformSomething(
 
   transformation = nullptr;
   if (is_error()) {
-    (this->*responeWithError)();
+    (this->*respondWithError)();
   }
 }
 

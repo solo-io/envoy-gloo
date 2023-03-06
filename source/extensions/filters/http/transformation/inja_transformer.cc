@@ -105,12 +105,12 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
 
 TransformerInstance::TransformerInstance(
     const Http::RequestOrResponseHeaderMap &header_map,
-    const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
+    GetBodyFunc &body,
     const std::unordered_map<std::string, absl::string_view> &extractions,
     const json &context,
     const std::unordered_map<std::string, std::string> &environ,
     const envoy::config::core::v3::Metadata *cluster_metadata)
-    : header_map_(header_map), request_headers_(request_headers), body_(body),
+    : header_map_(header_map), body_(body),
       extractions_(extractions), context_(context), environ_(environ),
       cluster_metadata_(cluster_metadata) {
   env_.add_callback("header", 1,
@@ -428,51 +428,58 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
   }
 }
 
-InjaTransformer::~InjaTransformer() {}
-
-void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
-                                Http::RequestHeaderMap *request_headers,
-                                Buffer::Instance &body,
-                                Http::StreamFilterCallbacks &callbacks) const {
-  absl::optional<std::string> string_body;
-  GetBodyFunc get_body = [&string_body, &body]() -> const std::string & {
+GetBodyFunc getGetBodyFunc(absl::optional<std::string> string_body, Buffer::Instance &body) {
+return [&string_body, &body]() -> const std::string & {
     if (!string_body.has_value()) {
       string_body.emplace(body.toString());
     }
     return string_body.value();
   };
 
+}
+json parseBody(Buffer::Instance &body, GetBodyFunc get_body,
+        envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
+          parse_body_behavior, bool ignore_error_on_parse) {
   json json_body;
 
-  if (parse_body_behavior_ != TransformationTemplate::DontParse &&
-      body.length() > 0) {
-    const std::string &bodystring = get_body();
-    // parse the body as json
-    // TODO: gate this under a parse_body boolean
-    if (parse_body_behavior_ == TransformationTemplate::ParseAsJson) {
-      if (ignore_error_on_parse_) {
-        try {
-          json_body = json::parse(bodystring);
-        } catch (const std::exception &) {
-        }
-      } else {
+  if (parse_body_behavior == TransformationTemplate::DontParse ||
+      body.length() == 0) {
+      return json_body;
+  }
+  const std::string &bodystring = get_body();
+  // parse the body as json
+  // TODO: gate this under a parse_body boolean
+  if (parse_body_behavior == TransformationTemplate::ParseAsJson) {
+    if (ignore_error_on_parse) {
+      try {
         json_body = json::parse(bodystring);
+      } catch (const std::exception &) {
       }
     } else {
-      ASSERT("missing behavior");
+      json_body = json::parse(bodystring);
     }
-  }
-  // get the extractions
-  std::unordered_map<std::string, absl::string_view> extractions;
-  if (advanced_templates_) {
-    extractions.reserve(extractors_.size());
+  } else {
+    ASSERT("missing behavior");
   }
 
-  for (const auto &named_extractor : extractors_) {
+  return json_body;
+}
+std::unordered_map<std::string, absl::string_view> getExtractions(json json_body,
+                                                                  GetBodyFunc get_body,
+                                                                  bool advanced_templates,
+                                                                  std::vector<std::pair<std::string, Extractor>> extractors,
+                                                                  Http::StreamFilterCallbacks &callbacks,
+                                                                  Http::RequestOrResponseHeaderMap &headers) {
+  std::unordered_map<std::string, absl::string_view> extractions;
+  if (advanced_templates) {
+    extractions.reserve(extractors.size());
+  }
+
+  for (const auto &named_extractor : extractors) {
     const std::string &name = named_extractor.first;
-    if (advanced_templates_) {
+    if (advanced_templates) {
       extractions[name] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
+          named_extractor.second.extract(callbacks, headers, get_body);
     } else {
       absl::string_view name_to_split = name;
       json *current = &json_body;
@@ -483,46 +490,56 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
         name_to_split = name_to_split.substr(pos + 1);
       }
       (*current)[std::string(name_to_split)] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
+          named_extractor.second.extract(callbacks, headers, get_body);
     }
   }
 
-  // get cluster metadata
+  return extractions;
+}
+const envoy::config::core::v3::Metadata *getClusterMetadata(Http::StreamFilterCallbacks &callbacks) {
   const envoy::config::core::v3::Metadata *cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
   if (ci.get()) {
     cluster_metadata = &ci->metadata();
   }
 
-  // start transforming!
-  TransformerInstance instance(header_map, request_headers, get_body,
-                               extractions, json_body, environ_,
-                               cluster_metadata);
+  return cluster_metadata;
+}
 
-  // Body transform:
+absl::optional<Buffer::OwnedImpl> transformBody(TransformerInstance &instance,
+                                                absl::optional<inja::Template> body_template,
+                                                bool merged_extractors_to_body,
+                                                json json_body) {
   absl::optional<Buffer::OwnedImpl> maybe_body;
 
-  if (body_template_.has_value()) {
-    std::string output = instance.render(body_template_.value());
+  if (body_template.has_value()) {
+    std::string output = instance.render(body_template.value());
     maybe_body.emplace(output);
-  } else if (merged_extractors_to_body_) {
+  } else if (merged_extractors_to_body) {
     std::string output = json_body.dump();
     maybe_body.emplace(output);
   }
+    return maybe_body;
+}
 
-  // DynamicMetadata transform:
-  for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
+void transformDynamicMetadata(TransformerInstance &instance, Http::StreamFilterCallbacks &callbacks,
+                              std::vector<InjaTransformer::DynamicMetadataValue> dynamic_metadata) {
+  for (const auto &templated_dynamic_metadata : dynamic_metadata) {
     std::string output = instance.render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
-      ProtobufWkt::Struct strct(
+      ProtobufWkt::Struct kv_struct(
           MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
       callbacks.streamInfo().setDynamicMetadata(
-          templated_dynamic_metadata.namespace_, strct);
+          templated_dynamic_metadata.namespace_, kv_struct);
     }
   }
+}
 
-  // Headers transform:
-  for (const auto &templated_header : headers_) {
+void transformHeaders(TransformerInstance &instance, std::vector<Http::LowerCaseString> headers_to_remove,
+                      std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append,
+                      std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers,
+                      Http::RequestOrResponseHeaderMap &header_map) {
+  for (const auto &templated_header : headers) {
     std::string output = instance.render(templated_header.second);
     // remove existing header
     header_map.remove(templated_header.first);
@@ -534,12 +551,12 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
 
-  for (const auto &header_to_remove : headers_to_remove_) {
+  for (const auto &header_to_remove : headers_to_remove) {
     header_map.remove(header_to_remove);
   }
 
   // Headers to Append Values transform:
-  for (const auto &templated_header : headers_to_append_) {
+  for (const auto &templated_header : headers_to_append) {
     std::string output = instance.render(templated_header.second);
     if (!output.empty()) {
       // we can add the key as reference as the headers_to_append_ lifetime is as the
@@ -549,8 +566,11 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
 
-  // replace body. we do it here so that headers and dynamic metadata have the
-  // original body.
+}
+
+void replaceBody(absl::optional<Buffer::OwnedImpl> &maybe_body,
+                 Http::RequestOrResponseHeaderMap &header_map,
+                 Buffer::Instance &body) {
   if (maybe_body.has_value()) {
     // remove content length, as we have new body.
     header_map.removeContentLength();
@@ -562,14 +582,93 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
 }
 
-InjaRequestTransformer::InjaRequestTransformer(const TransformationTemplate &transformation)
-    : InjaTransformer(transformation) {}
+void InjaRequestTransformer::transform(Http::RequestHeaderMap &request_headers,
+                                Buffer::Instance &body,
+                                Http::StreamFilterCallbacks &callbacks) const {
+  absl::optional<std::string> string_body;
 
-InjaResponseTransformer::InjaResponseTransformer(const TransformationTemplate &transformation)
-    : InjaTransformer(transformation) {}
+  auto get_body = getGetBodyFunc(string_body, body);
 
-InjaOnStreamCompleteTransformer::InjaOnStreamCompleteTransformer(const TransformationTemplate &transformation)
-    : InjaTransformer(transformation) {}
+  auto json_body = parseBody(body, get_body, parse_body_behavior_, ignore_error_on_parse_);
+
+  auto extractions = getExtractions(json_body, get_body, advanced_templates_, extractors_,
+                                    callbacks, request_headers);
+  const envoy::config::core::v3::Metadata *cluster_metadata = getClusterMetadata(callbacks);
+
+  // start transforming!
+  TransformerInstance instance(request_headers, get_body,
+                               extractions, json_body, environ_,
+                               cluster_metadata);
+
+  auto maybe_body = transformBody(instance, body_template_, merged_extractors_to_body_, json_body);
+
+  transformDynamicMetadata(instance, callbacks, dynamic_metadata_);
+
+  transformHeaders(instance, headers_to_remove_, headers_to_append_, headers_, request_headers);
+
+  // replace body. we do it here so that headers and dynamic metadata have the
+  // original body.
+  replaceBody(maybe_body, request_headers, body);
+}
+
+void InjaResponseTransformer::transform(Http::ResponseHeaderMap &response_headers,
+                                Buffer::Instance &body,
+                                Http::StreamFilterCallbacks &callbacks) const {
+  absl::optional<std::string> string_body;
+
+  auto get_body = getGetBodyFunc(string_body, body);
+
+  auto json_body = parseBody(body, get_body, parse_body_behavior_, ignore_error_on_parse_);
+
+  auto extractions = getExtractions(json_body, get_body, advanced_templates_, extractors_,
+                                    callbacks, response_headers);
+  const envoy::config::core::v3::Metadata *cluster_metadata = getClusterMetadata(callbacks);
+
+  // start transforming!
+  TransformerInstance instance(response_headers, get_body,
+                               extractions, json_body, environ_,
+                               cluster_metadata);
+
+  auto maybe_body = transformBody(instance, body_template_, merged_extractors_to_body_, json_body);
+
+  transformDynamicMetadata(instance, callbacks, dynamic_metadata_);
+
+  transformHeaders(instance, headers_to_remove_, headers_to_append_, headers_, response_headers);
+
+  // replace body. we do it here so that headers and dynamic metadata have the
+  // original body.
+  replaceBody(maybe_body, response_headers, body);
+}
+
+void InjaOnStreamCompleteTransformer::transform(Http::ResponseHeaderMap &response_headers,
+                                                Http::RequestHeaderMap &,
+                                Buffer::Instance &body,
+                                Http::StreamFilterCallbacks &callbacks) const {
+  absl::optional<std::string> string_body;
+
+  auto get_body = getGetBodyFunc(string_body, body);
+
+  auto json_body = parseBody(body, get_body, parse_body_behavior_, ignore_error_on_parse_);
+
+  auto extractions = getExtractions(json_body, get_body, advanced_templates_, extractors_,
+                                    callbacks, response_headers);
+  const envoy::config::core::v3::Metadata *cluster_metadata = getClusterMetadata(callbacks);
+
+  // start transforming!
+  TransformerInstance instance(response_headers, get_body,
+                               extractions, json_body, environ_,
+                               cluster_metadata);
+
+  auto maybe_body = transformBody(instance, body_template_, merged_extractors_to_body_, json_body);
+
+  transformDynamicMetadata(instance, callbacks, dynamic_metadata_);
+
+  transformHeaders(instance, headers_to_remove_, headers_to_append_, headers_, response_headers);
+
+  // replace body. we do it here so that headers and dynamic metadata have the
+  // original body.
+  replaceBody(maybe_body, response_headers, body);
+}
 
 } // namespace Transformation
 } // namespace HttpFilters
