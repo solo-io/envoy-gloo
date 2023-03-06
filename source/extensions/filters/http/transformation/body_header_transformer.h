@@ -13,10 +13,6 @@ namespace Transformation {
 class BodyHeaderTransformer : public Transformer {
 public:
   BodyHeaderTransformer(bool add_request_metadata);
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
-                 Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return false; };
 
 protected:
@@ -26,24 +22,18 @@ protected:
 class BodyHeaderRequestTransformer : public RequestTransformer, public BodyHeaderTransformer {
 public:
   BodyHeaderRequestTransformer(bool add_request_metadata);
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
+  void transform(Http::RequestHeaderMap &request_headers,
                  Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override {
-      BodyHeaderTransformer::transform(map, request_headers, body, cb);
-  };
+                 Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return BodyHeaderTransformer::passthrough_body(); };
 };
 
 class BodyHeaderResponseTransformer : public ResponseTransformer, public BodyHeaderTransformer {
 public:
-  BodyHeaderResponseTransformer(bool add_request_metadata);
-  void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_headers,
+  BodyHeaderResponseTransformer();
+  void transform(Http::ResponseHeaderMap &response_headers,
                  Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override {
-      BodyHeaderTransformer::transform(map, request_headers, body, cb);
-  };
+                 Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return BodyHeaderTransformer::passthrough_body(); };
 };
 
