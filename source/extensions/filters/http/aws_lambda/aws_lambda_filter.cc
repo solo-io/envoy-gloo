@@ -59,7 +59,7 @@ const HeaderList AWSLambdaFilter::HeadersToSign =
 AWSLambdaFilter::AWSLambdaFilter(Upstream::ClusterManager &cluster_manager,
                                  Api::Api &api,
                                  AWSLambdaConfigConstSharedPtr filter_config)
-    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),  
+    : aws_authenticator_(api.timeSource()), cluster_manager_(cluster_manager),
       filter_config_(filter_config){}
 
 AWSLambdaFilter::~AWSLambdaFilter() {}

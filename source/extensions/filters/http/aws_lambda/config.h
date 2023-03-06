@@ -85,13 +85,17 @@ public:
 
 class AWSLambdaConfigImpl
     : public AWSLambdaConfig,
-      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter>,
-      public std::enable_shared_from_this<AWSLambdaConfigImpl> {
+      public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
-  ~AWSLambdaConfigImpl() = default;
+  ~AWSLambdaConfigImpl();
+  // Non-copyable, as sts_refesher holds a raw pointer to this.
+  AWSLambdaConfigImpl(const AWSLambdaConfigImpl&) = delete;
+  AWSLambdaConfigImpl& operator=(const AWSLambdaConfigImpl&) = delete;
+  // Non-movable, same reason as non-copyable.
+  AWSLambdaConfigImpl(AWSLambdaConfigImpl&&) = delete;
+  AWSLambdaConfigImpl& operator=(AWSLambdaConfigImpl&&) = delete;
 
-  static std::shared_ptr<AWSLambdaConfigImpl>
-  create(std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
+  AWSLambdaConfigImpl(std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
              &&provider,
          std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
          Event::Dispatcher &dispatcher, Api::Api &api,
@@ -109,17 +113,23 @@ public:
     }
 
 private:
-  AWSLambdaConfigImpl(
-      std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
-          &&provider,
-      std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
-      Event::Dispatcher &dispatcher, Api::Api &api,
-      Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-      Stats::Scope &scope,
-      const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
-          &protoconfig);
 
+  class AWSLambdaStsRefresher :
+        public std::enable_shared_from_this<AWSLambdaStsRefresher> {
+  public:
+    ~AWSLambdaStsRefresher() = default;
 
+    AWSLambdaStsRefresher(AWSLambdaConfigImpl* parent, Event::Dispatcher &dispatcher);
+
+    void cancel();
+    void init(Event::Dispatcher &dispatcher);
+
+private:
+    AWSLambdaConfigImpl* parent_;
+
+    Envoy::Filesystem::WatcherPtr file_watcher_;
+    Event::TimerPtr timer_;
+  };
   struct ThreadLocalCredentials : public Envoy::ThreadLocal::ThreadLocalObject {
     ThreadLocalCredentials(CredentialsConstSharedPtr credentials)
         : credentials_(credentials) {}
@@ -144,17 +154,14 @@ private:
 
   Api::Api &api_;
 
-  Envoy::Filesystem::WatcherPtr file_watcher_;
-
   std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
       provider_;
 
-  bool sts_enabled_ = false;
+  ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;
   std::string token_file_;
   std::string web_token_;
   std::string role_arn_;
-  
-  ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;
+  std::shared_ptr<AWSLambdaStsRefresher> sts_refresher_;
 
   Event::TimerPtr timer_;
 
