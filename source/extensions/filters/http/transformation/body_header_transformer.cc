@@ -79,6 +79,7 @@ BodyHeaderResponseTransformer::BodyHeaderResponseTransformer()
 
 void BodyHeaderResponseTransformer::transform(
     Http::ResponseHeaderMap &response_headers,
+    Http::RequestHeaderMap *,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &) const {
   auto json_body = extractBodyAndHeaders(response_headers, body);

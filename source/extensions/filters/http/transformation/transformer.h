@@ -66,6 +66,7 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::ResponseHeaderMap &response_headers,
+                         Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };
@@ -79,7 +80,7 @@ public:
   virtual bool passthrough_body() const PURE;
 
   virtual void transform(Http::ResponseHeaderMap &response_headers,
-                         Http::RequestHeaderMap &request_headers,
+                         Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 };

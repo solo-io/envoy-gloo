@@ -28,6 +28,7 @@ class TransformerInstance {
 public:
   TransformerInstance(
       const Http::RequestOrResponseHeaderMap &header_map,
+      const Http::RequestHeaderMap *request_headers,
       GetBodyFunc &body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
@@ -125,6 +126,7 @@ public:
                       &transformation) : InjaTransformer(transformation) {};
   ~InjaResponseTransformer(){};
   void transform(Http::ResponseHeaderMap &response_headers,
+                 Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return passthrough_body_; };
@@ -136,7 +138,7 @@ public:
                       &transformation) : InjaTransformer(transformation) {};
   ~InjaOnStreamCompleteTransformer(){};
   void transform(Http::ResponseHeaderMap &reponse_headers,
-                 Http::RequestHeaderMap &request_headers,
+                 Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return passthrough_body_; };
