@@ -17,17 +17,17 @@ public:
                          Http::RequestHeaderMap *,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &) const override {
-                            std::string headers_string = std::string("headers:\n");
+                            std::string *headers_string = new std::string("headers:\n");
                             headers.iterate(
-                                [&headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
+                                [headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
                                     auto key = std::string(header.key().getStringView());
                                     auto value = std::string(header.value().getStringView());
                                     // use semicolon as a separator, because pseudo-headers (e.g. :path) have colons (":") in them
-                                    headers_string += std::string("\t") + key + "; " + value + "\n";
+                                    *headers_string += std::string("\t") + key + "; " + value + "\n";
                                     return Http::HeaderMap::Iterate::Continue;
                                 });
 
-                            std::string bodyString = "test body from fake transformer\n" + headers_string;
+                            std::string bodyString = "test body from fake transformer\n" + *headers_string;
                             body.drain(body.length());
                             body.add(bodyString);
   }
