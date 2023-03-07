@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package envoy.config.transformer.aws_lambda.v2;
+
+option java_package = "io.envoyproxy.envoy.config.transformer.aws_lambda.v2";
+option java_outer_classname = "ApiGatewayTransformerProto";
+option java_multiple_files = true;
+option go_package = "transformer";
+
+
+message ApiGatewayTransformation {
+} 

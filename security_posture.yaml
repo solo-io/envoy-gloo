@@ -11,3 +11,5 @@ extensions:
   security_posture: robust_to_untrusted_downstream
 - name: filters/http/transformation
   security_posture: robust_to_untrusted_downstream
+- name: transformers/aws_lambda
+  security_posture: robust_to_untrusted_downstream

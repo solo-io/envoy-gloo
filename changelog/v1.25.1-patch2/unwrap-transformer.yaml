@@ -1,0 +1,12 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/solo-projects/issues/4438
+  resolvesIssue: false
+  description: >-
+    Relocate transformer that handles unwrapAsApiGateway from enterprise
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/7907
+  resolvesIssue: false
+  description: >-
+    Enhance responseTransformation functionality by making it equivalent to the transformer
+    for unwrapAsApiGateway (previously EE only)

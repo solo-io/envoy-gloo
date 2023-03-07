@@ -18,6 +18,8 @@ envoy_gloo_cc_test(
     srcs = ["aws_lambda_filter_test.cc"],
     repository = "@envoy",
     deps = [
+        "//api/envoy/config/transformer/aws_lambda/v2:pkg_cc_proto",
+        "//source/extensions/transformers/aws_lambda:api_gateway_transformer_lib",
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
