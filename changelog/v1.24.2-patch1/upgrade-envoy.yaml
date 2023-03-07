@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.24.2
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependancyTag: 1.24.2
+  dependencyTag: 33f7528fcf8b24a810dcaa2aa085cad6bc6227cf
