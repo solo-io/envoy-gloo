@@ -157,7 +157,7 @@ void ApiGatewayTransformer::transform_response(
       body_dump = json_body["body"].dump();
     }
     if (json_body.contains("isBase64Encoded")) {
-        auto is_base64 = json_body["isBase64Encoded"];
+      auto is_base64 = json_body["isBase64Encoded"];
       if (is_base64.is_boolean() && is_base64.get<bool>() == true) {
         body_dump = Base64::decode(body_dump);
       }
