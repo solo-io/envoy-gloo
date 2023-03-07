@@ -44,7 +44,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  if (!requestActive()) {
+  if (!hasRequestTransformation()) {
     return Http::FilterHeadersStatus::Continue;
   }
 
@@ -61,7 +61,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!requestActive()) {
+  if (!hasRequestTransformation()) {
     return Http::FilterDataStatus::Continue;
   }
 
@@ -85,7 +85,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 TransformationFilter::decodeTrailers(Http::RequestTrailerMap &) {
-  if (requestActive()) {
+  if (hasRequestTransformation()) {
     filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
   }
@@ -110,9 +110,9 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
     }
   }
 
-  if (!responseActive()) {
+  if (!hasResponseTransformation()) {
     // this also covers the is_error() case. as is_error() == true implies
-    // responseActive() == false
+    // hasResponseTransformation() == false
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
   if (end_stream || response_transformation_->passthrough_body()) {
@@ -126,7 +126,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!responseActive()) {
+  if (!hasResponseTransformation()) {
     return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
@@ -149,7 +149,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
-  if (responseActive()) {
+  if (hasResponseTransformation()) {
     filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
   }
@@ -176,6 +176,8 @@ void TransformationFilter::setupTransformationPair() {
   active_transformer_pair = config_to_use->findTransformers(*request_headers_);
 
   if (active_transformer_pair != nullptr) {
+    std::cout << "request_transformation" << active_transformer_pair->getRequestTranformation() << std::endl;
+    std::cout << "response_transformation" << active_transformer_pair->getResponseTranformation() << std::endl;
     should_clear_cache_ = active_transformer_pair->shouldClearCache();
     request_transformation_ =
         active_transformer_pair->getRequestTranformation();

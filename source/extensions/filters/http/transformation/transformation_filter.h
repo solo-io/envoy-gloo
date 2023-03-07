@@ -76,8 +76,8 @@ private:
   };
   virtual void setupTransformationPair();
 
-  bool requestActive() { return request_transformation_ != nullptr; }
-  bool responseActive() { return response_transformation_ != nullptr; }
+  bool hasRequestTransformation() { return request_transformation_ != nullptr; }
+  bool hasResponseTransformation() { return response_transformation_ != nullptr; }
   void requestError();
   void responseError();
   void error(Error error, std::string msg = "");
