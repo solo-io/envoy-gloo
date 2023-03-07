@@ -270,7 +270,7 @@ TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
       "group 123 requested for regex with only 1 sub groups");
 }
 
-TEST(RequestTransformer, transform) {
+TEST(Transformer, transform) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},

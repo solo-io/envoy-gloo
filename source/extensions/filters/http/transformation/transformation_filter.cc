@@ -202,6 +202,7 @@ void TransformationFilter::transformRequest() {
                      &filter_config_->stats().request_error_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
+  request_transformation_ = nullptr;
   if (should_clear_cache_) {
     decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
   }
@@ -223,6 +224,7 @@ void TransformationFilter::transformResponse() {
                      &filter_config_->stats().response_error_,
                      &TransformationFilter::responseError,
                      &TransformationFilter::addEncoderData);
+  response_transformation_ = nullptr;
   std::cout << "9" << std::endl;
 }
 
@@ -269,6 +271,7 @@ void TransformationFilter::transformOnStreamCompletion() {
           &filter_config_->stats().on_stream_complete_error_,
           &TransformationFilter::responseError,
           &TransformationFilter::addEncoderData);
+  on_stream_completion_transformation_ = nullptr;
   std::cout << "9" << std::endl;
 }
 
@@ -281,7 +284,6 @@ void TransformationFilter::finalizeTransformation(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
   // first check if an error occurred during the transformation itself
   if (is_error()) {
-    transformation = nullptr;
     inc_counter->inc();
     (this->*respondWithError)();
     return;
@@ -306,7 +308,6 @@ void TransformationFilter::finalizeTransformation(
   }
 
   std::cout << "6" << std::endl;
-  transformation = nullptr;
   if (is_error()) {
     inc_counter->inc();
     (this->*respondWithError)();
