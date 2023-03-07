@@ -187,9 +187,9 @@ private:
   std::string path_;
   bool async_;
   bool unwrap_as_alb_;
-  Transformation::ResponseTransformerConstSharedPtr transformer_config_;
+  Transformation::TransformerConstSharedPtr transformer_config_;
   bool has_transformer_config_;
-  Transformation::RequestTransformerConstSharedPtr request_transformer_config_;
+  Transformation::TransformerConstSharedPtr request_transformer_config_;
   absl::optional<std::string> default_body_;
 
   static std::string functionUrlPath(const std::string &name,

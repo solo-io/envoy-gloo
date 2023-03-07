@@ -39,40 +39,6 @@ TransformerConstSharedPtr Transformation::getTransformer(
   }
 }
 
-RequestTransformerConstSharedPtr RequestTransformation::getTransformer(
-    const envoy::api::v2::filter::http::Transformation &transformation,
-    Server::Configuration::CommonFactoryContext &context) {
-  switch (transformation.transformation_type_case()) {
-  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
-    auto &factory = Config::Utility::getAndCheckFactory<RequestTransformerExtensionFactory>(transformation.transformer_config());
-    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    return factory.createRequestTransformer(*config, context);
-  }
-  case envoy::api::v2::filter::http::Transformation::
-      TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
-  default:
-    throw EnvoyException("non existant transformation");
-  }
-}
-
-ResponseTransformerConstSharedPtr ResponseTransformation::getTransformer(
-    const envoy::api::v2::filter::http::Transformation &transformation,
-    Server::Configuration::CommonFactoryContext &context) {
-  switch (transformation.transformation_type_case()) {
-  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
-    auto &factory = Config::Utility::getAndCheckFactory<ResponseTransformerExtensionFactory>(transformation.transformer_config());
-    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    return factory.createResponseTransformer(*config, context);
-  }
-  case envoy::api::v2::filter::http::Transformation::
-      TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
-  default:
-    throw EnvoyException("non existant transformation");
-  }
-}
-
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
@@ -82,8 +48,8 @@ TransformationFilterConfig::TransformationFilterConfig(
     if (!rule.has_match()) {
       continue;
     }
-    RequestTransformerConstSharedPtr request_transformation;
-    ResponseTransformerConstSharedPtr response_transformation;
+    TransformerConstSharedPtr request_transformation;
+    TransformerConstSharedPtr response_transformation;
     TransformerConstSharedPtr on_stream_completion_transformation;
     bool clear_route_cache = false;
     if (rule.has_route_transformations()) {
@@ -91,7 +57,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       clear_route_cache = route_transformation.clear_route_cache();
       if (route_transformation.has_request_transformation()) {
         try {
-          request_transformation = RequestTransformation::getTransformer(
+          request_transformation = Transformation::getTransformer(
               route_transformation.request_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -100,7 +66,7 @@ TransformationFilterConfig::TransformationFilterConfig(
       }
       if (route_transformation.has_response_transformation()) {
         try {
-          response_transformation = ResponseTransformation::getTransformer(
+          response_transformation = Transformation::getTransformer(
               route_transformation.response_transformation(), context);
         } catch (const std::exception &e) {
           throw EnvoyException(
@@ -216,8 +182,8 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
   switch (transformation.match_case()) {
   case RouteTransformations_RouteTransformation::kRequestMatch: {
     auto &&request_match = transformation.request_match();
-    RequestTransformerConstSharedPtr request_transformation;
-    ResponseTransformerConstSharedPtr response_transformation;
+    TransformerConstSharedPtr request_transformation;
+    TransformerConstSharedPtr response_transformation;
     Matcher::MatcherConstPtr matcher;
 
     if (request_match.has_match()) {
@@ -227,7 +193,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     bool clear_route_cache = request_match.clear_route_cache();
     if (request_match.has_request_transformation()) {
       try {
-        request_transformation = RequestTransformation::getTransformer(
+        request_transformation = Transformation::getTransformer(
             request_match.request_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(
@@ -236,7 +202,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     }
     if (request_match.has_response_transformation()) {
       try {
-        response_transformation = ResponseTransformation::getTransformer(
+        response_transformation = Transformation::getTransformer(
             request_match.response_transformation(), context);
       } catch (const std::exception &e) {
         throw EnvoyException(

@@ -9,8 +9,8 @@ namespace {
 constexpr uint64_t MAX_STAGE_NUMBER = 10UL;
 }
 
-TransformerPair::TransformerPair(RequestTransformerConstSharedPtr request_transformer,
-                                 ResponseTransformerConstSharedPtr response_transformer,
+TransformerPair::TransformerPair(TransformerConstSharedPtr request_transformer,
+                                 TransformerConstSharedPtr response_transformer,
                                  TransformerConstSharedPtr on_stream_completion_transformer,
                                  bool should_clear_cache)
     : clear_route_cache_(should_clear_cache),

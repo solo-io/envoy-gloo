@@ -90,7 +90,7 @@ private:
 
   void handleDefaultBody();
 
-  void finalizeRequest();
+  void lambdafy();
   void finalizeResponse();
   bool parseResponseAsALB(Http::ResponseHeaderMap&,
                           const Buffer::Instance&, Buffer::Instance&);
