@@ -21,15 +21,13 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-using json = nlohmann::json;
 using GetBodyFunc = std::function<const std::string &()>;
 
 class TransformerInstance {
 public:
   TransformerInstance(
       const Http::RequestOrResponseHeaderMap &header_map,
-      const Http::RequestHeaderMap *request_headers,
-      GetBodyFunc &body,
+      const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
@@ -81,17 +79,21 @@ class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
                       &transformation);
-  ~InjaTransformer() {};
+  ~InjaTransformer();
 
+  void transform(Http::RequestOrResponseHeaderMap &map,
+                 Http::RequestHeaderMap *request_headers,
+                 Buffer::Instance &body,
+                 Http::StreamFilterCallbacks &) const override;
   bool passthrough_body() const override { return passthrough_body_; };
 
+private:
   struct DynamicMetadataValue {
-      std::string namespace_;
-      std::string key_;
-      inja::Template template_;
+    std::string namespace_;
+    std::string key_;
+    inja::Template template_;
   };
 
-protected:
   bool advanced_templates_{};
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
@@ -109,40 +111,6 @@ protected:
   bool merged_extractors_to_body_{};
 };
 
-class InjaRequestTransformer : public RequestTransformer, public InjaTransformer  {
-public:
-  InjaRequestTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation) : InjaTransformer(transformation) {};
-  ~InjaRequestTransformer(){};
-  void transform(Http::RequestHeaderMap &request_headers,
-                 Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override;
-  bool passthrough_body() const override { std::cout << "returning passthrough_body_ " << passthrough_body_ << std::endl; return passthrough_body_; };
-};
-
-class InjaResponseTransformer : public ResponseTransformer, public InjaTransformer  {
-public:
-  InjaResponseTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation) : InjaTransformer(transformation) {};
-  ~InjaResponseTransformer(){};
-  void transform(Http::ResponseHeaderMap &response_headers,
-                 Http::RequestHeaderMap *request_headers,
-                 Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override;
-  bool passthrough_body() const override { return passthrough_body_; };
-};
-
-class InjaOnStreamCompleteTransformer : public OnStreamCompleteTransformer, public InjaTransformer  {
-public:
-  InjaOnStreamCompleteTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation) : InjaTransformer(transformation) {};
-  ~InjaOnStreamCompleteTransformer(){};
-  void transform(Http::ResponseHeaderMap &reponse_headers,
-                 Http::RequestHeaderMap *request_headers,
-                 Buffer::Instance &body,
-                 Http::StreamFilterCallbacks &cb) const override;
-  bool passthrough_body() const override { return passthrough_body_; };
-};
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions

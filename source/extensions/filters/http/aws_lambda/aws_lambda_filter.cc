@@ -192,6 +192,7 @@ void AWSLambdaFilter::finalizeResponse(){
       auto transformer_config = functionOnRoute()->transformerConfig();
       transformer_config->transform(
         *response_headers_,
+        request_headers_,
         enc_buf,
         *encoder_callbacks_
       );
@@ -426,7 +427,7 @@ void AWSLambdaFilter::transformRequest() {
   if (!has_body_) {
     ENVOY_LOG(debug, "Performing request transformation on empty buffer");
     Buffer::OwnedImpl body_buffer("");
-    request_transformer_config->transform(*request_headers_, body_buffer, *decoder_callbacks_);
+    request_transformer_config->transform(*request_headers_, request_headers_, body_buffer, *decoder_callbacks_);
     request_headers_->setContentLength(body_buffer.length());
     aws_authenticator_.updatePayloadHash(body_buffer);
     decoder_callbacks_->addDecodedData(body_buffer, false); // set the decoding buffer to the transformed buffer
@@ -436,7 +437,7 @@ void AWSLambdaFilter::transformRequest() {
   // if we're processing a request with a body, we modify the decoding buffer directly
   ENVOY_LOG(debug, "Performing request transformation on non-empty buffer");
   decoder_callbacks_->modifyDecodingBuffer([this, &request_transformer_config](Buffer::Instance &buffer) {
-    request_transformer_config->transform(*request_headers_, buffer, *decoder_callbacks_);
+    request_transformer_config->transform(*request_headers_, request_headers_, buffer, *decoder_callbacks_);
     request_headers_->setContentLength(buffer.length());
     aws_authenticator_.updatePayloadHash(buffer);
   });

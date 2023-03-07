@@ -76,12 +76,14 @@ private:
   };
   virtual void setupTransformationPair();
 
-  bool hasRequestTransformation() { return request_transformation_ != nullptr; }
-  bool hasResponseTransformation() { return response_transformation_ != nullptr; }
+  bool requestActive() { return request_transformation_ != nullptr; }
+  bool responseActive() { return response_transformation_ != nullptr; }
   void requestError();
   void responseError();
   void error(Error error, std::string msg = "");
   bool is_error();
+
+  // TransformerConstSharedPtr getTransformFromRoute(Direction direction);
 
   void transformRequest();
   void transformResponse();
@@ -89,12 +91,12 @@ private:
 
   void addDecoderData(Buffer::Instance &data);
   void addEncoderData(Buffer::Instance &data);
-  void finalizeTransformation(Http::StreamFilterCallbacks &callbacks,
-                     TransformerConstSharedPtr transformation,
+  void
+  transformSomething(Http::StreamFilterCallbacks &callbacks,
+                     TransformerConstSharedPtr &transformation,
                      Http::RequestOrResponseHeaderMap &header_map,
                      Buffer::Instance &body,
-                     Envoy::Stats::Counter *inc_counter,
-                     void (TransformationFilter::*respondWithError)(),
+                     void (TransformationFilter::*responeWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
@@ -110,12 +112,12 @@ private:
   Buffer::OwnedImpl request_body_{};
   Buffer::OwnedImpl response_body_{};
 
-  RequestTransformerConstSharedPtr request_transformation_;
-  ResponseTransformerConstSharedPtr response_transformation_;
-  OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformation_;
+  TransformerConstSharedPtr request_transformation_;
+  TransformerConstSharedPtr response_transformation_;
+  TransformerConstSharedPtr on_stream_completion_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
-  std::string error_message_;
+  std::string error_messgae_;
   bool should_clear_cache_{};
   bool destroyed_{};
 

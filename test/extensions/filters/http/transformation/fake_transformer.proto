@@ -4,6 +4,3 @@ package envoy.test.extensions.transformation;
 option go_package = "transformation";
 
 message FakeTransformer{}
-message FakeRequestTransformer{}
-message FakeResponseTransformer{}
-message FakeOnStreamCompleteTransformer{}

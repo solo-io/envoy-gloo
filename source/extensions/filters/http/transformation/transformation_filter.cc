@@ -26,9 +26,9 @@ TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
 
 TransformationFilter::~TransformationFilter() {}
 
-void TransformationFilter::onDestroy() {
+void TransformationFilter::onDestroy() { 
   destroyed_ = true;
-  resetInternalState();
+  resetInternalState(); 
 }
 
 void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
@@ -44,14 +44,14 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
     return Http::FilterHeadersStatus::StopIteration;
   }
 
-  if (!hasRequestTransformation()) {
+  if (!requestActive()) {
     return Http::FilterHeadersStatus::Continue;
   }
 
   if (end_stream || request_transformation_->passthrough_body()) {
     filter_config_->stats().request_header_transformations_.inc();
     transformRequest();
-    std::cout << "after transforming request" << std::endl;
+
     return is_error() ? Http::FilterHeadersStatus::StopIteration
                       : Http::FilterHeadersStatus::Continue;
   }
@@ -61,7 +61,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!hasRequestTransformation()) {
+  if (!requestActive()) {
     return Http::FilterDataStatus::Continue;
   }
 
@@ -85,7 +85,7 @@ Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 TransformationFilter::decodeTrailers(Http::RequestTrailerMap &) {
-  if (hasRequestTransformation()) {
+  if (requestActive()) {
     filter_config_->stats().request_body_transformations_.inc();
     transformRequest();
   }
@@ -110,9 +110,9 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
     }
   }
 
-  if (!hasResponseTransformation()) {
+  if (!responseActive()) {
     // this also covers the is_error() case. as is_error() == true implies
-    // hasResponseTransformation() == false
+    // responseActive() == false
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
   if (end_stream || response_transformation_->passthrough_body()) {
@@ -126,7 +126,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!hasResponseTransformation()) {
+  if (!responseActive()) {
     return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
@@ -149,7 +149,7 @@ Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
 
 Http::FilterTrailersStatus
 TransformationFilter::encodeTrailers(Http::ResponseTrailerMap &) {
-  if (hasResponseTransformation()) {
+  if (responseActive()) {
     filter_config_->stats().response_body_transformations_.inc();
     transformResponse();
   }
@@ -176,8 +176,6 @@ void TransformationFilter::setupTransformationPair() {
   active_transformer_pair = config_to_use->findTransformers(*request_headers_);
 
   if (active_transformer_pair != nullptr) {
-    std::cout << "request_transformation" << active_transformer_pair->getRequestTranformation() << std::endl;
-    std::cout << "response_transformation" << active_transformer_pair->getResponseTranformation() << std::endl;
     should_clear_cache_ = active_transformer_pair->shouldClearCache();
     request_transformation_ =
         active_transformer_pair->getRequestTranformation();
@@ -189,43 +187,20 @@ void TransformationFilter::setupTransformationPair() {
 }
 
 void TransformationFilter::transformRequest() {
-  try {
-    request_transformation_->transform(*request_headers_, request_body_, *decoder_callbacks_);
-  } catch (const std::exception &e) {
-    error(Error::TemplateParseError, e.what());
-    ENVOY_STREAM_LOG(debug,
-                     "failure transforming response {}",
-                     *encoder_callbacks_,
-                     e.what());
-  }
-  finalizeTransformation(*decoder_callbacks_, request_transformation_, *request_headers_, request_body_,
-                     &filter_config_->stats().request_error_,
+  transformSomething(*decoder_callbacks_, request_transformation_,
+                     *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
-  request_transformation_ = nullptr;
   if (should_clear_cache_) {
     decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
   }
 }
 
 void TransformationFilter::transformResponse() {
-  std::cout << "1" << std::endl;
-  try {
-    response_transformation_->transform(*response_headers_, response_body_, *decoder_callbacks_);
-  } catch (const std::exception &e) {
-    error(Error::TemplateParseError, e.what());
-    ENVOY_STREAM_LOG(debug,
-                     "failure transforming response {}",
-                     *encoder_callbacks_,
-                     e.what());
-  }
-  std::cout << "2" << std::endl;
-  finalizeTransformation(*encoder_callbacks_, response_transformation_, *response_headers_, response_body_,
-                     &filter_config_->stats().response_error_,
+  transformSomething(*encoder_callbacks_, response_transformation_,
+                     *response_headers_, response_body_,
                      &TransformationFilter::responseError,
                      &TransformationFilter::addEncoderData);
-  response_transformation_ = nullptr;
-  std::cout << "9" << std::endl;
 }
 
 void TransformationFilter::addDecoderData(Buffer::Instance &data) {
@@ -240,7 +215,6 @@ void TransformationFilter::transformOnStreamCompletion() {
   if (on_stream_completion_transformation_ == nullptr) {
     return;
   }
-  std::cout << "1" << std::endl;
 
   // Body isn't required for this transformer since it isn't included
   // in access logs
@@ -253,80 +227,63 @@ void TransformationFilter::transformOnStreamCompletion() {
     emptyResponseHeaderMap = Http::ResponseHeaderMapImpl::create();
     response_headers_ = emptyResponseHeaderMap.get();
   }
-  std::cout << "2" << std::endl;
 
   try {
-    std::cout << "!3" << std::endl;
-    on_stream_completion_transformation_->transform(*response_headers_,*request_headers_, emptyBody, *encoder_callbacks_);
-    std::cout << "!4" << std::endl;
+    on_stream_completion_transformation_->transform(*response_headers_,
+                                                    request_headers_, 
+                                                    emptyBody, 
+                                                    *encoder_callbacks_);
   } catch (std::exception &e)  {
-    error(Error::TemplateParseError, e.what());
-    std::cout << "8" << std::endl;
-    ENVOY_STREAM_LOG(debug,
-                     "failure transforming on stream completion {}",
-                     *encoder_callbacks_,
+    ENVOY_STREAM_LOG(debug, 
+                     "failure transforming on stream completion {}", 
+                     *encoder_callbacks_, 
                      e.what());
+    filter_config_->stats().on_stream_complete_error_.inc();
   }
-  finalizeTransformation(*encoder_callbacks_, on_stream_completion_transformation_, *response_headers_, emptyBody,
-          &filter_config_->stats().on_stream_complete_error_,
-          &TransformationFilter::responseError,
-          &TransformationFilter::addEncoderData);
-  on_stream_completion_transformation_ = nullptr;
-  std::cout << "9" << std::endl;
 }
 
-void TransformationFilter::finalizeTransformation(
+void TransformationFilter::transformSomething(
     Http::StreamFilterCallbacks &callbacks,
-    TransformerConstSharedPtr transformation,
+    TransformerConstSharedPtr &transformation,
     Http::RequestOrResponseHeaderMap &header_map, Buffer::Instance &body,
-    Envoy::Stats::Counter *inc_counter,
-    void (TransformationFilter::*respondWithError)(),
+    void (TransformationFilter::*responeWithError)(),
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
-  // first check if an error occurred during the transformation itself
-  if (is_error()) {
-    inc_counter->inc();
-    (this->*respondWithError)();
-    return;
-  }
 
   try {
-  std::cout << "3" << std::endl;
+    transformation->transform(header_map, request_headers_, body, callbacks);
+
     if (body.length() > 0) {
-  std::cout << "4.1" << std::endl;
       (this->*addData)(body);
     } else if (!transformation->passthrough_body()) {
-  std::cout << "4.2" << std::endl;
       // only remove content type if the request is not passthrough.
       // This means that the empty body is a result of the transformation.
       // so the content type should be removed
       header_map.removeContentType();
     }
   } catch (std::exception &e) {
-  std::cout << "5" << std::endl;
     ENVOY_STREAM_LOG(debug, "failure transforming {}", callbacks, e.what());
     error(Error::TemplateParseError, e.what());
   }
 
-  std::cout << "6" << std::endl;
+  transformation = nullptr;
   if (is_error()) {
-    inc_counter->inc();
-    (this->*respondWithError)();
+    (this->*responeWithError)();
   }
 }
 
 void TransformationFilter::requestError() {
   ASSERT(is_error());
-  /* filter_config_->stats().request_error_.inc(); */
-  decoder_callbacks_->sendLocalReply(error_code_, error_message_, nullptr,
+  filter_config_->stats().request_error_.inc();
+  decoder_callbacks_->sendLocalReply(error_code_, error_messgae_, nullptr,
                                      absl::nullopt,
                                      RcDetails::get().TransformError);
 }
 
 void TransformationFilter::responseError() {
   ASSERT(is_error());
-  /* filter_config_->stats().response_error_.inc(); */
+  filter_config_->stats().response_error_.inc();
   response_headers_->setStatus(enumToInt(error_code_));
-  Buffer::OwnedImpl data(error_message_);
+  Buffer::OwnedImpl data(error_messgae_);
   response_headers_->removeContentType();
   response_headers_->setContentLength(data.length());
   encoder_callbacks_->addEncodedData(data, false);
@@ -342,31 +299,31 @@ void TransformationFilter::error(Error error, std::string msg) {
   resetInternalState();
   switch (error) {
   case Error::PayloadTooLarge: {
-    error_message_ = "payload too large";
+    error_messgae_ = "payload too large";
     error_code_ = Http::Code::PayloadTooLarge;
     break;
   }
   case Error::JsonParseError: {
-    error_message_ = "bad request";
+    error_messgae_ = "bad request";
     error_code_ = Http::Code::BadRequest;
     break;
   }
   case Error::TemplateParseError: {
-    error_message_ = "bad request";
+    error_messgae_ = "bad request";
     error_code_ = Http::Code::BadRequest;
     break;
   }
   case Error::TransformationNotFound: {
-    error_message_ = "transformation for function not found";
+    error_messgae_ = "transformation for function not found";
     error_code_ = Http::Code::NotFound;
     break;
   }
   }
   if (!msg.empty()) {
-    if (error_message_.empty()) {
-      error_message_ = std::move(msg);
+    if (error_messgae_.empty()) {
+      error_messgae_ = std::move(msg);
     } else {
-      error_message_ = error_message_ + ": " + msg;
+      error_messgae_ = error_messgae_ + ": " + msg;
     }
   }
 }

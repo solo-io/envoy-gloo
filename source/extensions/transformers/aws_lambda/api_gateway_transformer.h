@@ -43,10 +43,11 @@ public:
 class ApiGatewayTransformer : public Transformation::ResponseTransformer, Logger::Loggable<Logger::Id::filter> {
 public:
   ApiGatewayTransformer();
-  void transform(Http::ResponseHeaderMap &response_headers,
+  void transform(Http::RequestOrResponseHeaderMap &map,
+                 Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
-  void transform_response(Http::ResponseHeaderMap &response_headers,
+  void transform_response(Http::ResponseHeaderMap *response_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const;
   void format_error(Http::ResponseHeaderMap &map,

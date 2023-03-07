@@ -17,30 +17,23 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-class Transformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+class Transformation {
 public:
   static TransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
 
-class RequestTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+class RequestTransformation {
 public:
   static RequestTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
 
-class ResponseTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
+class ResponseTransformation {
 public:
   static ResponseTransformerConstSharedPtr getTransformer(
-      const envoy::api::v2::filter::http::Transformation &transformation,
-      Server::Configuration::CommonFactoryContext &context );
-};
-
-class OnStreamCompleteTransformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
-public:
-  static OnStreamCompleteTransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
       Server::Configuration::CommonFactoryContext &context );
 };
@@ -94,13 +87,13 @@ public:
 
   TransformerPairConstSharedPtr
   findTransformers(const Http::RequestHeaderMap &headers) const override;
-  ResponseTransformerConstSharedPtr
+  TransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &,
                         StreamInfo::StreamInfo &) const override;
 
 private:
   std::vector<MatcherTransformerPair> transformer_pairs_;
-  std::vector<std::pair<ResponseMatcherConstPtr, ResponseTransformerConstSharedPtr>>
+  std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr>>
       response_transformations_;
 };
 
@@ -174,28 +167,6 @@ public:
       return createResponseTransformer(config, context);
   };
   virtual ResponseTransformerConstSharedPtr createResponseTransformer(const Protobuf::Message &config,
-    Server::Configuration::CommonFactoryContext &context) PURE;
-};
-
-/**
- * Implemented for transformation extensions and registered via Registry::registerFactory or the
- * convenience class RegisterFactory.
- */
-class OnStreamCompleteTransformerExtensionFactory :  public TransformerExtensionFactory {
-public:
-  ~OnStreamCompleteTransformerExtensionFactory() override = default;
-
-/**
- * Create a particular transformation extension implementation from a config proto. If the
- * implementation is unable to produce a factory with the provided parameters, it should throw
- * EnvoyException. The returned pointer should never be nullptr.
- * @param config the custom configuration for this transformer extension type.
- */
-  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
-    Server::Configuration::CommonFactoryContext &context) override {
-      return createOnStreamCompleteTransformer(config, context);
-  };
-  virtual OnStreamCompleteTransformerConstSharedPtr createOnStreamCompleteTransformer(const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) PURE;
 };
 
