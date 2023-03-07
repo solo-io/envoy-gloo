@@ -192,6 +192,7 @@ void AWSLambdaFilter::finalizeResponse(){
       auto transformer_config = functionOnRoute()->transformerConfig();
       transformer_config->transform(
         *response_headers_,
+        request_headers_,
         enc_buf,
         *encoder_callbacks_
       );

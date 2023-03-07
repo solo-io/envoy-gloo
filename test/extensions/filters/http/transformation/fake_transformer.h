@@ -31,6 +31,7 @@ class FakeResponseTransformer : public FakeTransformer, public ResponseTransform
 public:
   bool passthrough_body() const override {return false;}
   void transform (Http::ResponseHeaderMap &,
+                  Http::RequestHeaderMap *,
                   Buffer::Instance &,
                   Http::StreamFilterCallbacks &) const override {
   }
@@ -41,7 +42,7 @@ class FakeOnStreamCompleteTransformer : public FakeTransformer, public OnStreamC
 public:
   bool passthrough_body() const override {return false;}
   void transform (Http::ResponseHeaderMap &,
-                  Http::RequestHeaderMap &,
+                  Http::RequestHeaderMap *,
                   Buffer::Instance &,
                   Http::StreamFilterCallbacks &) const override {
   }
