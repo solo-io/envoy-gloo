@@ -7,6 +7,7 @@ steps:
   env:
   - 'COMMIT_SHA=$COMMIT_SHA'
   - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  - 'BUILD_TYPE=$_BUILD_TYPE'
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
