@@ -34,9 +34,9 @@ TEST(BodyHeaderTransformer, transform) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(false);
+  BodyHeaderRequestTransformer transformer(false);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, &headers, body, filter_callbacks_);
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -62,9 +62,9 @@ TEST(BodyHeaderTransformer, transformWithExtraAndQuery) {
                                          {":path", "/users/123?key=value"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderRequestTransformer transformer(true);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, &headers, body, filter_callbacks_);
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -93,9 +93,9 @@ TEST(BodyHeaderTransformer, transformWithExtraNoQuery) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderRequestTransformer transformer(true);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(headers, &headers, body, filter_callbacks_);
+  transformer.transform(headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);

@@ -11,28 +11,27 @@ using FakeTransformerProto = envoy::test::extensions::transformation::ApiGateway
 using FakeRequestTransformerProto = envoy::test::extensions::transformation::ApiGatewayTestRequestTransformer;
 using FakeResponseTransformerProto = envoy::test::extensions::transformation::ApiGatewayTestResponseTransformer;
 
+void fakeTransform(Http::RequestOrResponseHeaderMap &headers,
+        Buffer::Instance &body,
+        Http::StreamFilterCallbacks &) {
+    std::string *headers_string = new std::string("headers:\n");
+    headers.iterate(
+            [headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
+            auto key = std::string(header.key().getStringView());
+            auto value = std::string(header.value().getStringView());
+            // use semicolon as a separator, because pseudo-headers (e.g. :path) have colons (":") in them
+            *headers_string += "\t" + key + "; " + value + "\n";
+            return Http::HeaderMap::Iterate::Continue;
+            });
+
+    std::string bodyString = "test body from fake transformer\n" + *headers_string;
+    body.drain(body.length());
+    body.add(bodyString);
+}
 class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
-  void transform (Http::RequestOrResponseHeaderMap &headers,
-                         Http::RequestHeaderMap *,
-                         Buffer::Instance &body,
-                         Http::StreamFilterCallbacks &) const override {
-                            std::string *headers_string = new std::string("headers:\n");
-                            headers.iterate(
-                                [headers_string](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
-                                    auto key = std::string(header.key().getStringView());
-                                    auto value = std::string(header.value().getStringView());
-                                    // use semicolon as a separator, because pseudo-headers (e.g. :path) have colons (":") in them
-                                    *headers_string += "\t" + key + "; " + value + "\n";
-                                    return Http::HeaderMap::Iterate::Continue;
-                                });
-
-                            std::string bodyString = "test body from fake transformer\n" + *headers_string;
-                            body.drain(body.length());
-                            body.add(bodyString);
-  }
 
 };
 
@@ -54,11 +53,10 @@ class FakeRequestTransformer : public RequestTransformer, public FakeTransformer
 public:
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
-  void transform (Http::RequestOrResponseHeaderMap &headers,
-                         Http::RequestHeaderMap *header_map,
+  void transform (Http::RequestHeaderMap &headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &cb) const override {
-      FakeTransformer::transform(headers, header_map, body, cb);
+      fakeTransform(headers, body, cb);
   }
 
 };
@@ -86,11 +84,10 @@ class FakeResponseTransformer : public ResponseTransformer, public FakeTransform
 public:
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
-  void transform (Http::RequestOrResponseHeaderMap &headers,
-                         Http::RequestHeaderMap *header_map,
+  void transform (Http::ResponseHeaderMap &headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &cb) const override {
-      FakeTransformer::transform(headers, header_map, body, cb);
+      fakeTransform(headers, body, cb);
   }
 
 };

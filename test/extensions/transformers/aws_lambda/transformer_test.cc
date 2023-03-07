@@ -28,10 +28,6 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 TEST(ApiGatewayTransformer, transform) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -42,7 +38,7 @@ TEST(ApiGatewayTransformer, transform) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -56,10 +52,6 @@ TEST(ApiGatewayTransformer, transform) {
 }
 
 TEST(ApiGatewayTransformer, transform_body) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -73,7 +65,7 @@ TEST(ApiGatewayTransformer, transform_body) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -87,10 +79,6 @@ TEST(ApiGatewayTransformer, transform_body) {
 }
 
 TEST(ApiGatewayTransformer, transform_multi_value_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -107,7 +95,7 @@ TEST(ApiGatewayTransformer, transform_multi_value_headers) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -126,10 +114,6 @@ TEST(ApiGatewayTransformer, transform_multi_value_headers) {
 }
 
 TEST(ApiGatewayTransformer, transform_single_and_multi_value_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -146,7 +130,7 @@ TEST(ApiGatewayTransformer, transform_single_and_multi_value_headers) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -164,10 +148,6 @@ TEST(ApiGatewayTransformer, transform_single_and_multi_value_headers) {
 }
 
 TEST(ApiGatewayTransformer, transform_non_string_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -185,7 +165,7 @@ TEST(ApiGatewayTransformer, transform_non_string_headers) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -216,17 +196,13 @@ TEST(ApiGatewayTransformer, transform_non_string_headers) {
 }
 
 TEST(ApiGatewayTransformer, base64decode) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{ \"isBase64Encoded\": true, \"statusCode\": 201,"
             "\"body\": \"SGVsbG8gZnJvbSBMYW1iZGEgKG9wdGlvbmFsKQ==\"}");
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
 
@@ -235,10 +211,6 @@ TEST(ApiGatewayTransformer, base64decode) {
 }
 
 TEST(ApiGatewayTransformer, multiple_single_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{"
       "\"statusCode\": 200,"
@@ -253,7 +225,7 @@ TEST(ApiGatewayTransformer, multiple_single_headers) {
 
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   std::string res = body.toString();
   json actual = json::parse(res);
@@ -271,15 +243,11 @@ TEST(ApiGatewayTransformer, multiple_single_headers) {
 }
 
 TEST(ApiGatewayTransformer, error) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{invalid json}");
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+  transformer.transform(response_headers, body, filter_callbacks_);
 
   EXPECT_EQ(response_headers.getStatusValue(), "500");
   EXPECT_EQ(response_headers.get(Http::LowerCaseString("content-type"))[0]->value().getStringView(), "text/plain");
