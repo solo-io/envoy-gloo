@@ -76,8 +76,8 @@ private:
   };
   virtual void setupTransformationPair();
 
-  bool requestActive() { return request_transformation_ != nullptr; }
-  bool responseActive() { return response_transformation_ != nullptr; }
+  bool hasRequestTransformation() { return request_transformation_ != nullptr; }
+  bool hasResponseTransformation() { return response_transformation_ != nullptr; }
   void requestError();
   void responseError();
   void error(Error error, std::string msg = "");
@@ -93,7 +93,8 @@ private:
                      TransformerConstSharedPtr transformation,
                      Http::RequestOrResponseHeaderMap &header_map,
                      Buffer::Instance &body,
-                     void (TransformationFilter::*responeWithError)(),
+                     Envoy::Stats::Counter *inc_counter,
+                     void (TransformationFilter::*respondWithError)(),
                      void (TransformationFilter::*addData)(Buffer::Instance &));
 
   void resetInternalState();
@@ -114,7 +115,7 @@ private:
   OnStreamCompleteTransformerConstSharedPtr on_stream_completion_transformation_;
   absl::optional<Error> error_;
   Http::Code error_code_;
-  std::string error_messgae_;
+  std::string error_message_;
   bool should_clear_cache_{};
   bool destroyed_{};
 

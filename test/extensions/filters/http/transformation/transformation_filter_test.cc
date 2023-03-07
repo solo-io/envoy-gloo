@@ -742,7 +742,7 @@ TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
   res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
 
-  // Raise an arbitrary error during a call that is triggeres
+  // Raise an arbitrary error during a call that is triggered
   // during the Inja header transformer
   ON_CALL(encoder_filter_callbacks_, clusterInfo())
         .WillByDefault(Throw(std::runtime_error("arbitrary error")));

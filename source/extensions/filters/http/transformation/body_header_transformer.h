@@ -32,6 +32,7 @@ class BodyHeaderResponseTransformer : public ResponseTransformer, public BodyHea
 public:
   BodyHeaderResponseTransformer();
   void transform(Http::ResponseHeaderMap &response_headers,
+                 Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &cb) const override;
   bool passthrough_body() const override { return BodyHeaderTransformer::passthrough_body(); };
