@@ -475,12 +475,14 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
   EXPECT_EQ(expected_request, actual_request);
 
   json actual_response = json::parse(response->body());
+  // remove the `x-envoy-upstream-service-time` since its
+  // value depends on how long the test took to run
+  actual_response["headers"].erase("x-envoy-upstream-service-time");
   auto expected_response = R"( 
   {
     "headers": {
       ":status":"200",
-      "content-length":"0",
-      "x-envoy-upstream-service-time":"0"
+      "content-length":"0"
    }
    }
 )"_json;

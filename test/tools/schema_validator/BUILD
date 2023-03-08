@@ -1,5 +1,4 @@
 load(
-
     "envoy_cc_test_binary",
     "envoy_package",
 )
@@ -14,5 +13,3 @@ envoy_cc_test_binary(
     repository = "",
     deps = [],
 )
-
-

@@ -1,0 +1,55 @@
+steps:
+- name: 'envoyproxy/envoy-build-ubuntu:b0ff77ae3f25b0bf595f9b8bba46b489723ab446'
+  args: ['ci/do_ci.sh', 'bazel.release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+  env:
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  - 'BUILD_TYPE=$_BUILD_TYPE'
+  secretEnv:
+  - 'GCP_SERVICE_ACCOUNT_KEY'
+
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
+  env:
+  - 'TAGGED_VERSION=$TAG_NAME'
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  secretEnv:
+    - 'QUAY_IO_PASSWORD'
+    - 'GCP_SERVICE_ACCOUNT_KEY'
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+
+- name: gcr.io/cloud-builders/gsutil
+  entrypoint: 'bash'
+  args:
+  - '-ec'
+  - |
+    if [ -z "$$TAGGED_VERSION" ]; then exit 0; fi
+    gsutil cp ./linux/amd64/build_envoy_release_stripped/envoy gs://solo-public-artifacts.solo.io/envoy/$${TAGGED_VERSION}/envoy.stripped
+  id: 'save-tagged-version'
+  env:
+  - 'TAGGED_VERSION=$TAG_NAME'
+
+options:
+  machineType: 'N1_HIGHCPU_32'
+timeout: 7200s
+
+artifacts:
+  objects:
+    location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
+    paths: ['linux/amd64/build_envoy_release/envoy']
+
+availableSecrets:
+  inline:
+   - kmsKeyName: projects/solo-public/locations/global/keyRings/build/cryptoKeys/build-key
+     envMap:
+       QUAY_IO_PASSWORD: 'CiQABlzmSRx5TcOqbldXa/d/+bkmAfpNAWa3PTS06WvuloZL+vASaQCCPGSGCogonVZVEUNx4G3YJtWi18gSuNx4PvLe08q8xAflTMFkjsyQirAOK3Y2oCvgYwiw/ITcuydjkpMjxDygFyENXS9FKFJoAXHlPQE5qidKr8xxmxF5ezhmjGB0gjyjXIIkbSEnBg=='
+  secretManager:
+    - versionName: projects/gloo-ee/secrets/envoy-build-cache-sa/versions/2
+      env: 'GCP_SERVICE_ACCOUNT_KEY'
