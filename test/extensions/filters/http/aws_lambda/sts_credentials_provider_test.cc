@@ -55,38 +55,38 @@ public:
   void SetUp() override {
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
 
-    sts_connection_pool_ = new testing::NiceMock<MockStsConnectionPool>();
+    sts_connection_pool_ = std::make_unique<testing::NiceMock<MockStsConnectionPool>>();
     sts_chained_connection_pool_ =
-         new testing::NiceMock<MockStsConnectionPool>();
+         std::make_unique<testing::NiceMock<MockStsConnectionPool>>();
     sts_connection_pool_factory_ =
-        new testing::NiceMock<MockStsConnectionPoolFactory>();
+        std::make_unique<testing::NiceMock<MockStsConnectionPoolFactory>>();
   }
 
   envoy::config::filter::http::aws_lambda::v2::
       AWSLambdaConfig_ServiceAccountCredentials config_;
   testing::NiceMock<Server::Configuration::MockFactoryContext>
       mock_factory_ctx_;
-  testing::NiceMock<MockStsConnectionPoolFactory> *sts_connection_pool_factory_;
-  testing::NiceMock<MockStsConnectionPool> *sts_connection_pool_;
-  testing::NiceMock<MockStsConnectionPool> *sts_chained_connection_pool_;
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> sts_connection_pool_factory_;
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> sts_connection_pool_;
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> sts_chained_connection_pool_;
 };
 
 TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   // Setup
   std::string role_arn = "test_arn";
   std::string token = "test_token";
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
-      sts_connection_pool_factory_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
+  auto* factory = factory_.get();
   auto sts_provider = StsCredentialsProvider::create(
       config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
       std::move(factory_), token, role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool{
-      sts_connection_pool_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool = std::move(sts_connection_pool_);
+  auto* sts_connection_pool = unique_pool.get();
   StsConnectionPool::Callbacks *credentials_provider_callbacks;
 
-  EXPECT_CALL(*sts_connection_pool_factory_, build(_, _, _, _))
+  EXPECT_CALL(*factory, build(_, _, _, _))
       .WillOnce(Invoke([&](const absl::string_view cache_lookup_arg,
                            const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
@@ -97,7 +97,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
@@ -105,14 +105,14 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
       }));
-  EXPECT_CALL(*sts_connection_pool_, add(_));
+  EXPECT_CALL(*sts_connection_pool, add(_));
 
   sts_provider->find(role_arn, false, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
-  EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
-  EXPECT_CALL(*sts_connection_pool_, add(_));
+  EXPECT_CALL(*sts_connection_pool, requestInFlight()).WillOnce(Return(true));
+  EXPECT_CALL(*sts_connection_pool, add(_));
 
   sts_provider->find(role_arn, false, &ctx_callbacks_2);
 
@@ -158,22 +158,22 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   std::string base_role_arn = "test_arn";
   std::string role_arn = "test_arn_chained";
   std::string token = "test_token";
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
-      sts_connection_pool_factory_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
+  auto* factory = factory_.get();
   auto sts_provider = StsCredentialsProvider::create(
       config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
       std::move(factory_), token, base_role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool{
-      sts_connection_pool_};
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_chained_pool{
-      sts_chained_connection_pool_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool = std::move(sts_connection_pool_);
+  auto* sts_connection_pool = unique_pool.get();
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_chained_pool =std::move(sts_chained_connection_pool_);
+  auto* chained_pool = unique_chained_pool.get();
   StsConnectionPool::Callbacks *credentials_provider_callbacks;
   StsConnectionPool::Callbacks *credentials_provider_callbacks_chained;
   
   // Expect to see the chained pool created first and then the base pool
-  EXPECT_CALL(*sts_connection_pool_factory_, build(_, _, _, _))
+  EXPECT_CALL(*factory, build(_, _, _, _))
       .WillOnce(Invoke([&](const absl::string_view cache_lookup_arg,
                            const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
@@ -193,7 +193,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
       }));
     
   // expect the base pool to be initialized with fetch
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
@@ -202,21 +202,21 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
         EXPECT_EQ(uri.cluster(), config_.cluster());
       }));
 
-  EXPECT_CALL(*sts_chained_connection_pool_, setInFlight());
-  EXPECT_CALL(*sts_chained_connection_pool_, add(_));
+  EXPECT_CALL(*chained_pool, setInFlight());
+  EXPECT_CALL(*chained_pool, add(_));
 
   sts_provider->find(role_arn, false, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
-  EXPECT_CALL(*sts_chained_connection_pool_, 
+  EXPECT_CALL(*chained_pool,
     requestInFlight()).WillOnce(Return(true));
-  EXPECT_CALL(*sts_chained_connection_pool_, add(_));
+  EXPECT_CALL(*chained_pool, add(_));
   sts_provider->find(role_arn, false, &ctx_callbacks_2);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_3;
-  EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
-  EXPECT_CALL(*sts_connection_pool_, add(_));
+  EXPECT_CALL(*sts_connection_pool, requestInFlight()).WillOnce(Return(true));
+  EXPECT_CALL(*sts_connection_pool, add(_));
   sts_provider->find(base_role_arn, false, &ctx_callbacks_3);
 
   // place credentials in the cache
@@ -243,18 +243,21 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
   std::string role_arn = "test_arn";
   std::string cache_arn = "no-chain-test_arn";
   std::string token = "test_token";
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_{
-      sts_connection_pool_factory_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(
+      sts_connection_pool_factory_);
+  auto* factory = factory_.get();
+
   auto sts_provider = StsCredentialsProvider::create(
       config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
       std::move(factory_), token, role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
-  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool{
-      sts_connection_pool_};
+  std::unique_ptr<testing::NiceMock<MockStsConnectionPool>> unique_pool = std::move(
+      sts_connection_pool_);
+  auto* sts_connection_pool = unique_pool.get();
   StsConnectionPool::Callbacks *credentials_provider_callbacks;
 
-  EXPECT_CALL(*sts_connection_pool_factory_, build(_, _, _, _))
+  EXPECT_CALL(*factory, build(_, _, _, _))
       .WillOnce(Invoke([&](const absl::string_view cache_lookup_role,
                            const absl::string_view role_arn_arg,
                            StsConnectionPool::Callbacks *callbacks,
@@ -266,7 +269,7 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
@@ -274,14 +277,14 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
       }));
-  EXPECT_CALL(*sts_connection_pool_, add(_));
+  EXPECT_CALL(*sts_connection_pool, add(_));
 
   sts_provider->find(role_arn, true, &ctx_callbacks_1);
 
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_2;
 
-  EXPECT_CALL(*sts_connection_pool_, requestInFlight()).WillOnce(Return(true));
-  EXPECT_CALL(*sts_connection_pool_, add(_));
+  EXPECT_CALL(*sts_connection_pool, requestInFlight()).WillOnce(Return(true));
+  EXPECT_CALL(*sts_connection_pool, add(_));
 
   sts_provider->find(role_arn, true, &ctx_callbacks_2);
 
