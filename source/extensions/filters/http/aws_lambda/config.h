@@ -161,6 +161,7 @@ private:
   std::string token_file_;
   std::string web_token_;
   std::string role_arn_;
+
   std::shared_ptr<AWSLambdaStsRefresher> sts_refresher_;
 
   Event::TimerPtr timer_;

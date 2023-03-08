@@ -116,7 +116,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
   }
 
   if (end_stream) {
-    lambdafy();
+    finalizeRequest();
     return Http::FilterHeadersStatus::Continue;
   }
 
@@ -124,7 +124,7 @@ AWSLambdaFilter::decodeHeaders(Http::RequestHeaderMap &headers,
 }
 
 
-Http::FilterHeadersStatus 
+Http::FilterHeadersStatus
 AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool end_stream) {
 
   if (!headers.get(AWSLambdaHeaderNames::get().FunctionError).empty()){
@@ -140,10 +140,10 @@ AWSLambdaFilter::encodeHeaders(Http::ResponseHeaderMap &headers, bool end_stream
 }
 
 Http::FilterDataStatus AWSLambdaFilter::encodeData(
-                                      Buffer::Instance &data, bool end_stream ){  
+                                      Buffer::Instance &data, bool end_stream ){
 
   if (state_ == State::Destroyed){
-    // Safety against use after free if we exceed buffer limit 
+    // Safety against use after free if we exceed buffer limit
     // during modifications. This should never happen as we only shrink.
     ENVOY_LOG(debug, "{}: attempted operations while destroyed", __func__);
     return Http::FilterDataStatus::StopIterationNoBuffer;
@@ -160,12 +160,12 @@ Http::FilterDataStatus AWSLambdaFilter::encodeData(
   }
   encoder_callbacks_->addEncodedData(data, false);
   finalizeResponse();
-  
+
 
   return Http::FilterDataStatus::Continue;
 }
 
-Http::FilterTrailersStatus 
+Http::FilterTrailersStatus
 AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
 
   if (!isResponseTransformationNeeded()){
@@ -173,7 +173,7 @@ AWSLambdaFilter::encodeTrailers(Http::ResponseTrailerMap &) {
   }
   // Future proof against alb http2 support and finalize the data transform
   finalizeResponse();
-  
+
   return Http::FilterTrailersStatus::Continue;
 }
 
@@ -205,19 +205,19 @@ void AWSLambdaFilter::finalizeResponse(){
   response_headers_->setContentLength(buff.length());
 }
 
-bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers, 
+bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
                 const Buffer::Instance& json_buf, Buffer::Instance& body) {
 
-  ProtobufWkt::Struct alb_response;                
+  ProtobufWkt::Struct alb_response;
   try {
     MessageUtil::loadFromJson(json_buf.toString(), alb_response);
   } catch (EnvoyException& ex) {
-    ENVOY_LOG(debug, "{}: alb_unwrap set but did not recieve a json payload", 
+    ENVOY_LOG(debug, "{}: alb_unwrap set but did not recieve a json payload",
                                                    functionOnRoute()->path());
     headers.setStatus(static_cast<int>(Http::Code::InternalServerError));
     return true;
   }
-  
+
   const auto& flds = alb_response.fields();
   if (flds.contains("body")) {
     auto rawBody = flds.at("body").string_value();
@@ -241,7 +241,7 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
   if (flds.contains("headers")){
     const auto& hds = flds.at("headers").struct_value();
     const auto& hdsFields = hds.fields();
-    for (auto const& hdrEntry : hdsFields) { 
+    for (auto const& hdrEntry : hdsFields) {
       headers.addCopy(Http::LowerCaseString(hdrEntry.first),
                              hdrEntry.second.string_value());
     }
@@ -251,7 +251,7 @@ bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
   if (flds.contains("multiValueHeaders")){
     const auto& hds = flds.at("multiValueHeaders").struct_value();
     const auto& hdsFields = hds.fields();
-    for (auto const& hdrEntry : hdsFields) { 
+    for (auto const& hdrEntry : hdsFields) {
       const auto& list = hdrEntry.second.list_value();
       for (auto const& val : list.values()){
         headers.addCopy(Http::LowerCaseString(hdrEntry.first),
@@ -307,7 +307,7 @@ void AWSLambdaFilter::onSuccess(
     if (end_stream_) {
       // edge case where header only request was stopped, but now needs to be
       // lambdafied.
-      lambdafy();
+      finalizeRequest();
     }
     stopped_ = false;
     decoder_callbacks_->continueDecoding();
@@ -351,7 +351,7 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
     if (has_body_ && isRequestTransformationNeeded()) {
       decoder_callbacks_->addDecodedData(data, false);
     }
-    lambdafy();
+    finalizeRequest();
     return Http::FilterDataStatus::Continue;
   }
 
@@ -368,13 +368,13 @@ AWSLambdaFilter::decodeTrailers(Http::RequestTrailerMap &) {
   }
 
   if (function_on_route_ != nullptr) {
-    lambdafy();
+    finalizeRequest();
   }
 
   return Http::FilterTrailersStatus::Continue;
 }
 
-void AWSLambdaFilter::lambdafy() {
+void AWSLambdaFilter::finalizeRequest() {
   handleDefaultBody();
   if (isRequestTransformationNeeded()) {
       transformRequest();

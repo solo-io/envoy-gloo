@@ -17,7 +17,7 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-class Transformation {
+class Transformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
 public:
   static TransformerConstSharedPtr getTransformer(
       const envoy::api::v2::filter::http::Transformation &transformation,
@@ -99,10 +99,10 @@ public:
   ~TransformerExtensionFactory() override = default;
 
 /**
- * Create a particular transformation extension implementation from a config proto. If the 
+ * Create a particular transformation extension implementation from a config proto. If the
  * implementation is unable to produce a factory with the provided parameters, it should throw
  * EnvoyException. The returned pointer should never be nullptr.
- * @param config the custom configuration for this transformer exttension type.
+ * @param config the custom configuration for this transformer extension type.
  */
   virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
     Server::Configuration::CommonFactoryContext &context) PURE;
