@@ -85,10 +85,10 @@ void BodyHeaderTransformer::parse_headers(
  
                 // Then, ensure all existing values are in the multiValueHeaders vector
                 if (multi_value_headers[header_key].empty()) {
-                    multi_value_headers[header_key].push_back(existing_header_value);
+                    multi_value_headers[header_key].emplace_back(existing_header_value);
                 }
 
-                multi_value_headers[header_key].push_back(header_value);
+                multi_value_headers[header_key].emplace_back(header_value);
             }
             return Http::HeaderMap::Iterate::Continue;
         });
@@ -122,6 +122,9 @@ void BodyHeaderTransformer::parse_query_string(
       }
     }
 }
+
+// explain the differences between push_back and emplace_back:
+// the diff
 
 // Modified version of Envoy::Http::Utility::parseParameters which supports
 // multi-value query params
