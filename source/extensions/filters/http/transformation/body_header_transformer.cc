@@ -24,9 +24,9 @@ void BodyHeaderTransformer::transform(
     json_body["body"] = body.toString();
   }
 
-  auto headers = std::map<std::string, absl::string_view>{};
+  auto headers = std::map<std::string, std::string>{};
   // multi_value_headers will not be populated if add_request_metadata_ is false
-  auto multi_value_headers = std::map<std::string, std::vector<absl::string_view>>{};
+  auto multi_value_headers = std::map<std::string, std::vector<std::string>>{};
   parse_headers(header_map, headers, multi_value_headers);
   json_body["headers"] = headers;
 
@@ -69,27 +69,30 @@ void BodyHeaderTransformer::transform(
 
 void BodyHeaderTransformer::parse_headers(
   const Http::RequestOrResponseHeaderMap &header_map,
-  std::map<std::string, absl::string> &headers,
-  std::map<std::string, std::vector<absl::string>> &multi_value_headers) const {
+  std::map<std::string, std::string> &headers,
+  std::map<std::string, std::vector<std::string>> &multi_value_headers) const {
     if (add_request_metadata_) {
       header_map.iterate(
         [&headers, &multi_value_headers](const Http::HeaderEntry& header) -> Http::HeaderMap::Iterate {
             auto header_key = std::string(header.key().getStringView());
             auto header_value = std::string(header.value().getStringView());
-            if (headers[header_key].empty()) {
-                headers[header_key] = header_value;
-            } else {
-                // If there are more than one headers with the same key, use the last one
-                auto existing_header_value = headers[header_key];
-                headers[header_key] = header_value;
- 
-                // Then, ensure all existing values are in the multiValueHeaders vector
-                if (multi_value_headers[header_key].empty()) {
-                    multi_value_headers[header_key].emplace_back(existing_header_value);
-                }
+            // If there are more than one headers with the same key, use the last one
+            auto existing_header_value = headers[header_key];
+            headers[header_key] = header_value;
 
-                multi_value_headers[header_key].emplace_back(header_value);
+            // If there is no existing value, we don't need to do anything else
+            if (existing_header_value.empty()) {
+                return Http::HeaderMap::Iterate::Continue;
             }
+
+            // If this is the second time we've seen this header, we need to add the first value to
+            // multi_value_headers
+            if (multi_value_headers[header_key].empty()) {
+                multi_value_headers[header_key].emplace_back(existing_header_value);
+            }
+
+            // Add the current value to multi_value_headers
+            multi_value_headers[header_key].emplace_back(header_value);
             return Http::HeaderMap::Iterate::Continue;
         });
     } else {
