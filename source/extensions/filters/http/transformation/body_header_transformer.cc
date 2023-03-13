@@ -69,13 +69,13 @@ void BodyHeaderTransformer::transform(
 
 void BodyHeaderTransformer::parse_headers(
   const Http::RequestOrResponseHeaderMap &header_map,
-  std::map<std::string, absl::string_view> &headers,
-  std::map<std::string, std::vector<absl::string_view>> &multi_value_headers) const {
+  std::map<std::string, absl::string> &headers,
+  std::map<std::string, std::vector<absl::string>> &multi_value_headers) const {
     if (add_request_metadata_) {
       header_map.iterate(
         [&headers, &multi_value_headers](const Http::HeaderEntry& header) -> Http::HeaderMap::Iterate {
             auto header_key = std::string(header.key().getStringView());
-            auto header_value = header.value().getStringView();
+            auto header_value = std::string(header.value().getStringView());
             if (headers[header_key].empty()) {
                 headers[header_key] = header_value;
             } else {
@@ -96,7 +96,7 @@ void BodyHeaderTransformer::parse_headers(
       header_map.iterate(
       [&headers](const Http::HeaderEntry &header) -> Http::HeaderMap::Iterate {
         headers[std::string(header.key().getStringView())] =
-            header.value().getStringView();
+            std::string(header.value().getStringView());
         return Http::HeaderMap::Iterate::Continue;
       });
     }
@@ -122,9 +122,6 @@ void BodyHeaderTransformer::parse_query_string(
       }
     }
 }
-
-// explain the differences between push_back and emplace_back:
-// the diff
 
 // Modified version of Envoy::Http::Utility::parseParameters which supports
 // multi-value query params
