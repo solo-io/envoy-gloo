@@ -2,7 +2,7 @@ changelog:
 - type: NEW_FEATURE
   issueLink: https://github.com/solo-io/solo-projects/issues/4571
   resolvesIssue: false
-  description: >
+  description: >-
     Adds support for queryStringParameters, multiValueQueryStringParameters, and
     multiValueHeaders to the requestTransformation feature in the transformation
     filter. This feature is leveraged by the requestTransformation setting in our
