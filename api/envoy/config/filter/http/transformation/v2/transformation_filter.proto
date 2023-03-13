@@ -264,6 +264,10 @@ message MergeExtractorsToBody {}
 message HeaderBodyTransform {
   // When transforming a request, setting this to true will additionally add
   // "queryString", "queryStringParameters", "multiValueQueryStringParameters",
-  // "multiValueHeaders", "httpMethod" and "path" to the body
+  // "multiValueHeaders", "httpMethod" and "path" to the body.
+  // NOTE: To match the AWS API Gateway spec, multiValueQueryStringParameters
+  // and multiValueHeaders only contain query params and headers with multiple
+  // values. Query params and Headers with a single value will not be present
+  // in the multiValue fields.
   bool add_request_metadata = 1;
 }
