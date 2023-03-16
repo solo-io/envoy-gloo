@@ -1,0 +1,6 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Refactor transformation filter to use discrete `RequestTransformer`, `ResponseTransformer`, and `OnStreamCompleteTransformer`.
+    In this way, we can have more safety around transformers that may only be run in a particular case, or may behave differently
+    depending on when they are running.
