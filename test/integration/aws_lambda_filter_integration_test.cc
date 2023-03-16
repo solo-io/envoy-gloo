@@ -245,7 +245,6 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTS) {
   waitForNextUpstreamRequest(0, timeout);
   upstream_request_->encodeHeaders(default_response_headers_, false);
   upstream_request_->encodeData(VALID_CHAINED_RESPONSE, true);
-  upstream_request_.reset();
 
   // second upstream request is the "lambda" request.
   waitForNextUpstreamRequest(0, timeout);

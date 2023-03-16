@@ -44,7 +44,7 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
     : stats_(generateStats(stats_prefix, scope)), api_(api),
-      file_watcher_(dispatcher.createFilesystemWatcher()), tls_(tls),
+      tls_(tls),
       credential_refresh_delay_(std::chrono::milliseconds(
         DurationUtil::durationToMilliseconds(
           protoconfig.credential_refresh_delay()))),
@@ -88,13 +88,20 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
       return std::make_shared<ThreadLocalCredentials>(
           std::move(sts_cred_provider));
     });
-    sts_enabled_ = true;
+    sts_refresher_ = std::make_shared<AWSLambdaStsRefresher>(this, dispatcher);
+    sts_refresher_->init(dispatcher);
     break;
   }
   case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
       CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
     break;
   }
+  }
+}
+
+AWSLambdaConfigImpl::~AWSLambdaConfigImpl() {
+  if (sts_refresher_) {
+    sts_refresher_->cancel();
   }
 }
 
@@ -127,8 +134,19 @@ void AWSLambdaConfigImpl::loadSTSData() {
   this->stats_.webtoken_state_.set(1);
 }
 
-void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
-  if (sts_enabled_) {
+
+AWSLambdaConfigImpl::AWSLambdaStsRefresher::AWSLambdaStsRefresher(AWSLambdaConfigImpl* parent,
+       Event::Dispatcher &dispatcher) :
+       parent_(parent),
+       file_watcher_(dispatcher.createFilesystemWatcher()) {
+}
+
+void AWSLambdaConfigImpl::AWSLambdaStsRefresher::cancel() {
+  file_watcher_.reset();
+  timer_.reset();
+}
+
+void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatcher) {
     // Set up a filewatch and timer for sts token upating.
     auto shared_this = shared_from_this();
 
@@ -137,17 +155,17 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
     shared_this->timer_ = dispatcher.createTimer([shared_this] {
         try {
 
-            const auto web_token = shared_this->api_.fileSystem().fileReadToEnd(
-                shared_this->token_file_);
-             shared_this->stats_.webtoken_rotated_.inc();
+            const auto web_token = shared_this->parent_->api_.fileSystem().fileReadToEnd(
+                shared_this->parent_->token_file_);
+             shared_this->parent_->stats_.webtoken_rotated_.inc();
              // We enforce that it should not be empty at start up
              // but are more lenient at this point.
             if (web_token == "") {
-              shared_this->stats_.webtoken_state_.set(0);
-              shared_this->stats_.webtoken_failure_.inc();
+              shared_this->parent_->stats_.webtoken_state_.set(0);
+              shared_this->parent_->stats_.webtoken_failure_.inc();
             }else{
-              shared_this->stats_.webtoken_state_.set(1);
-              shared_this->tls_.runOnAllThreads(
+              shared_this->parent_->stats_.webtoken_state_.set(1);
+              shared_this->parent_->tls_.runOnAllThreads(
                   [web_token](OptRef<ThreadLocalCredentials> prev_config) {
                     prev_config->sts_credentials_->setWebToken(web_token);
                   });
@@ -158,30 +176,29 @@ void AWSLambdaConfigImpl::init(Event::Dispatcher &dispatcher) {
             ENVOY_LOG_TO_LOGGER(
                 Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,
                 "{}: Exception while reading web token file ({}): {}",
-                __func__, shared_this->token_file_, e.what());
+                __func__, shared_this->parent_->token_file_, e.what());
           }
 
         // re-enable refresh te timer with paranoid short time
         // Time decided given min plausible web_token life of 1 hour in AWS
-        if (shared_this->credential_refresh_delay_.count() > 0){
+        if (shared_this->parent_->credential_refresh_delay_.count() > 0){
             shared_this->timer_->enableTimer(
-                                shared_this->credential_refresh_delay_);
+                                shared_this->parent_->credential_refresh_delay_);
         }
      });
-    if (credential_refresh_delay_.count() > 0){
+    if (parent_->credential_refresh_delay_.count() > 0) {
           ENVOY_LOG(debug, "{}: STS enabled with {} time refresh",
-       __func__, shared_this->credential_refresh_delay_.count());
-      shared_this->timer_->enableTimer(shared_this->credential_refresh_delay_);
+       __func__, shared_this->parent_->credential_refresh_delay_.count());
+      timer_->enableTimer(shared_this->parent_->credential_refresh_delay_);
     } else {
         ENVOY_LOG(debug, "{}: STS enabled without time based refresh",__func__);
     }
     file_watcher_->addWatch(
-        token_file_, Filesystem::Watcher::Events::Modified,
+        parent_->token_file_, Filesystem::Watcher::Events::Modified,
         [shared_this](uint32_t) {
           // Force timer callback to happen immediately to pick up the change.
           shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
         });
-  }
 }
 
 /*
@@ -217,7 +234,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
     return nullptr;
   }
 
-  if (sts_enabled_) {
+  if (sts_refresher_ != nullptr) {
     ENVOY_LOG(trace, "{}: Credentials being retrieved from STS provider",
               __func__);
     return tls_->sts_credentials_->find(ext_cfg->roleArn(),
@@ -257,24 +274,6 @@ void AWSLambdaConfigImpl::timerCallback() {
     // re-enable refersh timer
     timer_->enableTimer(REFRESH_AWS_CREDS);
   }
-}
-
-std::shared_ptr<AWSLambdaConfigImpl> AWSLambdaConfigImpl::create(
-    std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProvider>
-        &&provider,
-    std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
-    Event::Dispatcher &dispatcher, Api::Api &api,
-    Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
-    Stats::Scope &scope,
-    const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
-        &protoconfig) {
-  // We can't use make_shared here because the constructor of this class is
-  // private.
-  std::shared_ptr<AWSLambdaConfigImpl> ptr(new AWSLambdaConfigImpl(
-      std::move(provider), std::move(sts_factory), dispatcher, api, tls,
-      stats_prefix, scope, protoconfig));
-  ptr->init(dispatcher);
-  return ptr;
 }
 
 AwsLambdaFilterStats

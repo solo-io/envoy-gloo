@@ -49,6 +49,7 @@ void ApiGatewayTransformer::format_error(
 
 void ApiGatewayTransformer::transform(
     Http::ResponseHeaderMap &response_headers,
+    Http::RequestHeaderMap *,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
       ENVOY_STREAM_LOG(debug, "Transforming response", stream_filter_callbacks);

@@ -243,11 +243,15 @@ TEST(ApiGatewayTransformer, multiple_single_headers) {
 }
 
 TEST(ApiGatewayTransformer, error) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
   Http::TestResponseHeaderMapImpl response_headers{};
   Buffer::OwnedImpl body("{invalid json}");
   ApiGatewayTransformer transformer;
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, body, filter_callbacks_);
+  transformer.transform(response_headers, &headers, body, filter_callbacks_);
 
   EXPECT_EQ(response_headers.getStatusValue(), "500");
   EXPECT_EQ(response_headers.get(Http::LowerCaseString("content-type"))[0]->value().getStringView(), "text/plain");

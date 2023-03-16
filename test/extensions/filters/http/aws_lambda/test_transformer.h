@@ -85,6 +85,7 @@ public:
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
   void transform (Http::ResponseHeaderMap &headers,
+                  Http::RequestHeaderMap *,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &cb) const override {
       fakeTransform(headers, body, cb);
