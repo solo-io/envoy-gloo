@@ -1,0 +1,6 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update alpine glibc for scanners that dont account for our apk upgrades. Eventually we will move to distroless like upstream
+  dependencyOwner: frolvlad
+  dependencyRepo: alpine-glibc
+  dependencyTag: 7590d4e652d5a43834384b640652a6008aebf9d1f9a7400ade09b29daffd5aa2
