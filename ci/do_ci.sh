@@ -12,11 +12,11 @@ cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
 # cp -f $UPSTREAM_ENVOY_SRCDIR/bazel/get_workspace_status $SOURCE_DIR/bazel/get_workspace_status
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
+cp -f $UPSTREAM_ENVOY_SRCDIR/VERSION.txt $SOURCE_DIR/VERSION.txt
 
 # upstream removed the flaky_test
 mkdir -p $SOURCE_DIR/ci/flaky_test
-# Shooting in the dark here since I cannot view logs. These were removed upstream
-# but the build seems to fail here.
+# These were removed upstream but the build seems to fail here.
 if [[ -d "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]] || [[ -f "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]]; then
   cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
 fi
