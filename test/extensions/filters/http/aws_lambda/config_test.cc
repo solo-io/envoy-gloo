@@ -83,7 +83,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  auto config = AWSLambdaConfigImpl::create(
+  auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
@@ -149,7 +149,7 @@ TEST_F(ConfigTest, FailingToRotate) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  auto config = AWSLambdaConfigImpl::create(
+  auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
@@ -199,7 +199,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  auto config = AWSLambdaConfigImpl::create(
+  auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
@@ -279,7 +279,7 @@ TEST_F(ConfigTest, WithStsCreds) {
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
-  auto config = AWSLambdaConfigImpl::create(
+  auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
       context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 

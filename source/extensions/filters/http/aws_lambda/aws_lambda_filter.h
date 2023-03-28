@@ -21,14 +21,13 @@ namespace HttpFilters {
 namespace AwsLambda {
 
 /*
- * A filter to make calls to AWS Lambda. Note that as a functional filter,
- * it expects retrieveFunction to be called before decodeHeaders.
+ * A filter to make calls to AWS Lambda.
  */
 class AWSLambdaFilter : public Http::StreamFilter,
                         StsConnectionPool::Context::Callbacks,
                         Logger::Loggable<Logger::Id::filter> {
 public:
-  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api, 
+  AWSLambdaFilter(Upstream::ClusterManager &cluster_manager, Api::Api &api,
                   AWSLambdaConfigConstSharedPtr filter_config);
   ~AWSLambdaFilter();
 
@@ -62,13 +61,13 @@ public:
 
   Http::FilterTrailersStatus
   encodeTrailers(Http::ResponseTrailerMap &) override;
-  
+
   Http::FilterMetadataStatus encodeMetadata(Http::MetadataMap &) override {
     return Http::FilterMetadataStatus::Continue;
   }
 
   void setEncoderFilterCallbacks(
-              Http::StreamEncoderFilterCallbacks &encoder_callbacks) override { 
+              Http::StreamEncoderFilterCallbacks &encoder_callbacks) override {
     encoder_callbacks_ = &encoder_callbacks;
   }
 
@@ -80,7 +79,7 @@ public:
   const AWSLambdaRouteConfig  * functionOnRoute() {
     return function_on_route_;
   }
-  
+
   // Used by unit tests to gain access to the authenticator
   const AwsAuthenticator  awsAuthenticator() {
     return aws_authenticator_;
@@ -91,9 +90,9 @@ private:
 
   void handleDefaultBody();
 
-  void lambdafy();
+  void finalizeRequest();
   void finalizeResponse();
-  bool parseResponseAsALB(Http::ResponseHeaderMap&, 
+  bool parseResponseAsALB(Http::ResponseHeaderMap&,
                           const Buffer::Instance&, Buffer::Instance&);
   bool isResponseTransformationNeeded();
   bool isRequestTransformationNeeded();

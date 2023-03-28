@@ -16,6 +16,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/aws_lambda:aws_lambda_filter_config_lib",
+        "//source/extensions/transformers/aws_lambda:api_gateway_transformer_lib",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
     ],

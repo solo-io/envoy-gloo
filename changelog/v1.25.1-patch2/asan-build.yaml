@@ -1,0 +1,8 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/pull/481
+  resolvesIssue: true
+  description:
+      Enables ASAN builds in CI. All CI runs should automatically run our unit
+      tests through ASAN to prevent memory leaks, use after free, etc.
+

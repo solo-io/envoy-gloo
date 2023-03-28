@@ -33,9 +33,10 @@ TransformerConstSharedPtr Transformation::getTransformer(
   }
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
-    // TODO: return null here?
+    ENVOY_LOG(trace, "Request transformation type not set");
+    FALLTHRU;
   default:
-    throw EnvoyException("non existant transformation");
+    throw EnvoyException("non existent transformation");
   }
 }
 

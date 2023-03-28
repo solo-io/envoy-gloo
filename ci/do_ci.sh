@@ -43,8 +43,19 @@ export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 # sudo apt-get install google-perftools -y
 # export PPROF_PATH=$(which google-pprof)
 
+if [ "x${BUILD_TYPE:-}" != "x" ] ; then
+  BUILD_CONFIG="--config=$BUILD_TYPE"
+fi
+echo "$BUILD_CONFIG is ${BUILD_CONFIG}"
+
+echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/.bazelrc"
+
 echo Building
 sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools/schema_validator:schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
+
+$SOURCE_DIR/ci/static_analysis.sh
+
+echo "CI completed"
