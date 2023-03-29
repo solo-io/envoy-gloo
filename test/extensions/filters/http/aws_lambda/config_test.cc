@@ -12,13 +12,8 @@
 #include "gtest/gtest.h"
 
 using testing::_;
-using testing::AtLeast;
 using testing::Invoke;
 using testing::Return;
-using testing::ReturnPointee;
-using testing::ReturnRef;
-using testing::SaveArg;
-using testing::WithArg;
 
 namespace Envoy {
 namespace Extensions {
@@ -85,7 +80,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
+      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -151,7 +146,7 @@ TEST_F(ConfigTest, FailingToRotate) {
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
+      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config_1 =
       std::make_shared<const AWSLambdaProtocolExtensionConfig>(protoextconfig);
@@ -201,7 +196,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
+      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -281,7 +276,7 @@ TEST_F(ConfigTest, WithStsCreds) {
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
       std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", stats_, protoconfig);
+      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks;
 
