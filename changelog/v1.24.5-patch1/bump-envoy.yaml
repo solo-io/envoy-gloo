@@ -1,0 +1,12 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.24.5 for cve fixes
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependancyTag: 1.24.5
+  dependencyTag: a29f064197841454f4cc4de8a6c4a75e862d855d
+- type: DEPENDENCY_BUMP
+  description: Update alpine glibc for scanners that dont account for our apk upgrades. Eventually we will move to distroless like upstream
+  dependencyOwner: frolvlad
+  dependencyRepo: alpine-glibc
+  dependencyTag: alpine-3.17_glibc-2.34
