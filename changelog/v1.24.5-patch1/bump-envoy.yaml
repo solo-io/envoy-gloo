@@ -4,7 +4,7 @@ changelog:
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
   dependancyTag: 1.24.5
-  dependencyTag: 29f064197841454f4cc4de8a6c4a75e862d855d
+  dependencyTag: a29f064197841454f4cc4de8a6c4a75e862d855d
 - type: DEPENDENCY_BUMP
   description: Update alpine glibc for scanners that dont account for our apk upgrades. Eventually we will move to distroless like upstream
   dependencyOwner: frolvlad
