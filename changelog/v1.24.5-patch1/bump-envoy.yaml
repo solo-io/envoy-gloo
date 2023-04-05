@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  description: Update envoy to 1.24.5 for cve fixes
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependancyTag: 1.24.5
+  dependencyTag: 29f064197841454f4cc4de8a6c4a75e862d855d
