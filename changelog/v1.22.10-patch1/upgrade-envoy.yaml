@@ -5,3 +5,8 @@ changelog:
   dependencyRepo: envoy
   dependancyTag: 1.22.10
   dependencyTag: ad105d154ff3e422b8e9ccc8525d46a78ee88330
+- type: DEPENDENCY_BUMP
+  description: Update alpine glibc for scanners that dont account for our apk upgrades. Eventually we will move to distroless like upstream
+  dependencyOwner: frolvlad
+  dependencyRepo: alpine-glibc
+  dependencyTag: alpine-3.17_glibc-2.34

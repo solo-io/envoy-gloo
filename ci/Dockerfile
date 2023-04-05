@@ -1,7 +1,7 @@
 # This file was inspired by envoy Dockerfile:
 # https://github.com/envoyproxy/envoy/blob/445a67344ffda0c8828c8e438e463fcaa7878434/ci/Dockerfile-envoy-alpine
 
-FROM frolvlad/alpine-glibc@sha256:7b5e8e727246ea48bee1690e30f3fe35925ed9e437f87206870b2ba54fef833f
+FROM frolvlad/alpine-3.17_glibc-2.34
 
 ENV loglevel=info
 
