@@ -3,8 +3,11 @@ REPOSITORY_LOCATIONS = dict(
         # envoy fork starting from 1.25.4 with cherry-picks:
         # https://github.com/envoyproxy/envoy/pull/25856
         #   ^ add filter state matching input
+        #     https://github.com/envoyproxy/envoy/commit/f52d559e0479824b9c964e4c028fa373bcb9b767
         # https://github.com/envoyproxy/envoy/pull/26311
         #   ^ add dynamic metadata to MatchingData
+        #     https://github.com/solo-io/envoy-fork/commit/71359920812f13130e657c25913c8b174852daf4
+        #     https://github.com/ashishb-solo/envoy/tree/ashishb-solo/add-dynamic-metadata-to-matchingdata
         commit = "fa3b44a537def7ab966e2192e2693be9bede0446",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
