@@ -53,6 +53,8 @@ echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/.bazelrc"
 echo Building
 sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools/schema_validator:schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
+sed -i "s|VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
+sed -i "s|\${ENVOY_SRCDIR}/VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
 
