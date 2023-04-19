@@ -1,5 +1,5 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu:55d9e4719d2bd0accce8f829b44dab70cd42112a-amd64'
+- name: 'envoyproxy/envoy-build-ubuntu:2635f3db824bb06340102da51ea7e292133af038'
   args: ['ci/do_ci.sh', 'bazel.release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
   volumes:
   - name: 'vol-build'
