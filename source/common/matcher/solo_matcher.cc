@@ -187,7 +187,7 @@ MatcherConstPtr Matcher::create(const RouteMatch &match) {
   // path specifier is required.
   case RouteMatch::PathSpecifierCase::PATH_SPECIFIER_NOT_SET:
   default:
-    PANIC_DUE_TO_CORRUPT_ENUM;
+    NOT_REACHED_GCOVR_EXCL_LINE;
   }
 }
 

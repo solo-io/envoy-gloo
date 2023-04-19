@@ -32,8 +32,6 @@ TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
   envoy::api::v2::filter::http::Transformation transformation;
   auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
-  auto any = factoryConfig->mutable_typed_config();
-  any->set_type_url("type.googleapis.com/envoy.test.extensions.transformation.FakeTransformer");
   auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
   EXPECT_EQ(factory.name(), "io.solo.transformer.fake");
 }
@@ -47,7 +45,7 @@ TEST(Transformation, TestGetTransformer){
   auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
   auto any = factoryConfig->mutable_typed_config();
-  any->set_type_url("type.googleapis.com/envoy.test.extensions.transformation.FakeTransformer");
+  any->set_type_url("type.googleapis.com/envoy.config.transformer.xslt.v2.XsltTransformation");
   auto transformer = t.getTransformer(transformation, factory_context_);
   auto fakeTransformer = dynamic_cast<const Envoy::Extensions::Transformer::Fake::FakeTransformer *>(transformer.get());
   // if transformer is not fake transformer type, will return nullptr
