@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: TODO
+  description: >-
+    Use fork of envoy to backport CVE fixes announced April 4 onto unsupported v1.21
