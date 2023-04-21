@@ -132,15 +132,29 @@ std::string AwsAuthenticator::getBodyHexSha() {
   return hexpayload;
 }
 
+void AwsAuthenticator::setUrlBase(std::string url_base) {
+  url_base_ = url_base;
+}
+
 void AwsAuthenticator::fetchUrl() {
-  const Http::HeaderString &canonical_url = request_headers_->Path()->value();
-  url_base_ = canonical_url.getStringView();
-  query_string_ = Http::Utility::findQueryStringStart(canonical_url);
-  if (query_string_.length() != 0) {
-    url_base_.remove_suffix(query_string_.length());
-    // remove the question mark
-    query_string_.remove_prefix(1);
+  // if url_base_ is not defined, set it to the value of the path request header
+  if (url_base_.empty()) {
+    const Http::HeaderString &path = request_headers_->Path()->value();
+    url_base_ = std::string(path.getStringView());
   }
+
+  absl::string_view query_string_view = Http::Utility::findQueryStringStart(Http::HeaderString(url_base_));
+  query_string_ = std::string(query_string_view);
+  if (query_string_.length() != 0) {
+    // remove the query string from the url_base
+    url_base_ = url_base_.substr(0, url_base_.length() - query_string_.length());
+    // remove the ? from the query string
+    query_string_ = query_string_.substr(1);
+    std::cout << "query string is " << query_string_ << std::endl;
+  }
+
+  // although the URL base is already encode it, due to a bug in AWS we need to encode it again
+  url_base_ = Http::Utility::PercentEncoding::encode(url_base_, "%");
 }
 
 std::string AwsAuthenticator::computeCanonicalRequestHash(
@@ -187,6 +201,7 @@ AwsAuthenticator::getCredntialScope(const std::string &region,
   return credential_scope_stream.str();
 }
 
+// NTS: we compute signatures here
 std::string AwsAuthenticator::computeSignature(
     const std::string &region, const std::string &credentials_scope_date,
     const std::string &credential_scope, const std::string &request_date_time,
