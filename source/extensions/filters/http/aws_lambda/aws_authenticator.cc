@@ -201,7 +201,6 @@ AwsAuthenticator::getCredntialScope(const std::string &region,
   return credential_scope_stream.str();
 }
 
-// NTS: we compute signatures here
 std::string AwsAuthenticator::computeSignature(
     const std::string &region, const std::string &credentials_scope_date,
     const std::string &credential_scope, const std::string &request_date_time,
