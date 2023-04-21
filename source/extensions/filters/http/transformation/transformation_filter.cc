@@ -211,7 +211,7 @@ void TransformationFilter::transformRequest() {
 void TransformationFilter::transformResponse() {
   std::cout << "1" << std::endl;
   try {
-    response_transformation_->transform(*response_headers_, response_body_, *decoder_callbacks_);
+    response_transformation_->transform(*response_headers_, request_headers_, response_body_, *decoder_callbacks_);
   } catch (const std::exception &e) {
     error(Error::TemplateParseError, e.what());
     ENVOY_STREAM_LOG(debug,
@@ -257,7 +257,7 @@ void TransformationFilter::transformOnStreamCompletion() {
 
   try {
     std::cout << "!3" << std::endl;
-    on_stream_completion_transformation_->transform(*response_headers_,*request_headers_, emptyBody, *encoder_callbacks_);
+    on_stream_completion_transformation_->transform(*response_headers_, request_headers_, emptyBody, *encoder_callbacks_);
     std::cout << "!4" << std::endl;
   } catch (std::exception &e)  {
     error(Error::TemplateParseError, e.what());
