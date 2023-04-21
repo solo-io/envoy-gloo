@@ -1,0 +1,7 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/gloo/issues/7965
+  description: >
+    Addresses a bug that blocked the resource-based cross-account Lambda workflow.
+    Essentially, the AWS Lambda API expects the ARN to be URL encoded twice. We were
+    only encoding it once, which caused the API to reject the request.
