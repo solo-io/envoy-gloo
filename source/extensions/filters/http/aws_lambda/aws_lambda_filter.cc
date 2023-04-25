@@ -381,7 +381,6 @@ void AWSLambdaFilter::finalizeRequest() {
   }
   updateHeaders();
 
-  aws_authenticator_.setUrlBase(functionOnRoute()->path());
   aws_authenticator_.sign(request_headers_, HeadersToSign,
                           protocol_options_->region());
 }

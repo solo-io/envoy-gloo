@@ -57,8 +57,6 @@ public:
 
   std::string getBodyHexSha();
 
-  void setUrlBase(std::string url_base);
-
 private:
   // TODO(yuval-k) can I refactor our the friendliness?
   friend class AwsAuthenticatorTest;
