@@ -1,7 +1,10 @@
 REPOSITORY_LOCATIONS = dict(
-    # envoy-fork 1.21.7 ??? using to test CI
+    # envoy-fork 1.21.5-patch1
+    # This release represents upstream's v1.21.5 with the April 4, 2023 CVE patches applied
+    # The envoy-gloo release nomenclature will continue with the -patchX incrementing
+    # from the previous envoy-gloo release
     envoy = dict(
-        commit = "1ee08d875d9c549813c4edb38fe7bfd8dd4ce88e",
+        commit = "6658a0d3a0bbc1072fe4e9d88003cf2530813893",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
