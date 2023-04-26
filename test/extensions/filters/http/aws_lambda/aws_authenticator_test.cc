@@ -156,6 +156,35 @@ TEST_F(AwsAuthenticatorTest, TestGuide) {
   EXPECT_EQ(session_header, sessiontoken);
 }
 
+TEST_F(AwsAuthenticatorTest, UrlEncoding) {
+  DangerousDeprecatedTestTime time;
+  AwsAuthenticator aws(time.timeSystem());
+
+  std::string secretkey = "secretkey";
+  std::string accesskey = "accesskey";
+  aws.init(&accesskey, &secretkey, nullptr);
+
+  // example url representing a lambda addressed by ARN
+  std::string url = "/2015-03-31/functions/arn%3Aaws%3Alambda%3Aus-east-1%3A"
+                    "123456789012%3Afunction%3Asome-function/invocations";
+  Http::TestRequestHeaderMapImpl headers;
+  headers.setPath(url);
+  headers.setMethod(std::string("GET"));
+  headers.setHost(std::string("www.solo.io"));
+
+  updatePayloadHash(aws, "abc");
+
+  HeaderList headers_to_sign =
+      AwsAuthenticator::createHeaderToSign({Http::LowerCaseString("path")});
+  aws.sign(&headers, headers_to_sign, "us-east-1");
+
+  // the URL needs to be _double_ encoded, due to a bug in AWS
+  std::string encoded_url = "/2015-03-31/functions/arn%253Aaws%253Alambda%253A"
+                            "us-east-1%253A123456789012%253Afunction%253A"
+                            "some-function/invocations";
+  EXPECT_EQ(encoded_url, get_url(aws));
+}
+
 } // namespace AwsLambda
 } // namespace HttpFilters
 } // namespace Extensions
