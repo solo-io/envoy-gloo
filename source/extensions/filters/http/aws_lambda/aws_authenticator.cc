@@ -134,13 +134,18 @@ std::string AwsAuthenticator::getBodyHexSha() {
 
 void AwsAuthenticator::fetchUrl() {
   const Http::HeaderString &canonical_url = request_headers_->Path()->value();
-  url_base_ = canonical_url.getStringView();
-  query_string_ = Http::Utility::findQueryStringStart(canonical_url);
+  
+  url_base_ = std::string(canonical_url.getStringView());
+  query_string_ = std::string(Http::Utility::findQueryStringStart(canonical_url));
   if (query_string_.length() != 0) {
-    url_base_.remove_suffix(query_string_.length());
-    // remove the question mark
-    query_string_.remove_prefix(1);
+    // remove the query string from the url_base
+    url_base_ = url_base_.substr(0, url_base_.length() - query_string_.length());
+    // remove the ? from the query string
+    query_string_ = query_string_.substr(1);
   }
+
+  // although the URL base is already encode it, due to a bug in AWS we need to encode it again
+  url_base_ = Http::Utility::PercentEncoding::encode(url_base_, "%");
 }
 
 std::string AwsAuthenticator::computeCanonicalRequestHash(
