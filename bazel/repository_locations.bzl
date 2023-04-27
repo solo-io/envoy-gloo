@@ -8,7 +8,7 @@ REPOSITORY_LOCATIONS = dict(
         #   ^ add dynamic metadata to MatchingData
         #     https://github.com/envoyproxy/envoy/commit/1b66c3690422fb0d423411ebe70c777b9afbf2da
         commit = "f89e0efddb8e4f8bad556608aa0e68fd5eae8d37",
-        remote = "https://github.com/solo-io/envoy-fork",
+        remote = "https://github.com/envoyproxy/envoy",
         patches = [
             "@envoy_gloo//bazel/foreign_cc/filter-state-matching-input-25.yaml", # https://github.com/envoyproxy/envoy/pull/25856
             "@envoy_gloo//bazel/foreign_cc/dynamic-metadata-matchingdata-25.yaml", # https://github.com/envoyproxy/envoy/pull/26311
