@@ -1,7 +1,7 @@
 diff --git a/api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto b/api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto
 index 467771dff6..59756bc0c0 100644
---- a/api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto
-+++ b/api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto
+--- api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto
++++ api/envoy/extensions/matching/common_inputs/network/v3/network_inputs.proto
 @@ -3,6 +3,7 @@ syntax = "proto3";
  package envoy.extensions.matching.common_inputs.network.v3;
  
@@ -23,8 +23,8 @@ index 467771dff6..59756bc0c0 100644
 +}
 diff --git a/envoy/network/filter.h b/envoy/network/filter.h
 index b7001f9a6c..713fc17450 100644
---- a/envoy/network/filter.h
-+++ b/envoy/network/filter.h
+--- envoy/network/filter.h
++++ envoy/network/filter.h
 @@ -570,6 +570,7 @@ public:
    virtual ~MatchingData() = default;
  
@@ -35,8 +35,8 @@ index b7001f9a6c..713fc17450 100644
      return socket().connectionInfoProvider();
 diff --git a/source/common/network/matching/data_impl.h b/source/common/network/matching/data_impl.h
 index 344ab90476..186bd4b068 100644
---- a/source/common/network/matching/data_impl.h
-+++ b/source/common/network/matching/data_impl.h
+--- source/common/network/matching/data_impl.h
++++ source/common/network/matching/data_impl.h
 @@ -12,11 +12,15 @@ namespace Matching {
   */
  class MatchingDataImpl : public MatchingData {
@@ -56,8 +56,8 @@ index 344ab90476..186bd4b068 100644
  /**
 diff --git a/source/common/network/matching/inputs.cc b/source/common/network/matching/inputs.cc
 index 15a003ee3b..9c58d1db55 100644
---- a/source/common/network/matching/inputs.cc
-+++ b/source/common/network/matching/inputs.cc
+--- source/common/network/matching/inputs.cc
++++ source/common/network/matching/inputs.cc
 @@ -27,6 +27,18 @@ Matcher::DataInputGetResult ApplicationProtocolInput::get(const MatchingData& da
    return {Matcher::DataInputGetResult::DataAvailability::AllDataAvailable, absl::nullopt};
  }
@@ -87,8 +87,8 @@ index 15a003ee3b..9c58d1db55 100644
  } // namespace Network
 diff --git a/source/common/network/matching/inputs.h b/source/common/network/matching/inputs.h
 index 0eaac39681..da7932e9ad 100644
---- a/source/common/network/matching/inputs.h
-+++ b/source/common/network/matching/inputs.h
+--- source/common/network/matching/inputs.h
++++ source/common/network/matching/inputs.h
 @@ -268,6 +268,40 @@ public:
  
  DECLARE_FACTORY(ApplicationProtocolInputFactory);
@@ -132,8 +132,8 @@ index 0eaac39681..da7932e9ad 100644
  } // namespace Envoy
 diff --git a/source/extensions/extensions_metadata.yaml b/source/extensions/extensions_metadata.yaml
 index 31f424b44d..cfd18e7b86 100644
---- a/source/extensions/extensions_metadata.yaml
-+++ b/source/extensions/extensions_metadata.yaml
+--- source/extensions/extensions_metadata.yaml
++++ source/extensions/extensions_metadata.yaml
 @@ -1316,6 +1316,13 @@ envoy.matching.inputs.application_protocol:
    status: alpha
    type_urls:
@@ -150,8 +150,8 @@ index 31f424b44d..cfd18e7b86 100644
    - envoy.matching.http.input
 diff --git a/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc b/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
 index a4ac5b6ac8..cb68dfbda5 100644
---- a/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
-+++ b/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
+--- source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
++++ source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
 @@ -585,7 +585,7 @@ FilterChainManagerImpl::findFilterChain(const Network::ConnectionSocket& socket,
  const Network::FilterChain*
  FilterChainManagerImpl::findFilterChainUsingMatcher(const Network::ConnectionSocket& socket,
@@ -163,8 +163,8 @@ index a4ac5b6ac8..cb68dfbda5 100644
           "Matching must complete for network streams.");
 diff --git a/test/common/network/matching/BUILD b/test/common/network/matching/BUILD
 index e0723d8853..bee7fbea82 100644
---- a/test/common/network/matching/BUILD
-+++ b/test/common/network/matching/BUILD
+--- test/common/network/matching/BUILD
++++ test/common/network/matching/BUILD
 @@ -16,6 +16,7 @@ envoy_cc_test(
          "//source/common/network:address_lib",
          "//source/common/network/matching:data_impl_lib",
@@ -183,8 +183,8 @@ index e0723d8853..bee7fbea82 100644
          "//test/mocks/network:network_mocks",
 diff --git a/test/common/network/matching/inputs_integration_test.cc b/test/common/network/matching/inputs_integration_test.cc
 index f3f9203b89..4669e75886 100644
---- a/test/common/network/matching/inputs_integration_test.cc
-+++ b/test/common/network/matching/inputs_integration_test.cc
+--- test/common/network/matching/inputs_integration_test.cc
++++ test/common/network/matching/inputs_integration_test.cc
 @@ -1,6 +1,8 @@
  #include "source/common/network/address_impl.h"
  #include "source/common/network/matching/data_impl.h"
@@ -383,8 +383,8 @@ index f3f9203b89..4669e75886 100644
    UdpInputsIntegrationTest()
 diff --git a/test/common/network/matching/inputs_test.cc b/test/common/network/matching/inputs_test.cc
 index c673a6220f..42356c1e4f 100644
---- a/test/common/network/matching/inputs_test.cc
-+++ b/test/common/network/matching/inputs_test.cc
+--- test/common/network/matching/inputs_test.cc
++++ test/common/network/matching/inputs_test.cc
 @@ -4,6 +4,8 @@
  #include "source/common/network/address_impl.h"
  #include "source/common/network/matching/data_impl.h"
@@ -536,8 +536,8 @@ index c673a6220f..42356c1e4f 100644
    const Address::Ipv4Instance ip("127.0.0.1", 8080);
 diff --git a/test/common/ssl/matching/inputs_integration_test.cc b/test/common/ssl/matching/inputs_integration_test.cc
 index 99439ca9f8..8e5d58bf33 100644
---- a/test/common/ssl/matching/inputs_integration_test.cc
-+++ b/test/common/ssl/matching/inputs_integration_test.cc
+--- test/common/ssl/matching/inputs_integration_test.cc
++++ test/common/ssl/matching/inputs_integration_test.cc
 @@ -69,7 +69,8 @@ TEST_F(NetworkInputsIntegrationTest, UriSanInput) {
    socket.connection_info_provider_->setSslConnection(ssl);
    std::vector<std::string> uri_sans{host};
@@ -570,8 +570,8 @@ index 99439ca9f8..8e5d58bf33 100644
    EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
 diff --git a/test/extensions/common/matcher/trie_matcher_test.cc b/test/extensions/common/matcher/trie_matcher_test.cc
 index 1d1e9dc92f..53798d92d2 100644
---- a/test/extensions/common/matcher/trie_matcher_test.cc
-+++ b/test/extensions/common/matcher/trie_matcher_test.cc
+--- test/extensions/common/matcher/trie_matcher_test.cc
++++ test/extensions/common/matcher/trie_matcher_test.cc
 @@ -535,7 +535,8 @@ matcher_tree:
    Network::MockConnectionSocket socket;
    socket.connection_info_provider_->setLocalAddress(
@@ -584,8 +584,8 @@ index 1d1e9dc92f..53798d92d2 100644
    EXPECT_EQ(result.match_state_, MatchState::MatchComplete);
 diff --git a/test/extensions/listener_managers/listener_manager/BUILD b/test/extensions/listener_managers/listener_manager/BUILD
 index bc274c67de..d333eeb617 100644
---- a/test/extensions/listener_managers/listener_manager/BUILD
-+++ b/test/extensions/listener_managers/listener_manager/BUILD
+--- test/extensions/listener_managers/listener_manager/BUILD
++++ test/extensions/listener_managers/listener_manager/BUILD
 @@ -52,6 +52,7 @@ envoy_cc_test(
          "//source/common/network:socket_option_lib",
          "//source/common/network:utility_lib",
@@ -596,8 +596,8 @@ index bc274c67de..d333eeb617 100644
          "//source/extensions/filters/listener/tls_inspector:config",
 diff --git a/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc b/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc
 index 7e4dd29914..7f05064a17 100644
---- a/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc
-+++ b/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc
+--- test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc
++++ test/extensions/listener_managers/listener_manager/listener_manager_impl_test.cc
 @@ -23,6 +23,7 @@
  #include "source/common/network/socket_interface_impl.h"
  #include "source/common/network/utility.h"
@@ -764,8 +764,8 @@ index 7e4dd29914..7f05064a17 100644
      address:
 diff --git a/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h b/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h
 index 88fa6c33a1..df3cbccc49 100644
---- a/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h
-+++ b/test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h
+--- test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h
++++ test/extensions/listener_managers/listener_manager/listener_manager_impl_test.h
 @@ -236,10 +236,9 @@ protected:
            Network::Utility::parseInternetAddress(direct_source_address, source_port);
      }
@@ -788,8 +788,8 @@ index 88fa6c33a1..df3cbccc49 100644
    bool enable_dispatcher_stats_{false};
 diff --git a/tools/extensions/extensions_schema.yaml b/tools/extensions/extensions_schema.yaml
 index 3c7625be55..b894d8ce57 100644
---- a/tools/extensions/extensions_schema.yaml
-+++ b/tools/extensions/extensions_schema.yaml
+--- tools/extensions/extensions_schema.yaml
++++ tools/extensions/extensions_schema.yaml
 @@ -19,6 +19,7 @@ builtin:
  - envoy.matching.inputs.server_name
  - envoy.matching.inputs.transport_protocol
