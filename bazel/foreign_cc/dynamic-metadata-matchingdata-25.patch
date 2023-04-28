@@ -1,7 +1,7 @@
 diff --git a/envoy/network/filter.h b/envoy/network/filter.h
 index 713fc17450..3b5ad61a29 100644
---- a/envoy/network/filter.h
-+++ b/envoy/network/filter.h
+--- envoy/network/filter.h
++++ envoy/network/filter.h
 @@ -571,6 +571,7 @@ public:
  
    virtual const ConnectionSocket& socket() const PURE;
@@ -12,8 +12,8 @@ index 713fc17450..3b5ad61a29 100644
      return socket().connectionInfoProvider();
 diff --git a/source/common/network/matching/data_impl.h b/source/common/network/matching/data_impl.h
 index 186bd4b068..374ab0c5e3 100644
---- a/source/common/network/matching/data_impl.h
-+++ b/source/common/network/matching/data_impl.h
+--- source/common/network/matching/data_impl.h
++++ source/common/network/matching/data_impl.h
 @@ -13,14 +13,19 @@ namespace Matching {
  class MatchingDataImpl : public MatchingData {
  public:
@@ -38,8 +38,8 @@ index 186bd4b068..374ab0c5e3 100644
  /**
 diff --git a/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc b/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
 index cb68dfbda5..356072181b 100644
---- a/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
-+++ b/source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
+--- source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
++++ source/extensions/listener_managers/listener_manager/filter_chain_manager_impl.cc
 @@ -585,7 +585,7 @@ FilterChainManagerImpl::findFilterChain(const Network::ConnectionSocket& socket,
  const Network::FilterChain*
  FilterChainManagerImpl::findFilterChainUsingMatcher(const Network::ConnectionSocket& socket,
@@ -51,8 +51,8 @@ index cb68dfbda5..356072181b 100644
           "Matching must complete for network streams.");
 diff --git a/test/common/network/matching/inputs_integration_test.cc b/test/common/network/matching/inputs_integration_test.cc
 index 4669e75886..e258255cb7 100644
---- a/test/common/network/matching/inputs_integration_test.cc
-+++ b/test/common/network/matching/inputs_integration_test.cc
+--- test/common/network/matching/inputs_integration_test.cc
++++ test/common/network/matching/inputs_integration_test.cc
 @@ -87,7 +87,8 @@ TEST_F(InputsIntegrationTest, DestinationIPInput) {
  
    Network::MockConnectionSocket socket;
@@ -189,8 +189,8 @@ index 4669e75886..e258255cb7 100644
    const auto result_no_fs = match_tree_()->match(data);
 diff --git a/test/common/network/matching/inputs_test.cc b/test/common/network/matching/inputs_test.cc
 index 42356c1e4f..9360fac41f 100644
---- a/test/common/network/matching/inputs_test.cc
-+++ b/test/common/network/matching/inputs_test.cc
+--- test/common/network/matching/inputs_test.cc
++++ test/common/network/matching/inputs_test.cc
 @@ -17,7 +17,8 @@ TEST(MatchingData, DestinationIPInput) {
    DestinationIPInput<MatchingData> input;
    MockConnectionSocket socket;
@@ -293,8 +293,8 @@ index 42356c1e4f..9360fac41f 100644
      const auto result = input.get(data);
 diff --git a/test/common/ssl/matching/inputs_integration_test.cc b/test/common/ssl/matching/inputs_integration_test.cc
 index 8e5d58bf33..d96bfb8ff3 100644
---- a/test/common/ssl/matching/inputs_integration_test.cc
-+++ b/test/common/ssl/matching/inputs_integration_test.cc
+--- test/common/ssl/matching/inputs_integration_test.cc
++++ test/common/ssl/matching/inputs_integration_test.cc
 @@ -70,7 +70,8 @@ TEST_F(NetworkInputsIntegrationTest, UriSanInput) {
    std::vector<std::string> uri_sans{host};
    EXPECT_CALL(*ssl, uriSanPeerCertificate()).WillOnce(Return(uri_sans));
@@ -327,8 +327,8 @@ index 8e5d58bf33..d96bfb8ff3 100644
    EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
 diff --git a/test/extensions/common/matcher/trie_matcher_test.cc b/test/extensions/common/matcher/trie_matcher_test.cc
 index 53798d92d2..e8d4665903 100644
---- a/test/extensions/common/matcher/trie_matcher_test.cc
-+++ b/test/extensions/common/matcher/trie_matcher_test.cc
+--- test/extensions/common/matcher/trie_matcher_test.cc
++++ test/extensions/common/matcher/trie_matcher_test.cc
 @@ -536,7 +536,8 @@ matcher_tree:
    socket.connection_info_provider_->setLocalAddress(
        std::make_shared<Network::Address::Ipv4Instance>("192.168.0.1", 8080));
