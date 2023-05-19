@@ -91,6 +91,7 @@ envoy_cc_library(
         "@envoy//source/common/common:regex_lib",
         "@envoy//source/common/common:utility_lib",
         "@envoy//source/common/protobuf",
+	"@envoy//source/common/common:random_generator_lib",
         "@inja//:inja-lib",
         "@json//:json-lib",
     ],
