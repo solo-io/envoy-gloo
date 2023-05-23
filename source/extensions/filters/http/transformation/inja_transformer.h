@@ -49,7 +49,7 @@ private:
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
   nlohmann::json substring_callback(const inja::Arguments &args) const;
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
-  int random_for_pattern(const std::string& pattern);
+  std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;
@@ -59,7 +59,7 @@ private:
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string> &environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
-  std::unordered_map<std::string, int> pattern_replacements_;
+  std::unordered_map<std::string, std::string> pattern_replacements_;
   Envoy::Random::RandomGeneratorImpl rng_;
 };
 

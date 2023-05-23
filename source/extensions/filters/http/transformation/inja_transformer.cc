@@ -328,12 +328,17 @@ json TransformerInstance::replace_with_random_callback(const inja::Arguments &ar
     absl::StrReplaceAll(source, {{to_replace, absl::StrCat(random_for_pattern(to_replace))}});
 }
 
-int TransformerInstance::random_for_pattern(const std::string& pattern) {
+std::string& TransformerInstance::random_for_pattern(const std::string& pattern) {
   auto found = pattern_replacements_.find(pattern);
   if (found == pattern_replacements_.end()) {
-    auto random = rng_.random();
-    pattern_replacements_.insert({pattern, random});
-    return random;
+    uint64_t random[3];
+    uint64_t high = rng_.random();
+    uint64_t low = rng_.random();
+    random[0] = low;
+    random[1] = high;
+    random[2] = 0;
+    pattern_replacements_.insert({pattern, Base64::encode(reinterpret_cast<char *>(random), 16, false)});
+    return pattern_replacements_[pattern];
   }
   return found->second;
 }

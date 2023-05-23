@@ -936,6 +936,120 @@ TEST(Transformer, transformHeaderAndHeadersToRemove) {
   EXPECT_EQ("custom-value3", result3[0]->value().getStringView());
 }
 
+TEST(InjaTransformer, ReplaceWithRandomBodyTest) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto test_string = "test-replace-me";
+  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_TRUE(body.toString().find("test-") != std::string::npos);
+  // length of "test-" + 128 bit long random number, Base64-encoded without padding (128/6 ~ 22).
+  EXPECT_EQ(27, body.toString().length());
+}
+
+TEST(InjaTransformer, ReplaceWithRandomHeaderTest) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto test_string = "abcdef-replace-me";
+  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+
+  (*transformation.mutable_headers())["x-test-123"].set_text(formatted_string);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+
+  EXPECT_TRUE(headers.get_("x-test-123").find("abcdef-") != std::string::npos);
+  // length of "test-" + 128 bit long random number, Base64-encoded without padding (128/6 ~ 22).
+  EXPECT_EQ(29, headers.get_("x-test-123").length());
+}
+
+TEST(InjaTransformer, ReplaceWithRandomTestButNothingToReplace) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto test_string = "nothing-to-replace-here";
+  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_STREQ(test_string, body.toString().c_str());
+}
+
+void assert_replacements(std::string&& body, std::string&& pattern) {
+  auto p1 = body.find(pattern);
+  auto p2 = body.rfind(pattern);
+  EXPECT_NE(std::string::npos, p1);
+  EXPECT_NE(std::string::npos, p2);
+  EXPECT_NE(p1, p2);
+  // 22 -- the length of a base64 encoded 128 bit long string
+  EXPECT_STREQ(body.substr(p1, 22).c_str(), body.substr(p2, 22).c_str());
+}
+
+TEST(InjaTransformer, ReplaceWithRandomTest_SameReplacementPatternUsesSameRandomString) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern1 = "replace-me";
+  auto test_string1 = "test-1-replace-me";
+  auto pattern2 = "another-replace-me";
+  auto test_string2 = "test-2-another-replace-me";
+  auto pattern3 = "yet-another-replace-me";
+  auto test_string3 = "test-3-yet-another-replace-me";
+
+  const auto* format_string = R"ENDFMT(
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+  )ENDFMT";
+
+  auto formatted_string = fmt::format(format_string, 
+    test_string1, pattern1,
+    test_string2, pattern2,
+    test_string3, pattern3,
+    test_string1, pattern1,
+    test_string2, pattern2,
+    test_string3, pattern3
+    );
+
+  transformation.mutable_body()->set_text(formatted_string);
+  InjaTransformer transformer(transformation);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+
+  assert_replacements(body.toString(), "test-1-");
+  assert_replacements(body.toString(), "test-2-");
+  assert_replacements(body.toString(), "test-3-");
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
