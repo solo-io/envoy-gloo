@@ -35,7 +35,6 @@ using TransformationTemplate =
 
 namespace {
 std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
-
 }
 
 inja::Template parse(std::string s) {
