@@ -78,7 +78,7 @@ private:
 class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation);
+                      &transformation, bool log_request_response_info);
   ~InjaTransformer();
 
   void transform(Http::RequestOrResponseHeaderMap &map,
