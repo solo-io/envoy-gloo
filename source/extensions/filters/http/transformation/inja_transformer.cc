@@ -2,6 +2,8 @@
 
 #include <iterator>
 
+#include "absl/strings/str_replace.h"
+
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
 #include "source/common/common/regex.h"
@@ -141,6 +143,9 @@ TransformerInstance::TransformerInstance(
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
     return substring_callback(args); 
+  });
+  env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
+    return replace_with_random_callback(args);
   });
 }
 
@@ -311,6 +316,32 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
 
   // otherwise, return the substring from start to start + len
   return input.substr(start, substring_len);
+}
+
+json TransformerInstance::replace_with_random_callback(const inja::Arguments &args) {
+    // first argument: string to modify
+  const std::string &source = args.at(0)->get_ref<const std::string &>();
+    // second argument: pattern to be replaced
+  const std::string &to_replace = args.at(1)->get_ref<const std::string &>();
+
+  return 
+    absl::StrReplaceAll(source, {{to_replace, absl::StrCat(random_for_pattern(to_replace))}});
+}
+
+std::string& TransformerInstance::random_for_pattern(const std::string& pattern) {
+  auto found = pattern_replacements_.find(pattern);
+  if (found == pattern_replacements_.end()) {
+    // generate 128 bit long random number
+    uint64_t random[2];
+    uint64_t high = rng_.random();
+    uint64_t low = rng_.random();
+    random[0] = low;
+    random[1] = high;
+    // and convert it to a base64-encoded string with no padding
+    pattern_replacements_.insert({pattern, Base64::encode(reinterpret_cast<char *>(random), 16, false)});
+    return pattern_replacements_[pattern];
+  }
+  return found->second;
 }
 
 std::string TransformerInstance::render(const inja::Template &input) {

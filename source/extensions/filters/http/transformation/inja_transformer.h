@@ -6,6 +6,7 @@
 #include "envoy/http/header_map.h"
 
 #include "source/common/common/base64.h"
+#include "source/common/common/random_generator.h"
 
 #include "source/extensions/filters/http/transformation/transformer.h"
 
@@ -47,6 +48,8 @@ private:
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
   nlohmann::json substring_callback(const inja::Arguments &args) const;
+  nlohmann::json replace_with_random_callback(const inja::Arguments &args);
+  std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;
@@ -56,6 +59,8 @@ private:
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string> &environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
+  std::unordered_map<std::string, std::string> pattern_replacements_;
+  Envoy::Random::RandomGeneratorImpl rng_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
