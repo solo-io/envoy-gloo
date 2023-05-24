@@ -941,16 +941,17 @@ TEST(InjaTransformer, ReplaceWithRandomBodyTest) {
   TransformationTemplate transformation;
 
   auto pattern = "replace-me";
-  auto test_string = "test-replace-me";
-  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+  auto formatted_string = fmt::format("{{{{replace_with_random(body(), \"{}\")}}}}", pattern);
 
   transformation.mutable_body()->set_text(formatted_string);
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(false);
 
   InjaTransformer transformer(transformation);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  Buffer::OwnedImpl body("");
+  Buffer::OwnedImpl body("test-replace-me");
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_TRUE(body.toString().find("test-") != std::string::npos);
   // length of "test-" + 128 bit long random number, Base64-encoded without padding (128/6 ~ 22).
@@ -958,12 +959,11 @@ TEST(InjaTransformer, ReplaceWithRandomBodyTest) {
 }
 
 TEST(InjaTransformer, ReplaceWithRandomHeaderTest) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"x-test-123", "abcdef-replace-me"}};
   TransformationTemplate transformation;
 
   auto pattern = "replace-me";
-  auto test_string = "abcdef-replace-me";
-  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+  auto formatted_string = fmt::format("{{{{replace_with_random(header(\"x-test-123\"), \"{}\")}}}}", pattern);
 
   (*transformation.mutable_headers())["x-test-123"].set_text(formatted_string);
 

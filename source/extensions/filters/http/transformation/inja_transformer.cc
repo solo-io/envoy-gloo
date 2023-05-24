@@ -331,12 +331,13 @@ json TransformerInstance::replace_with_random_callback(const inja::Arguments &ar
 std::string& TransformerInstance::random_for_pattern(const std::string& pattern) {
   auto found = pattern_replacements_.find(pattern);
   if (found == pattern_replacements_.end()) {
-    uint64_t random[3];
+    // generate 128 bit long random number
+    uint64_t random[2];
     uint64_t high = rng_.random();
     uint64_t low = rng_.random();
     random[0] = low;
     random[1] = high;
-    random[2] = 0;
+    // and convert it to a base64-encoded string with no padding
     pattern_replacements_.insert({pattern, Base64::encode(reinterpret_cast<char *>(random), 16, false)});
     return pattern_replacements_[pattern];
   }
