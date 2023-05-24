@@ -39,6 +39,7 @@ struct TransformationFilterStats {
 
 class Transformer {
 public:
+  Transformer(bool log_request_response_info) : log_request_response_info_(log_request_response_info) {}
   virtual ~Transformer() {}
 
   virtual bool passthrough_body() const PURE;
@@ -49,6 +50,10 @@ public:
                          Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
+
+  bool logRequestResponseInfo() const { return log_request_response_info_; }
+
+  bool log_request_response_info_{};
 };
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
@@ -58,7 +63,10 @@ public:
   TransformerPair(TransformerConstSharedPtr request_transformer,
                   TransformerConstSharedPtr response_transformer,
                   TransformerConstSharedPtr on_stream_completion_transformer,
-                  bool should_clear_cache);
+                  bool should_clear_cache
+                  );
+                  // ,
+                  // bool log_request_response_info);
 
   TransformerConstSharedPtr getRequestTranformation() const {
     return request_transformation_;
@@ -74,8 +82,11 @@ public:
 
   bool shouldClearCache() const { return clear_route_cache_; }
 
+  // bool logRequestResponseInfo() const { return log_request_response_info_; }
+
 private:
   bool clear_route_cache_{};
+  // bool log_request_response_info_{};
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
   TransformerConstSharedPtr on_stream_completion_transformation_;

@@ -127,6 +127,8 @@ message Transformation {
     // Configuration for an externally implemented transformer.
     envoy.config.core.v3.TypedExtensionConfig transformer_config = 3;
   }
+
+  bool log_request_response_info = 4;
 }
 
 // Extractions can be used to extract information from the request/response.

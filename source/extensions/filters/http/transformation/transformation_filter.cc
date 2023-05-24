@@ -9,6 +9,7 @@
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 #include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/transformation_logger.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -250,6 +251,14 @@ void TransformationFilter::transformSomething(
     void (TransformationFilter::*addData)(Buffer::Instance &)) {
 
   try {
+    // if log_request_response_info_ is set on the transformation, log the
+    // request body and request headers before transformation
+    TRANSFORMATION_LOG_IF(debug, transformation->logRequestResponseInfo(),
+                          "headers before transformation: {}",
+                          callbacks, header_map);
+    TRANSFORMATION_LOG_IF(debug, transformation->logRequestResponseInfo(),
+                          "body before transformation: {}",
+                          callbacks, body);
     transformation->transform(header_map, request_headers_, body, callbacks);
 
     if (body.length() > 0) {

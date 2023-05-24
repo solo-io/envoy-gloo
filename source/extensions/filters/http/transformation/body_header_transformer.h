@@ -11,7 +11,7 @@ namespace Transformation {
 
 class BodyHeaderTransformer : public Transformer {
 public:
-  BodyHeaderTransformer(bool add_request_metadata);
+  BodyHeaderTransformer(bool add_request_metadata, bool log_request_response_info);
   void transform(Http::RequestOrResponseHeaderMap &map,
                  Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
