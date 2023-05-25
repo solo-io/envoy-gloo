@@ -1,0 +1,5 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/gloo-mesh-enterprise/issues/9214
+  description: >-
+    Do not instantiate an rng in each filter instance, instead use the global instance provided by envoy.

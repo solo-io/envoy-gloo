@@ -110,10 +110,11 @@ TransformerInstance::TransformerInstance(
     const std::unordered_map<std::string, absl::string_view> &extractions,
     const json &context,
     const std::unordered_map<std::string, std::string> &environ,
-    const envoy::config::core::v3::Metadata *cluster_metadata)
+    const envoy::config::core::v3::Metadata *cluster_metadata,
+    Envoy::Random::RandomGenerator &rng)
     : header_map_(header_map), request_headers_(request_headers), body_(body),
       extractions_(extractions), context_(context), environ_(environ),
-      cluster_metadata_(cluster_metadata) {
+      cluster_metadata_(cluster_metadata), rng_(rng) {
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
@@ -354,11 +355,13 @@ std::string TransformerInstance::render(const inja::Template &input) {
   }
 }
 
-InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
+InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, 
+  Envoy::Random::RandomGenerator &rng)
     : advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
-      ignore_error_on_parse_(transformation.ignore_error_on_parse()) {
+      ignore_error_on_parse_(transformation.ignore_error_on_parse()),
+      rng_(rng) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
   inja::TemplateStorage template_storage;
@@ -527,7 +530,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // start transforming!
   TransformerInstance instance(header_map, request_headers, get_body,
                                extractions, json_body, environ_,
-                               cluster_metadata);
+                               cluster_metadata, rng_);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
