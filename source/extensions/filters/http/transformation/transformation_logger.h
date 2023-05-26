@@ -14,7 +14,7 @@
         }                                                                   \
     } while (0)
 
-#define TRANSFORMATION_SENSITIVE_LOG(LEVEL, FORMAT, PARAMS, ...)                               \
-    do {                                                                                       \
-        TRANSFORMATION_LOG_IF(true, LEVEL, FORMAT, (PARAMS).stream_callbacks_, ##__VA_ARGS__); \
+#define TRANSFORMATION_SENSITIVE_LOG(LEVEL, FORMAT, TRANSFORMATION, FILTER_CONFIG, STREAM, ...)                                 \
+    do {                                                                                                 \
+        TRANSFORMATION_LOG_IF(LEVEL, ((FILTER_CONFIG)->logRequestResponseInfo() || (TRANSFORMATION)->logRequestResponseInfo()), FORMAT, STREAM, ##__VA_ARGS__); \
     } while (0)
