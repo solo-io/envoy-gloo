@@ -44,7 +44,7 @@ TransformerConstSharedPtr Transformation::getTransformer(
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
-    : FilterConfig(prefix, context.scope(), proto_config.stage()) {
+    : FilterConfig(prefix, context.scope(), proto_config.stage(), proto_config.log_request_response_info()) {
 
   for (const auto &rule : proto_config.transformations()) {
     if (!rule.has_match()) {

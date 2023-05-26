@@ -129,8 +129,8 @@ private:
 
 class FilterConfig : public TransformConfig {
 public:
-  FilterConfig(const std::string &prefix, Stats::Scope &scope, uint32_t stage)
-      : stats_(generateStats(prefix, scope)), stage_(stage){};
+  FilterConfig(const std::string &prefix, Stats::Scope &scope, uint32_t stage, bool log_request_response_info)
+      : stats_(generateStats(prefix, scope)), stage_(stage), log_request_response_info_(log_request_response_info) {}
 
   static TransformationFilterStats generateStats(const std::string &prefix,
                                                  Stats::Scope &scope);
@@ -154,9 +154,12 @@ public:
 
   uint32_t stage() const { return stage_; }
 
+  bool logRequestResponseInfo() const { return log_request_response_info_; }
+
 private:
   TransformationFilterStats stats_;
   uint32_t stage_{};
+  bool log_request_response_info_{};
 };
 
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig,

@@ -2,7 +2,6 @@
 
 #include "source/common/common/logger.h"
 
-// TODO: remove logs to stdout
 #define TRANSFORMATION_LOG(LEVEL, FORMAT, STREAM, ...)                  \
   do {                                                                  \
       ENVOY_STREAM_LOG(LEVEL, FORMAT, STREAM, ##__VA_ARGS__);           \

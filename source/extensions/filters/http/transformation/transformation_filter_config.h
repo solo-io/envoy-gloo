@@ -58,9 +58,15 @@ public:
     return SoloHttpFilterNames::get().Transformation;
   }
 
+  bool logRequestResponseInfo() const {
+    return log_request_response_info_;
+  }
+
 private:
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
+
+  bool log_request_response_info_{};
 };
 
 class PerStageRouteTransformationFilterConfig : public TransformConfig {

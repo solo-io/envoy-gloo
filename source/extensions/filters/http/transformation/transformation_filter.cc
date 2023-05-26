@@ -253,12 +253,13 @@ void TransformationFilter::transformSomething(
   try {
     // if log_request_response_info_ is set on the transformation, log the
     // request body and request headers before transformation
-    TRANSFORMATION_LOG_IF(debug, transformation->logRequestResponseInfo(),
-                          "headers before transformation: {}",
-                          callbacks, header_map);
-    TRANSFORMATION_LOG_IF(debug, transformation->logRequestResponseInfo(),
-                          "body before transformation: {}",
-                          callbacks, body);
+    auto log_condition = filter_config_->logRequestResponseInfo() || transformation->logRequestResponseInfo();
+    TRANSFORMATION_LOG_IF(debug, log_condition,
+                          "headers before transformation: {}", callbacks,
+                          header_map);
+    TRANSFORMATION_LOG_IF(debug, log_condition,
+                          "body before transformation: {}", callbacks,
+                          body.toString());
     transformation->transform(header_map, request_headers_, body, callbacks);
 
     if (body.length() > 0) {
