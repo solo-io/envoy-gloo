@@ -1,0 +1,6 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo-mesh-enterprise/issues/9214
+  description: >-
+    Add support for substitution of patterns in http headers and bodies
+    with Base64-encoded 128 bit long random strings.

@@ -4,6 +4,7 @@
 
 #include "envoy/buffer/buffer.h"
 #include "envoy/http/header_map.h"
+#include "envoy/common/random_generator.h"
 
 #include "source/common/common/base64.h"
 
@@ -31,7 +32,8 @@ public:
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
-      const envoy::config::core::v3::Metadata *cluster_metadata);
+      const envoy::config::core::v3::Metadata *cluster_metadata,
+      Envoy::Random::RandomGenerator &rng);
 
   std::string render(const inja::Template &input);
 
@@ -47,6 +49,8 @@ private:
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
   nlohmann::json substring_callback(const inja::Arguments &args) const;
+  nlohmann::json replace_with_random_callback(const inja::Arguments &args);
+  std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
   const Http::RequestOrResponseHeaderMap &header_map_;
@@ -56,6 +60,8 @@ private:
   const nlohmann::json &context_;
   const std::unordered_map<std::string, std::string> &environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
+  absl::flat_hash_map<std::string, std::string> pattern_replacements_;
+  Envoy::Random::RandomGenerator &rng_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
@@ -78,7 +84,7 @@ private:
 class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
-                      &transformation, bool log_request_response_info);
+                      &transformation, Envoy::Random::RandomGenerator &rng, bool log_request_response_info);
   ~InjaTransformer();
 
   void transform(Http::RequestOrResponseHeaderMap &map,
@@ -109,6 +115,7 @@ private:
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
+  Envoy::Random::RandomGenerator &rng_;
 };
 
 } // namespace Transformation

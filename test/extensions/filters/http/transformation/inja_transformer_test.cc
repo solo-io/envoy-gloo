@@ -1,6 +1,7 @@
 #include "source/extensions/filters/http/solo_well_known_names.h"
 #include "source/extensions/filters/http/transformation/inja_transformer.h"
 #include "source/common/common/base64.h"
+#include "source/common/common/random_generator.h"
 
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
@@ -45,7 +46,12 @@ inja::Template parse(std::string s) {
   return parser.parse(s);
 }
 
-TEST(TransformerInstance, ReplacesValueFromContext) {
+class TransformerInstanceTest : public testing::Test {
+protected:
+  NiceMock<Random::MockRandomGenerator> rng_;
+};
+
+TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestRequestHeaderMapImpl headers;
@@ -54,14 +60,14 @@ TEST(TransformerInstance, ReplacesValueFromContext) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{field1}}"));
 
   EXPECT_EQ(originalbody["field1"], res);
 }
 
-TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
+TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
   json originalbody;
   originalbody["field1"] = "value1";
   std::string path = "/getsomething";
@@ -73,14 +79,14 @@ TEST(TransformerInstance, ReplacesValueFromInlineHeader) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{header(\":path\")}}"));
 
   EXPECT_EQ(path, res);
 }
 
-TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
+TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
   json originalbody;
   originalbody["field1"] = "value1";
   std::string header = "blah blah";
@@ -93,14 +99,14 @@ TEST(TransformerInstance, ReplacesValueFromCustomHeader) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
 
   EXPECT_EQ(header, res);
 }
 
-TEST(TransformerInstance, ReplaceFromExtracted) {
+TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   absl::string_view field = "res";
@@ -110,14 +116,14 @@ TEST(TransformerInstance, ReplaceFromExtracted) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{extraction(\"f\")}}"));
 
   EXPECT_EQ(field, res);
 }
 
-TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
+TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
@@ -126,14 +132,14 @@ TEST(TransformerInstance, ReplaceFromNonExistentExtraction) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
 
   EXPECT_EQ("", res);
 }
 
-TEST(TransformerInstance, Environment) {
+TEST_F(TransformerInstanceTest, Environment) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
@@ -142,13 +148,13 @@ TEST(TransformerInstance, Environment) {
   env["FOO"] = "BAR";
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
 }
 
-TEST(TransformerInstance, EmptyEnvironment) {
+TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
@@ -156,13 +162,13 @@ TEST(TransformerInstance, EmptyEnvironment) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
 }
 
-TEST(TransformerInstance, ClusterMetadata) {
+TEST_F(TransformerInstanceTest, ClusterMetadata) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
@@ -175,13 +181,13 @@ TEST(TransformerInstance, ClusterMetadata) {
        MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, &cluster_metadata);
+                        originalbody, env, &cluster_metadata, rng_);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
 }
 
-TEST(TransformerInstance, EmptyClusterMetadata) {
+TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
@@ -190,13 +196,13 @@ TEST(TransformerInstance, EmptyClusterMetadata) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata);
+                        originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
 }
 
-TEST(TransformerInstance, RequestHeaders) {
+TEST_F(TransformerInstanceTest, RequestHeaders) {
   json originalbody;
   std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
@@ -206,7 +212,7 @@ TEST(TransformerInstance, RequestHeaders) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   TransformerInstance t(response_headers, &request_headers, empty_body,
-                        extractions, originalbody, env, cluster_metadata);
+                        extractions, originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(
       parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
@@ -271,7 +277,9 @@ TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
       "group 123 requested for regex with only 1 sub groups");
 }
 
-TEST(Transformer, transform) {
+class TransformerTest : public TransformerInstanceTest {};
+
+TEST_F(TransformerTest, transform) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -293,7 +301,7 @@ TEST(Transformer, transform) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -303,7 +311,7 @@ TEST(Transformer, transform) {
   EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
-TEST(Transformer, transformSimple) {
+TEST_F(TransformerTest, transformSimple) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -325,7 +333,7 @@ TEST(Transformer, transformSimple) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -335,7 +343,7 @@ TEST(Transformer, transformSimple) {
   EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
-TEST(Transformer, transformMultipleHeaderValues) {
+TEST_F(TransformerTest, transformMultipleHeaderValues) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-custom-header", "original value"},
@@ -351,7 +359,7 @@ TEST(Transformer, transformMultipleHeaderValues) {
   header1->mutable_value()->set_text("{{upper(\"second value\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -365,7 +373,7 @@ TEST(Transformer, transformMultipleHeaderValues) {
   EXPECT_EQ("SECOND VALUE", result[2]->value().getStringView());
 }
 
-TEST(Transformer, transformHeaderAndHeadersToAppend) {
+TEST_F(TransformerTest, transformHeaderAndHeadersToAppend) {
   Http::TestRequestHeaderMapImpl headers{{"x-custom-header", "original value"}};
   Buffer::OwnedImpl body;
   TransformationTemplate transformation;
@@ -383,7 +391,7 @@ TEST(Transformer, transformHeaderAndHeadersToAppend) {
   header1->mutable_value()->set_text("{{upper(\"second value\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -397,7 +405,7 @@ TEST(Transformer, transformHeaderAndHeadersToAppend) {
   EXPECT_EQ("SECOND VALUE", result[2]->value().getStringView());
 }
 
-TEST(Transformer, transformSimpleNestedStructs) {
+TEST_F(TransformerTest, transformSimpleNestedStructs) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -419,7 +427,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -429,7 +437,7 @@ TEST(Transformer, transformSimpleNestedStructs) {
   EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
-TEST(Transformer, transformPassthrough) {
+TEST_F(TransformerTest, transformPassthrough) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -446,7 +454,7 @@ TEST(Transformer, transformPassthrough) {
 
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -456,7 +464,7 @@ TEST(Transformer, transformPassthrough) {
   EXPECT_EQ("default", headers.get_("x-header"));
 }
 
-TEST(Transformer, transformMergeExtractorsToBody) {
+TEST_F(TransformerTest, transformMergeExtractorsToBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -477,7 +485,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
 
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -486,7 +494,7 @@ TEST(Transformer, transformMergeExtractorsToBody) {
   EXPECT_EQ("{\"ext1\":\"123\"}", res);
 }
 
-TEST(Transformer, transformBodyNotSet) {
+TEST_F(TransformerTest, transformBodyNotSet) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {"x-test", "789"},
@@ -502,7 +510,7 @@ TEST(Transformer, transformBodyNotSet) {
 
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -512,7 +520,9 @@ TEST(Transformer, transformBodyNotSet) {
   EXPECT_EQ("456", headers.get_("x-header"));
 }
 
-TEST(InjaTransformer, transformWithHyphens) {
+class InjaTransformerTest : public TransformerInstanceTest {};
+
+TEST_F(InjaTransformerTest, transformWithHyphens) {
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"},
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
@@ -530,7 +540,7 @@ TEST(InjaTransformer, transformWithHyphens) {
   transformation.set_advanced_templates(false);
   transformation.mutable_merge_extractors_to_body();
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -539,7 +549,7 @@ TEST(InjaTransformer, transformWithHyphens) {
   EXPECT_THAT(res, HasSubstr("\"764b.0f_0f-7319-4b29-bbd0-887a39705a70\""));
 }
 
-TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
+TEST_F(InjaTransformerTest, RemoveHeadersUsingEmptyTemplate) {
   const std::string content_type = "content-type";
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":path", "/foo"}, {content_type, "x-test"}};
@@ -550,7 +560,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
 
   (*transformation.mutable_headers())[content_type] = empty;
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   EXPECT_TRUE(headers.has(content_type));
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -558,7 +568,7 @@ TEST(InjaTransformer, RemoveHeadersUsingEmptyTemplate) {
   EXPECT_FALSE(headers.has(content_type));
 }
 
-TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
+TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   Buffer::OwnedImpl body("not json body");
 
@@ -574,14 +584,14 @@ TEST(InjaTransformer, DontParseBodyAndExtractFromIt) {
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "json");
 }
 
-TEST(InjaTransformer, UseBodyFunction) {
+TEST_F(InjaTransformerTest, UseBodyFunction) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
@@ -589,7 +599,7 @@ TEST(InjaTransformer, UseBodyFunction) {
 
   transformation.mutable_body()->set_text("{{body()}} {{body()}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("1");
@@ -597,7 +607,7 @@ TEST(InjaTransformer, UseBodyFunction) {
   EXPECT_EQ(body.toString(), "1 1");
 }
 
-TEST(InjaTransformer, UseDefaultNS) {
+TEST_F(InjaTransformerTest, UseDefaultNS) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
@@ -607,7 +617,7 @@ TEST(InjaTransformer, UseDefaultNS) {
   dynamic_meta->set_key("foo");
   dynamic_meta->mutable_value()->set_text("{{body()}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -623,7 +633,7 @@ TEST(InjaTransformer, UseDefaultNS) {
   transformer.transform(headers, &headers, body, callbacks);
 }
 
-TEST(InjaTransformer, UseCustomNS) {
+TEST_F(InjaTransformerTest, UseCustomNS) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
@@ -634,7 +644,7 @@ TEST(InjaTransformer, UseCustomNS) {
   dynamic_meta->set_metadata_namespace("foo.ns");
   dynamic_meta->mutable_value()->set_text("123");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -643,7 +653,7 @@ TEST(InjaTransformer, UseCustomNS) {
   transformer.transform(headers, &headers, body, callbacks);
 }
 
-TEST(InjaTransformer, UseDynamicMetaTwice) {
+TEST_F(InjaTransformerTest, UseDynamicMetaTwice) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
@@ -654,7 +664,7 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
   dynamic_meta->set_key("bar");
   dynamic_meta->mutable_value()->set_text("123");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -665,7 +675,7 @@ TEST(InjaTransformer, UseDynamicMetaTwice) {
   transformer.transform(headers, &headers, body, callbacks);
 }
 
-TEST(InjaTransformer, UseEnvVar) {
+TEST_F(InjaTransformerTest, UseEnvVar) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{env(\"FOO\")}}");
@@ -673,7 +683,7 @@ TEST(InjaTransformer, UseEnvVar) {
   TestEnvironment::setEnvVar("FOO", "BAR", 1);
   TestEnvironment::setEnvVar("EMPTY", "", 1);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -682,7 +692,7 @@ TEST(InjaTransformer, UseEnvVar) {
   EXPECT_EQ(body.toString(), "BAR");
 }
 
-TEST(InjaTransformer, Base64EncodeTestString) {
+TEST_F(InjaTransformerTest, Base64EncodeTestString) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
@@ -691,7 +701,7 @@ TEST(InjaTransformer, Base64EncodeTestString) {
 
   transformation.mutable_body()->set_text(formatted_string);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -700,7 +710,7 @@ TEST(InjaTransformer, Base64EncodeTestString) {
   EXPECT_EQ(Base64::decode(body.toString()), test_string);
 }
 
-TEST(InjaTransformer, Base64DecodeTestString) {
+TEST_F(InjaTransformerTest, Base64DecodeTestString) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
@@ -711,7 +721,7 @@ TEST(InjaTransformer, Base64DecodeTestString) {
 
   transformation.mutable_body()->set_text(formatted_string);
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -720,13 +730,13 @@ TEST(InjaTransformer, Base64DecodeTestString) {
   EXPECT_EQ(body.toString(), test_string);
 }
 
-TEST(InjaTransformer, Base64Composed) {
+TEST_F(InjaTransformerTest, Base64Composed) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -736,13 +746,13 @@ TEST(InjaTransformer, Base64Composed) {
   EXPECT_EQ(body.toString(), test_string);
 }
 
-TEST(InjaTransformer, DecodeInvalidBase64) {
+TEST_F(InjaTransformerTest, DecodeInvalidBase64) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   transformation.mutable_body()->set_text("{{base64_decode(\"INVALID BASE64\")}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -751,13 +761,13 @@ TEST(InjaTransformer, DecodeInvalidBase64) {
   EXPECT_EQ(body.toString(), "");
 }
 
-TEST(InjaTransformer, Substring) {
+TEST_F(InjaTransformerTest, Substring) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   transformation.mutable_body()->set_text("{{substring(body(), 1, 2)}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -767,13 +777,13 @@ TEST(InjaTransformer, Substring) {
   EXPECT_EQ(body.toString(), "23");
 }
 
-TEST(InjaTransformer, SubstringTwoArguments) {
+TEST_F(InjaTransformerTest, SubstringTwoArguments) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
   transformation.mutable_body()->set_text("{{substring(body(), 1)}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -783,7 +793,7 @@ TEST(InjaTransformer, SubstringTwoArguments) {
   EXPECT_EQ(body.toString(), "23");
 }
 
-TEST(InjaTransformer, SubstringOutOfBounds) {
+TEST_F(InjaTransformerTest, SubstringOutOfBounds) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
@@ -793,34 +803,34 @@ TEST(InjaTransformer, SubstringOutOfBounds) {
 
   // case: start index is greater than string length
   transformation.mutable_body()->set_text("{{substring(body(), 10, 1)}}");
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   Buffer::OwnedImpl body(test_string);
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: start index is negative
   transformation.mutable_body()->set_text("{{substring(body(), -1, 1)}}");
-  InjaTransformer transformer2(transformation);
+  InjaTransformer transformer2(transformation, rng_);
   body = Buffer::OwnedImpl(test_string);
   transformer2.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: substring length is greater than string length
   transformation.mutable_body()->set_text("{{substring(body(), 0, 10)}}");
-  InjaTransformer transformer3(transformation);
+  InjaTransformer transformer3(transformation, rng_);
   body = Buffer::OwnedImpl(test_string);
   transformer3.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "123");
 
   // case: substring length is negative
   transformation.mutable_body()->set_text("{{substring(body(), 0, -1)}}");
-  InjaTransformer transformer4(transformation);
+  InjaTransformer transformer4(transformation, rng_);
   body = Buffer::OwnedImpl(test_string);
   transformer4.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "123");
 }
 
-TEST(InjaTransformer, SubstringNonIntegerArguments) {
+TEST_F(InjaTransformerTest, SubstringNonIntegerArguments) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
@@ -830,25 +840,25 @@ TEST(InjaTransformer, SubstringNonIntegerArguments) {
 
   // case: start index is not an integer
   transformation.mutable_body()->set_text("{{substring(body(), \"a\", 1)}}");
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   Buffer::OwnedImpl body(test_string);
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: substring length is not an integer
   transformation.mutable_body()->set_text("{{substring(body(), 0, \"a\")}}");
-  InjaTransformer transformer2(transformation);
+  InjaTransformer transformer2(transformation, rng_);
   body = Buffer::OwnedImpl(test_string);
   transformer2.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 }
 
-TEST(InjaTransformer, ParseBodyListUsingContext) {
+TEST_F(InjaTransformerTest, ParseBodyListUsingContext) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       "{% for i in context() %}{{ i }}{% endfor %}");
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -857,12 +867,12 @@ TEST(InjaTransformer, ParseBodyListUsingContext) {
   EXPECT_EQ(body.toString(), "321");
 }
 
-TEST(InjaTransformer, ParseFromClusterMetadata) {
+TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -878,12 +888,12 @@ TEST(InjaTransformer, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
-TEST(InjaTransformer, ParseFromNilClusterInfo) {
+TEST_F(InjaTransformerTest, ParseFromNilClusterInfo) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   callbacks.cluster_info_.reset();
@@ -894,7 +904,7 @@ TEST(InjaTransformer, ParseFromNilClusterInfo) {
   EXPECT_EQ(body.toString(), "");
 }
 
-TEST(Transformer, transformHeaderAndHeadersToRemove) {
+TEST_F(TransformerTest, transformHeaderAndHeadersToRemove) {
   Http::TestRequestHeaderMapImpl headers{
     {"x-custom-header1", "custom-value1"},
     {"x-custom-header2-repeated", "custom-value2"},
@@ -922,7 +932,7 @@ TEST(Transformer, transformHeaderAndHeadersToRemove) {
   // perform the removal of header2 only
   transformation.add_headers_to_remove("x-custom-header2-repeated");
   transformation.add_headers_to_remove("x-custom-header1");
-  InjaTransformer transformer(transformation);
+  InjaTransformer transformer(transformation, rng_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -934,6 +944,124 @@ TEST(Transformer, transformHeaderAndHeadersToRemove) {
   EXPECT_EQ(0, result2_postremoval.size());
   EXPECT_EQ(1, result3_postremoval.size());
   EXPECT_EQ("custom-value3", result3[0]->value().getStringView());
+}
+
+TEST_F(InjaTransformerTest, ReplaceWithRandomBodyTest) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto formatted_string = fmt::format("{{{{replace_with_random(body(), \"{}\")}}}}", pattern);
+
+  transformation.mutable_body()->set_text(formatted_string);
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(false);
+
+  Random::RandomGeneratorImpl rng;
+  InjaTransformer transformer(transformation, rng);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("test-replace-me");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_TRUE(body.toString().find("test-") != std::string::npos);
+  // length of "test-" + 128 bit long random number, Base64-encoded without padding (128/6 ~ 22).
+  EXPECT_EQ(27, body.toString().length());
+}
+
+TEST_F(InjaTransformerTest, ReplaceWithRandomHeaderTest) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"x-test-123", "abcdef-replace-me"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto formatted_string = fmt::format("{{{{replace_with_random(header(\"x-test-123\"), \"{}\")}}}}", pattern);
+
+  (*transformation.mutable_headers())["x-test-123"].set_text(formatted_string);
+
+  Random::RandomGeneratorImpl rng;
+  InjaTransformer transformer(transformation, rng);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+
+  EXPECT_TRUE(headers.get_("x-test-123").find("abcdef-") != std::string::npos);
+  // length of "test-" + 128 bit long random number, Base64-encoded without padding (128/6 ~ 22).
+  EXPECT_EQ(29, headers.get_("x-test-123").length());
+}
+
+TEST_F(InjaTransformerTest, ReplaceWithRandomTestButNothingToReplace) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern = "replace-me";
+  auto test_string = "nothing-to-replace-here";
+  auto formatted_string = fmt::format("{{{{replace_with_random(\"{}\", \"{}\")}}}}", test_string, pattern);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  Random::RandomGeneratorImpl rng;
+  InjaTransformer transformer(transformation, rng);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_STREQ(test_string, body.toString().c_str());
+}
+
+void assert_replacements(std::string&& body, std::string&& pattern) {
+  auto p1 = body.find(pattern);
+  auto p2 = body.rfind(pattern);
+  EXPECT_NE(std::string::npos, p1);
+  EXPECT_NE(std::string::npos, p2);
+  EXPECT_NE(p1, p2);
+  // 22 -- the length of a base64 encoded 128 bit long string
+  EXPECT_STREQ(body.substr(p1, 22).c_str(), body.substr(p2, 22).c_str());
+}
+
+TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSameRandomString) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  auto pattern1 = "replace-me";
+  auto test_string1 = "test-1-replace-me";
+  auto pattern2 = "another-replace-me";
+  auto test_string2 = "test-2-another-replace-me";
+  auto pattern3 = "yet-another-replace-me";
+  auto test_string3 = "test-3-yet-another-replace-me";
+
+  const auto* format_string = R"ENDFMT(
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+{{{{ replace_with_random("{}", "{}") }}}}
+  )ENDFMT";
+
+  auto formatted_string = fmt::format(format_string, 
+    test_string1, pattern1,
+    test_string2, pattern2,
+    test_string3, pattern3,
+    test_string1, pattern1,
+    test_string2, pattern2,
+    test_string3, pattern3
+    );
+
+  transformation.mutable_body()->set_text(formatted_string);
+  Random::RandomGeneratorImpl rng;
+  InjaTransformer transformer(transformation, rng);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+
+  assert_replacements(body.toString(), "test-1-");
+  assert_replacements(body.toString(), "test-2-");
+  assert_replacements(body.toString(), "test-3-");
 }
 
 } // namespace Transformation

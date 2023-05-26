@@ -1,0 +1,9 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.25.6
+- type: NON_USER_FACING
+  description: >-
+    Change strategy for backporting functionality required for DCP. Previously we had this applied as cherry-picks
+    in a fork, which we referenced in this repo. Now we apply bazel patches directly over upstream in this repo.
