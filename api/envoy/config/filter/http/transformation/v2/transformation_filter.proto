@@ -24,6 +24,8 @@ message FilterTransformations {
   // used with this filter.
   uint32 stage = 2 [ (validate.rules).uint32 = {lte : 10} ];
 
+  // If set to true, the filter will log the request/response body and headers before 
+  // any transformation is applied.
   bool log_request_response_info = 3;
 }
 
@@ -130,6 +132,8 @@ message Transformation {
     envoy.config.core.v3.TypedExtensionConfig transformer_config = 3;
   }
 
+  // If set to true, the filter will log the request/response body and headers before
+  // this transformation is applied.
   bool log_request_response_info = 4;
 }
 
