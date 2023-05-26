@@ -29,7 +29,6 @@ TransformerConstSharedPtr Transformation::getTransformer(
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
     auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    // TODO: need to validate this case
     return factory.createTransformer(*config, context);
   }
   case envoy::api::v2::filter::http::Transformation::

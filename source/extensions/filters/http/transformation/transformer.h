@@ -63,10 +63,7 @@ public:
   TransformerPair(TransformerConstSharedPtr request_transformer,
                   TransformerConstSharedPtr response_transformer,
                   TransformerConstSharedPtr on_stream_completion_transformer,
-                  bool should_clear_cache
-                  );
-                  // ,
-                  // bool log_request_response_info);
+                  bool should_clear_cache);
 
   TransformerConstSharedPtr getRequestTranformation() const {
     return request_transformation_;
@@ -82,11 +79,8 @@ public:
 
   bool shouldClearCache() const { return clear_route_cache_; }
 
-  // bool logRequestResponseInfo() const { return log_request_response_info_; }
-
 private:
   bool clear_route_cache_{};
-  // bool log_request_response_info_{};
   TransformerConstSharedPtr request_transformation_;
   TransformerConstSharedPtr response_transformation_;
   TransformerConstSharedPtr on_stream_completion_transformation_;

@@ -328,8 +328,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, b
       advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
-      ignore_error_on_parse_(transformation.ignore_error_on_parse())
-       {
+      ignore_error_on_parse_(transformation.ignore_error_on_parse()) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
   inja::TemplateStorage template_storage;
