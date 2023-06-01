@@ -24,7 +24,7 @@ ApiGatewayTransformerFactory::createTransformer(
   return std::make_shared<ApiGatewayTransformer>();
 }
 
-ApiGatewayTransformer::ApiGatewayTransformer(){}
+ApiGatewayTransformer::ApiGatewayTransformer(): Transformation::Transformer(false) {}
 const Envoy::Http::LowerCaseString ApiGatewayTransformer::AMAZON_ERRORTYPE_HEADER = Envoy::Http::LowerCaseString("x-amzn-errortype");
 
 void ApiGatewayTransformer::format_error(
