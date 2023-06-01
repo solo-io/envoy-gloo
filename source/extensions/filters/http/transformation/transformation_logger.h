@@ -4,7 +4,6 @@
 
 #define TRANSFORMATION_LOG(LEVEL, FORMAT, STREAM, ...)                  \
   do {                                                                  \
-      std::cout << "TRANSFORMATION_LOG: " << FORMAT << std::endl;       \
       ENVOY_STREAM_LOG(LEVEL, FORMAT, STREAM, ##__VA_ARGS__);           \
   } while (0)
 

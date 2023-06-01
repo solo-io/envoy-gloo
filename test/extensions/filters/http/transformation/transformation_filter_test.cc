@@ -790,7 +790,9 @@ TEST_F(TransformationFilterTest, LogWithLogDetailsTransformationLevel) {
   EXPECT_CALL(sink, log(_, _)).WillRepeatedly(Invoke([](auto msg, __attribute__((unused)) auto& log) {
     EXPECT_THAT(msg, testing::HasSubstr("[debug]"));
     EXPECT_THAT(msg, testing::AnyOf(testing::HasSubstr("headers before transformation: "),
-                                    testing::HasSubstr("body before transformation: ")));
+                                    testing::HasSubstr("body before transformation: "),
+                                    testing::HasSubstr("headers after transformation: "),
+                                    testing::HasSubstr("body after transformation: ")));
   }));
 
   // set log_request_response_info on transformation config
@@ -809,7 +811,9 @@ TEST_F(TransformationFilterTest, LogWithLogDetailsListenerLevel) {
   EXPECT_CALL(sink, log(_, _)).WillRepeatedly(Invoke([](auto msg, __attribute__((unused)) auto& log) {
     EXPECT_THAT(msg, testing::HasSubstr("[debug]"));
     EXPECT_THAT(msg, testing::AnyOf(testing::HasSubstr("headers before transformation: "),
-                                    testing::HasSubstr("body before transformation: ")));
+                                    testing::HasSubstr("body before transformation: "),
+                                    testing::HasSubstr("headers after transformation: "),
+                                    testing::HasSubstr("body after transformation: ")));
   }));
 
   // set log_request_response_info on listener config

@@ -259,6 +259,11 @@ void TransformationFilter::transformSomething(
                           transformation, filter_config_, callbacks, body.toString());
     transformation->transform(header_map, request_headers_, body, callbacks);
 
+    TRANSFORMATION_SENSITIVE_LOG(debug, "headers after transformation: {}", 
+                          transformation, filter_config_, callbacks, header_map);
+    TRANSFORMATION_SENSITIVE_LOG(debug, "body after transformation: {}", 
+                          transformation, filter_config_, callbacks, body.toString());
+
     if (body.length() > 0) {
       (this->*addData)(body);
     } else if (!transformation->passthrough_body()) {
