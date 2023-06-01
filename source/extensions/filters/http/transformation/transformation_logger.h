@@ -20,6 +20,6 @@
         TRANSFORMATION_LOG_IF(LEVEL, (((TRANSFORMATION)->logRequestResponseInfo().IsInitialized() &&   \
                                         (TRANSFORMATION)->logRequestResponseInfo().value()) ||         \
                                        (!(TRANSFORMATION)->logRequestResponseInfo().IsInitialized() &&  \
-                                       (FILTER_CONFIG)->logRequestResponseInfo().value())),             \
+                                       (FILTER_CONFIG)->logRequestResponseInfo())),             \
                               FORMAT, STREAM, ##__VA_ARGS__);                                         \
     } while (0)
