@@ -8,6 +8,7 @@ option java_multiple_files = true;
 option go_package = "transformation";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 import "validate/validate.proto";
 
 import "envoy/config/route/v3/route_components.proto";
@@ -138,7 +139,7 @@ message Transformation {
   // By default, this is false so no request or response sensitive information is logged.
   // If set to true, the filter will log the request/response body and headers before
   // this transformation is applied.
-  bool log_request_response_info = 4;
+  google.protobuf.BoolValue log_request_response_info = 4;
 }
 
 // Extractions can be used to extract information from the request/response.
