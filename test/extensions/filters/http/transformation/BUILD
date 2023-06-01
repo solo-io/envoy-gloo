@@ -53,6 +53,7 @@ envoy_gloo_cc_test(
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
+        "@envoy//test/common/common:logger_test",
     ],
 )
 

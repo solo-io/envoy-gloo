@@ -1,0 +1,8 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/8266
+  resolvesIssue: false
+  description: >-
+    Expand transformation logging so that request/response body and headers can
+    be logged before a transformation is executed. Adds transformation-level
+    and filter-level settings (`log_request_response_info`) to enable this

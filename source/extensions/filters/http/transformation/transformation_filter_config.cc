@@ -21,10 +21,10 @@ TransformerConstSharedPtr Transformation::getTransformer(
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
     return std::make_unique<InjaTransformer>(
-        transformation.transformation_template(), context.api().randomGenerator());
+        transformation.transformation_template(), context.api().randomGenerator(), transformation.log_request_response_info());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
     const auto& header_body_transform = transformation.header_body_transform();
-    return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata());
+    return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata(), transformation.log_request_response_info());
   }
   case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
     auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
@@ -43,7 +43,7 @@ TransformerConstSharedPtr Transformation::getTransformer(
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
-    : FilterConfig(prefix, context.scope(), proto_config.stage()) {
+    : FilterConfig(prefix, context.scope(), proto_config.stage(), proto_config.log_request_response_info()) {
 
   for (const auto &rule : proto_config.transformations()) {
     if (!rule.has_match()) {

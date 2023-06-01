@@ -11,6 +11,7 @@ using FakeTransformerProto = envoy::test::extensions::transformation::ApiGateway
 
 class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
+  FakeTransformer() : Transformer(google::protobuf::BoolValue()) {}
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
   void transform (Http::RequestOrResponseHeaderMap &headers,

@@ -355,9 +355,9 @@ std::string TransformerInstance::render(const inja::Template &input) {
   }
 }
 
-InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, 
-  Envoy::Random::RandomGenerator &rng)
-    : advanced_templates_(transformation.advanced_templates()),
+InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info)
+    : Transformer(log_request_response_info),
+      advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
