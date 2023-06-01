@@ -4,6 +4,7 @@
 
 #define TRANSFORMATION_LOG(LEVEL, FORMAT, STREAM, ...)                  \
   do {                                                                  \
+      std::cout << "TRANSFORMATION_LOG: " << FORMAT << std::endl;       \
       ENVOY_STREAM_LOG(LEVEL, FORMAT, STREAM, ##__VA_ARGS__);           \
   } while (0)
 
@@ -16,5 +17,9 @@
 
 #define TRANSFORMATION_SENSITIVE_LOG(LEVEL, FORMAT, TRANSFORMATION, FILTER_CONFIG, STREAM, ...)                                 \
     do {                                                                                                 \
-        TRANSFORMATION_LOG_IF(LEVEL, ((FILTER_CONFIG)->logRequestResponseInfo() || (TRANSFORMATION)->logRequestResponseInfo()), FORMAT, STREAM, ##__VA_ARGS__); \
+        TRANSFORMATION_LOG_IF(LEVEL, (((TRANSFORMATION)->logRequestResponseInfo().IsInitialized() &&   \
+                                        (TRANSFORMATION)->logRequestResponseInfo().value()) ||         \
+                                       (!(TRANSFORMATION)->logRequestResponseInfo().IsInitialized() &&  \
+                                       (FILTER_CONFIG)->logRequestResponseInfo().value())),             \
+                              FORMAT, STREAM, ##__VA_ARGS__);                                         \
     } while (0)

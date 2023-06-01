@@ -795,7 +795,7 @@ TEST_F(TransformationFilterTest, LogWithLogDetailsTransformationLevel) {
 
   // set log_request_response_info on transformation config
   transformation_rule_.mutable_route_transformations()
-                ->mutable_request_transformation()->set_log_request_response_info(true);
+                ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(true);
   // confirm that log_request_response_info on listener config is ignored when transformation-level setting is true
   listener_config_.set_log_request_response_info(false);
   happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
@@ -814,10 +814,28 @@ TEST_F(TransformationFilterTest, LogWithLogDetailsListenerLevel) {
 
   // set log_request_response_info on listener config
   listener_config_.set_log_request_response_info(true);
-  // confirm that log_request_response_info on transformation-level setting is ignored when listener config is true
-  transformation_rule_.mutable_route_transformations()
-            ->mutable_request_transformation()->set_log_request_response_info(false);
+
   happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+}
+
+TEST_F(TransformationFilterTest, LogWithLogDetailsListenerLevelTransformationLevelFalse) {
+  Envoy::Logger::Registry::setLogLevel(spdlog::level::debug);
+
+  MockLogSink sink(Envoy::Logger::Registry::getSink());
+
+  EXPECT_CALL(sink, log(_, _)).WillOnce(Invoke([](auto msg, __attribute__((unused)) auto& log) {
+    EXPECT_THAT(msg, testing::HasSubstr("test"));
+  }));
+
+  // set log_request_response_info on listener config
+  listener_config_.set_log_request_response_info(true);
+  // confirm that log_request_response_info on transformation-level setting is respected when listener config is true
+  transformation_rule_.mutable_route_transformations()
+            ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(false);
+  happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+
+  // if processing the transformation generates a log, then this line will cause the "WillOnce" expectation above to fail
+  sink.log("test", spdlog::details::log_msg());
 }
 
 TEST_F(TransformationFilterTest, NoLogWhenLogWithDetailsDisabled) {
@@ -832,7 +850,7 @@ TEST_F(TransformationFilterTest, NoLogWhenLogWithDetailsDisabled) {
   // set log_request_response_info false on both transformation and listener config
   listener_config_.set_log_request_response_info(false);
   transformation_rule_.mutable_route_transformations()
-            ->mutable_request_transformation()->set_log_request_response_info(false);
+            ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(false);
   happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
 
   // if processing the transformation generates a log, then this line will cause the "WillOnce" expectation above to fail

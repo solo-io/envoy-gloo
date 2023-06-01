@@ -39,7 +39,7 @@ struct TransformationFilterStats {
 
 class Transformer {
 public:
-  Transformer(bool log_request_response_info) : log_request_response_info_(log_request_response_info) {}
+  Transformer(google::protobuf::BoolValue log_request_response_info) : log_request_response_info_(log_request_response_info) {}
   virtual ~Transformer() {}
 
   virtual bool passthrough_body() const PURE;
@@ -51,9 +51,9 @@ public:
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
 
-  bool logRequestResponseInfo() const { return log_request_response_info_; }
+  google::protobuf::BoolValue logRequestResponseInfo() const { return log_request_response_info_; }
 
-  bool log_request_response_info_{};
+  google::protobuf::BoolValue log_request_response_info_{};
 };
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
