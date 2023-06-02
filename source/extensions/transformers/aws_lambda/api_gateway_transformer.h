@@ -29,6 +29,7 @@ class ApiGatewayTransformerFactory
 public:
   HttpFilters::Transformation::TransformerConstSharedPtr createTransformer(
       const Protobuf::Message &config,
+      google::protobuf::BoolValue log_request_response_info,
       Server::Configuration::CommonFactoryContext &context) override;
 
   ProtobufTypes::MessagePtr createEmptyConfigProto() override {

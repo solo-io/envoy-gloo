@@ -18,6 +18,7 @@ namespace AwsLambda {
 HttpFilters::Transformation::TransformerConstSharedPtr
 ApiGatewayTransformerFactory::createTransformer(
     const Protobuf::Message &config,
+    google::protobuf::BoolValue log_request_response_info,
     Server::Configuration::CommonFactoryContext &context) {
     MessageUtil::downcastAndValidate<const ApiGatewayTransformerProto &>(
           config, context.messageValidationContext().staticValidationVisitor());
