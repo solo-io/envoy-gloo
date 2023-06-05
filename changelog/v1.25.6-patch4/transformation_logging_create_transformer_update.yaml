@@ -1,0 +1,9 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/gloo/issues/8266
+  resolvesIssue: false
+  description: >-
+    Addresses a blind spot missed in the original PR (#240)
+    to add additional debug logging to transformations.
+    This change allows transformations defined outside of 
+    envoy-gloo-ee to support that functionality.

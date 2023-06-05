@@ -40,6 +40,7 @@ public:
   std::string name() const override {return "io.solo.transformer.api_gateway_test_transformer";}
 
   TransformerConstSharedPtr createTransformer(const Protobuf::Message &,
+   __attribute__((unused)) google::protobuf::BoolValue log_request_response_info,
   Server::Configuration::CommonFactoryContext &) override {
     return std::make_shared<FakeTransformer>();
   }

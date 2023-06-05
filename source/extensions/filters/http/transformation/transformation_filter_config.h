@@ -111,6 +111,7 @@ public:
  * @param config the custom configuration for this transformer extension type.
  */
   virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
+    google::protobuf::BoolValue log_request_response_info,
     Server::Configuration::CommonFactoryContext &context) PURE;
 
   virtual std::string name() const override PURE;
