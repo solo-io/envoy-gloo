@@ -1,7 +1,7 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.25.6
-        commit = "f89e0efddb8e4f8bad556608aa0e68fd5eae8d37",
+        # envoy 1.25.7
+        commit = "ddb94b9d031790282f87e51f7e59a9cd61e8e55b",
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
