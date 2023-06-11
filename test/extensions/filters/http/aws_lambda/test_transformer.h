@@ -11,6 +11,7 @@ using FakeTransformerProto = envoy::test::extensions::transformation::ApiGateway
 
 class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
+  FakeTransformer() : Transformer(google::protobuf::BoolValue()) {}
   bool passthrough_body() const override {return false;}
   // This transformer just drains the body and replaces it with a hardcoded string.
   void transform (Http::RequestOrResponseHeaderMap &headers,
@@ -39,6 +40,7 @@ public:
   std::string name() const override {return "io.solo.transformer.api_gateway_test_transformer";}
 
   TransformerConstSharedPtr createTransformer(const Protobuf::Message &,
+   __attribute__((unused)) google::protobuf::BoolValue log_request_response_info,
   Server::Configuration::CommonFactoryContext &) override {
     return std::make_shared<FakeTransformer>();
   }

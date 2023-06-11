@@ -11,6 +11,7 @@ using FakeTransformerProto = envoy::test::extensions::transformation::FakeTransf
 
 class FakeTransformer : public HttpFilters::Transformation::Transformer {
 public:
+  FakeTransformer() : Transformer(google::protobuf::BoolValue()) {}
   bool passthrough_body() const override {return false;}
   void transform (Http::RequestOrResponseHeaderMap &,
                          // request header map. this has the request header map
@@ -27,6 +28,7 @@ public:
   std::string name() const override {return "io.solo.transformer.fake";}
 
   TransformerConstSharedPtr createTransformer(const Protobuf::Message &,
+   __attribute__((unused)) google::protobuf::BoolValue log_request_response_info,
   Server::Configuration::CommonFactoryContext &) override {
     return std::make_shared<FakeTransformer>();
   }

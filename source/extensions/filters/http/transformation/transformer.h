@@ -39,6 +39,7 @@ struct TransformationFilterStats {
 
 class Transformer {
 public:
+  Transformer(google::protobuf::BoolValue log_request_response_info) : log_request_response_info_(log_request_response_info) {}
   virtual ~Transformer() {}
 
   virtual bool passthrough_body() const PURE;
@@ -49,6 +50,10 @@ public:
                          Http::RequestHeaderMap *request_headers,
                          Buffer::Instance &body,
                          Http::StreamFilterCallbacks &callbacks) const PURE;
+
+  google::protobuf::BoolValue logRequestResponseInfo() const { return log_request_response_info_; }
+
+  google::protobuf::BoolValue log_request_response_info_{};
 };
 
 typedef std::shared_ptr<const Transformer> TransformerConstSharedPtr;
@@ -118,8 +123,8 @@ private:
 
 class FilterConfig : public TransformConfig {
 public:
-  FilterConfig(const std::string &prefix, Stats::Scope &scope, uint32_t stage)
-      : stats_(generateStats(prefix, scope)), stage_(stage){};
+  FilterConfig(const std::string &prefix, Stats::Scope &scope, uint32_t stage, bool log_request_response_info)
+      : stats_(generateStats(prefix, scope)), stage_(stage), log_request_response_info_(log_request_response_info) {}
 
   static TransformationFilterStats generateStats(const std::string &prefix,
                                                  Stats::Scope &scope);
@@ -143,9 +148,12 @@ public:
 
   uint32_t stage() const { return stage_; }
 
+  bool logRequestResponseInfo() const { return log_request_response_info_; }
+
 private:
   TransformationFilterStats stats_;
   uint32_t stage_{};
+  bool log_request_response_info_{};
 };
 
 class RouteFilterConfig : public Router::RouteSpecificFilterConfig,

@@ -18,13 +18,14 @@ namespace AwsLambda {
 HttpFilters::Transformation::TransformerConstSharedPtr
 ApiGatewayTransformerFactory::createTransformer(
     const Protobuf::Message &config,
+    __attribute__((unused)) google::protobuf::BoolValue log_request_response_info,
     Server::Configuration::CommonFactoryContext &context) {
     MessageUtil::downcastAndValidate<const ApiGatewayTransformerProto &>(
           config, context.messageValidationContext().staticValidationVisitor());
   return std::make_shared<ApiGatewayTransformer>();
 }
 
-ApiGatewayTransformer::ApiGatewayTransformer(){}
+ApiGatewayTransformer::ApiGatewayTransformer(): Transformation::Transformer(google::protobuf::BoolValue()) {}
 const Envoy::Http::LowerCaseString ApiGatewayTransformer::AMAZON_ERRORTYPE_HEADER = Envoy::Http::LowerCaseString("x-amzn-errortype");
 
 void ApiGatewayTransformer::format_error(

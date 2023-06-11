@@ -1,0 +1,8 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/solo-projects/issues/4634
+  resolvesIssue: false
+  description: >-
+    Fork envoy and incorporate a few patches to support the deprecated cipher
+    passthrough work. Specifically, enable parsing dynamic metadata in filter
+    chain input matchers.

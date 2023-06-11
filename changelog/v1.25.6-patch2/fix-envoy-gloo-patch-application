@@ -1,0 +1,5 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Fix for patches from upstream v1.26 onto out v1.25.x branch were not
+    working previously. This change rectifies that.

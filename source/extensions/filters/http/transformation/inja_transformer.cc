@@ -2,6 +2,8 @@
 
 #include <iterator>
 
+#include "absl/strings/str_replace.h"
+
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
 #include "source/common/common/regex.h"
@@ -108,10 +110,11 @@ TransformerInstance::TransformerInstance(
     const std::unordered_map<std::string, absl::string_view> &extractions,
     const json &context,
     const std::unordered_map<std::string, std::string> &environ,
-    const envoy::config::core::v3::Metadata *cluster_metadata)
+    const envoy::config::core::v3::Metadata *cluster_metadata,
+    Envoy::Random::RandomGenerator &rng)
     : header_map_(header_map), request_headers_(request_headers), body_(body),
       extractions_(extractions), context_(context), environ_(environ),
-      cluster_metadata_(cluster_metadata) {
+      cluster_metadata_(cluster_metadata), rng_(rng) {
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
@@ -141,6 +144,9 @@ TransformerInstance::TransformerInstance(
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
     return substring_callback(args); 
+  });
+  env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
+    return replace_with_random_callback(args);
   });
 }
 
@@ -313,6 +319,32 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
   return input.substr(start, substring_len);
 }
 
+json TransformerInstance::replace_with_random_callback(const inja::Arguments &args) {
+    // first argument: string to modify
+  const std::string &source = args.at(0)->get_ref<const std::string &>();
+    // second argument: pattern to be replaced
+  const std::string &to_replace = args.at(1)->get_ref<const std::string &>();
+
+  return 
+    absl::StrReplaceAll(source, {{to_replace, absl::StrCat(random_for_pattern(to_replace))}});
+}
+
+std::string& TransformerInstance::random_for_pattern(const std::string& pattern) {
+  auto found = pattern_replacements_.find(pattern);
+  if (found == pattern_replacements_.end()) {
+    // generate 128 bit long random number
+    uint64_t random[2];
+    uint64_t high = rng_.random();
+    uint64_t low = rng_.random();
+    random[0] = low;
+    random[1] = high;
+    // and convert it to a base64-encoded string with no padding
+    pattern_replacements_.insert({pattern, Base64::encode(reinterpret_cast<char *>(random), 16, false)});
+    return pattern_replacements_[pattern];
+  }
+  return found->second;
+}
+
 std::string TransformerInstance::render(const inja::Template &input) {
   // inja can't handle context that are not objects correctly, so we give it an
   // empty object in that case
@@ -323,11 +355,13 @@ std::string TransformerInstance::render(const inja::Template &input) {
   }
 }
 
-InjaTransformer::InjaTransformer(const TransformationTemplate &transformation)
-    : advanced_templates_(transformation.advanced_templates()),
+InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info)
+    : Transformer(log_request_response_info),
+      advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
-      ignore_error_on_parse_(transformation.ignore_error_on_parse()) {
+      ignore_error_on_parse_(transformation.ignore_error_on_parse()),
+      rng_(rng) {
   inja::ParserConfig parser_config;
   inja::LexerConfig lexer_config;
   inja::TemplateStorage template_storage;
@@ -496,7 +530,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // start transforming!
   TransformerInstance instance(header_map, request_headers, get_body,
                                extractions, json_body, environ_,
-                               cluster_metadata);
+                               cluster_metadata, rng_);
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

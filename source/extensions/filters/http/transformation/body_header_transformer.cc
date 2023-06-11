@@ -13,7 +13,8 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-BodyHeaderTransformer::BodyHeaderTransformer(bool add_request_metadata):add_request_metadata_(add_request_metadata){}
+BodyHeaderTransformer::BodyHeaderTransformer(bool add_request_metadata, google::protobuf::BoolValue log_request_response_info)
+    : Transformer(log_request_response_info), add_request_metadata_(add_request_metadata){}
 
 void BodyHeaderTransformer::transform(
     Http::RequestOrResponseHeaderMap &header_map,

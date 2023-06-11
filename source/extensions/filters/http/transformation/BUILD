@@ -11,6 +11,16 @@ load(
 envoy_package()
 
 envoy_cc_library(
+    name = "transformation_logger_lib",
+    hdrs = ["transformation_logger.h"],
+    srcs = ["transformation_logger.cc"],
+    deps = [
+        "@envoy//source/common/common:minimal_logger_lib"
+    ],
+    repository = "@envoy",
+)
+
+envoy_cc_library(
     name = "transformation_filter_config",
     srcs = [
         "transformation_filter_config.cc",
@@ -23,6 +33,7 @@ envoy_cc_library(
         ":body_header_transformer_lib",
         ":inja_transformer_lib",
         ":transformer_lib",
+        ":transformation_logger_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//envoy/router:router_interface",
@@ -85,6 +96,7 @@ envoy_cc_library(
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//envoy/buffer:buffer_interface",
+        "@envoy//envoy/common:random_generator_interface",
         "@envoy//envoy/http:header_map_interface",
         "@envoy//source/common/common:base64_lib",
         "@envoy//source/common/common:macros",

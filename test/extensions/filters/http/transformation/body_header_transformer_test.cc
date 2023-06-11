@@ -34,7 +34,7 @@ TEST(BodyHeaderTransformer, transform) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(false);
+  BodyHeaderTransformer transformer(false, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -62,7 +62,7 @@ TEST(BodyHeaderTransformer, transformWithExtraAndQuery) {
                                          {":path", "/users/123?key=value"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderTransformer transformer(true, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -98,7 +98,7 @@ TEST(BodyHeaderTransformer, transformWithExtraNoQuery) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderTransformer transformer(true, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -132,7 +132,7 @@ TEST(BodyHeaderTransformer, transformWithExtraMultiValueQuery) {
                                          {":path", "/users/123?key=value&key=value2"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderTransformer transformer(true, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -174,7 +174,7 @@ TEST(BodyHeaderTransformer, transformWithExtraMultiValueHeaders) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderTransformer transformer(true, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
@@ -214,7 +214,7 @@ TEST(BodyHeaderTransformer, transformWithExtraMultiValueHeadersAndMultiValueQuer
                                          {":path", "/users/123?key=value&key=value2"}};
   Buffer::OwnedImpl body("testbody");
 
-  BodyHeaderTransformer transformer(true);
+  BodyHeaderTransformer transformer(true, google::protobuf::BoolValue());
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
   transformer.transform(headers, &headers, body, filter_callbacks_);
 
