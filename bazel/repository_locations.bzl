@@ -1,7 +1,7 @@
 REPOSITORY_LOCATIONS = dict(
-    # exp-ambient-dev (2023-03-23), commit: https://github.com/envoyproxy/envoy/commit/17844b10a3e57e411f3b11c595445327d6ac4d49
+    # v1.26.2, commit: https://github.com/envoyproxy/envoy/commit/17844b10a3e57e411f3b11c595445327d6ac4d49
     envoy = dict(
-        commit = "17844b10a3e57e411f3b11c595445327d6ac4d49",
+        commit = "4aa28dcbfdaf17b754ee6d4ca4f1fdf6f84c99dc",
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
