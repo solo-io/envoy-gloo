@@ -61,7 +61,7 @@ sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/
 sed -i "s|VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|\${ENVOY_SRCDIR}/VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"
 
-bash -x ci/upstream_do_ci.sh "$@"
+bash -x ci/upstream/upstream_do_ci.sh "$@"
 
 $SOURCE_DIR/ci/static_analysis.sh
 
