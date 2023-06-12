@@ -4,9 +4,14 @@ bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
 
+git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
+pushd /tmp/envoy
+git checkout v1.25.7
+popd
+
 $SOURCE_DIR/ci/verify_posture.sh verify
 
-export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
+export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 # dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
@@ -61,7 +66,7 @@ sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/
 sed -i "s|VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|\${ENVOY_SRCDIR}/VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"
 
-bash -x ci/upstream/do_ci.sh "$@"
+bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
 
 $SOURCE_DIR/ci/static_analysis.sh
 
