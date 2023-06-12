@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: nlohmann
+  dependencyRepo: json
+  dependencyTag: v1.11.2
+  description: >-
+    Bump nlohmann/json to match upstream
