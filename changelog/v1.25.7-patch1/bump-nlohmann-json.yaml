@@ -1,6 +1,6 @@
 changelog:
 - type: DEPENDENCY_BUMP
-  depenencyOwner: nlohmann
+  dependencyOwner: nlohmann
   dependencyRepo: json
   dependencyTag: v1.11.2
   description: >-
