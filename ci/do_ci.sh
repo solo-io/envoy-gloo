@@ -4,17 +4,28 @@ bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
 
+# will be reverted or updated in https://github.com/solo-io/envoy-gloo/issues/246
+git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
+pushd /tmp/envoy
+git checkout v1.25.7
+popd
+
 $SOURCE_DIR/ci/verify_posture.sh verify
 
-export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
+export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 # dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
 # cp -f $UPSTREAM_ENVOY_SRCDIR/bazel/get_workspace_status $SOURCE_DIR/bazel/get_workspace_status
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
+cp -f $UPSTREAM_ENVOY_SRCDIR/VERSION.txt $SOURCE_DIR/VERSION.txt
 
+# upstream removed the flaky_test
 mkdir -p $SOURCE_DIR/ci/flaky_test
-cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
+# These were removed upstream but the build seems to fail here.
+if [[ -d "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]] || [[ -f "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]]; then
+  cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
+fi
 
 cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
 

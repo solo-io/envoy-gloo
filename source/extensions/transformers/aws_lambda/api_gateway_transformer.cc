@@ -169,7 +169,7 @@ void ApiGatewayTransformer::transform_response(
   }
   response_headers->setContentLength(body.length());
 
-  ASSERT(response_headers->getStatusValue() != 0);
+  ASSERT(!response_headers->getStatusValue().empty());
 }
 
 void ApiGatewayTransformer::add_response_header(

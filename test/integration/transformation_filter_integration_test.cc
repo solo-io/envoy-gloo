@@ -220,7 +220,7 @@ private:
         Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation);
     filter.mutable_typed_config()->PackFrom(filter_config);
 
-    return MessageUtil::getJsonStringFromMessageOrDie(filter);
+    return MessageUtil::getJsonStringFromMessageOrError(filter);
   }
 };
 
