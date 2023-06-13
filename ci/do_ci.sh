@@ -4,7 +4,7 @@ bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
 
-# will be reverted or updated in https://github.com/solo-io/solo-projects/issues/5098
+# will be reverted or updated in https://github.com/solo-io/envoy-gloo/issues/246
 git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
 pushd /tmp/envoy
 git checkout v1.25.7
