@@ -9,6 +9,8 @@
 #include "source/common/common/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
+#include "source/common/http/header_map_impl.h"
+#include "source/common/common/random_generator.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
@@ -130,20 +132,20 @@ TransformerInstance::TransformerInstance(
     return cluster_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
-    return base64_encode_callback(args); 
+    return base64_encode_callback(args);
   });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
-    return base64_decode_callback(args); 
+    return base64_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
   // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
@@ -282,7 +284,7 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 json TransformerInstance::substring_callback(const inja::Arguments &args) const {
   // get first argument, which is the string to be modified
   const std::string &input = args.at(0)->get_ref<const std::string &>();
-  
+
   // try to get second argument (start position) as an int64_t
   int start = 0;
   try {
@@ -309,7 +311,7 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
     return "";
   }
 
-  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string, 
+  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string,
   // return the substring from start to the end of the string
   if (substring_len <= 0 || start + substring_len > input_len) {
     return input.substr(start);
@@ -325,7 +327,7 @@ json TransformerInstance::replace_with_random_callback(const inja::Arguments &ar
     // second argument: pattern to be replaced
   const std::string &to_replace = args.at(1)->get_ref<const std::string &>();
 
-  return 
+  return
     absl::StrReplaceAll(source, {{to_replace, absl::StrCat(random_for_pattern(to_replace))}});
 }
 
@@ -355,6 +357,36 @@ std::string TransformerInstance::render(const inja::Template &input) {
   }
 }
 
+inja::Template TransformerInstance::parse(std::string_view input) {
+    return env_.parse(input);
+}
+
+TransformerInstance TransformerInstance::empty_transformer_instance() {
+
+  std::unique_ptr<Http::RequestHeaderMap> emptyRequestHeaderMap;
+  emptyRequestHeaderMap = Http::RequestHeaderMapImpl::create();
+  auto header_map = emptyRequestHeaderMap.get();
+
+  absl::optional<std::string> string_body;
+  GetBodyFunc get_body = []() -> const std::string & {
+      const std::string ret("");
+      return std::move(ret);
+  };
+
+  Buffer::OwnedImpl emptyBody{};
+  const envoy::config::core::v3::Metadata *cluster_metadata{};
+  json json_body;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  Random::RandomGeneratorImpl rng;
+  std::unordered_map<std::string, std::string> empty_environ;
+
+  TransformerInstance instance(*header_map, header_map, get_body,
+          extractions, json_body, empty_environ,
+          cluster_metadata, rng);
+
+  return instance;
+}
+
 InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info)
     : Transformer(log_request_response_info),
       advanced_templates_(transformation.advanced_templates()),
@@ -362,14 +394,10 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
       rng_(rng) {
-  inja::ParserConfig parser_config;
-  inja::LexerConfig lexer_config;
-  inja::TemplateStorage template_storage;
-  if (!advanced_templates_) {
-    parser_config.notation = inja::ElementNotation::Dot;
+  auto instance = TransformerInstance::empty_transformer_instance();
+  if (advanced_templates_) {
+      instance.set_element_notation(inja::ElementNotation::Dot);
   }
-
-  inja::Parser parser(parser_config, lexer_config, template_storage);
 
   const auto &extractors = transformation.extractors();
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
@@ -380,7 +408,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
     Http::LowerCaseString header_name(it->first);
     try {
       headers_.emplace_back(std::make_pair(std::move(header_name),
-                                           parser.parse(it->second.text())));
+                                           instance.parse(it->second.text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it->first, e.what()));
@@ -402,7 +430,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
     Http::LowerCaseString header_name(it.key());
     try {
       headers_to_append_.emplace_back(std::make_pair(std::move(header_name),
-                                           parser.parse(it.value().text())));
+                                           instance.parse(it.value().text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it.key(), e.what()));
@@ -420,7 +448,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
             SoloHttpFilterNames::get().Transformation;
       }
       dynamicMetadataValue.key_ = it->key();
-      dynamicMetadataValue.template_ = parser.parse(it->value().text());
+      dynamicMetadataValue.template_ = instance.parse(it->value().text());
       dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
@@ -431,7 +459,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
   switch (transformation.body_transformation_case()) {
   case TransformationTemplate::kBody: {
     try {
-      body_template_.emplace(parser.parse(transformation.body().text()));
+      body_template_.emplace(instance.parse(transformation.body().text()));
     } catch (const std::exception &e) {
       throw EnvoyException(
           fmt::format("Failed to parse body template {}", e.what()));
@@ -531,6 +559,9 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   TransformerInstance instance(header_map, request_headers, get_body,
                                extractions, json_body, environ_,
                                cluster_metadata, rng_);
+  if (advanced_templates_) {
+      instance.set_element_notation(inja::ElementNotation::Dot);
+  }
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

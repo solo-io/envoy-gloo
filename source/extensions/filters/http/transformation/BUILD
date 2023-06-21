@@ -100,6 +100,7 @@ envoy_cc_library(
         "@envoy//envoy/http:header_map_interface",
         "@envoy//source/common/common:base64_lib",
         "@envoy//source/common/common:macros",
+        "@envoy//source/common/common:random_generator_lib",
         "@envoy//source/common/common:regex_lib",
         "@envoy//source/common/common:utility_lib",
         "@envoy//source/common/protobuf",

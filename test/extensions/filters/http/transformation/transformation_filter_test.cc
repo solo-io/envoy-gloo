@@ -101,7 +101,7 @@ class TransformationFilterTest : public testing::Test {
 public:
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
-  
+
   enum class ConfigType {
     Listener,
     Route,
@@ -703,7 +703,7 @@ TEST_F(TransformationFilterTest, HappyPathOnStreamComplete) {
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
-  
+
   // Header should not be added yet
   EXPECT_EQ(EMPTY_STRING, headers_.get_("added-header"));
   EXPECT_EQ(EMPTY_STRING, response_headers.get_("added-header"));
@@ -742,7 +742,7 @@ TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   res = filter_->encodeHeaders(response_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
-  
+
   // Raise an arbitrary error during a call that is triggeres
   // during the Inja header transformer
   ON_CALL(encoder_filter_callbacks_, clusterInfo())
@@ -751,7 +751,7 @@ TEST_F(TransformationFilterTest, ErroredOnStreamComplete) {
   // Verify that error is caught and stat is incremented
   EXPECT_NO_THROW(filter_->onStreamComplete());
   EXPECT_EQ(1U, config_->stats().on_stream_complete_error_.value());
- 
+
 }
 
 TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
@@ -760,12 +760,12 @@ TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
   Http::TestResponseHeaderMapImpl response_headers{};
   auto ehResult = filter_->encodeHeaders(response_headers, false);
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration, ehResult);
-  
+
   Buffer::OwnedImpl buf{};
-  
+
   auto edResult = filter_->encodeData(buf, false);
   EXPECT_EQ(Http::FilterDataStatus::StopIterationNoBuffer, edResult);
-  
+
     Http::TestResponseTrailerMapImpl response_trailers{};
   auto etResult = filter_->encodeTrailers(response_trailers);
   EXPECT_EQ(Http::FilterTrailersStatus::StopIteration, etResult);

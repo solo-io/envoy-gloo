@@ -36,6 +36,11 @@ public:
       Envoy::Random::RandomGenerator &rng);
 
   std::string render(const inja::Template &input);
+  inja::Template parse(std::string_view input);
+  void set_element_notation(inja::ElementNotation notation) {
+      env_.set_element_notation(notation);
+  }
+  static TransformerInstance empty_transformer_instance();
 
 private:
   // header_value(name)

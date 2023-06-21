@@ -38,12 +38,8 @@ std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 }
 
 inja::Template parse(std::string s) {
-  inja::ParserConfig parser_config;
-  inja::LexerConfig lexer_config;
-  inja::TemplateStorage template_storage;
-
-  inja::Parser parser(parser_config, lexer_config, template_storage);
-  return parser.parse(s);
+  auto instance = TransformerInstance::empty_transformer_instance();
+  return instance.parse(s);
 }
 
 class TransformerInstanceTest : public testing::Test {
