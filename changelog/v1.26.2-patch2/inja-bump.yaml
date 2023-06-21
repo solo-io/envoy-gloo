@@ -1,0 +1,8 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: pantor
+  dependencyRepo: inja
+  dependencyTag: 3.4
+  description: >-
+    Use newer version of Inja templating engine in order to include newer template
+    features, specifically 'set'

@@ -1,11 +1,11 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.26.2
-        commit = "4aa28dcbfdaf17b754ee6d4ca4f1fdf6f84c99dc",
+        # envoy 1.25.7
+        commit = "ddb94b9d031790282f87e51f7e59a9cd61e8e55b",
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
-        commit = "4c0ee3a46c0bbb279b0849e5a659e52684a37a98",
+        commit = "5a18986825fc7e5d2916ff345c4369e4b6ea7122", # v3.4 + JSON Pointers
         remote = "https://github.com/pantor/inja",
     ),
     json = dict(
