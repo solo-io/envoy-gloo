@@ -115,40 +115,43 @@ TransformerInstance::TransformerInstance(
     const envoy::config::core::v3::Metadata *cluster_metadata,
     Envoy::Random::RandomGenerator &rng)
     : header_map_(header_map), request_headers_(request_headers), body_(body),
-      extractions_(extractions), context_(context), environ_(environ),
+      extractions_(std::move(extractions)), context_(context), environ_(environ),
       cluster_metadata_(cluster_metadata), rng_(rng) {
+  for(auto it = extractions_.begin(); it != extractions_.end(); it++) {
+  }
+
   env_.add_callback("header", 1,
-                    [this](Arguments &args) { return header_callback(args); });
+                    [this](Arguments &args) { return this->header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
-    return request_header_callback(args);
+    return this->request_header_callback(args);
   });
   env_.add_callback("extraction", 1, [this](Arguments &args) {
-    return extracted_callback(args);
+    return this->extracted_callback(args);
   });
-  env_.add_callback("context", 0, [this](Arguments &) { return context_; });
-  env_.add_callback("body", 0, [this](Arguments &) { return body_(); });
-  env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
+  env_.add_callback("context", 0, [this](Arguments &) { return this->context_; });
+  env_.add_callback("body", 0, [this](Arguments &) { return this->body_(); });
+  env_.add_callback("env", 1, [this](Arguments &args) { return this->env(args); });
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
-    return cluster_metadata_callback(args);
+    return this->cluster_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
-    return base64_encode_callback(args);
+    return this->base64_encode_callback(args);
   });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
-    return base64_decode_callback(args);
+    return this->base64_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
   // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
-    return substring_callback(args);
+    return this->substring_callback(args);
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
-    return substring_callback(args);
+    return this->substring_callback(args);
   });
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
-    return replace_with_random_callback(args);
+    return this->replace_with_random_callback(args);
   });
 }
 
@@ -177,8 +180,8 @@ json TransformerInstance::request_header_callback(
 
 json TransformerInstance::extracted_callback(
     const inja::Arguments &args) const {
-  const std::string &name = args.at(0)->get_ref<const std::string &>();
-  const auto value_it = extractions_.find(name);
+  const std::string &ext_name = args.at(0)->get_ref<const std::string &>();
+  const auto value_it = extractions_.find(ext_name);
   if (value_it != extractions_.end()) {
     return value_it->second;
   }
@@ -358,7 +361,7 @@ std::string TransformerInstance::render(const inja::Template &input) {
 }
 
 inja::Template TransformerInstance::parse(std::string_view input) {
-    return env_.parse(input);
+  return env_.parse(input);
 }
 
 TransformerInstance TransformerInstance::empty_transformer_instance() {
@@ -389,93 +392,10 @@ TransformerInstance TransformerInstance::empty_transformer_instance() {
 
 InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info)
     : Transformer(log_request_response_info),
-      advanced_templates_(transformation.advanced_templates()),
-      passthrough_body_(transformation.has_passthrough()),
-      parse_body_behavior_(transformation.parse_body_behavior()),
-      ignore_error_on_parse_(transformation.ignore_error_on_parse()),
+      transformation_(transformation),
       rng_(rng) {
-  auto instance = TransformerInstance::empty_transformer_instance();
-  if (advanced_templates_) {
-      instance.set_element_notation(inja::ElementNotation::Dot);
-  }
-
-  const auto &extractors = transformation.extractors();
-  for (auto it = extractors.begin(); it != extractors.end(); it++) {
-    extractors_.emplace_back(std::make_pair(it->first, it->second));
-  }
-  const auto &headers = transformation.headers();
-  for (auto it = headers.begin(); it != headers.end(); it++) {
-    Http::LowerCaseString header_name(it->first);
-    try {
-      headers_.emplace_back(std::make_pair(std::move(header_name),
-                                           instance.parse(it->second.text())));
-    } catch (const std::exception &e) {
-      throw EnvoyException(fmt::format(
-          "Failed to parse header template '{}': {}", it->first, e.what()));
-    }
-  }
-  const auto &headers_to_remove = transformation.headers_to_remove();
-  for (auto idx : headers_to_remove) {
-    Http::LowerCaseString header_name(idx);
-    try {
-      headers_to_remove_.push_back(header_name);
-    } catch (const std::exception &e) {
-      throw EnvoyException(fmt::format(
-          "Failed to parse header to remove '{}': {}", idx, e.what()));
-      }
-  }
-  const auto &headers_to_append = transformation.headers_to_append();
-  for (auto idx = 0; idx < transformation.headers_to_append_size(); idx++) {
-    const auto &it = headers_to_append.Get(idx);
-    Http::LowerCaseString header_name(it.key());
-    try {
-      headers_to_append_.emplace_back(std::make_pair(std::move(header_name),
-                                           instance.parse(it.value().text())));
-    } catch (const std::exception &e) {
-      throw EnvoyException(fmt::format(
-          "Failed to parse header template '{}': {}", it.key(), e.what()));
-    }
-  }
-  const auto &dynamic_metadata_values =
-      transformation.dynamic_metadata_values();
-  for (auto it = dynamic_metadata_values.begin();
-       it != dynamic_metadata_values.end(); it++) {
-    try {
-      DynamicMetadataValue dynamicMetadataValue;
-      dynamicMetadataValue.namespace_ = it->metadata_namespace();
-      if (dynamicMetadataValue.namespace_.empty()) {
-        dynamicMetadataValue.namespace_ =
-            SoloHttpFilterNames::get().Transformation;
-      }
-      dynamicMetadataValue.key_ = it->key();
-      dynamicMetadataValue.template_ = instance.parse(it->value().text());
-      dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
-    } catch (const std::exception &e) {
-      throw EnvoyException(fmt::format(
-          "Failed to parse header template '{}': {}", it->key(), e.what()));
-    }
-  }
-
-  switch (transformation.body_transformation_case()) {
-  case TransformationTemplate::kBody: {
-    try {
-      body_template_.emplace(instance.parse(transformation.body().text()));
-    } catch (const std::exception &e) {
-      throw EnvoyException(
-          fmt::format("Failed to parse body template {}", e.what()));
-    }
-    break;
-  }
-  case TransformationTemplate::kMergeExtractorsToBody: {
-    merged_extractors_to_body_ = true;
-    break;
-  }
-  case TransformationTemplate::kPassthrough:
-    break;
-  case TransformationTemplate::BODY_TRANSFORMATION_NOT_SET: {
-    break;
-  }
-  }
+  // first we validate the templates parse so we can catch invalid templates at config time
+  validate_templates();
 
   // parse environment
   for (char **env = environ; *env != 0; env++) {
@@ -487,10 +407,80 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
       environ_[key] = value;
     }
   }
+
+  switch (transformation_.body_transformation_case()) {
+  case TransformationTemplate::kBody: {
+    // this case is handled in transform method
+    break;
+  }
+  case TransformationTemplate::kMergeExtractorsToBody: {
+    merged_extractors_to_body_ = true;
+    break;
+  }
+  case TransformationTemplate::kPassthrough:
+    break;
+  case TransformationTemplate::BODY_TRANSFORMATION_NOT_SET: {
+    break;
+  }
+}
 }
 
 InjaTransformer::~InjaTransformer() {}
 
+// validate_templates provides a way to return early if we encounter parser errors
+// while processing user-provided templates. This requires the use of an TransformerInstance
+// because we will encounter parser errors if we do not have the callbacks defined.
+void InjaTransformer::validate_templates() {
+  auto instance = TransformerInstance::empty_transformer_instance();
+  if (transformation_.advanced_templates()) {
+      instance.set_element_notation(inja::ElementNotation::Pointer);
+  }
+  const auto &headers = transformation_.headers();
+  for (auto it = headers.begin(); it != headers.end(); it++) {
+    Http::LowerCaseString header_name(it->first);
+    try {
+      instance.parse(it->second.text());
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it->first, e.what()));
+    }
+  }
+  const auto &headers_to_append = transformation_.headers_to_append();
+  for (auto idx = 0; idx < transformation_.headers_to_append_size(); idx++) {
+    const auto &it = headers_to_append.Get(idx);
+    try {
+      instance.parse(it.value().text());
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it.key(), e.what()));
+    }
+  }
+  const auto &dynamic_metadata_values =
+      transformation_.dynamic_metadata_values();
+  for (auto it = dynamic_metadata_values.begin();
+       it != dynamic_metadata_values.end(); it++) {
+    try {
+      instance.parse(it->value().text());
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse dynamic metadata template '{}': {}", it->key(), e.what()));
+    }
+  }
+
+  switch (transformation_.body_transformation_case()) {
+  case TransformationTemplate::kBody: {
+    try {
+      instance.parse(transformation_.body().text());
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse body template {}", e.what()));
+    }
+    break;
+  }
+  default: break;
+  }
+
+}
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
                                 Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
@@ -505,13 +495,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   json json_body;
 
-  if (parse_body_behavior_ != TransformationTemplate::DontParse &&
+  if (transformation_.parse_body_behavior() != TransformationTemplate::DontParse &&
       body.length() > 0) {
     const std::string &bodystring = get_body();
     // parse the body as json
     // TODO: gate this under a parse_body boolean
-    if (parse_body_behavior_ == TransformationTemplate::ParseAsJson) {
-      if (ignore_error_on_parse_) {
+    if (transformation_.parse_body_behavior() == TransformationTemplate::ParseAsJson) {
+      if (transformation_.ignore_error_on_parse()) {
         try {
           json_body = json::parse(bodystring);
         } catch (const std::exception &) {
@@ -524,14 +514,20 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
   // get the extractions
+  std::vector<std::pair<std::string, Extractor>> extractor_pairs;
   std::unordered_map<std::string, absl::string_view> extractions;
-  if (advanced_templates_) {
-    extractions.reserve(extractors_.size());
+
+  const auto &extractors = transformation_.extractors();
+  for (auto it = extractors.begin(); it != extractors.end(); it++) {
+    extractor_pairs.emplace_back(std::make_pair(it->first, it->second));
+  }
+  if (transformation_.advanced_templates()) {
+    extractions.reserve(extractor_pairs.size());
   }
 
-  for (const auto &named_extractor : extractors_) {
+  for (const auto &named_extractor : extractor_pairs) {
     const std::string &name = named_extractor.first;
-    if (advanced_templates_) {
+    if (transformation_.advanced_templates()) {
       extractions[name] =
           named_extractor.second.extract(callbacks, header_map, get_body);
     } else {
@@ -559,15 +555,86 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   TransformerInstance instance(header_map, request_headers, get_body,
                                extractions, json_body, environ_,
                                cluster_metadata, rng_);
-  if (advanced_templates_) {
-      instance.set_element_notation(inja::ElementNotation::Dot);
+  if (transformation_.advanced_templates()) {
+      instance.set_element_notation(inja::ElementNotation::Pointer);
   }
+
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_templates;
+  const auto &headers = transformation_.headers();
+  for (auto it = headers.begin(); it != headers.end(); it++) {
+    Http::LowerCaseString header_name(it->first);
+    try {
+      headers_templates.emplace_back(std::make_pair(std::move(header_name),
+                                           instance.parse(it->second.text())));
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it->first, e.what()));
+    }
+  }
+
+  std::vector<Http::LowerCaseString> headers_to_remove_templates;
+  const auto &headers_to_remove = transformation_.headers_to_remove();
+  for (auto idx : headers_to_remove) {
+    Http::LowerCaseString header_name(idx);
+    headers_to_remove_templates.push_back(header_name);
+  }
+
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_templates;
+  const auto &headers_to_append = transformation_.headers_to_append();
+  for (auto idx = 0; idx < transformation_.headers_to_append_size(); idx++) {
+    const auto &it = headers_to_append.Get(idx);
+    Http::LowerCaseString header_name(it.key());
+    try {
+      headers_to_append_templates.emplace_back(std::make_pair(std::move(header_name),
+                                           instance.parse(it.value().text())));
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it.key(), e.what()));
+    }
+  }
+
+  std::vector<DynamicMetadataValue> dynamic_metadata_templates;
+  const auto &dynamic_metadata_values = transformation_.dynamic_metadata_values();
+  for (auto it = dynamic_metadata_values.begin();
+       it != dynamic_metadata_values.end(); it++) {
+    try {
+      DynamicMetadataValue dynamicMetadataValue;
+      dynamicMetadataValue.namespace_ = it->metadata_namespace();
+      if (dynamicMetadataValue.namespace_.empty()) {
+        dynamicMetadataValue.namespace_ =
+            SoloHttpFilterNames::get().Transformation;
+      }
+      dynamicMetadataValue.key_ = it->key();
+      dynamicMetadataValue.template_ = instance.parse(it->value().text());
+      dynamic_metadata_templates.emplace_back(std::move(dynamicMetadataValue));
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse header template '{}': {}", it->key(), e.what()));
+    }
+  }
+
+  absl::optional<inja::Template> body_template;
+  switch (transformation_.body_transformation_case()) {
+  case TransformationTemplate::kBody: {
+    try {
+      body_template.emplace(instance.parse(transformation_.body().text()));
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse body template {}", e.what()));
+    }
+    break;
+  }
+  default:
+    // the other cases are handled in the constructor
+    break;
+  }
+
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
 
-  if (body_template_.has_value()) {
-    std::string output = instance.render(body_template_.value());
+  if (body_template.has_value()) {
+    std::string output = instance.render(body_template.value());
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -575,7 +642,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
 
   // DynamicMetadata transform:
-  for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
+  for (const auto &templated_dynamic_metadata : dynamic_metadata_templates) {
     std::string output = instance.render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
       ProtobufWkt::Struct strct(
@@ -586,30 +653,29 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
 
   // Headers transform:
-  for (const auto &templated_header : headers_) {
+  for (const auto &templated_header : headers_templates) {
     std::string output = instance.render(templated_header.second);
     // remove existing header
     header_map.remove(templated_header.first);
     // TODO(yuval-k): Do we need to support intentional empty headers?
     if (!output.empty()) {
-      // we can add the key as reference as the headers_ lifetime is as the
-      // route's
-      header_map.addReferenceKey(templated_header.first, output);
+      // we cannot add the key as reference as the headers_templates
+      // is in local scope and has shorter lifetime than life of request
+      header_map.addCopy(templated_header.first, output);
     }
   }
 
-  for (const auto &header_to_remove : headers_to_remove_) {
+  for (const auto &header_to_remove : headers_to_remove_templates) {
     header_map.remove(header_to_remove);
   }
 
   // Headers to Append Values transform:
-  for (const auto &templated_header : headers_to_append_) {
+  for (const auto &templated_header : headers_to_append_templates) {
     std::string output = instance.render(templated_header.second);
     if (!output.empty()) {
-      // we can add the key as reference as the headers_to_append_ lifetime is as the
-      // route's
-      // don't remove headers that already exist
-      header_map.addReferenceKey(templated_header.first, output);
+      // we cannot add the key as reference as the headers_to_append_templates
+      // is in local scope and has shorter lifetime than life of request
+      header_map.addCopy(templated_header.first, output);
     }
   }
 

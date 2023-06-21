@@ -37,11 +37,6 @@ namespace {
 std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 }
 
-inja::Template parse(std::string s) {
-  auto instance = TransformerInstance::empty_transformer_instance();
-  return instance.parse(s);
-}
-
 class TransformerInstanceTest : public testing::Test {
 protected:
   NiceMock<Random::MockRandomGenerator> rng_;
@@ -58,7 +53,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{field1}}"));
+  auto res = t.render(t.parse("{{field1}}"));
 
   EXPECT_EQ(originalbody["field1"], res);
 }
@@ -77,7 +72,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{header(\":path\")}}"));
+  auto res = t.render(t.parse("{{header(\":path\")}}"));
 
   EXPECT_EQ(path, res);
 }
@@ -97,7 +92,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
+  auto res = t.render(t.parse("{{header(\"x-custom-header\")}}"));
 
   EXPECT_EQ(header, res);
 }
@@ -114,7 +109,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{extraction(\"f\")}}"));
+  auto res = t.render(t.parse("{{extraction(\"f\")}}"));
 
   EXPECT_EQ(field, res);
 }
@@ -130,7 +125,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
+  auto res = t.render(t.parse("{{extraction(\"notsuchfield\")}}"));
 
   EXPECT_EQ("", res);
 }
@@ -146,7 +141,7 @@ TEST_F(TransformerInstanceTest, Environment) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{env(\"FOO\")}}"));
+  auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
 }
 
@@ -160,7 +155,7 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{env(\"FOO\")}}"));
+  auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -179,7 +174,7 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, &cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
+  auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
 }
 
@@ -194,7 +189,7 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   TransformerInstance t(headers, &headers, empty_body, extractions,
                         originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
+  auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -211,7 +206,7 @@ TEST_F(TransformerInstanceTest, RequestHeaders) {
                         extractions, originalbody, env, cluster_metadata, rng_);
 
   auto res = t.render(
-      parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
+      t.parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
   EXPECT_EQ("200-GET", res);
 }
 
@@ -362,6 +357,8 @@ TEST_F(TransformerTest, transformMultipleHeaderValues) {
 
   auto lowerkey = Http::LowerCaseString("x-custom-header");
   auto result = headers.get(lowerkey);
+
+  EXPECT_EQ(result.size(), 3);
   // Check original header value is preserved
   EXPECT_EQ("original value", result[0]->value().getStringView());
   // Check multiple transformed values are included
@@ -1064,7 +1061,7 @@ TEST_F(InjaTransformerTest, ParseUsingSetKeyword) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
-      "{% set foo = bar %}{{ foo }}");
+      "{% set foo = \"bar\" %}{{ foo }}");
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;

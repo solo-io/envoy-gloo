@@ -58,15 +58,15 @@ private:
   std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
-  const Http::RequestOrResponseHeaderMap &header_map_;
-  const Http::RequestHeaderMap *request_headers_;
-  GetBodyFunc &body_;
-  const std::unordered_map<std::string, absl::string_view> &extractions_;
-  const nlohmann::json &context_;
-  const std::unordered_map<std::string, std::string> &environ_;
-  const envoy::config::core::v3::Metadata *cluster_metadata_;
+  const Http::RequestOrResponseHeaderMap& header_map_;
+  const Http::RequestHeaderMap* request_headers_;
+  GetBodyFunc& body_;
+  const std::unordered_map<std::string, absl::string_view>& extractions_;
+  const nlohmann::json& context_;
+  const std::unordered_map<std::string, std::string>& environ_;
+  const envoy::config::core::v3::Metadata* cluster_metadata_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
-  Envoy::Random::RandomGenerator &rng_;
+  Envoy::Random::RandomGenerator& rng_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
@@ -90,13 +90,15 @@ class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
                       &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info);
+  InjaTransformer();
   ~InjaTransformer();
 
   void transform(Http::RequestOrResponseHeaderMap &map,
                  Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
-  bool passthrough_body() const override { return passthrough_body_; };
+  bool passthrough_body() const override { return transformation_.has_passthrough(); };
+  void validate_templates();
 
 private:
   struct DynamicMetadataValue {
@@ -105,20 +107,10 @@ private:
     inja::Template template_;
   };
 
-  bool advanced_templates_{};
-  bool passthrough_body_{};
-  std::vector<std::pair<std::string, Extractor>> extractors_;
-  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
-  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_;
-  std::vector<Http::LowerCaseString> headers_to_remove_;
-  std::vector<DynamicMetadataValue> dynamic_metadata_;
   std::unordered_map<std::string, std::string> environ_;
 
-  envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
-      parse_body_behavior_;
-  bool ignore_error_on_parse_;
+  envoy::api::v2::filter::http::TransformationTemplate transformation_;
 
-  absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
   Envoy::Random::RandomGenerator &rng_;
 };

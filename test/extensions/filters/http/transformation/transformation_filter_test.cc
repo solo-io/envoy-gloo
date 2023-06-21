@@ -25,6 +25,14 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
+const std::string invalid_template = "{{not a valid template";
+std::string get_invalid_template_error(std::string request_or_response) {
+  auto error_pos = std::to_string(invalid_template.length()+1);
+  return "Failed to parse " + request_or_response + " template: "
+    "Failed to parse body template "
+    "[inja.exception.parser_error] (at 1:" + error_pos + ") malformed expression";
+}
+
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Stats::MockIsolatedStatsStore> scope;
@@ -36,7 +44,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         (*transformation_rule.mutable_route_transformations()
               ->mutable_request_transformation());
     transformation.mutable_transformation_template()->mutable_body()->set_text(
-        "{{not a valid template");
+        invalid_template);
 
     TransformationConfigProto listener_config;
     *listener_config.mutable_transformations()->Add() = transformation_rule;
@@ -45,8 +53,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
                                                      factory_context_),
         EnvoyException,
-        "Failed to parse request template: Failed to parse body template "
-        "[inja.exception.parser_error] expected expression close, got 'valid'");
+        get_invalid_template_error("request"));
   }
   transformation_rule.mutable_route_transformations()->Clear();
   {
@@ -54,7 +61,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         (*transformation_rule.mutable_route_transformations()
               ->mutable_response_transformation());
     transformation.mutable_transformation_template()->mutable_body()->set_text(
-        "{{not a valid template");
+        invalid_template);
 
     TransformationConfigProto listener_config;
     *listener_config.mutable_transformations()->Add() = transformation_rule;
@@ -63,8 +70,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
                                                      factory_context_),
         EnvoyException,
-        "Failed to parse response template: Failed to parse body template "
-        "[inja.exception.parser_error] expected expression close, got 'valid'");
+        get_invalid_template_error("response"));
   }
 }
 
@@ -75,25 +81,23 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
     RouteTransformationConfigProto route_config;
     auto &transformation = (*route_config.mutable_request_transformation());
     transformation.mutable_transformation_template()->mutable_body()->set_text(
-        "{{not a valid template");
+        invalid_template);
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<RouteTransformationFilterConfig>(route_config, server_factory_context_),
         EnvoyException,
-        "Failed to parse request template: Failed to parse body template "
-        "[inja.exception.parser_error] expected expression close, got 'valid'");
+        get_invalid_template_error("request"));
   }
   {
     RouteTransformationConfigProto route_config;
     auto &transformation = (*route_config.mutable_response_transformation());
     transformation.mutable_transformation_template()->mutable_body()->set_text(
-        "{{not a valid template");
+        invalid_template);
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<RouteTransformationFilterConfig>(route_config, server_factory_context_),
         EnvoyException,
-        "Failed to parse response template: Failed to parse body template "
-        "[inja.exception.parser_error] expected expression close, got 'valid'");
+        get_invalid_template_error("response"));
   }
 }
 
