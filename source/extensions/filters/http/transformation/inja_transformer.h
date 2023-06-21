@@ -58,15 +58,15 @@ private:
   std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
-  const Http::RequestOrResponseHeaderMap& header_map_;
-  const Http::RequestHeaderMap* request_headers_;
-  GetBodyFunc& body_;
-  const std::unordered_map<std::string, absl::string_view>& extractions_;
-  const nlohmann::json& context_;
-  const std::unordered_map<std::string, std::string>& environ_;
-  const envoy::config::core::v3::Metadata* cluster_metadata_;
+  const Http::RequestOrResponseHeaderMap &header_map_;
+  const Http::RequestHeaderMap *request_headers_;
+  GetBodyFunc &body_;
+  const std::unordered_map<std::string, absl::string_view> &extractions_;
+  const nlohmann::json &context_;
+  const std::unordered_map<std::string, std::string> &environ_;
+  const envoy::config::core::v3::Metadata *cluster_metadata_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
-  Envoy::Random::RandomGenerator& rng_;
+  Envoy::Random::RandomGenerator &rng_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {

@@ -115,43 +115,43 @@ TransformerInstance::TransformerInstance(
     const envoy::config::core::v3::Metadata *cluster_metadata,
     Envoy::Random::RandomGenerator &rng)
     : header_map_(header_map), request_headers_(request_headers), body_(body),
-      extractions_(std::move(extractions)), context_(context), environ_(environ),
+      extractions_(extractions), context_(context), environ_(environ),
       cluster_metadata_(cluster_metadata), rng_(rng) {
   for(auto it = extractions_.begin(); it != extractions_.end(); it++) {
   }
 
   env_.add_callback("header", 1,
-                    [this](Arguments &args) { return this->header_callback(args); });
+                    [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
-    return this->request_header_callback(args);
+    return request_header_callback(args);
   });
   env_.add_callback("extraction", 1, [this](Arguments &args) {
-    return this->extracted_callback(args);
+    return extracted_callback(args);
   });
-  env_.add_callback("context", 0, [this](Arguments &) { return this->context_; });
-  env_.add_callback("body", 0, [this](Arguments &) { return this->body_(); });
-  env_.add_callback("env", 1, [this](Arguments &args) { return this->env(args); });
+  env_.add_callback("context", 0, [this](Arguments &) { return context_; });
+  env_.add_callback("body", 0, [this](Arguments &) { return body_(); });
+  env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
-    return this->cluster_metadata_callback(args);
+    return cluster_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
-    return this->base64_encode_callback(args);
+    return base64_encode_callback(args);
   });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
-    return this->base64_decode_callback(args);
+    return base64_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
   // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
-    return this->substring_callback(args);
+    return substring_callback(args);
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
-    return this->substring_callback(args);
+    return substring_callback(args);
   });
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
-    return this->replace_with_random_callback(args);
+    return replace_with_random_callback(args);
   });
 }
 
@@ -180,8 +180,8 @@ json TransformerInstance::request_header_callback(
 
 json TransformerInstance::extracted_callback(
     const inja::Arguments &args) const {
-  const std::string &ext_name = args.at(0)->get_ref<const std::string &>();
-  const auto value_it = extractions_.find(ext_name);
+  const std::string &name = args.at(0)->get_ref<const std::string &>();
+  const auto value_it = extractions_.find(name);
   if (value_it != extractions_.end()) {
     return value_it->second;
   }
