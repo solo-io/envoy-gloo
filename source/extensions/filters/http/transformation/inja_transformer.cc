@@ -117,9 +117,6 @@ TransformerInstance::TransformerInstance(
     : header_map_(header_map), request_headers_(request_headers), body_(body),
       extractions_(extractions), context_(context), environ_(environ),
       cluster_metadata_(cluster_metadata), rng_(rng) {
-  for(auto it = extractions_.begin(); it != extractions_.end(); it++) {
-  }
-
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
@@ -427,9 +424,9 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
 
 InjaTransformer::~InjaTransformer() {}
 
-// validate_templates provides a way to return early if we encounter parser errors
+// validate_templates provides a way to error early if we encounter parser errors
 // while processing user-provided templates. This requires the use of an TransformerInstance
-// because we will encounter parser errors if we do not have the callbacks defined.
+// because we will encounter unwanted parser errors if we do not have the callbacks defined.
 void InjaTransformer::validate_templates() {
   auto instance = TransformerInstance::empty_transformer_instance();
   if (transformation_.advanced_templates()) {

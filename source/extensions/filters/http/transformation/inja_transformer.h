@@ -90,7 +90,6 @@ class InjaTransformer : public Transformer {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate
                       &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info);
-  InjaTransformer();
   ~InjaTransformer();
 
   void transform(Http::RequestOrResponseHeaderMap &map,
