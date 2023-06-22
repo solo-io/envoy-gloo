@@ -50,8 +50,9 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{field1}}"));
 
@@ -69,8 +70,9 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{header(\":path\")}}"));
 
@@ -89,8 +91,9 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{header(\"x-custom-header\")}}"));
 
@@ -106,8 +109,9 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{extraction(\"f\")}}"));
 
@@ -122,8 +126,9 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -138,8 +143,9 @@ TEST_F(TransformerInstanceTest, Environment) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
   env["FOO"] = "BAR";
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -152,8 +158,9 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
@@ -171,8 +178,9 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
       {SoloHttpFilterNames::get().Transformation,
        MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, &cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, &cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
@@ -186,8 +194,9 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&headers, &headers, &empty_body, &extractions,
+                        &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
@@ -202,8 +211,9 @@ TEST_F(TransformerInstanceTest, RequestHeaders) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(response_headers, &request_headers, empty_body,
-                        extractions, originalbody, env, cluster_metadata, rng_);
+  TransformerInstance t;
+  t.populate(&response_headers, &request_headers, &empty_body,
+                        &extractions, &originalbody, &env, cluster_metadata, &rng_);
 
   auto res = t.render(
       t.parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));

@@ -26,16 +26,16 @@ using GetBodyFunc = std::function<const std::string &()>;
 
 class TransformerInstance {
 public:
-  TransformerInstance(
-      const Http::RequestOrResponseHeaderMap &header_map,
-      const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
-      const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context,
-      const std::unordered_map<std::string, std::string> &environ,
-      const envoy::config::core::v3::Metadata *cluster_metadata,
-      Envoy::Random::RandomGenerator &rng);
+  TransformerInstance();
 
   std::string render(const inja::Template &input);
+  void populate(Http::RequestOrResponseHeaderMap *header_map,
+      Http::RequestHeaderMap *request_headers, GetBodyFunc *body,
+      std::unordered_map<std::string, absl::string_view> *extractions,
+      nlohmann::json *context,
+      std::unordered_map<std::string, std::string> *environ,
+      envoy::config::core::v3::Metadata *cluster_metadata,
+      Envoy::Random::RandomGenerator *rng);
   inja::Template parse(std::string_view input);
   void set_element_notation(inja::ElementNotation notation) {
       env_.set_element_notation(notation);
@@ -43,6 +43,8 @@ public:
   static TransformerInstance empty_transformer_instance();
 
 private:
+  void register_callbacks();
+
   // header_value(name)
   nlohmann::json header_callback(const inja::Arguments &args) const;
   nlohmann::json request_header_callback(const inja::Arguments &args) const;
@@ -58,15 +60,17 @@ private:
   std::string& random_for_pattern(const std::string& pattern);
 
   inja::Environment env_;
-  const Http::RequestOrResponseHeaderMap &header_map_;
-  const Http::RequestHeaderMap *request_headers_;
-  GetBodyFunc &body_;
-  const std::unordered_map<std::string, absl::string_view> &extractions_;
-  const nlohmann::json &context_;
-  const std::unordered_map<std::string, std::string> &environ_;
-  const envoy::config::core::v3::Metadata *cluster_metadata_;
+  Http::RequestOrResponseHeaderMap *header_map_;
+  Http::RequestHeaderMap *request_headers_;
+  GetBodyFunc *body_;
+  std::unordered_map<std::string, absl::string_view> *extractions_;
+  nlohmann::json *context_;
+  std::unordered_map<std::string, std::string> *environ_;
+  envoy::config::core::v3::Metadata *cluster_metadata_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
-  Envoy::Random::RandomGenerator &rng_;
+  Envoy::Random::RandomGenerator *rng_;
+
+  bool populated_{};
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
@@ -96,7 +100,7 @@ public:
                  Http::RequestHeaderMap *request_headers,
                  Buffer::Instance &body,
                  Http::StreamFilterCallbacks &) const override;
-  bool passthrough_body() const override { return transformation_.has_passthrough(); };
+  bool passthrough_body() const override { return passthrough_body_; };
   void validate_templates();
 
 private:
@@ -106,12 +110,25 @@ private:
     inja::Template template_;
   };
 
-  std::unordered_map<std::string, std::string> environ_;
 
-  envoy::api::v2::filter::http::TransformationTemplate transformation_;
+  bool advanced_templates_{};
+  bool passthrough_body_{};
+  std::vector<std::pair<std::string, Extractor>> extractors_;
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
+  std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_;
+  std::vector<Http::LowerCaseString> headers_to_remove_;
+  std::vector<DynamicMetadataValue> dynamic_metadata_;
+  std::unordered_map<std::string, std::string> *environ_;
+
+  envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
+      parse_body_behavior_;
+  bool ignore_error_on_parse_;
+
+  absl::optional<inja::Template> body_template_;
+  TransformerInstance& instance_;
 
   bool merged_extractors_to_body_{};
-  Envoy::Random::RandomGenerator &rng_;
+  Envoy::Random::RandomGenerator *rng_;
 };
 
 } // namespace Transformation
