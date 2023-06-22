@@ -361,24 +361,23 @@ inja::Template TransformerInstance::parse(std::string_view input) {
   return env_.parse(input);
 }
 
+// empty_transformer_instance provides a TransformerInstance that can be used to validate parsing
+// of templates. because there is no request data, the returned TransformerInstance
+// cannot be used for rendering.
 TransformerInstance TransformerInstance::empty_transformer_instance() {
-
-  std::unique_ptr<Http::RequestHeaderMap> emptyRequestHeaderMap;
-  emptyRequestHeaderMap = Http::RequestHeaderMapImpl::create();
+  auto emptyRequestHeaderMap = Http::RequestHeaderMapImpl::create();
   auto header_map = emptyRequestHeaderMap.get();
 
-  absl::optional<std::string> string_body;
   GetBodyFunc get_body = []() -> const std::string & {
       const std::string ret("");
       return std::move(ret);
   };
 
-  Buffer::OwnedImpl emptyBody{};
-  const envoy::config::core::v3::Metadata *cluster_metadata{};
-  json json_body;
   std::unordered_map<std::string, absl::string_view> extractions;
-  Random::RandomGeneratorImpl rng;
+  json json_body;
   std::unordered_map<std::string, std::string> empty_environ;
+  const envoy::config::core::v3::Metadata *cluster_metadata{};
+  Random::RandomGeneratorImpl rng;
 
   TransformerInstance instance(*header_map, header_map, get_body,
           extractions, json_body, empty_environ,
