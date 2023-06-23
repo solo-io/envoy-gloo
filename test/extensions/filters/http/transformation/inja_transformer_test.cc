@@ -381,7 +381,7 @@ TEST_F(TransformerTest, transformHeaderAndHeadersToAppend) {
   // this should overwrite existing headers with the same name
   (*transformation.mutable_headers())["x-custom-header"].set_text(
       "{{upper(\"overwritten value\")}}");
-  // define "headers_to_append" 
+  // define "headers_to_append"
   // these header values should be appended to the current x-custom-header
   const auto &header = transformation.add_headers_to_append();
   header->set_key("x-custom-header");
@@ -1041,7 +1041,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
 {{{{ replace_with_random("{}", "{}") }}}}
   )ENDFMT";
 
-  auto formatted_string = fmt::format(format_string, 
+  auto formatted_string = fmt::format(format_string,
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3,
@@ -1062,6 +1062,20 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
   assert_replacements(body.toString(), "test-1-");
   assert_replacements(body.toString(), "test-2-");
   assert_replacements(body.toString(), "test-3-");
+}
+
+TEST_F(InjaTransformerTest, ParseUsingSetKeyword) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      "{% set foo = \"bar\" %}{{ foo }}");
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("{\"bat\":\"baz\"}");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "bar");
 }
 
 } // namespace Transformation
