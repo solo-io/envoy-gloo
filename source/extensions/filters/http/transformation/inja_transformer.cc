@@ -104,17 +104,10 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
   return "";
 }
 
-TransformerInstance::TransformerInstance(
-    const Http::RequestOrResponseHeaderMap &header_map,
-    const Http::RequestHeaderMap *request_headers, GetBodyFunc &body,
-    const std::unordered_map<std::string, absl::string_view> &extractions,
-    const json &context,
-    const std::unordered_map<std::string, std::string> &environ,
-    const envoy::config::core::v3::Metadata *cluster_metadata,
-    Envoy::Random::RandomGenerator &rng)
-    : header_map_(header_map), request_headers_(request_headers), body_(body),
-      extractions_(extractions), context_(context), environ_(environ),
-      cluster_metadata_(cluster_metadata), rng_(rng) {
+// A TransformerInstance is constructed by the InjaTransformer::transform method
+// on the request path, and may be executed on any worker thread
+TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls)
+    : tls_(tls) {
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
@@ -123,27 +116,27 @@ TransformerInstance::TransformerInstance(
   env_.add_callback("extraction", 1, [this](Arguments &args) {
     return extracted_callback(args);
   });
-  env_.add_callback("context", 0, [this](Arguments &) { return context_; });
-  env_.add_callback("body", 0, [this](Arguments &) { return body_(); });
+  env_.add_callback("context", 0, [this](Arguments &) { return tls_.getTyped<ThreadLocalTransformerRequestData>().context_; });
+  env_.add_callback("body", 0, [this](Arguments &) { return tls_.getTyped<ThreadLocalTransformerRequestData>().body_(); });
   env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
-    return base64_encode_callback(args); 
+    return base64_encode_callback(args);
   });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
-    return base64_decode_callback(args); 
+    return base64_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
   // of the substring, and the optional third argument is the length of the substring.
   // If the third argument is not provided, the substring will extend to the end of the string.
   env_.add_callback("substring", 2, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
   env_.add_callback("substring", 3, [this](Arguments &args) {
-    return substring_callback(args); 
+    return substring_callback(args);
   });
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
@@ -152,7 +145,7 @@ TransformerInstance::TransformerInstance(
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
   const std::string &headername = args.at(0)->get_ref<const std::string &>();
-  const Http::HeaderMap::GetResult header_entries = getHeader(header_map_, headername);
+  const Http::HeaderMap::GetResult header_entries = getHeader(tls_.getTyped<ThreadLocalTransformerRequestData>().header_map_, headername);
   if (header_entries.empty()) {
     return "";
   }
@@ -161,12 +154,12 @@ json TransformerInstance::header_callback(const inja::Arguments &args) const {
 
 json TransformerInstance::request_header_callback(
     const inja::Arguments &args) const {
-  if (request_headers_ == nullptr) {
+  if (tls_.getTyped<ThreadLocalTransformerRequestData>().request_headers_ == nullptr) {
     return "";
   }
   const std::string &headername = args.at(0)->get_ref<const std::string &>();
   const Http::HeaderMap::GetResult header_entries =
-      getHeader(*request_headers_, headername);
+      getHeader(*tls_.getTyped<ThreadLocalTransformerRequestData>().request_headers_, headername);
   if (header_entries.empty()) {
     return "";
   }
@@ -176,8 +169,8 @@ json TransformerInstance::request_header_callback(
 json TransformerInstance::extracted_callback(
     const inja::Arguments &args) const {
   const std::string &name = args.at(0)->get_ref<const std::string &>();
-  const auto value_it = extractions_.find(name);
-  if (value_it != extractions_.end()) {
+  const auto value_it = tls_.getTyped<ThreadLocalTransformerRequestData>().extractions_.find(name);
+  if (value_it != tls_.getTyped<ThreadLocalTransformerRequestData>().extractions_.end()) {
     return value_it->second;
   }
   return "";
@@ -185,8 +178,8 @@ json TransformerInstance::extracted_callback(
 
 json TransformerInstance::env(const inja::Arguments &args) const {
   const std::string &key = args.at(0)->get_ref<const std::string &>();
-  auto it = environ_.find(key);
-  if (it != environ_.end()) {
+  auto it = tls_.getTyped<ThreadLocalTransformerRequestData>().environ_.find(key);
+  if (it != tls_.getTyped<ThreadLocalTransformerRequestData>().environ_.end()) {
     return it->second;
   }
   return "";
@@ -196,12 +189,12 @@ json TransformerInstance::cluster_metadata_callback(
     const inja::Arguments &args) const {
   const std::string &key = args.at(0)->get_ref<const std::string &>();
 
-  if (!cluster_metadata_) {
+  if (!tls_.getTyped<ThreadLocalTransformerRequestData>().cluster_metadata_) {
     return "";
   }
 
   const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
-      cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+      tls_.getTyped<ThreadLocalTransformerRequestData>().cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
@@ -282,7 +275,7 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 json TransformerInstance::substring_callback(const inja::Arguments &args) const {
   // get first argument, which is the string to be modified
   const std::string &input = args.at(0)->get_ref<const std::string &>();
-  
+
   // try to get second argument (start position) as an int64_t
   int start = 0;
   try {
@@ -309,7 +302,7 @@ json TransformerInstance::substring_callback(const inja::Arguments &args) const 
     return "";
   }
 
-  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string, 
+  // if supplied substring_len is <= 0 or start + substring_len is greater than the length of the string,
   // return the substring from start to the end of the string
   if (substring_len <= 0 || start + substring_len > input_len) {
     return input.substr(start);
@@ -325,7 +318,7 @@ json TransformerInstance::replace_with_random_callback(const inja::Arguments &ar
     // second argument: pattern to be replaced
   const std::string &to_replace = args.at(1)->get_ref<const std::string &>();
 
-  return 
+  return
     absl::StrReplaceAll(source, {{to_replace, absl::StrCat(random_for_pattern(to_replace))}});
 }
 
@@ -334,8 +327,8 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
   if (found == pattern_replacements_.end()) {
     // generate 128 bit long random number
     uint64_t random[2];
-    uint64_t high = rng_.random();
-    uint64_t low = rng_.random();
+    uint64_t high = tls_.getTyped<ThreadLocalTransformerRequestData>().rng_.random();
+    uint64_t low = tls_.getTyped<ThreadLocalTransformerRequestData>().rng_.random();
     random[0] = low;
     random[1] = high;
     // and convert it to a base64-encoded string with no padding
@@ -345,31 +338,48 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
   return found->second;
 }
 
+inja::Template TransformerInstance::parse(std::string_view input) {
+    return env_.parse(input);
+}
+
 std::string TransformerInstance::render(const inja::Template &input) {
   // inja can't handle context that are not objects correctly, so we give it an
   // empty object in that case
-  if (context_.is_object()) {
-    return env_.render(input, context_);
+  if (tls_.getTyped<ThreadLocalTransformerRequestData>().context_.is_object()) {
+    return env_.render(input, tls_.getTyped<ThreadLocalTransformerRequestData>().context_);
   } else {
     return env_.render(input, {});
   }
 }
 
-InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, Envoy::Random::RandomGenerator &rng, google::protobuf::BoolValue log_request_response_info)
+ThreadLocalTransformerRequestData::ThreadLocalTransformerRequestData(
+      const Http::RequestOrResponseHeaderMap &header_map,
+      const Http::RequestHeaderMap *request_headers, const GetBodyFunc &body,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
+      const nlohmann::json &context,
+      const std::unordered_map<std::string, std::string> &environ,
+      const envoy::config::core::v3::Metadata *cluster_metadata,
+      Envoy::Random::RandomGenerator &rng)
+      : header_map_(header_map), request_headers_(request_headers), body_(body),
+      extractions_(extractions), context_(context), environ_(environ),
+      cluster_metadata_(cluster_metadata), rng_(rng) {}
+
+// An InjaTransformer is constructed on initialization on the main thread
+InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
+                                 Envoy::Random::RandomGenerator &rng,
+                                 google::protobuf::BoolValue log_request_response_info,
+                                 ThreadLocal::SlotAllocator &tls)
     : Transformer(log_request_response_info),
       advanced_templates_(transformation.advanced_templates()),
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
-      rng_(rng) {
-  inja::ParserConfig parser_config;
-  inja::LexerConfig lexer_config;
-  inja::TemplateStorage template_storage;
-  if (!advanced_templates_) {
-    parser_config.notation = inja::ElementNotation::Dot;
+      rng_(rng),
+      tls_(tls.allocateSlot()),
+      instance_(std::make_unique<TransformerInstance>(*tls_)) {
+  if (advanced_templates_) {
+    instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
-
-  inja::Parser parser(parser_config, lexer_config, template_storage);
 
   const auto &extractors = transformation.extractors();
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
@@ -380,7 +390,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
     Http::LowerCaseString header_name(it->first);
     try {
       headers_.emplace_back(std::make_pair(std::move(header_name),
-                                           parser.parse(it->second.text())));
+                                           instance_->parse(it->second.text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it->first, e.what()));
@@ -402,7 +412,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
     Http::LowerCaseString header_name(it.key());
     try {
       headers_to_append_.emplace_back(std::make_pair(std::move(header_name),
-                                           parser.parse(it.value().text())));
+                                           instance_->parse(it.value().text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it.key(), e.what()));
@@ -420,7 +430,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
             SoloHttpFilterNames::get().Transformation;
       }
       dynamicMetadataValue.key_ = it->key();
-      dynamicMetadataValue.template_ = parser.parse(it->value().text());
+      dynamicMetadataValue.template_ = instance_->parse(it->value().text());
       dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
@@ -431,7 +441,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
   switch (transformation.body_transformation_case()) {
   case TransformationTemplate::kBody: {
     try {
-      body_template_.emplace(parser.parse(transformation.body().text()));
+      body_template_.emplace(instance_->parse(transformation.body().text()));
     } catch (const std::exception &e) {
       throw EnvoyException(
           fmt::format("Failed to parse body template {}", e.what()));
@@ -463,6 +473,8 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation, E
 
 InjaTransformer::~InjaTransformer() {}
 
+// transform is called on the request path, and may be executed on any worker thread.
+// it must be thread-safe
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
                                 Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
@@ -526,17 +538,22 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   if (ci.get()) {
     cluster_metadata = &ci->metadata();
   }
-
-  // start transforming!
-  TransformerInstance instance(header_map, request_headers, get_body,
-                               extractions, json_body, environ_,
-                               cluster_metadata, rng_);
-
+  tls_->set([header_map=&header_map, request_headers, get_body, extractions=&extractions, json_body=&json_body, environ=&environ_, cluster_metadata, rng=&rng_](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+    return std::make_shared<ThreadLocalTransformerRequestData>(
+            *header_map,
+            request_headers,
+            get_body,
+            *extractions,
+            *json_body,
+            *environ,
+            cluster_metadata,
+            *rng);
+  });
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
 
   if (body_template_.has_value()) {
-    std::string output = instance.render(body_template_.value());
+    std::string output = instance_->render(body_template_.value());
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -545,7 +562,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // DynamicMetadata transform:
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
-    std::string output = instance.render(templated_dynamic_metadata.template_);
+    std::string output = instance_->render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
       ProtobufWkt::Struct strct(
           MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
@@ -556,7 +573,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // Headers transform:
   for (const auto &templated_header : headers_) {
-    std::string output = instance.render(templated_header.second);
+    std::string output = instance_->render(templated_header.second);
     // remove existing header
     header_map.remove(templated_header.first);
     // TODO(yuval-k): Do we need to support intentional empty headers?
@@ -573,7 +590,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // Headers to Append Values transform:
   for (const auto &templated_header : headers_to_append_) {
-    std::string output = instance.render(templated_header.second);
+    std::string output = instance_->render(templated_header.second);
     if (!output.empty()) {
       // we can add the key as reference as the headers_to_append_ lifetime is as the
       // route's
