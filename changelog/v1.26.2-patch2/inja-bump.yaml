@@ -4,5 +4,6 @@ changelog:
   dependencyRepo: inja
   dependencyTag: 3.4
   description: >-
-    Use newer version of Inja templating engine in order to include newer template
-    features, specifically 'set'
+    Use newer version of Inja templating engine. This upgrade includes numerous
+    performance improvements in the template parsing logic as well as access to
+    more recent Inja builtin functions.

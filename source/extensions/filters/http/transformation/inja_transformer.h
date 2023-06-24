@@ -24,32 +24,36 @@ namespace Transformation {
 
 using GetBodyFunc = std::function<const std::string &()>;
 
-struct ThreadLocalTransformerRequestData : public ThreadLocal::ThreadLocalObject {
+struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
 public:
 
-  ThreadLocalTransformerRequestData(
-      const Http::RequestOrResponseHeaderMap &header_map,
-      const Http::RequestHeaderMap *request_headers, const GetBodyFunc &body,
-      const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context,
-      const std::unordered_map<std::string, std::string> &environ,
-      const envoy::config::core::v3::Metadata *cluster_metadata,
-      Envoy::Random::RandomGenerator &rng);
+  ThreadLocalTransformerContext(
+      Http::RequestOrResponseHeaderMap *header_map,
+      Http::RequestHeaderMap *request_headers,
+      GetBodyFunc *body,
+      std::unordered_map<std::string, absl::string_view> *extractions,
+      nlohmann::json *context,
+      std::unordered_map<std::string, std::string> *environ,
+      envoy::config::core::v3::Metadata *cluster_metadata)
+      : header_map_(header_map), request_headers_(request_headers), body_(body),
+      extractions_(extractions), context_(context), environ_(environ),
+      cluster_metadata_(cluster_metadata) {}
 
-  const Http::RequestOrResponseHeaderMap &header_map_;
+  ThreadLocalTransformerContext(){}
+
+  const Http::RequestOrResponseHeaderMap *header_map_;
   const Http::RequestHeaderMap *request_headers_;
-  const GetBodyFunc &body_;
-  const std::unordered_map<std::string, absl::string_view> &extractions_;
-  const nlohmann::json &context_;
-  const std::unordered_map<std::string, std::string> &environ_;
+  const GetBodyFunc *body_;
+  const std::unordered_map<std::string, absl::string_view> *extractions_;
+  const nlohmann::json *context_;
+  const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
-  Envoy::Random::RandomGenerator &rng_;
 };
 
 
 class TransformerInstance {
 public:
-  TransformerInstance(ThreadLocal::Slot& tls);
+  TransformerInstance(ThreadLocal::Slot& tls, Envoy::Random::RandomGenerator &rng);
 
   inja::Template parse(std::string_view input);
   std::string render(const inja::Template &input);
@@ -75,6 +79,7 @@ private:
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
   ThreadLocal::Slot &tls_;
+  Envoy::Random::RandomGenerator &rng_;
 };
 
 class Extractor : Logger::Loggable<Logger::Id::filter> {
@@ -130,7 +135,6 @@ private:
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
-  Envoy::Random::RandomGenerator &rng_;
   ThreadLocal::SlotPtr tls_;
   std::unique_ptr<TransformerInstance> instance_;
 };

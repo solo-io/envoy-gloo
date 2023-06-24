@@ -46,28 +46,25 @@ protected:
 };
 
 void fill_slot(
-      ThreadLocal::Slot& slot,
+      ThreadLocal::SlotPtr& slot,
       const Http::RequestOrResponseHeaderMap &header_map,
       const Http::RequestHeaderMap *request_headers,
       GetBodyFunc &body,
       const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
-      const envoy::config::core::v3::Metadata *cluster_metadata,
-      Envoy::Random::RandomGenerator &rng) {
-  slot.set([header_map=&header_map, request_headers, body=&body,
-          extractions=&extractions, context=&context, environ=&environ,
-          cluster_metadata, rng=&rng](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
-    return std::make_shared<ThreadLocalTransformerRequestData>(
-            *header_map,
-            request_headers,
-            *body,
-            *extractions,
-            *context,
-            *environ,
-            cluster_metadata,
-            *rng);
+      const envoy::config::core::v3::Metadata *cluster_metadata) {
+  slot->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+          return std::make_shared<ThreadLocalTransformerContext>();
   });
+  auto& typed_slot = slot->getTyped<ThreadLocalTransformerContext>();
+  typed_slot.header_map_ = &header_map;
+  typed_slot.request_headers_ = request_headers;
+  typed_slot.body_ = &body;
+  typed_slot.extractions_ = &extractions;
+  typed_slot.context_ = &context;
+  typed_slot.environ_ = &environ;
+  typed_slot.cluster_metadata_ = cluster_metadata;
 }
 
 TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
@@ -79,9 +76,9 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
-  TransformerInstance t(*slot);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{field1}}"));
 
@@ -100,10 +97,10 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{header(\":path\")}}"));
 
@@ -123,10 +120,10 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{header(\"x-custom-header\")}}"));
 
@@ -143,10 +140,10 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{extraction(\"f\")}}"));
 
@@ -162,10 +159,10 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{extraction(\"notsuchfield\")}}"));
 
@@ -181,10 +178,10 @@ TEST_F(TransformerInstanceTest, Environment) {
   env["FOO"] = "BAR";
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
@@ -199,10 +196,10 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
@@ -221,10 +218,10 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
        MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
@@ -239,10 +236,10 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
@@ -258,10 +255,10 @@ TEST_F(TransformerInstanceTest, RequestHeaders) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
-  fill_slot(*slot,
-          response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata, rng_);
+  fill_slot(slot,
+          response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  TransformerInstance t(*slot);
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(
       t.parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
