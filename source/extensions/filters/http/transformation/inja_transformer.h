@@ -26,19 +26,6 @@ using GetBodyFunc = std::function<const std::string &()>;
 
 struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
 public:
-
-  ThreadLocalTransformerContext(
-      Http::RequestOrResponseHeaderMap *header_map,
-      Http::RequestHeaderMap *request_headers,
-      GetBodyFunc *body,
-      std::unordered_map<std::string, absl::string_view> *extractions,
-      nlohmann::json *context,
-      std::unordered_map<std::string, std::string> *environ,
-      envoy::config::core::v3::Metadata *cluster_metadata)
-      : header_map_(header_map), request_headers_(request_headers), body_(body),
-      extractions_(extractions), context_(context), environ_(environ),
-      cluster_metadata_(cluster_metadata) {}
-
   ThreadLocalTransformerContext(){}
 
   const Http::RequestOrResponseHeaderMap *header_map_;
