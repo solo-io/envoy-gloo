@@ -1,5 +1,7 @@
 changelog:
 - type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/gloo/issues/8177
+  resolvesIssue: false
   dependencyOwner: pantor
   dependencyRepo: inja
   dependencyTag: 3.4
@@ -7,3 +9,6 @@ changelog:
     Use newer version of Inja templating engine. This upgrade includes numerous
     performance improvements in the template parsing logic as well as access to
     more recent Inja builtin functions.
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/247
+  resolvesIssue: false
