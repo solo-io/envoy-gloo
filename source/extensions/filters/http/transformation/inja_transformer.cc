@@ -104,8 +104,10 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
   return "";
 }
 
-// A TransformerInstance is constructed by the InjaTransformer::transform method
-// on the request path, and may be executed on any worker thread
+// A TransformerInstance is constructed by the InjaTransformer constructor at config time
+// on the main thread. It access thread-local storage which is populated during the
+// InjaTransformer::transform method call, which happens on the request path on any
+// given worker thread.
 TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::RandomGenerator &rng)
     : tls_(tls), rng_(rng) {
   env_.add_callback("header", 1,
