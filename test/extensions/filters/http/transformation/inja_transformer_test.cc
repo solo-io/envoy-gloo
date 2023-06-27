@@ -1124,6 +1124,29 @@ TEST_F(InjaTransformerTest, ParseUsingSetKeyword) {
   EXPECT_EQ(body.toString(), "bar");
 }
 
+TEST_F(InjaTransformerTest, ParseUsingJsonPointerSyntax) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.set_advanced_templates(true);
+  transformation.mutable_body()->set_text(
+      "{{ json_pointers/example.com }}--{{ json_pointers/and~1or }}--{{ json_pointers/and~0or }}");
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body(R"EOF(
+{
+  "json_pointers": {
+    "example.com": "online",
+    "and/or": "slash",
+    "and~or": "tilde"
+  }
+}
+)EOF");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "online--slash--tilde");
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
