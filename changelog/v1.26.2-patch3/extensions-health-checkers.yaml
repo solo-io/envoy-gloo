@@ -1,0 +1,5 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Upstream moved health checkers out of common code and into extensions. In
+    order to use these health checkers, we have to modify our extensions_build_config.
