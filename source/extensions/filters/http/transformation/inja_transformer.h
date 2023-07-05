@@ -43,7 +43,7 @@ public:
   TransformerInstance(ThreadLocal::Slot& tls, Envoy::Random::RandomGenerator &rng);
 
   inja::Template parse(std::string_view input);
-  std::string render(const inja::Template &input) const;
+  std::string render(const inja::Template &input);
   void set_element_notation(inja::ElementNotation notation) {
       env_.set_element_notation(notation);
   };
@@ -123,7 +123,7 @@ private:
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
   ThreadLocal::SlotPtr tls_;
-  TransformerInstance instance_;
+  std::unique_ptr<TransformerInstance> instance_;
 };
 
 } // namespace Transformation

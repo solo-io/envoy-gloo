@@ -347,7 +347,7 @@ inja::Template TransformerInstance::parse(std::string_view input) {
     return env_.parse(input);
 }
 
-std::string TransformerInstance::render(const inja::Template &input) const {
+std::string TransformerInstance::render(const inja::Template &input) {
   // inja can't handle context that are not objects correctly, so we give it an
   // empty object in that case
   const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
@@ -369,9 +369,9 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
       tls_(tls.allocateSlot()),
-      instance_(TransformerInstance(*tls_, rng)) {
+      instance_(std::make_unique<TransformerInstance>(*tls_, rng)) {
   if (advanced_templates_) {
-    instance_.set_element_notation(inja::ElementNotation::Pointer);
+    instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
 
   tls_->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
@@ -387,7 +387,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     Http::LowerCaseString header_name(it->first);
     try {
       headers_.emplace_back(std::make_pair(std::move(header_name),
-                                           instance_.parse(it->second.text())));
+                                           instance_->parse(it->second.text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it->first, e.what()));
@@ -409,7 +409,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     Http::LowerCaseString header_name(it.key());
     try {
       headers_to_append_.emplace_back(std::make_pair(std::move(header_name),
-                                           instance_.parse(it.value().text())));
+                                           instance_->parse(it.value().text())));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
           "Failed to parse header template '{}': {}", it.key(), e.what()));
@@ -427,7 +427,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
             SoloHttpFilterNames::get().Transformation;
       }
       dynamicMetadataValue.key_ = it->key();
-      dynamicMetadataValue.template_ = instance_.parse(it->value().text());
+      dynamicMetadataValue.template_ = instance_->parse(it->value().text());
       dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
@@ -438,7 +438,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
   switch (transformation.body_transformation_case()) {
   case TransformationTemplate::kBody: {
     try {
-      body_template_.emplace(instance_.parse(transformation.body().text()));
+      body_template_.emplace(instance_->parse(transformation.body().text()));
     } catch (const std::exception &e) {
       throw EnvoyException(
           fmt::format("Failed to parse body template {}", e.what()));
@@ -552,7 +552,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   absl::optional<Buffer::OwnedImpl> maybe_body;
 
   if (body_template_.has_value()) {
-    std::string output = instance_.render(body_template_.value());
+    std::string output = instance_->render(body_template_.value());
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -561,7 +561,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // DynamicMetadata transform:
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
-    std::string output = instance_.render(templated_dynamic_metadata.template_);
+    std::string output = instance_->render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
       ProtobufWkt::Struct strct(
           MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
@@ -572,7 +572,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // Headers transform:
   for (const auto &templated_header : headers_) {
-    std::string output = instance_.render(templated_header.second);
+    std::string output = instance_->render(templated_header.second);
     // remove existing header
     header_map.remove(templated_header.first);
     // TODO(yuval-k): Do we need to support intentional empty headers?
@@ -589,7 +589,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // Headers to Append Values transform:
   for (const auto &templated_header : headers_to_append_) {
-    std::string output = instance_.render(templated_header.second);
+    std::string output = instance_->render(templated_header.second);
     if (!output.empty()) {
       // we can add the key as reference as the headers_to_append_ lifetime is as the
       // route's
