@@ -5,8 +5,8 @@ REPOSITORY_LOCATIONS = dict(
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
-        commit = "4c0ee3a46c0bbb279b0849e5a659e52684a37a98",
-        remote = "https://github.com/pantor/inja",
+        commit = "5a18986825fc7e5d2916ff345c4369e4b6ea7122", # v3.4 + JSON Pointers
+        remote = "https://github.com/solo-io/inja", # solo-io fork including the changes
     ),
     json = dict(
         commit = "bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d",  # v3.11.2
