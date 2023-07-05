@@ -21,7 +21,7 @@ TransformerConstSharedPtr Transformation::getTransformer(
   switch (transformation.transformation_type_case()) {
   case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
     return std::make_unique<InjaTransformer>(
-        transformation.transformation_template(), context.api().randomGenerator(), transformation.log_request_response_info());
+        transformation.transformation_template(), context.api().randomGenerator(), transformation.log_request_response_info(), context.threadLocal());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
     const auto& header_body_transform = transformation.header_body_transform();
     return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata(), transformation.log_request_response_info());

@@ -1,4 +1,4 @@
-VERSION := $(COMMIT_SHA)
+VERSION ?= $(COMMIT_SHA)
 RELEASE := "false"
 ifneq ($(TAGGED_VERSION),)
         VERSION := $(shell echo $(TAGGED_VERSION) | cut -c 2-)

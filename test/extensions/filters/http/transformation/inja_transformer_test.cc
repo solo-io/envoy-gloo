@@ -6,12 +6,14 @@
 #include "test/mocks/common.h"
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
+#include "test/mocks/thread_local/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "test/test_common/environment.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 using testing::_;
 using testing::AtLeast;
@@ -37,19 +39,33 @@ namespace {
 std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
 }
 
-inja::Template parse(std::string s) {
-  inja::ParserConfig parser_config;
-  inja::LexerConfig lexer_config;
-  inja::TemplateStorage template_storage;
-
-  inja::Parser parser(parser_config, lexer_config, template_storage);
-  return parser.parse(s);
-}
-
 class TransformerInstanceTest : public testing::Test {
 protected:
   NiceMock<Random::MockRandomGenerator> rng_;
+  NiceMock<ThreadLocal::MockInstance> tls_;
 };
+
+void fill_slot(
+      ThreadLocal::SlotPtr& slot,
+      const Http::RequestOrResponseHeaderMap &header_map,
+      const Http::RequestHeaderMap *request_headers,
+      GetBodyFunc &body,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
+      const nlohmann::json &context,
+      const std::unordered_map<std::string, std::string> &environ,
+      const envoy::config::core::v3::Metadata *cluster_metadata) {
+  slot->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
+          return std::make_shared<ThreadLocalTransformerContext>();
+  });
+  auto& typed_slot = slot->getTyped<ThreadLocalTransformerContext>();
+  typed_slot.header_map_ = &header_map;
+  typed_slot.request_headers_ = request_headers;
+  typed_slot.body_ = &body;
+  typed_slot.extractions_ = &extractions;
+  typed_slot.context_ = &context;
+  typed_slot.environ_ = &environ;
+  typed_slot.cluster_metadata_ = cluster_metadata;
+}
 
 TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   json originalbody;
@@ -59,10 +75,12 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+  TransformerInstance t(*slot, rng_);
 
-  auto res = t.render(parse("{{field1}}"));
+  auto res = t.render(t.parse("{{field1}}"));
 
   EXPECT_EQ(originalbody["field1"], res);
 }
@@ -78,10 +96,13 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{header(\":path\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{header(\":path\")}}"));
 
   EXPECT_EQ(path, res);
 }
@@ -98,10 +119,13 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{header(\"x-custom-header\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{header(\"x-custom-header\")}}"));
 
   EXPECT_EQ(header, res);
 }
@@ -115,10 +139,13 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{extraction(\"f\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{extraction(\"f\")}}"));
 
   EXPECT_EQ(field, res);
 }
@@ -131,10 +158,13 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{extraction(\"notsuchfield\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{extraction(\"notsuchfield\")}}"));
 
   EXPECT_EQ("", res);
 }
@@ -147,10 +177,13 @@ TEST_F(TransformerInstanceTest, Environment) {
   envoy::config::core::v3::Metadata *cluster_metadata{};
   env["FOO"] = "BAR";
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{env(\"FOO\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("BAR", res);
 }
 
@@ -161,10 +194,14 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
 
-  auto res = t.render(parse("{{env(\"FOO\")}}"));
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{env(\"FOO\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -180,10 +217,13 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
       {SoloHttpFilterNames::get().Transformation,
        MessageUtil::keyValueStruct("io.solo.hostname", "foo.example.com")});
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, &cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata);
 
-  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("foo.example.com", res);
 }
 
@@ -195,10 +235,13 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(headers, &headers, empty_body, extractions,
-                        originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
 
-  auto res = t.render(parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
+  TransformerInstance t(*slot, rng_);
+
+  auto res = t.render(t.parse("{{clusterMetadata(\"io.solo.hostname\")}}"));
   EXPECT_EQ("", res);
 }
 
@@ -211,11 +254,14 @@ TEST_F(TransformerInstanceTest, RequestHeaders) {
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
-  TransformerInstance t(response_headers, &request_headers, empty_body,
-                        extractions, originalbody, env, cluster_metadata, rng_);
+  auto slot = tls_.allocateSlot();
+  fill_slot(slot,
+          response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata);
+
+  TransformerInstance t(*slot, rng_);
 
   auto res = t.render(
-      parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
+      t.parse("{{header(\":status\")}}-{{request_header(\":method\")}}"));
   EXPECT_EQ("200-GET", res);
 }
 
@@ -301,7 +347,7 @@ TEST_F(TransformerTest, transform) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -333,7 +379,7 @@ TEST_F(TransformerTest, transformSimple) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -359,7 +405,7 @@ TEST_F(TransformerTest, transformMultipleHeaderValues) {
   header1->mutable_value()->set_text("{{upper(\"second value\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -381,7 +427,7 @@ TEST_F(TransformerTest, transformHeaderAndHeadersToAppend) {
   // this should overwrite existing headers with the same name
   (*transformation.mutable_headers())["x-custom-header"].set_text(
       "{{upper(\"overwritten value\")}}");
-  // define "headers_to_append" 
+  // define "headers_to_append"
   // these header values should be appended to the current x-custom-header
   const auto &header = transformation.add_headers_to_append();
   header->set_key("x-custom-header");
@@ -391,7 +437,7 @@ TEST_F(TransformerTest, transformHeaderAndHeadersToAppend) {
   header1->mutable_value()->set_text("{{upper(\"second value\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -427,7 +473,7 @@ TEST_F(TransformerTest, transformSimpleNestedStructs) {
       "{{upper(\"abc\")}}");
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -454,7 +500,7 @@ TEST_F(TransformerTest, transformPassthrough) {
 
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -485,7 +531,7 @@ TEST_F(TransformerTest, transformMergeExtractorsToBody) {
 
   transformation.set_advanced_templates(false);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -510,7 +556,7 @@ TEST_F(TransformerTest, transformBodyNotSet) {
 
   transformation.set_advanced_templates(true);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -540,7 +586,7 @@ TEST_F(InjaTransformerTest, transformWithHyphens) {
   transformation.set_advanced_templates(false);
   transformation.mutable_merge_extractors_to_body();
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -560,7 +606,7 @@ TEST_F(InjaTransformerTest, RemoveHeadersUsingEmptyTemplate) {
 
   (*transformation.mutable_headers())[content_type] = empty;
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   EXPECT_TRUE(headers.has(content_type));
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -584,7 +630,7 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
@@ -599,7 +645,7 @@ TEST_F(InjaTransformerTest, UseBodyFunction) {
 
   transformation.mutable_body()->set_text("{{body()}} {{body()}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("1");
@@ -617,7 +663,7 @@ TEST_F(InjaTransformerTest, UseDefaultNS) {
   dynamic_meta->set_key("foo");
   dynamic_meta->mutable_value()->set_text("{{body()}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -644,7 +690,7 @@ TEST_F(InjaTransformerTest, UseCustomNS) {
   dynamic_meta->set_metadata_namespace("foo.ns");
   dynamic_meta->mutable_value()->set_text("123");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -664,7 +710,7 @@ TEST_F(InjaTransformerTest, UseDynamicMetaTwice) {
   dynamic_meta->set_key("bar");
   dynamic_meta->mutable_value()->set_text("123");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -683,7 +729,7 @@ TEST_F(InjaTransformerTest, UseEnvVar) {
   TestEnvironment::setEnvVar("FOO", "BAR", 1);
   TestEnvironment::setEnvVar("EMPTY", "", 1);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -701,7 +747,7 @@ TEST_F(InjaTransformerTest, Base64EncodeTestString) {
 
   transformation.mutable_body()->set_text(formatted_string);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -721,7 +767,7 @@ TEST_F(InjaTransformerTest, Base64DecodeTestString) {
 
   transformation.mutable_body()->set_text(formatted_string);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -736,7 +782,7 @@ TEST_F(InjaTransformerTest, Base64Composed) {
 
   transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -752,7 +798,7 @@ TEST_F(InjaTransformerTest, DecodeInvalidBase64) {
 
   transformation.mutable_body()->set_text("{{base64_decode(\"INVALID BASE64\")}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -767,7 +813,7 @@ TEST_F(InjaTransformerTest, Substring) {
 
   transformation.mutable_body()->set_text("{{substring(body(), 1, 2)}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -783,7 +829,7 @@ TEST_F(InjaTransformerTest, SubstringTwoArguments) {
 
   transformation.mutable_body()->set_text("{{substring(body(), 1)}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -803,28 +849,28 @@ TEST_F(InjaTransformerTest, SubstringOutOfBounds) {
 
   // case: start index is greater than string length
   transformation.mutable_body()->set_text("{{substring(body(), 10, 1)}}");
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   Buffer::OwnedImpl body(test_string);
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: start index is negative
   transformation.mutable_body()->set_text("{{substring(body(), -1, 1)}}");
-  InjaTransformer transformer2(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer2(transformation, rng_, google::protobuf::BoolValue(), tls_);
   body = Buffer::OwnedImpl(test_string);
   transformer2.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: substring length is greater than string length
   transformation.mutable_body()->set_text("{{substring(body(), 0, 10)}}");
-  InjaTransformer transformer3(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer3(transformation, rng_, google::protobuf::BoolValue(), tls_);
   body = Buffer::OwnedImpl(test_string);
   transformer3.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "123");
 
   // case: substring length is negative
   transformation.mutable_body()->set_text("{{substring(body(), 0, -1)}}");
-  InjaTransformer transformer4(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer4(transformation, rng_, google::protobuf::BoolValue(), tls_);
   body = Buffer::OwnedImpl(test_string);
   transformer4.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "123");
@@ -840,14 +886,14 @@ TEST_F(InjaTransformerTest, SubstringNonIntegerArguments) {
 
   // case: start index is not an integer
   transformation.mutable_body()->set_text("{{substring(body(), \"a\", 1)}}");
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   Buffer::OwnedImpl body(test_string);
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
 
   // case: substring length is not an integer
   transformation.mutable_body()->set_text("{{substring(body(), 0, \"a\")}}");
-  InjaTransformer transformer2(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer2(transformation, rng_, google::protobuf::BoolValue(), tls_);
   body = Buffer::OwnedImpl(test_string);
   transformer2.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "");
@@ -858,7 +904,7 @@ TEST_F(InjaTransformerTest, ParseBodyListUsingContext) {
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       "{% for i in context() %}{{ i }}{% endfor %}");
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -872,7 +918,7 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -893,7 +939,7 @@ TEST_F(InjaTransformerTest, ParseFromNilClusterInfo) {
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   callbacks.cluster_info_.reset();
@@ -932,7 +978,7 @@ TEST_F(TransformerTest, transformHeaderAndHeadersToRemove) {
   // perform the removal of header2 only
   transformation.add_headers_to_remove("x-custom-header2-repeated");
   transformation.add_headers_to_remove("x-custom-header1");
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
@@ -958,7 +1004,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomBodyTest) {
   transformation.set_advanced_templates(false);
 
   Random::RandomGeneratorImpl rng;
-  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -979,7 +1025,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomHeaderTest) {
   (*transformation.mutable_headers())["x-test-123"].set_text(formatted_string);
 
   Random::RandomGeneratorImpl rng;
-  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -1002,7 +1048,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTestButNothingToReplace) {
   transformation.mutable_body()->set_text(formatted_string);
 
   Random::RandomGeneratorImpl rng;
-  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -1041,7 +1087,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
 {{{{ replace_with_random("{}", "{}") }}}}
   )ENDFMT";
 
-  auto formatted_string = fmt::format(format_string, 
+  auto formatted_string = fmt::format(format_string,
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3,
@@ -1052,7 +1098,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
 
   transformation.mutable_body()->set_text(formatted_string);
   Random::RandomGeneratorImpl rng;
-  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue());
+  InjaTransformer transformer(transformation, rng, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
@@ -1062,6 +1108,43 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
   assert_replacements(body.toString(), "test-1-");
   assert_replacements(body.toString(), "test-2-");
   assert_replacements(body.toString(), "test-3-");
+}
+
+TEST_F(InjaTransformerTest, ParseUsingSetKeyword) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      "{% set foo = \"bar\" %}{{ foo }}");
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("{\"bat\":\"baz\"}");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "bar");
+}
+
+TEST_F(InjaTransformerTest, ParseUsingJsonPointerSyntax) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.set_advanced_templates(true);
+  transformation.mutable_body()->set_text(
+      "{{ json_pointers/example.com }}--{{ json_pointers/and~1or }}--{{ json_pointers/and~0or }}");
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body(R"EOF(
+{
+  "json_pointers": {
+    "example.com": "online",
+    "and/or": "slash",
+    "and~or": "tilde"
+  }
+}
+)EOF");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "online--slash--tilde");
 }
 
 } // namespace Transformation
