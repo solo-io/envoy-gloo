@@ -343,6 +343,10 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
   return found->second;
 }
 
+// parse calls Inja::Environment::parse which uses non-const references to member
+// data fields. This method is NOT SAFE to call outside of the InjaTransformer
+// constructor since doing so could cause Inja::Environment member fields to be
+// modified by multiple threads at runtime.
 inja::Template TransformerInstance::parse(std::string_view input) {
     return env_.parse(input);
 }
@@ -471,7 +475,8 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
 InjaTransformer::~InjaTransformer() {}
 
 // transform is called on the request path, and may be executed on any worker thread.
-// it must be thread-safe
+// it must be thread-safe. note that calling instance_->parse is NOT THREAD SAFE
+// and MUST NOT be done from this method.
 void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
                                 Http::RequestHeaderMap *request_headers,
                                 Buffer::Instance &body,
