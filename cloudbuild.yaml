@@ -1,6 +1,6 @@
 steps:
 
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['builds','submit','--config=ci/cloudbuild.yaml','--substitutions','TAG_NAME=$TAG_NAME,COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=']
+  args: ['builds','submit','--config=ci/cloudbuild.yaml','--substitutions','TAG_NAME=$TAG_NAME,COMMIT_SHA=$COMMIT_SHA']
 
 timeout: 10000s
