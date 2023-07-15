@@ -1,0 +1,6 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy
+    dependencyOwner: envoyproxy
+    dependencyTag: ea9d25e93cef74b023c95ca1a3f79449cdf7fa9a
+    description: Bump Envoy to ea9d25e93cef74b023c95ca1a3f79449cdf7fa9a for http cve
