@@ -4,7 +4,6 @@
 
 ARG BUILD_OS=ubuntu
 ARG BUILD_TAG=20.04
-ARG ENVOY_VRP_BASE_IMAGE=envoy-base
 
 
 FROM scratch AS binary
