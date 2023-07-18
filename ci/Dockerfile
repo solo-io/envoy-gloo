@@ -9,7 +9,7 @@ ARG BUILD_TAG=20.04
 FROM scratch AS binary
 # this matters for envoy-gloo but is overwritten in gloo
 # so we mimick this file between the repos for now
-COPY ci/docker-entrypoint.sh /
+COPY docker-entrypoint.sh /
 
 
 # See https://github.com/docker/buildx/issues/510 for why this _must_ be this way
