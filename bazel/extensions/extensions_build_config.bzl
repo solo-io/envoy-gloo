@@ -1,3 +1,7 @@
+# CHECK_ON_MINOR_UPDATE we dont need to register everything nessecarily 
+# but we must register all extensions we may use
+
+
 # See bazel/README.md for details on how this system works.
 MOBILE_PACKAGE_VISIBILITY = ["@envoy//:mobile_library"]
 EXTENSIONS = {

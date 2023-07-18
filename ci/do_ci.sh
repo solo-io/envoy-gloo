@@ -1,5 +1,10 @@
 #!/bin/bash
 set -e
+
+
+# CHECK_ON_MINOR_UPDATE this may be massively affected by non-release note changes
+# make sure to check the do_ci script and any seds that exist in this file
+
 bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
