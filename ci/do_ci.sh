@@ -7,7 +7,7 @@ SOURCE_DIR="$(bazel info workspace)"
 # will be reverted or updated in https://github.com/solo-io/envoy-gloo/issues/246
 git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
 pushd /tmp/envoy
-git checkout v1.25.7
+git checkout v1.26.0
 popd
 
 $SOURCE_DIR/ci/verify_posture.sh verify
