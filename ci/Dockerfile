@@ -9,13 +9,14 @@ ARG BUILD_TAG=20.04
 FROM scratch AS binary
 # this matters for envoy-gloo but is overwritten in gloo
 # so we mimick this file between the repos for now
-COPY docker-entrypoint.sh /
+COPY ci/docker-entrypoint.sh /
 
 
 # See https://github.com/docker/buildx/issues/510 for why this _must_ be this way
 ARG TARGETPLATFORM
 ENV TARGETPLATFORM="${TARGETPLATFORM:-linux/amd64}"
-ADD "${TARGETPLATFORM}/release.tar.zst" /usr/local/bin/
+# ADD "${TARGETPLATFORM}/release.tar.zst" /usr/local/bin/
+ADD envoy.stripped /usr/local/bin/envoy
 
 
 # STAGE: envoy-base
@@ -23,8 +24,8 @@ FROM ${BUILD_OS}:${BUILD_TAG} AS envoy-base
 ENV DEBIAN_FRONTEND=noninteractive
 EXPOSE 10000
 CMD ["envoy", "-c", "/etc/envoy/envoy.yaml"]
-RUN mkdir -p /etc/envoy \
-    && adduser --group --system envoy
+RUN mkdir -p /etc/envoy 
+#   && adduser --group --system envoy # for now we can hardcode like we did previously
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/docker-entrypoint.sh"]
 # NB: Adding this here means that following steps, for example updating the system packages, are run
 #   when the version file changes. This should mean that a release version will always update.
