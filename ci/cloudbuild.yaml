@@ -13,7 +13,7 @@ steps:
 
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: 'bash'
-  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
+  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && ls &&  cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
   env:
   - 'TAGGED_VERSION=$TAG_NAME'
   - 'COMMIT_SHA=$COMMIT_SHA'
