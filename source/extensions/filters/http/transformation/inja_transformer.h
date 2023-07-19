@@ -47,6 +47,9 @@ public:
   void set_element_notation(inja::ElementNotation notation) {
       env_.set_element_notation(notation);
   };
+  void set_escape_strings(bool escape_strings) {
+      env_.set_escape_strings(escape_strings);
+  };
 
 private:
   // header_value(name)
@@ -62,6 +65,7 @@ private:
   nlohmann::json substring_callback(const inja::Arguments &args) const;
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
+  nlohmann::json json_escaped_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
@@ -115,11 +119,11 @@ private:
   std::vector<Http::LowerCaseString> headers_to_remove_;
   std::vector<DynamicMetadataValue> dynamic_metadata_;
   std::unordered_map<std::string, std::string> environ_;
-  bool render_body_as_json_{};
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;
   bool ignore_error_on_parse_;
+  bool render_body_as_json_{};
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};

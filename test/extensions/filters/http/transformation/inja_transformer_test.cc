@@ -1151,16 +1151,20 @@ TEST_F(InjaTransformerTest, RenderBodyAsJson) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
-      "{\"Value\":\"{{ value }}\"}");
+      R"EOF({"Value":"{{ value }}"})EOF");
+  transformation.set_render_body_as_json(true);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  Buffer::OwnedImpl body("{\"value\":\"foo\"}");
+  Buffer::OwnedImpl body(R"({"value":"\"foo\""})"_json.dump());
+  auto expected_body = R"({"Value":"\"foo\""})"_json.dump();
+  std::cout << "body.toString() before: " << body.toString() << std::endl;
   transformer.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), "{\\\"Value\\\":\\\"foo\\\"}");
+  std::cout << "body.toString() after: " << body.toString() << std::endl;
+  std::cout << "expected_body: " << expected_body << std::endl;
+  EXPECT_EQ(body.toString(), expected_body);
 }
-
 
 } // namespace Transformation
 } // namespace HttpFilters

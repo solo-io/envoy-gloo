@@ -32,14 +32,14 @@ const std::string DEFAULT_TRANSFORMATION =
         text: abc {{extraction("ext1")}}
 )EOF";
 
-const std::string DUPLICATE_HEADER_TRANSFORMATION = 
+const std::string DUPLICATE_HEADER_TRANSFORMATION =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: true
       headers_to_append:
         - key: x-solo
-          value: 
+          value:
             text: appended header 1
         - key: x-solo
           value:
@@ -122,6 +122,22 @@ const std::string PASSTHROUGH_TRANSFORMATION =
           subgroup: 1
       headers: { "x-solo": {"text": "{{extraction(\"ext1\")}}"} }
       passthrough: {}
+)EOF";
+
+const std::string RENDER_BODY_AS_JSON_TRANSFORMATION =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
 )EOF";
 
 const std::string DEFAULT_FILTER_TRANSFORMATION =
@@ -238,7 +254,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 
   auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
   processRequest(response);
-  
+
   std::string xsolo_header(upstream_request_->headers()
                                .get(Http::LowerCaseString("x-solo"))[0]
                                ->value()
@@ -457,7 +473,7 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
 
   json actual_request = json::parse(upstream_request_->body().toString());
   actual_request["headers"]["x-request-id"] = ""; // zero out random headers
-  auto expected_request = R"( 
+  auto expected_request = R"(
   {
    "body":"{\"abc\":\"efg\"}",
    "headers": {
@@ -481,7 +497,7 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
   // remove the `x-envoy-upstream-service-time` since its
   // value depends on how long the test took to run
   actual_response["headers"].erase("x-envoy-upstream-service-time");
-  auto expected_response = R"( 
+  auto expected_response = R"(
   {
     "headers": {
       ":status":"200",
@@ -493,4 +509,48 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
 
 }
 
+TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransform) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
+
+  // make sure response works as well, with no metadata set:
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  json actual_response_body = json::parse(response->body());
+  // remove the `x-envoy-upstream-service-time` since its
+  // value depends on how long the test took to run
+  auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
 } // namespace Envoy

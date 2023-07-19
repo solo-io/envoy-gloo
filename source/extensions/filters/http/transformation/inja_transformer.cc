@@ -143,6 +143,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
   });
+  env_.add_callback("json_escaped", 1, [this](Arguments &args) {
+    return json_escaped_callback(args);
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -343,6 +346,11 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
   return found->second;
 }
 
+json TransformerInstance::json_escaped_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  return json::parse(input).dump();
+}
+
 // parse calls Inja::Environment::parse which uses non-const references to member
 // data fields. This method is NOT SAFE to call outside of the InjaTransformer
 // constructor since doing so could cause Inja::Environment member fields to be
@@ -372,11 +380,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
+      render_body_as_json_(transformation.render_body_as_json()),
       tls_(tls.allocateSlot()),
       instance_(std::make_unique<TransformerInstance>(*tls_, rng)) {
   if (advanced_templates_) {
     instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
+
+  instance_->set_escape_strings(render_body_as_json_);
 
   tls_->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
           return std::make_shared<ThreadLocalTransformerContext>();
@@ -558,6 +569,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   if (body_template_.has_value()) {
     std::string output = instance_->render(body_template_.value());
+
+    std::cout << "output: " << output << std::endl;
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -606,15 +619,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // replace body. we do it here so that headers and dynamic metadata have the
   // original body.
   if (maybe_body.has_value()) {
-    json body_json;
-    if (render_body_as_json_) {
-      try {
-      body_json = json(maybe_body.value().toString());
-      } catch (json::parse_error parse_exception) {
-        ENVOY_STREAM_LOG(debug, "unable to parse body as json; returning as raw {}", callbacks, maybe_body.value().toString());
-      }
-      maybe_body.emplace(body_json.dump());
-    }
+    auto body_string = maybe_body.value().toString();
+    std::cout << "body_string: " << body_string << std::endl;
 
     // remove content length, as we have new body.
     header_map.removeContentLength();
