@@ -1159,10 +1159,7 @@ TEST_F(InjaTransformerTest, RenderBodyAsJson) {
 
   Buffer::OwnedImpl body(R"({"value":"\"foo\""})"_json.dump());
   auto expected_body = R"({"Value":"\"foo\""})"_json.dump();
-  std::cout << "body.toString() before: " << body.toString() << std::endl;
   transformer.transform(headers, &headers, body, callbacks);
-  std::cout << "body.toString() after: " << body.toString() << std::endl;
-  std::cout << "expected_body: " << expected_body << std::endl;
   EXPECT_EQ(body.toString(), expected_body);
 }
 

@@ -143,9 +143,6 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
   });
-  env_.add_callback("json_escaped", 1, [this](Arguments &args) {
-    return json_escaped_callback(args);
-  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -344,11 +341,6 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
     return pattern_replacements_[pattern];
   }
   return found->second;
-}
-
-json TransformerInstance::json_escaped_callback(const inja::Arguments &args) const {
-  const std::string &input = args.at(0)->get_ref<const std::string &>();
-  return json::parse(input).dump();
 }
 
 // parse calls Inja::Environment::parse which uses non-const references to member
@@ -569,8 +561,6 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   if (body_template_.has_value()) {
     std::string output = instance_->render(body_template_.value());
-
-    std::cout << "output: " << output << std::endl;
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
@@ -619,9 +609,6 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // replace body. we do it here so that headers and dynamic metadata have the
   // original body.
   if (maybe_body.has_value()) {
-    auto body_string = maybe_body.value().toString();
-    std::cout << "body_string: " << body_string << std::endl;
-
     // remove content length, as we have new body.
     header_map.removeContentLength();
     // replace body

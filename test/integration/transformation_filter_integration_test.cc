@@ -124,22 +124,6 @@ const std::string PASSTHROUGH_TRANSFORMATION =
       passthrough: {}
 )EOF";
 
-const std::string RENDER_BODY_AS_JSON_TRANSFORMATION =
-    R"EOF(
-  request_transformation:
-    transformation_template:
-      advanced_templates: false
-      render_body_as_json: true
-      body:
-        text: "{\"Foo\":\"{{ foo }}\"}"
-  response_transformation:
-    transformation_template:
-      advanced_templates: false
-      render_body_as_json: true
-      body:
-        text: "{\"Bar\":\"{{ bar }}\"}"
-)EOF";
-
 const std::string DEFAULT_FILTER_TRANSFORMATION =
     R"EOF(
       {}
