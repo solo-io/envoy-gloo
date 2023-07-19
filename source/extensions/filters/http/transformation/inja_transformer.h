@@ -86,7 +86,7 @@ private:
   const std::regex extract_regex_;
 };
 
-class InjaTransformer : public Transformer {
+class InjaTransformer : public Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate &transformation,
                   Envoy::Random::RandomGenerator &rng,
@@ -115,6 +115,7 @@ private:
   std::vector<Http::LowerCaseString> headers_to_remove_;
   std::vector<DynamicMetadataValue> dynamic_metadata_;
   std::unordered_map<std::string, std::string> environ_;
+  bool render_body_as_json_{};
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;

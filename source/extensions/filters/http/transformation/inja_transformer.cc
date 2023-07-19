@@ -606,6 +606,16 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // replace body. we do it here so that headers and dynamic metadata have the
   // original body.
   if (maybe_body.has_value()) {
+    json body_json;
+    if (render_body_as_json_) {
+      try {
+      body_json = json(maybe_body.value().toString());
+      } catch (json::parse_error parse_exception) {
+        ENVOY_STREAM_LOG(debug, "unable to parse body as json; returning as raw {}", callbacks, maybe_body.value().toString());
+      }
+      maybe_body.emplace(body_json.dump());
+    }
+
     // remove content length, as we have new body.
     header_map.removeContentLength();
     // replace body

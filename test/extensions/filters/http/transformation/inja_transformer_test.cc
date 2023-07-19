@@ -1147,6 +1147,21 @@ TEST_F(InjaTransformerTest, ParseUsingJsonPointerSyntax) {
   EXPECT_EQ(body.toString(), "online--slash--tilde");
 }
 
+TEST_F(InjaTransformerTest, RenderBodyAsJson) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      "{\"Value\":\"{{ value }}\"}");
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("{\"value\":\"foo\"}");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "{\\\"Value\\\":\\\"foo\\\"}");
+}
+
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
