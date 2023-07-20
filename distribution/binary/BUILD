@@ -12,10 +12,10 @@ bundled(
     mode = "opt",
     stripopts = ["--strip-all"],
     targets = {
-        "//distribution:envoy-binary-stripped": "envoy",
+        "@envoy///distribution:envoy-binary-stripped": "envoy",
         -- "//distribution:envoy-contrib-binary-stripped": "envoy-contrib",
-        "//distribution:envoy-binary": "dbg/envoy",
-        "//distribution:envoy-dwarf": "dbg/envoy.dwp",
+        "@envoy///distribution:envoy-binary": "dbg/envoy",
+        "@envoy///distribution:envoy-dwarf": "dbg/envoy.dwp",
         -- "//distribution:envoy-contrib-binary": "dbg/envoy-contrib",
         -- "//distribution:envoy-contrib-dwarf": "dbg/envoy-contrib.dwp",
         -- "//external:su-exec": "utils/su-exec",
