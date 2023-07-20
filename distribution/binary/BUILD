@@ -1,7 +1,7 @@
-load("//bazel:envoy_build_system.bzl", "envoy_package")
+load("@envoy//bazel:envoy_build_system.bzl", "envoy_package")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files")
 load("@rules_pkg//pkg:pkg.bzl", "pkg_tar")
-load("//distribution/binary:compiler.bzl", "bundled")
+load("@envoy//distribution/binary:compiler.bzl", "bundled")
 
 licenses(["notice"])  # Apache 2
 
@@ -39,7 +39,7 @@ pkg_tar(
     srcs = [
         ":release_files",
     ],
-    compressor = "//$UPSTREAM_ENVOY_SRCDIR/tools/zstd",
+    compressor = "@envoy//tools/zstd",
     compressor_args = "-T0",
     extension = "tar.zst",
 )
