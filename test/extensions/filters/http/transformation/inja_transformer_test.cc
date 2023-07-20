@@ -1163,7 +1163,7 @@ TEST_F(InjaTransformerTest, RenderBodyAsJson) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
-TEST_F(InjaTransformerTest, RenderBodyAsJsonPreEscapedInput) {
+TEST_F(InjaTransformerTest, RenderBodyAsJsonDoubleEscapedInput) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
@@ -1176,15 +1176,14 @@ TEST_F(InjaTransformerTest, RenderBodyAsJsonPreEscapedInput) {
   Buffer::OwnedImpl body(R"({"value":"\\\"foo\\\""})"_json.dump());
   auto expected_body = R"({"Value":"\"foo\""})"_json.dump();
   transformer.transform(headers, &headers, body, callbacks);
-  std::cout << expected_body << std::endl;
   EXPECT_EQ(body.toString(), expected_body);
 }
 
-TEST_F(InjaTransformerTest, RenderBodyAsJsonWithCallback) {
+TEST_F(InjaTransformerTest, RawStringCallback) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
-      R"EOF({"Value":{{ to_json(value) }}})EOF");
+      R"EOF({"Value":"{{ raw_string(value) }}"})EOF");
   transformation.set_render_body_as_json(false);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
@@ -1193,7 +1192,22 @@ TEST_F(InjaTransformerTest, RenderBodyAsJsonWithCallback) {
   Buffer::OwnedImpl body(R"({"value":"\"foo\""})"_json.dump());
   auto expected_body = R"({"Value":"\"foo\""})"_json.dump();
   transformer.transform(headers, &headers, body, callbacks);
-  std::cout << "expected_body: " << expected_body << std::endl;
+  EXPECT_EQ(body.toString(), expected_body);
+}
+
+TEST_F(InjaTransformerTest, RenderBodyAsJsonRawStringCallback) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      R"EOF({"Value":"{{ raw_string(value) }}"})EOF");
+  transformation.set_render_body_as_json(true);
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body(R"({"value":"\"foo\""})"_json.dump());
+  auto expected_body = R"({"Value":"\\\"foo\\\""})"_json.dump();
+  transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), expected_body);
 }
 
