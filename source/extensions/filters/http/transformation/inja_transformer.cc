@@ -347,18 +347,16 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
 }
 
 json TransformerInstance::raw_string_callback(const inja::Arguments &args) const {
-  const std::string &input = args.at(0)->get_ref<const std::string &>();
-
-  // in order to get the escaping the way we want, we must cast directly to a json object
-  // since using parse will cause the surrounding " to be stripped
-  auto j = json(input);
+  // inja::Arguments is a std::vector<const json *>, so we can get the json
+  // value from the args directly.
+  const auto& input = args.at(0);
 
   // make sure to bail if we're not working with a raw string value
-  if(!j.is_string()) {
-      return input;
+  if(!input->is_string()) {
+      return input->get_ref<const std::string&>();
   }
 
-  auto val = j.dump();
+  auto val = input->dump();
 
   // This block makes it such that a template must have surrounding " characters
   // around the raw string. This is reasonable since we expect the value we get out of the
