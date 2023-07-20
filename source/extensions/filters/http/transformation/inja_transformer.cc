@@ -143,6 +143,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
   });
+  env_.add_callback("to_json", 1, [this](Arguments &args) {
+    return tojson_callback(args);
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -341,6 +344,31 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
     return pattern_replacements_[pattern];
   }
   return found->second;
+}
+
+json TransformerInstance::tojson_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  std::cout << "modifying input: \n" << input << std::endl;
+  // in order to get the escaping the way we want, we must cast directly to a json object
+  // since using parse will cause the surrounding " to be stripped
+  auto parsed = json(input);
+  std::cout << "modified input (as string): \n" << parsed.get<std::string>() << std::endl;
+
+  auto val = parsed.dump();
+  std::cout << "modified input (as dump): \n" << val << std::endl;
+
+  // This block is optional. It makes it such that a template must have surrounding
+  // " characters. This is logical to me since we expect the value we get out of the
+  // context (body) to be placed in exactly as-is. HOWEVER, the behavior of jinja
+  // is such that the quotes added by .dumps() are left in, so to mirror that impl
+  // exactly, we should not strip them.
+
+  /* // strip the leading and trailing " characters that are added by dump() */
+  /* // if C++20 is adopted, val.starts_with and val.ends_with would clean this up a bit */
+  /* val = val.substr(0,1) == "\"" && val.substr(val.length()-1,1) == "\"" */
+  /*     ? val.substr(1, val.length()-2) */
+  /*     : val; */
+  return val;
 }
 
 // parse calls Inja::Environment::parse which uses non-const references to member

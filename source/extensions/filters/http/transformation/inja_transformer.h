@@ -65,6 +65,7 @@ private:
   nlohmann::json substring_callback(const inja::Arguments &args) const;
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
+  nlohmann::json tojson_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
