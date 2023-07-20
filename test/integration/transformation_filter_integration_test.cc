@@ -527,13 +527,10 @@ TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransform) {
 
   auto actual_request_body = json::parse(upstream_request_->body().toString());
   auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
-
-  // make sure response works as well, with no metadata set:
   EXPECT_EQ(expected_request_body, actual_request_body);
 
-  json actual_response_body = json::parse(response->body());
-  // remove the `x-envoy-upstream-service-time` since its
-  // value depends on how long the test took to run
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
   auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
@@ -572,14 +569,95 @@ TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransformEscapedInpu
 
   auto actual_request_body = json::parse(upstream_request_->body().toString());
   auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
-
-  // make sure response works as well, with no metadata set:
   EXPECT_EQ(expected_request_body, actual_request_body);
 
-  json actual_response_body = json::parse(response->body());
-  // remove the `x-envoy-upstream-service-time` since its
-  // value depends on how long the test took to run
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
   auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonRawStringCallback) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: false
+      body:
+        text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: false
+      body:
+        text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransformRawStringCallback) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      render_body_as_json: true
+      body:
+        text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\\\"bar\\\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\\\"baz\\\""})"_json;
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
 } // namespace Envoy

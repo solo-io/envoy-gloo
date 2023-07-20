@@ -257,7 +257,7 @@ message TransformationTemplate {
   repeated DynamicMetadataValue dynamic_metadata_values = 9;
 
   // Use to render the output of a body transformation as JSON. This will cause
-  // rendered values to be escaped in order to make valid JSON strings
+  // rendered string values to be escaped in order to make valid JSON strings
   bool render_body_as_json = 12;
 
 }
