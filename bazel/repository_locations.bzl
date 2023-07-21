@@ -8,7 +8,7 @@ REPOSITORY_LOCATIONS = dict(
         # Includes unmerged modifications for
         # - JSON pointer syntax support
         # - Allowing escaped strings
-        commit = "3aa95b8b58a525f86f79cb547bf937176c9cc7ff", # v3.4.0-patch1
+        commit = "2c441a3ca0b66bdab61f3f9044fb075ae6cacea4", # v3.4.0-patch2
         remote = "https://github.com/solo-io/inja", # solo-io fork including the changes
     ),
     json = dict(
