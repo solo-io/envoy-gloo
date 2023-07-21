@@ -20,6 +20,8 @@ cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
 cp -f $UPSTREAM_ENVOY_SRCDIR/VERSION.txt $SOURCE_DIR/VERSION.txt
 
+cp 
+
 # upstream removed the flaky_test
 mkdir -p $SOURCE_DIR/ci/flaky_test
 # These were removed upstream but the build seems to fail here.
@@ -66,6 +68,10 @@ sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools
 sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 sed -i "s|\${ENVOY_SRCDIR}/VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"
+
+
+cp -f "bazel/repositories.bzl" "distribution/repositories.bzl"
+
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
 
