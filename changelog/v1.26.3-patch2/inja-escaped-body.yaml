@@ -1,0 +1,11 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: inja
+  dependencyTag: v3.4.0-patch2 # not yet released DO NOT MERGE
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/solo-projects/issues/5155
+  resolvesIssue: false
+  description: >-
+    Inja callback `raw_string` added to permit fine-grained escaping of input strings.
+    Also, configuration added to escape all strings for a given transformation.

@@ -32,14 +32,14 @@ const std::string DEFAULT_TRANSFORMATION =
         text: abc {{extraction("ext1")}}
 )EOF";
 
-const std::string DUPLICATE_HEADER_TRANSFORMATION = 
+const std::string DUPLICATE_HEADER_TRANSFORMATION =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: true
       headers_to_append:
         - key: x-solo
-          value: 
+          value:
             text: appended header 1
         - key: x-solo
           value:
@@ -238,7 +238,7 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
 
   auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
   processRequest(response);
-  
+
   std::string xsolo_header(upstream_request_->headers()
                                .get(Http::LowerCaseString("x-solo"))[0]
                                ->value()
@@ -457,7 +457,7 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
 
   json actual_request = json::parse(upstream_request_->body().toString());
   actual_request["headers"]["x-request-id"] = ""; // zero out random headers
-  auto expected_request = R"( 
+  auto expected_request = R"(
   {
    "body":"{\"abc\":\"efg\"}",
    "headers": {
@@ -481,7 +481,7 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
   // remove the `x-envoy-upstream-service-time` since its
   // value depends on how long the test took to run
   actual_response["headers"].erase("x-envoy-upstream-service-time");
-  auto expected_response = R"( 
+  auto expected_response = R"(
   {
     "headers": {
       ":status":"200",
@@ -493,4 +493,214 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
 
 }
 
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformNestedJson) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"{\"bar\":{\"bat\":\"\\\"baq\\\"\"}}"})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"{\"bat\":{\"baq\":\"\\\"baz\\\"\"}}"})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"{\"bar\":{\"bat\":\"\\\"baq\\\"\"}}"})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"{\"bat\":{\"baq\":\"\\\"baz\\\"\"}}"})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransform) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformEscapedInput) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: false
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: false
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\\\"bar\\\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\\\"baz\\\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersRawStringCallback) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: false
+      body:
+        text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: false
+      body:
+        text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\"bar\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\"baz\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformRawStringCallback) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"\"bar\""})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"\"baz\""})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"\\\"bar\\\""})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"\\\"baz\\\""})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
 } // namespace Envoy

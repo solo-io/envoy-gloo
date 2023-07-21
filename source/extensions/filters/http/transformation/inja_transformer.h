@@ -47,6 +47,10 @@ public:
   void set_element_notation(inja::ElementNotation notation) {
       env_.set_element_notation(notation);
   };
+  // Sets the config for rendering strings raw or unescaped
+  void set_escape_strings(bool escape_strings) {
+      env_.set_escape_strings(escape_strings);
+  };
 
 private:
   // header_value(name)
@@ -62,6 +66,7 @@ private:
   nlohmann::json substring_callback(const inja::Arguments &args) const;
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
+  nlohmann::json raw_string_callback(const inja::Arguments &args) const;
 
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
@@ -119,6 +124,7 @@ private:
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;
   bool ignore_error_on_parse_;
+  bool escape_characters_{};
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};

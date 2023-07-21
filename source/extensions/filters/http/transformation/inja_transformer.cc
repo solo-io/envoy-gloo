@@ -143,6 +143,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("replace_with_random", 2, [this](Arguments &args) {
     return replace_with_random_callback(args);
   });
+  env_.add_callback("raw_string", 1, [this](Arguments &args) {
+    return raw_string_callback(args);
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -343,6 +346,34 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
   return found->second;
 }
 
+json TransformerInstance::raw_string_callback(const inja::Arguments &args) const {
+  // inja::Arguments is a std::vector<const json *>, so we can get the json
+  // value from the args directly. We are guaranteed to have exactly one argument
+  // because Inja will throw a Parser error in any other case.
+  // https://github.com/pantor/inja/blob/v3.4.0/include/inja/parser.hpp#L228-L231
+  const auto& input = args.at(0);
+
+  // make sure to bail if we're not working with a raw string value
+  if(!input->is_string()) {
+      return input->get_ref<const std::string&>();
+  }
+
+  auto val = input->dump();
+
+  // This block makes it such that a template must have surrounding " characters
+  // around the raw string. This is reasonable since we expect the value we get out of the
+  // context (body) to be placed in exactly as-is. HOWEVER, the behavior of the jinja
+  // filter is such that the quotes added by .dumps() are left in. For that reason,
+  // this callback is NOT named to_json to avoid confusion with that behavior.
+
+  // strip the leading and trailing " characters that are added by dump()
+  // if C++20 is adopted, val.starts_with and val.ends_with would clean this up a bit
+  val = val.substr(0,1) == "\"" && val.substr(val.length()-1,1) == "\""
+      ? val.substr(1, val.length()-2)
+      : val;
+  return val;
+}
+
 // parse calls Inja::Environment::parse which uses non-const references to member
 // data fields. This method is NOT SAFE to call outside of the InjaTransformer
 // constructor since doing so could cause Inja::Environment member fields to be
@@ -372,11 +403,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
+      escape_characters_(transformation.escape_characters()),
       tls_(tls.allocateSlot()),
       instance_(std::make_unique<TransformerInstance>(*tls_, rng)) {
   if (advanced_templates_) {
     instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
+
+  instance_->set_escape_strings(escape_characters_);
 
   tls_->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
           return std::make_shared<ThreadLocalTransformerContext>();
