@@ -5,14 +5,15 @@ bazel fetch //source/exe:envoy-static
 SOURCE_DIR="$(bazel info workspace)"
 
 # will be reverted or updated in https://github.com/solo-io/envoy-gloo/issues/246
-git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
-pushd /tmp/envoy
-git checkout v1.26.0
-popd
+# git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
+# pushd /tmp/envoy
+# git checkout v1.26.0
+# popd
 
 $SOURCE_DIR/ci/verify_posture.sh verify
 
-export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
+# export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
+export UPSTREAM_ENVOY_SRCDIR=./
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 # dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
