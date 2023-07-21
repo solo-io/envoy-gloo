@@ -348,7 +348,9 @@ std::string& TransformerInstance::random_for_pattern(const std::string& pattern)
 
 json TransformerInstance::raw_string_callback(const inja::Arguments &args) const {
   // inja::Arguments is a std::vector<const json *>, so we can get the json
-  // value from the args directly.
+  // value from the args directly. We are guaranteed to have exactly one argument
+  // because Inja will throw a Parser error in any other case.
+  // https://github.com/pantor/inja/blob/v3.4.0/include/inja/parser.hpp#L228-L231
   const auto& input = args.at(0);
 
   // make sure to bail if we're not working with a raw string value
@@ -401,14 +403,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       passthrough_body_(transformation.has_passthrough()),
       parse_body_behavior_(transformation.parse_body_behavior()),
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
-      render_body_as_json_(transformation.render_body_as_json()),
+      escape_characters_(transformation.escape_characters()),
       tls_(tls.allocateSlot()),
       instance_(std::make_unique<TransformerInstance>(*tls_, rng)) {
   if (advanced_templates_) {
     instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
 
-  instance_->set_escape_strings(render_body_as_json_);
+  instance_->set_escape_strings(escape_characters_);
 
   tls_->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
           return std::make_shared<ThreadLocalTransformerContext>();

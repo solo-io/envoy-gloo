@@ -493,20 +493,63 @@ TEST_P(TransformationFilterIntegrationTest, BodyHeaderTransform) {
 
 }
 
-TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransform) {
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformNestedJson) {
   using json = nlohmann::json;
   transformation_string_ =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: true
+      escape_characters: true
       body:
         text: "{\"Foo\":\"{{ foo }}\"}"
   response_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: true
+      escape_characters: true
+      body:
+        text: "{\"Bar\":\"{{ bar }}\"}"
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"{\"bar\":{\"bat\":\"\\\"baq\\\"\"}}"})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"bar":"{\"bat\":{\"baq\":\"\\\"baz\\\"\"}}"})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"Foo":"{\"bar\":{\"bat\":\"\\\"baq\\\"\"}}"})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"Bar":"{\"bat\":{\"baq\":\"\\\"baz\\\"\"}}"})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransform) {
+  using json = nlohmann::json;
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
+      body:
+        text: "{\"Foo\":\"{{ foo }}\"}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      escape_characters: true
       body:
         text: "{\"Bar\":\"{{ bar }}\"}"
 )EOF";
@@ -535,20 +578,20 @@ TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransform) {
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
 
-TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransformEscapedInput) {
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformEscapedInput) {
   using json = nlohmann::json;
   transformation_string_ =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: false
+      escape_characters: false
       body:
         text: "{\"Foo\":\"{{ foo }}\"}"
   response_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: false
+      escape_characters: false
       body:
         text: "{\"Bar\":\"{{ bar }}\"}"
 )EOF";
@@ -577,20 +620,20 @@ TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransformEscapedInpu
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
 
-TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonRawStringCallback) {
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersRawStringCallback) {
   using json = nlohmann::json;
   transformation_string_ =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: false
+      escape_characters: false
       body:
         text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
   response_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: false
+      escape_characters: false
       body:
         text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
 )EOF";
@@ -619,20 +662,20 @@ TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonRawStringCallback) {
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
 
-TEST_P(TransformationFilterIntegrationTest, RenderBodyAsJsonTransformRawStringCallback) {
+TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformRawStringCallback) {
   using json = nlohmann::json;
   transformation_string_ =
     R"EOF(
   request_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: true
+      escape_characters: true
       body:
         text: "{\"Foo\":\"{{ raw_string(foo) }}\"}"
   response_transformation:
     transformation_template:
       advanced_templates: false
-      render_body_as_json: true
+      escape_characters: true
       body:
         text: "{\"Bar\":\"{{ raw_string(bar) }}\"}"
 )EOF";

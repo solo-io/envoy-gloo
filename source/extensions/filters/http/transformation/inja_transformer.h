@@ -47,6 +47,7 @@ public:
   void set_element_notation(inja::ElementNotation notation) {
       env_.set_element_notation(notation);
   };
+  // Sets the config for rendering strings raw or unescaped
   void set_escape_strings(bool escape_strings) {
       env_.set_escape_strings(escape_strings);
   };
@@ -123,7 +124,7 @@ private:
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;
   bool ignore_error_on_parse_;
-  bool render_body_as_json_{};
+  bool escape_characters_{};
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};

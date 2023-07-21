@@ -1147,12 +1147,12 @@ TEST_F(InjaTransformerTest, ParseUsingJsonPointerSyntax) {
   EXPECT_EQ(body.toString(), "online--slash--tilde");
 }
 
-TEST_F(InjaTransformerTest, RenderBodyAsJson) {
+TEST_F(InjaTransformerTest, EscapeCharacters) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       R"EOF({"Value":"{{ value }}"})EOF");
-  transformation.set_render_body_as_json(true);
+  transformation.set_escape_characters(true);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -1163,12 +1163,28 @@ TEST_F(InjaTransformerTest, RenderBodyAsJson) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
-TEST_F(InjaTransformerTest, RenderBodyAsJsonDoubleEscapedInput) {
+TEST_F(InjaTransformerTest, EscapeCharactersNestedJson) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       R"EOF({"Value":"{{ value }}"})EOF");
-  transformation.set_render_body_as_json(false);
+  transformation.set_escape_characters(true);
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body(R"({"value":"{\"foo\":{\"bar\":\"\\\"baz\\\"\"}}"})"_json.dump());
+  auto expected_body = R"({"Value":"{\"foo\":{\"bar\":\"\\\"baz\\\"\"}}"})"_json.dump();
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), expected_body);
+}
+
+TEST_F(InjaTransformerTest, EscapeCharactersDoubleEscapedInput) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      R"EOF({"Value":"{{ value }}"})EOF");
+  transformation.set_escape_characters(false);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -1184,7 +1200,7 @@ TEST_F(InjaTransformerTest, RawStringCallback) {
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       R"EOF({"Value":"{{ raw_string(value) }}"})EOF");
-  transformation.set_render_body_as_json(false);
+  transformation.set_escape_characters(false);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -1195,12 +1211,27 @@ TEST_F(InjaTransformerTest, RawStringCallback) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
-TEST_F(InjaTransformerTest, RenderBodyAsJsonRawStringCallback) {
+TEST_F(InjaTransformerTest, RawStringCallbackTooManyArguments) {
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      R"EOF({% set bad="extra argument to function" %}{"Value":"{{ raw_string(value, bad) }}"})EOF");
+  EXPECT_THROW_WITH_REGEX(InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_), EnvoyException, ".*unknown function raw_string.*")
+}
+
+TEST_F(InjaTransformerTest, RawStringCallbackZeroArguments) {
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text(
+      R"EOF({"Value":"{{ raw_string() }}"})EOF");
+  EXPECT_THROW_WITH_REGEX(InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_), EnvoyException, ".*unknown function raw_string.*")
+}
+
+
+TEST_F(InjaTransformerTest, EscapeCharactersRawStringCallback) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text(
       R"EOF({"Value":"{{ raw_string(value) }}"})EOF");
-  transformation.set_render_body_as_json(true);
+  transformation.set_escape_characters(true);
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
