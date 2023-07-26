@@ -1,7 +1,7 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
         # pre-1.26.4 commit -- https://github.com/envoyproxy/envoy/commit/ac06249e76fbe2c427678c1c9d85c88675d6129e
-        # using pre-release commit due to upstream build issues
+        # using pre-release commit due to upstream build issues https://github.com/envoyproxy/envoy/issues/28639
         commit = "ac06249e76fbe2c427678c1c9d85c88675d6129e",
         remote = "https://github.com/envoyproxy/envoy",
     ),
