@@ -1,0 +1,8 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy
+    dependencyOwner: envoyproxy
+    dependencyTag: ac06249e76fbe2c427678c1c9d85c88675d6129e
+    description: >
+      Bump Envoy to ac06249e76fbe2c427678c1c9d85c88675d6129e to pull in fixes for
+      CVE-2023-35941, CVE-2023-35942, CVE-2023-35944, and CVE-2023-35945
