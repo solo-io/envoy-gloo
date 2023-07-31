@@ -13,7 +13,7 @@ SOURCE_DIR="$(bazel info workspace)"
 $SOURCE_DIR/ci/verify_posture.sh verify
 
 # export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
-export UPSTREAM_ENVOY_SRCDIR=./
+export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
 # dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
