@@ -21,7 +21,7 @@ cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
 cp -f $UPSTREAM_ENVOY_SRCDIR/VERSION.txt $SOURCE_DIR/VERSION.txt
 
-cp 
+
 
 # upstream removed the flaky_test
 mkdir -p $SOURCE_DIR/ci/flaky_test
