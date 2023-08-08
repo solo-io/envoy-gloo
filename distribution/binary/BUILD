@@ -1,6 +1,6 @@
 
 load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
-envoy_gloo_dependencies()
+-- envoy_gloo_dependencies()
 
 load("@envoy//bazel:envoy_build_system.bzl", "envoy_package")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_files")
