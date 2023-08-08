@@ -10,7 +10,7 @@ using ::envoy::config::route::v3::RouteMatch;
 using Envoy::Router::ConfigUtility;
 
 namespace Envoy {
-namespace Matcher {
+namespace MatcherCopy {
 namespace {
 
 /**
