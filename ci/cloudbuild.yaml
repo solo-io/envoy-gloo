@@ -1,5 +1,5 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
+- name: 'gcr.io/solo-public/envoy-build-ubuntu:0.0.0-dev'
   args: ['ci/do_ci.sh', 'bazel.release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
   volumes:
   - name: 'vol-build'
