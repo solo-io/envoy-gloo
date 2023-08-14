@@ -1,9 +1,13 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.26.4
-        commit = "cfa32deca25ac57c2bbecdad72807a9b13493fc1",
-        remote = "https://github.com/envoyproxy/envoy",
+        commit = "56695ce4f6d8af962932b103c753455f844903b5",
+        remote = "https://github.com/solo-io/envoy-fork",
     ),
+    # envoy = dict(
+    #     # envoy 1.26.4
+    #     commit = "cfa32deca25ac57c2bbecdad72807a9b13493fc1",
+    #     remote = "https://github.com/envoyproxy/envoy",
+    # ),
     inja = dict(
         # Includes unmerged modifications for
         # - JSON pointer syntax support
