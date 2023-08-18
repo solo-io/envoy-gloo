@@ -99,7 +99,7 @@ public:
     auto& hdrs = message->headers();
     // TODO(nfuden) allow for Region this to be overridable. 
     // DefaultRegion is gauranteed to be available but an override may be faster
-    aws_authenticator.sign(&hdrs, HeadersToSign, DefaultRegion);
+    aws_authenticator.sign(&hdrs, HeadersToSign, "us-east-2");
     // Log the accessKey but not the secret. This is to show that we have valid 
     // credentials but does not leak anything secret. This is due to our
     // sessions being 
