@@ -1,8 +1,9 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.26.4
-        commit = "cfa32deca25ac57c2bbecdad72807a9b13493fc1",
-        remote = "https://github.com/envoyproxy/envoy",
+        # DO NOT MERGE
+        # incorporate tap filter work before it merges into envoy master
+        commit = "fa273d0f9884994b2f0838adc3d21ec24776b69a",
+        remote = "https://github.com/ashishb-solo/envoy",
     ),
     inja = dict(
         # Includes unmerged modifications for
