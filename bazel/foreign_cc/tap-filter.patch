@@ -1,0 +1,449 @@
+commit 18bfe1cf4a2a0ff7237a1739e358e88a0a06c18e
+Author: Ashish Banerjee <ashish.banerjee@solo.io>
+Date:   Mon Aug 21 17:55:49 2023 +0000
+
+    Port tap filter changes from upstream
+    
+    This is mostly a cherry-pick of c745c1956cdaffa35d6f4933b57a431a2d2e9fc7 onto
+    this branch, which is the current version on which solo-projects is based. A
+    few changes:
+    
+    1. There was a lot of churn in
+    source/extensions/transport_sockets/tap/config.cc. Since our changes in that
+    file were not so large, this merge conflict was fairly easy to resolve.
+    Nevertheless, tests were run to ensure that things are still working smoothly.
+    
+    2. There was a typo in `acmin_test.cc` - the `"@type"` field was changed from
+    `types.googleapis.cm` to `types.googleapis.com`
+    
+    3. The changelog changes were removed
+
+diff --git api/envoy/config/tap/v3/common.proto api/envoy/config/tap/v3/common.proto
+index 1884bd57d3..126993d0f7 100644
+--- api/envoy/config/tap/v3/common.proto
++++ api/envoy/config/tap/v3/common.proto
+@@ -4,6 +4,7 @@ package envoy.config.tap.v3;
+ 
+ import "envoy/config/common/matcher/v3/matcher.proto";
+ import "envoy/config/core/v3/base.proto";
++import "envoy/config/core/v3/extension.proto";
+ import "envoy/config/core/v3/grpc_service.proto";
+ import "envoy/config/route/v3/route_components.proto";
+ 
+@@ -183,7 +184,7 @@ message OutputConfig {
+ }
+ 
+ // Tap output sink configuration.
+-// [#next-free-field: 6]
++// [#next-free-field: 7]
+ message OutputSink {
+   option (udpa.annotations.versioning).previous_message_type =
+       "envoy.service.tap.v2alpha.OutputSink";
+@@ -259,6 +260,9 @@ message OutputSink {
+     //   been configured to receive tap configuration from some other source (e.g., static
+     //   file, XDS, etc.) configuring the buffered admin output type will fail.
+     BufferedAdminSink buffered_admin = 5;
++
++    // Tap output filter will be defined by an extension type
++    core.v3.TypedExtensionConfig custom_sink = 6;
+   }
+ }
+ 
+diff --git source/extensions/common/tap/BUILD source/extensions/common/tap/BUILD
+index 452fa65c61..68e8617581 100644
+--- source/extensions/common/tap/BUILD
++++ source/extensions/common/tap/BUILD
+@@ -28,6 +28,7 @@ envoy_cc_library(
+         ":tap_interface",
+         "//source/common/common:assert_lib",
+         "//source/common/common:hex_lib",
++        "//source/common/config:utility_lib",
+         "//source/extensions/common/matcher:matcher_lib",
+         "@envoy_api//envoy/config/tap/v3:pkg_cc_proto",
+         "@envoy_api//envoy/data/tap/v3:pkg_cc_proto",
+diff --git source/extensions/common/tap/tap.h source/extensions/common/tap/tap.h
+index 107152f9d0..9f3a86966e 100644
+--- source/extensions/common/tap/tap.h
++++ source/extensions/common/tap/tap.h
+@@ -76,6 +76,27 @@ public:
+ };
+ 
+ using SinkPtr = std::unique_ptr<Sink>;
++using SinkContext =
++    absl::variant<std::reference_wrapper<Server::Configuration::FactoryContext>,
++                  std::reference_wrapper<Server::Configuration::TransportSocketFactoryContext>>;
++
++/**
++ * Abstract tap sink factory. Produces a factory that can instantiate SinkPtr objects
++ */
++class TapSinkFactory : public Config::TypedFactory {
++public:
++  ~TapSinkFactory() override = default;
++  std::string category() const override { return "envoy.tap.sinks"; }
++
++  /**
++   * Create a Sink that can be used for writing out data produced by the tap filter.
++   * @param config supplies the protobuf configuration for the sink factory
++   * @param cluster_manager is a ClusterManager from the HTTP/transport socket context
++   */
++  virtual SinkPtr createSinkPtr(const Protobuf::Message& config, SinkContext context) PURE;
++};
++
++using TapSinkFactoryPtr = std::unique_ptr<TapSinkFactory>;
+ 
+ /**
+  * Generic configuration for a tap extension (filter, transport socket, etc.).
+diff --git source/extensions/common/tap/tap_config_base.cc source/extensions/common/tap/tap_config_base.cc
+index 5d91f81bf9..7f75f4636f 100644
+--- source/extensions/common/tap/tap_config_base.cc
++++ source/extensions/common/tap/tap_config_base.cc
+@@ -3,9 +3,11 @@
+ #include "envoy/config/tap/v3/common.pb.h"
+ #include "envoy/data/tap/v3/common.pb.h"
+ #include "envoy/data/tap/v3/wrapper.pb.h"
++#include "envoy/server/transport_socket_config.h"
+ 
+ #include "source/common/common/assert.h"
+ #include "source/common/common/fmt.h"
++#include "source/common/config/utility.h"
+ #include "source/common/protobuf/utility.h"
+ #include "source/extensions/common/matcher/matcher.h"
+ 
+@@ -45,12 +47,13 @@ bool Utility::addBufferToProtoBytes(envoy::data::tap::v3::Body& output_body,
+ }
+ 
+ TapConfigBaseImpl::TapConfigBaseImpl(const envoy::config::tap::v3::TapConfig& proto_config,
+-                                     Common::Tap::Sink* admin_streamer)
++                                     Common::Tap::Sink* admin_streamer, SinkContext context)
+     : max_buffered_rx_bytes_(PROTOBUF_GET_WRAPPED_OR_DEFAULT(
+           proto_config.output_config(), max_buffered_rx_bytes, DefaultMaxBufferedBytes)),
+       max_buffered_tx_bytes_(PROTOBUF_GET_WRAPPED_OR_DEFAULT(
+           proto_config.output_config(), max_buffered_tx_bytes, DefaultMaxBufferedBytes)),
+       streaming_(proto_config.output_config().streaming()) {
++
+   using ProtoOutputSink = envoy::config::tap::v3::OutputSink;
+   auto& sinks = proto_config.output_config().sinks();
+   ASSERT(sinks.size() == 1);
+@@ -86,6 +89,33 @@ TapConfigBaseImpl::TapConfigBaseImpl(const envoy::config::tap::v3::TapConfig& pr
+     sink_ = std::make_unique<FilePerTapSink>(sinks[0].file_per_tap());
+     sink_to_use_ = sink_.get();
+     break;
++  case ProtoOutputSink::OutputSinkTypeCase::kCustomSink: {
++    TapSinkFactory& tap_sink_factory =
++        Envoy::Config::Utility::getAndCheckFactory<TapSinkFactory>(sinks[0].custom_sink());
++
++    // extract message validation visitor from the context and use it to define config
++    ProtobufTypes::MessagePtr config;
++    using TsfContextRef =
++        std::reference_wrapper<Server::Configuration::TransportSocketFactoryContext>;
++    using HttpContextRef = std::reference_wrapper<Server::Configuration::FactoryContext>;
++    if (absl::holds_alternative<TsfContextRef>(context)) {
++      Server::Configuration::TransportSocketFactoryContext& tsf_context =
++          absl::get<TsfContextRef>(context).get();
++      config = Config::Utility::translateAnyToFactoryConfig(sinks[0].custom_sink().typed_config(),
++                                                            tsf_context.messageValidationVisitor(),
++                                                            tap_sink_factory);
++    } else {
++      Server::Configuration::FactoryContext& http_context =
++          absl::get<HttpContextRef>(context).get();
++      config = Config::Utility::translateAnyToFactoryConfig(
++          sinks[0].custom_sink().typed_config(),
++          http_context.messageValidationContext().staticValidationVisitor(), tap_sink_factory);
++    }
++
++    sink_ = tap_sink_factory.createSinkPtr(*config, context);
++    sink_to_use_ = sink_.get();
++    break;
++  }
+   case envoy::config::tap::v3::OutputSink::OutputSinkTypeCase::kStreamingGrpc:
+     PANIC("not implemented");
+   case envoy::config::tap::v3::OutputSink::OutputSinkTypeCase::OUTPUT_SINK_TYPE_NOT_SET:
+diff --git source/extensions/common/tap/tap_config_base.h source/extensions/common/tap/tap_config_base.h
+index 77a997929b..aca6eb1cf4 100644
+--- source/extensions/common/tap/tap_config_base.h
++++ source/extensions/common/tap/tap_config_base.h
+@@ -103,7 +103,7 @@ public:
+ 
+ protected:
+   TapConfigBaseImpl(const envoy::config::tap::v3::TapConfig& proto_config,
+-                    Common::Tap::Sink* admin_streamer);
++                    Common::Tap::Sink* admin_streamer, SinkContext context);
+ 
+ private:
+   // This is the default setting for both RX/TX max buffered bytes. (This means that per tap, the
+diff --git source/extensions/filters/http/tap/config.cc source/extensions/filters/http/tap/config.cc
+index 5c573924f7..c9051d7c68 100644
+--- source/extensions/filters/http/tap/config.cc
++++ source/extensions/filters/http/tap/config.cc
+@@ -15,21 +15,27 @@ namespace TapFilter {
+ 
+ class HttpTapConfigFactoryImpl : public Extensions::Common::Tap::TapConfigFactory {
+ public:
++  HttpTapConfigFactoryImpl(Server::Configuration::FactoryContext& context)
++      : factory_context_(context) {}
+   // TapConfigFactory
+   Extensions::Common::Tap::TapConfigSharedPtr
+   createConfigFromProto(const envoy::config::tap::v3::TapConfig& proto_config,
+                         Extensions::Common::Tap::Sink* admin_streamer) override {
+-    return std::make_shared<HttpTapConfigImpl>(std::move(proto_config), admin_streamer);
++    return std::make_shared<HttpTapConfigImpl>(std::move(proto_config), admin_streamer,
++                                               factory_context_);
+   }
++
++private:
++  Server::Configuration::FactoryContext& factory_context_;
+ };
+ 
+ Http::FilterFactoryCb TapFilterFactory::createFilterFactoryFromProtoTyped(
+     const envoy::extensions::filters::http::tap::v3::Tap& proto_config,
+     const std::string& stats_prefix, Server::Configuration::FactoryContext& context) {
+-  FilterConfigSharedPtr filter_config(
+-      new FilterConfigImpl(proto_config, stats_prefix, std::make_unique<HttpTapConfigFactoryImpl>(),
+-                           context.scope(), context.admin(), context.singletonManager(),
+-                           context.threadLocal(), context.mainThreadDispatcher()));
++  FilterConfigSharedPtr filter_config(new FilterConfigImpl(
++      proto_config, stats_prefix, std::make_unique<HttpTapConfigFactoryImpl>(context),
++      context.scope(), context.admin(), context.singletonManager(), context.threadLocal(),
++      context.mainThreadDispatcher()));
+   return [filter_config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+     auto filter = std::make_shared<Filter>(filter_config);
+     callbacks.addStreamFilter(filter);
+diff --git source/extensions/filters/http/tap/tap_config_impl.cc source/extensions/filters/http/tap/tap_config_impl.cc
+index b3d844c7a4..2aa2653a4f 100644
+--- source/extensions/filters/http/tap/tap_config_impl.cc
++++ source/extensions/filters/http/tap/tap_config_impl.cc
+@@ -29,8 +29,9 @@ fillHeaderList(Protobuf::RepeatedPtrField<envoy::config::core::v3::HeaderValue>*
+ } // namespace
+ 
+ HttpTapConfigImpl::HttpTapConfigImpl(const envoy::config::tap::v3::TapConfig& proto_config,
+-                                     Common::Tap::Sink* admin_streamer)
+-    : TapCommon::TapConfigBaseImpl(std::move(proto_config), admin_streamer) {}
++                                     Common::Tap::Sink* admin_streamer,
++                                     Server::Configuration::FactoryContext& context)
++    : TapCommon::TapConfigBaseImpl(std::move(proto_config), admin_streamer, context) {}
+ 
+ HttpPerRequestTapperPtr HttpTapConfigImpl::createPerRequestTapper(uint64_t stream_id) {
+   return std::make_unique<HttpPerRequestTapperImpl>(shared_from_this(), stream_id);
+diff --git source/extensions/filters/http/tap/tap_config_impl.h source/extensions/filters/http/tap/tap_config_impl.h
+index d79ef4cc48..5938d38076 100644
+--- source/extensions/filters/http/tap/tap_config_impl.h
++++ source/extensions/filters/http/tap/tap_config_impl.h
+@@ -19,7 +19,8 @@ class HttpTapConfigImpl : public Extensions::Common::Tap::TapConfigBaseImpl,
+                           public std::enable_shared_from_this<HttpTapConfigImpl> {
+ public:
+   HttpTapConfigImpl(const envoy::config::tap::v3::TapConfig& proto_config,
+-                    Extensions::Common::Tap::Sink* admin_streamer);
++                    Extensions::Common::Tap::Sink* admin_streamer,
++                    Server::Configuration::FactoryContext& context);
+ 
+   // TapFilter::HttpTapConfig
+   HttpPerRequestTapperPtr createPerRequestTapper(uint64_t stream_id) override;
+diff --git source/extensions/transport_sockets/tap/config.cc source/extensions/transport_sockets/tap/config.cc
+index b84b173d2d..430fa6c02c 100644
+--- source/extensions/transport_sockets/tap/config.cc
++++ source/extensions/transport_sockets/tap/config.cc
+@@ -17,18 +17,22 @@ namespace Tap {
+ 
+ class SocketTapConfigFactoryImpl : public Extensions::Common::Tap::TapConfigFactory {
+ public:
+-  SocketTapConfigFactoryImpl(TimeSource& time_source) : time_source_(time_source) {}
++  SocketTapConfigFactoryImpl(TimeSource& time_source,
++                             Server::Configuration::TransportSocketFactoryContext& context)
++      : time_source_(time_source), factory_context_(context) {}
+ 
+   // TapConfigFactory
+   Extensions::Common::Tap::TapConfigSharedPtr
+   createConfigFromProto(const envoy::config::tap::v3::TapConfig& proto_config,
+                         Extensions::Common::Tap::Sink* admin_streamer) override {
+     return std::make_shared<SocketTapConfigImpl>(std::move(proto_config), admin_streamer,
+-                                                 time_source_);
++                                                 time_source_,
++                                                 factory_context_);
+   }
+ 
+ private:
+   TimeSource& time_source_;
++  Server::Configuration::TransportSocketFactoryContext& factory_context_;
+ };
+ 
+ Network::UpstreamTransportSocketFactoryPtr
+@@ -46,7 +50,7 @@ UpstreamTapSocketConfigFactory::createTransportSocketFactory(
+       inner_config_factory.createTransportSocketFactory(*inner_factory_config, context);
+   return std::make_unique<TapSocketFactory>(
+       outer_config,
+-      std::make_unique<SocketTapConfigFactoryImpl>(context.mainThreadDispatcher().timeSource()),
++      std::make_unique<SocketTapConfigFactoryImpl>(context.mainThreadDispatcher().timeSource(), context),
+       context.admin(), context.singletonManager(), context.threadLocal(),
+       context.mainThreadDispatcher(), std::move(inner_transport_factory));
+ }
+@@ -67,7 +71,7 @@ DownstreamTapSocketConfigFactory::createTransportSocketFactory(
+       *inner_factory_config, context, server_names);
+   return std::make_unique<DownstreamTapSocketFactory>(
+       outer_config,
+-      std::make_unique<SocketTapConfigFactoryImpl>(context.mainThreadDispatcher().timeSource()),
++      std::make_unique<SocketTapConfigFactoryImpl>(context.mainThreadDispatcher().timeSource(), context),
+       context.admin(), context.singletonManager(), context.threadLocal(),
+       context.mainThreadDispatcher(), std::move(inner_transport_factory));
+ }
+diff --git source/extensions/transport_sockets/tap/tap_config_impl.h source/extensions/transport_sockets/tap/tap_config_impl.h
+index cf715c3df9..38556025c1 100644
+--- source/extensions/transport_sockets/tap/tap_config_impl.h
++++ source/extensions/transport_sockets/tap/tap_config_impl.h
+@@ -3,6 +3,7 @@
+ #include "envoy/config/tap/v3/common.pb.h"
+ #include "envoy/data/tap/v3/transport.pb.h"
+ #include "envoy/event/timer.h"
++#include "envoy/server/transport_socket_config.h"
+ 
+ #include "source/extensions/common/tap/tap_config_base.h"
+ #include "source/extensions/transport_sockets/tap/tap_config.h"
+@@ -51,8 +52,10 @@ class SocketTapConfigImpl : public Extensions::Common::Tap::TapConfigBaseImpl,
+                             public std::enable_shared_from_this<SocketTapConfigImpl> {
+ public:
+   SocketTapConfigImpl(const envoy::config::tap::v3::TapConfig& proto_config,
+-                      Extensions::Common::Tap::Sink* admin_streamer, TimeSource& time_system)
+-      : Extensions::Common::Tap::TapConfigBaseImpl(std::move(proto_config), admin_streamer),
++                      Extensions::Common::Tap::Sink* admin_streamer, TimeSource& time_system,
++                      Server::Configuration::TransportSocketFactoryContext& context)
++      : Extensions::Common::Tap::TapConfigBaseImpl(std::move(proto_config), admin_streamer,
++                                                   context),
+         time_source_(time_system) {}
+ 
+   // SocketTapConfig
+diff --git test/extensions/common/tap/BUILD test/extensions/common/tap/BUILD
+index f65ad733ea..dea02d4f72 100644
+--- test/extensions/common/tap/BUILD
++++ test/extensions/common/tap/BUILD
+@@ -26,9 +26,12 @@ envoy_cc_test(
+     srcs = envoy_select_admin_functionality(["admin_test.cc"]),
+     deps = [
+         "//source/extensions/common/tap:admin",
++        "//source/extensions/common/tap:tap_config_base",
+         "//test/mocks/server:admin_mocks",
+         "//test/mocks/server:admin_stream_mocks",
++        "//test/mocks/server:server_mocks",
+         "//test/test_common:logging_lib",
++        "//test/test_common:registry_lib",
+         "@envoy_api//envoy/config/tap/v3:pkg_cc_proto",
+     ],
+ )
+diff --git test/extensions/common/tap/admin_test.cc test/extensions/common/tap/admin_test.cc
+index 2a98078939..e8ad7aaf65 100644
+--- test/extensions/common/tap/admin_test.cc
++++ test/extensions/common/tap/admin_test.cc
+@@ -5,10 +5,13 @@
+ 
+ #include "source/extensions/common/tap/admin.h"
+ #include "source/extensions/common/tap/tap.h"
++#include "source/extensions/common/tap/tap_config_base.h"
+ 
+ #include "test/mocks/server/admin.h"
+ #include "test/mocks/server/admin_stream.h"
++#include "test/mocks/server/mocks.h"
+ #include "test/test_common/logging.h"
++#include "test/test_common/registry.h"
+ 
+ #include "gtest/gtest.h"
+ 
+@@ -20,6 +23,7 @@ using ::testing::_;
+ using ::testing::AtLeast;
+ using ::testing::Between;
+ using ::testing::DoAll;
++using ::testing::Invoke;
+ using ::testing::Return;
+ using ::testing::ReturnRef;
+ using ::testing::SaveArg;
+@@ -146,6 +150,93 @@ tap_config:
+   StrictMock<Http::MockStreamDecoderFilterCallbacks> sink_;
+ };
+ 
++using Extensions::Common::Tap::TapSinkFactory;
++class MockTapSinkFactory : public TapSinkFactory {
++public:
++  MockTapSinkFactory() {}
++  ~MockTapSinkFactory() override{};
++
++  MOCK_METHOD(SinkPtr, createSinkPtr, (const Protobuf::Message& config, SinkContext), (override));
++
++  MOCK_METHOD(std::string, name, (), (const, override));
++  MOCK_METHOD(ProtobufTypes::MessagePtr, createEmptyConfigProto, (), (override));
++};
++
++class TestConfigImpl : public TapConfigBaseImpl {
++public:
++  TestConfigImpl(const envoy::config::tap::v3::TapConfig& proto_config,
++                 Extensions::Common::Tap::Sink* admin_streamer, SinkContext context)
++      : TapConfigBaseImpl(std::move(proto_config), admin_streamer, context) {}
++};
++
++TEST(TypedExtensionConfigTest, AddTestConfigHttpContext) {
++
++  const std::string tap_config_yaml =
++      R"EOF(
++  match:
++    any_match: true
++  output_config:
++    sinks:
++      - format: PROTO_BINARY
++        custom_sink:
++          name: custom_sink
++          typed_config:
++            "@type": type.googleapis.com/google.protobuf.StringValue
++)EOF";
++  envoy::config::tap::v3::TapConfig tap_config;
++  TestUtility::loadFromYaml(tap_config_yaml, tap_config);
++
++  MockTapSinkFactory factory_impl;
++  EXPECT_CALL(factory_impl, name).Times(AtLeast(1));
++  EXPECT_CALL(factory_impl, createEmptyConfigProto)
++      .WillRepeatedly(Invoke([]() -> ProtobufTypes::MessagePtr {
++        return std::make_unique<ProtobufWkt::StringValue>();
++      }));
++  EXPECT_CALL(
++      factory_impl,
++      createSinkPtr(
++          _,
++          testing::VariantWith<std::reference_wrapper<Server::Configuration::FactoryContext>>(_)));
++  Registry::InjectFactory<TapSinkFactory> factory(factory_impl);
++
++  NiceMock<Server::Configuration::MockFactoryContext> factory_context;
++  TestConfigImpl(tap_config, NULL, factory_context);
++}
++
++TEST(TypedExtensionConfigTest, AddTestConfigTransportSocketContext) {
++
++  const std::string tap_config_yaml =
++      R"EOF(
++  match:
++    any_match: true
++  output_config:
++    sinks:
++      - format: PROTO_BINARY
++        custom_sink:
++          name: custom_sink
++          typed_config:
++            "@type": type.googleapis.com/google.protobuf.StringValue
++)EOF";
++  envoy::config::tap::v3::TapConfig tap_config;
++  TestUtility::loadFromYaml(tap_config_yaml, tap_config);
++
++  MockTapSinkFactory factory_impl;
++  EXPECT_CALL(factory_impl, name).Times(AtLeast(1));
++  EXPECT_CALL(factory_impl, createEmptyConfigProto)
++      .WillRepeatedly(Invoke([]() -> ProtobufTypes::MessagePtr {
++        return std::make_unique<ProtobufWkt::StringValue>();
++      }));
++  EXPECT_CALL(
++      factory_impl,
++      createSinkPtr(
++          _, testing::VariantWith<
++                 std::reference_wrapper<Server::Configuration::TransportSocketFactoryContext>>(_)));
++  Registry::InjectFactory<TapSinkFactory> factory(factory_impl);
++
++  NiceMock<Server::Configuration::MockTransportSocketFactoryContext> factory_context;
++  TestConfigImpl(tap_config, NULL, factory_context);
++}
++
+ // Make sure warn if using a pipe address for the admin handler.
+ TEST_F(AdminHandlerTest, AdminWithPipeSocket) {
+   EXPECT_LOG_CONTAINS(
