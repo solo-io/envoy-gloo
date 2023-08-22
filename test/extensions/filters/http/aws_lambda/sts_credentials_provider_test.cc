@@ -159,7 +159,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
 TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   // Setup
   std::string base_role_arn = "test_arn";
-  std::string role_arn = "test_arn_chained";``
+  std::string role_arn = "test_arn_chained";
   std::string token = "test_token";
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
   auto* factory = factory_.get();
