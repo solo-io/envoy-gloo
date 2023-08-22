@@ -45,7 +45,8 @@ std::chrono::seconds expiry_time(4120492825);
 
 const std::string service_account_credentials_config = R"(
 cluster: test
-uri: https://foo.com
+uri: https://sts.us-east-1.amazonaws.com
+region: us-east-1
 timeout: 1s
 )";
 
@@ -97,13 +98,15 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
   EXPECT_CALL(*sts_connection_pool, add(_));
 
@@ -156,7 +159,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
 TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   // Setup
   std::string base_role_arn = "test_arn";
-  std::string role_arn = "test_arn_chained";
+  std::string role_arn = "test_arn_chained";``
   std::string token = "test_token";
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
   auto* factory = factory_.get();
@@ -193,13 +196,15 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
       }));
     
   // expect the base pool to be initialized with fetch
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
 
   EXPECT_CALL(*chained_pool, setInFlight());
@@ -269,13 +274,15 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
   EXPECT_CALL(*sts_connection_pool, add(_));
 

@@ -81,6 +81,7 @@ const std::string service_account_credentials_config = R"(
 cluster: test
 uri: https://foo.com
 timeout: 1s
+region: us-east-1
 )";
 
 const std::string role_arn = "role_arn";
@@ -92,9 +93,15 @@ public:
   void SetUp() override {
     mock_factory_ctx_.cluster_manager_.initializeClusters({"test"}, {});
     mock_factory_ctx_.cluster_manager_.initializeThreadLocalClusters({"test"});
-    TestUtility::loadFromYaml(service_account_credentials_config, uri_);
+    TestUtility::loadFromYaml(service_account_credentials_config, config_);
+    uri_.set_cluster(config_.cluster());
+    uri_.set_uri(config_.uri());
+    region_ = config_.region();
   }
+
+  envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials config_;
   HttpUri uri_;
+  std::string region_;
   testing::NiceMock<Server::Configuration::MockFactoryContext>
       mock_factory_ctx_;
 };
@@ -111,7 +118,7 @@ TEST_F(StsFetcherTest, TestGetSuccess) {
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
   EXPECT_CALL(callbacks, onSuccess(valid_response)).Times(1);
   // Act
-  fetcher->fetch(uri_, role_arn, web_token, NULL, &callbacks);
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestChainedSts) {
@@ -135,7 +142,7 @@ TEST_F(StsFetcherTest, TestChainedSts) {
                         access_key, secret_key, session_token, expiration_time);
 
   // Act
-  fetcher->fetch(uri_, to_chain_role_arn, "", sub_creds, &callbacks);
+  fetcher->fetch(uri_, region_, to_chain_role_arn, "", sub_creds, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestGet503) {
@@ -149,7 +156,7 @@ TEST_F(StsFetcherTest, TestGet503) {
   EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::Network)).Times(1);
 
   // Act
-  fetcher->fetch(uri_, role_arn, web_token, NULL, &callbacks);
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestCredentialsExpired) {
@@ -165,7 +172,7 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
       .Times(1);
 
   // Act
-  fetcher->fetch(uri_, role_arn, web_token, NULL, &callbacks);
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestHttpFailure) {
@@ -180,7 +187,7 @@ TEST_F(StsFetcherTest, TestHttpFailure) {
   EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::Network)).Times(1);
 
   // Act
-  fetcher->fetch(uri_, role_arn, web_token, NULL, &callbacks);
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
 }
 
 TEST_F(StsFetcherTest, TestCancel) {
@@ -196,7 +203,7 @@ TEST_F(StsFetcherTest, TestCancel) {
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
 
   // Act
-  fetcher->fetch(uri_, role_arn, web_token, NULL, &callbacks);
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
   // Proper cancel
   fetcher->cancel();
   // Re-entrant cancel
