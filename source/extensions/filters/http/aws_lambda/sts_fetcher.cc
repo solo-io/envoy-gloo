@@ -34,6 +34,7 @@ public:
   }
 
   void fetch(const envoy::config::core::v3::HttpUri &uri,
+             const std::string region,
              const absl::string_view role_arn,
              const absl::string_view web_token,
              StsCredentialsConstSharedPtr creds,
@@ -97,9 +98,17 @@ public:
         &creds->secretAccessKey().value(), &creds->sessionToken().value());
     aws_authenticator.updatePayloadHash(message->body());
     auto& hdrs = message->headers();
-    // TODO(nfuden) allow for Region this to be overridable. 
-    // DefaultRegion is gauranteed to be available but an override may be faster
-    aws_authenticator.sign(&hdrs, HeadersToSign, DefaultRegion);
+    // region should never be NULL at this point, but if it is, we can use the 
+    // default region.
+    if (!region.empty()){
+      ENVOY_LOG(debug, "assume chained role from [uri = {}]: region is {}", 
+                                                                uri_->uri(), region);
+      aws_authenticator.sign(&hdrs, HeadersToSign, region);
+    } else {
+      ENVOY_LOG(debug, "assume chained role from [uri = {}]: region is empty, using default region",
+                                                                uri_->uri());
+      aws_authenticator.sign(&hdrs, HeadersToSign, DefaultRegion);
+    }
     // Log the accessKey but not the secret. This is to show that we have valid 
     // credentials but does not leak anything secret. This is due to our
     // sessions being 

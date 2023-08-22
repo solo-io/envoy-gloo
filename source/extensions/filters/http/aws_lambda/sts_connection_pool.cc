@@ -28,6 +28,7 @@ public:
   ~StsConnectionPoolImpl();
 
   void init(const envoy::config::core::v3::HttpUri &uri,
+            const std::string region,
             const absl::string_view web_token,
             StsCredentialsConstSharedPtr creds) override;
   void setInFlight() override;
@@ -112,9 +113,10 @@ StsConnectionPoolImpl::~StsConnectionPoolImpl() {
 };
 
 void StsConnectionPoolImpl::init(const envoy::config::core::v3::HttpUri &uri,
+        const std::string region,
         const absl::string_view web_token, StsCredentialsConstSharedPtr creds) {
   request_in_flight_ = true;
-  fetcher_->fetch(uri, role_arn_, web_token, creds, this);
+  fetcher_->fetch(uri, region, role_arn_, web_token, creds, this);
 }
 void StsConnectionPoolImpl::setInFlight() {
   request_in_flight_ = true;
@@ -187,6 +189,9 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
   // Report the existence of this credential to any pools that may be waitin
+
+  std::cout << "sending result back to credential provider" << std::endl;
+
   callbacks_->onResult(result, cache_key_arn_, chained_requests_);
   request_in_flight_ = false;
   

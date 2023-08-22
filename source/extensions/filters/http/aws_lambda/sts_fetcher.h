@@ -98,6 +98,7 @@ public:
    * @param failure the cb called on failed role assumption
    */
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
+                     const std::string region,
                      const absl::string_view role_arn,
                      const absl::string_view web_token,
                      StsCredentialsConstSharedPtr creds,
