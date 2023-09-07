@@ -189,9 +189,6 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
                      api_.timeSource().systemTime().time_since_epoch().count());
   // Send result back to Credential Provider to store in cache
   // Report the existence of this credential to any pools that may be waitin
-
-  std::cout << "sending result back to credential provider" << std::endl;
-
   callbacks_->onResult(result, cache_key_arn_, chained_requests_);
   request_in_flight_ = false;
   
