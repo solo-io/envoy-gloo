@@ -2,6 +2,7 @@ REPOSITORY_LOCATIONS = dict(
     envoy = dict(
         # envoy 1.26.4 forked with extproc changes
         # sourced from release/v1.26-backportedfork
+        # should go back to upstream once 1.27 or whever the associated prs are merged
         commit = "f854df5872c0a632774a78537a63d0f6ec4b370b",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
