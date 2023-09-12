@@ -25,6 +25,8 @@ namespace {
     "Version=2011-06-15";
 
 constexpr char ExpiredTokenError[] = "ExpiredTokenException";
+constexpr char SignaturedoesNotMatchError[] = "SignatureDoesNotMatch";
+constexpr char CredentialScopeMessage[] = "Credential should be scoped to a valid region.";
 } // namespace
 
 class StsCredentials : public Extensions::Common::Aws::Credentials {

@@ -149,6 +149,10 @@ public:
         // TODO: cover more AWS error cases
         if (body.find(ExpiredTokenError) != std::string::npos) {
           callbacks_->onFailure(CredentialsFailureStatus::ExpiredToken);
+        } else if (body.find(SignaturedoesNotMatchError) != std::string::npos &&
+                   body.find(CredentialScopeMessage) != std::string::npos )
+        {
+          callbacks_->onFailure(CredentialsFailureStatus::CredentialScopeMismatch);
         } else {
           callbacks_->onFailure(CredentialsFailureStatus::Network);
         }
