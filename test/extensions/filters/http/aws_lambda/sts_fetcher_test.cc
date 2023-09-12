@@ -52,6 +52,16 @@ const std::string expired_token_response = R"(
 </ErrorResponse>
 )";
 
+const std::string credential_scope_mismatch = R"(
+  <ErrorResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <Error>
+    <Type>Sender</Type>
+    <Code>SignatureDoesNotMatch</Code>
+    <Message>Credential should be scoped to a valid region. </Message>
+  </Error>
+</ErrorResponse>
+)";
+
 const std::string valid_chained_response = R"(
   <AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
   <AssumeRoleResult>
@@ -169,6 +179,22 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
   EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::ExpiredToken))
+      .Times(1);
+
+  // Act
+  fetcher->fetch(uri_, region_, role_arn, web_token, NULL, &callbacks);
+}
+
+TEST_F(StsFetcherTest, TestCredentialScopeMismatch) {
+  // Setup
+  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "401",
+                        credential_scope_mismatch);
+  std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
+      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+  EXPECT_TRUE(fetcher != nullptr);
+
+  testing::NiceMock<MockStsFetcherCallbacks> callbacks;
+  EXPECT_CALL(callbacks, onFailure(CredentialsFailureStatus::CredentialScopeMismatch))
       .Times(1);
 
   // Act
