@@ -31,6 +31,7 @@ typed_config:
   service_account_credentials:
     cluster: cluster_0
     uri: https://foo.com
+    region: us-east-1
     timeout: 1s
 )EOF";
 
