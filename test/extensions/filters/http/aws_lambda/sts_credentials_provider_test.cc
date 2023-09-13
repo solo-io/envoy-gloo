@@ -98,7 +98,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const std::string region,
                            const absl::string_view web_token,
@@ -196,7 +196,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
       }));
     
   // expect the base pool to be initialized with fetch
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const std::string region,
                            const absl::string_view web_token,
@@ -271,7 +271,7 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
                            const std::string region,
                            const absl::string_view web_token,
