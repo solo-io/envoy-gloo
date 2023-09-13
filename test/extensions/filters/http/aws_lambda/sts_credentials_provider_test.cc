@@ -45,7 +45,8 @@ std::chrono::seconds expiry_time(4120492825);
 
 const std::string service_account_credentials_config = R"(
 cluster: test
-uri: https://foo.com
+uri: https://sts.us-east-1.amazonaws.com
+region: us-east-1
 timeout: 1s
 )";
 
@@ -97,13 +98,15 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 
@@ -193,13 +196,15 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
       }));
     
   // expect the base pool to be initialized with fetch
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
 
   EXPECT_CALL(*sts_chained_connection_pool_, setInFlight());
@@ -266,13 +271,15 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
         return std::move(unique_pool);
       }));
 
-  EXPECT_CALL(*sts_connection_pool_, init(_, _, _))
+  EXPECT_CALL(*sts_connection_pool_, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,
+                           const std::string region,
                            const absl::string_view web_token,
                            StsCredentialsConstSharedPtr ) {
         EXPECT_EQ(web_token, token);
         EXPECT_EQ(uri.uri(), config_.uri());
         EXPECT_EQ(uri.cluster(), config_.cluster());
+        EXPECT_EQ(region, config_.region());
       }));
   EXPECT_CALL(*sts_connection_pool_, add(_));
 

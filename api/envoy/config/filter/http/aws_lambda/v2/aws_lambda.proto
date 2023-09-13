@@ -101,6 +101,10 @@ message AWSLambdaConfig {
     string uri = 2 [ (validate.rules).string.min_bytes = 1 ];
     // timeout for the request
     google.protobuf.Duration timeout = 3;
+    // Region for the sts endpoint, defaults to us-east-1. 
+    // This must be an enabled region https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html
+    // This should match the region specified in the uri.
+    string region = 4;
   }
 
   // Send downstream path and method as `x-envoy-original-path` and

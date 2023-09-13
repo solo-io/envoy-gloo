@@ -49,6 +49,7 @@ private:
 
   std::string default_role_arn_;
   envoy::config::core::v3::HttpUri uri_;
+  std::string region_;
   StsConnectionPoolFactoryPtr conn_pool_factory_;
 
   // web_token set by AWS, will be auto-updated by StsCredentialsProvider
@@ -71,6 +72,7 @@ StsCredentialsProviderImpl::StsCredentialsProviderImpl(
 
   uri_.set_cluster(config_.cluster());
   uri_.set_uri(config_.uri());
+  region_ = config_.region();
   // TODO: Figure out how to get this to compile, timeout is not all that
   // important right now uri_.set_allocated_timeout(config_.mutable_timeout())
   // Consider if this is still reasonable. We have a timeout configuration for
@@ -98,7 +100,7 @@ void StsCredentialsProviderImpl::onResult(
     ENVOY_LOG(trace, "calling sts chained for {}", chained_role);
     auto conn_pool = connection_pools_.find(chained_role);
     if (conn_pool != connection_pools_.end()) {
-      conn_pool->second->init(uri_, "", result);
+      conn_pool->second->init(uri_, region_, "", result);
     }
     chained_requests.pop_back();
   }
@@ -180,7 +182,9 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   //  and use webtoken.
   if (role_arn == default_role_arn_  ||  disable_role_chaining) {
     // initialize the connection and subscribe to the callbacks
-    conn_pool->second->init(uri_, web_token_, NULL);
+    // we do not strictly need the region here, as this is not a
+    // chained call, but we will pass it in anyway.
+    conn_pool->second->init(uri_, region_, web_token_, NULL);
     return conn_pool->second->add(callbacks);
   }
 
@@ -193,7 +197,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     auto time_left = existing_base_token->second->expirationTime() - now;
     if (time_left > REFRESH_GRACE_PERIOD) {
       ENVOY_LOG(trace,"found base token with remaining time");
-      conn_pool->second->init(uri_, web_token_, existing_base_token->second);
+      conn_pool->second->init(uri_, region_, web_token_, existing_base_token->second);
       return conn_pool->second->add(callbacks);
     }
   }
@@ -208,7 +212,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
   // only recreate base request if its not in flight
   if (!base_conn_pool->second->requestInFlight()) {
-   base_conn_pool->second->init(uri_, web_token_, NULL);
+   base_conn_pool->second->init(uri_, region_, web_token_, NULL);
   }
   base_conn_pool->second->addChained(role_arn);
 

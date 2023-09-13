@@ -106,6 +106,7 @@ public:
   using ContextPtr = std::unique_ptr<Context>;
 
   virtual void init(const envoy::config::core::v3::HttpUri &uri,
+    const std::string region,
     const absl::string_view web_token, StsCredentialsConstSharedPtr creds) PURE;
   virtual void setInFlight() PURE;
   virtual Context *add(StsConnectionPool::Context::Callbacks *callback) PURE;
