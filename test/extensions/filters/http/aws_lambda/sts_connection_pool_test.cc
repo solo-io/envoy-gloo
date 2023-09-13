@@ -50,17 +50,25 @@ const std::string service_account_credentials_config = R"(
 cluster: test
 uri: https://foo.com
 timeout: 1s
+region: us-east-1
 )";
 
 class StsConnectionPoolTest : public testing::Test,
                               public Event::TestUsingSimulatedTime {
 public:
   void SetUp() override {
-    TestUtility::loadFromYaml(service_account_credentials_config, uri_);
+    envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig_ServiceAccountCredentials
+        service_account_credentials;
+    TestUtility::loadFromYaml(service_account_credentials_config, service_account_credentials);
+    uri_.set_cluster(service_account_credentials.cluster());
+    uri_.set_uri(service_account_credentials.uri());
+    region_ = service_account_credentials.region();
+
     sts_fetcher_ = new testing::NiceMock<MockStsFetcher>();
   }
 
   HttpUri uri_;
+  std::string region_;
   testing::NiceMock<Server::Configuration::MockFactoryContext>
       mock_factory_ctx_;
   testing::NiceMock<MockStsFetcher> *sts_fetcher_;
@@ -79,8 +87,9 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const std::string,
                            const absl::string_view, const absl::string_view,
                             StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
@@ -112,7 +121,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token, NULL);
+  sts_conn_pool->init(uri_, region_, web_token, NULL);
 }
 
 TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
@@ -129,8 +138,9 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
 
   StsFetcher::Callbacks *lambda_callbacks;
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const std::string,
                            const absl::string_view, const absl::string_view,
                            StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
@@ -139,7 +149,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token, NULL);
+  sts_conn_pool->init(uri_, region_, web_token, NULL);
 
   auto context_1 = sts_conn_pool->add(&ctx_callbacks);
 
@@ -187,8 +197,9 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
-  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _ ))
+  EXPECT_CALL(*sts_fetcher_, fetch(_, _, _, _, _, _ ))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &,
+                           const std::string,
                            const absl::string_view, const absl::string_view,
                            StsCredentialsConstSharedPtr,
                            StsFetcher::Callbacks *callbacks) -> void {
@@ -207,7 +218,7 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
 
   sts_conn_pool->add(&ctx_callbacks);
 
-  sts_conn_pool->init(uri_, web_token, NULL);
+  sts_conn_pool->init(uri_, region_, web_token, NULL);
 }
 
 } // namespace AwsLambda

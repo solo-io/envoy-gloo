@@ -25,6 +25,8 @@ namespace {
     "Version=2011-06-15";
 
 constexpr char ExpiredTokenError[] = "ExpiredTokenException";
+constexpr char SignaturedoesNotMatchError[] = "SignatureDoesNotMatch";
+constexpr char CredentialScopeMessage[] = "Credential should be scoped to a valid region.";
 } // namespace
 
 class StsCredentials : public Extensions::Common::Aws::Credentials {
@@ -98,6 +100,7 @@ public:
    * @param failure the cb called on failed role assumption
    */
   virtual void fetch(const envoy::config::core::v3::HttpUri &uri,
+                     const std::string region,
                      const absl::string_view role_arn,
                      const absl::string_view web_token,
                      StsCredentialsConstSharedPtr creds,
