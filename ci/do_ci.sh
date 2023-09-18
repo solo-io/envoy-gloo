@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
