@@ -10,6 +10,11 @@ load(
 
 envoy_package()
 
+alias(
+    name = "envoy",
+    actual = ":envoy-static",
+)
+
 envoy_cc_binary(
     name = "envoy-static",
     repository = "@envoy",
