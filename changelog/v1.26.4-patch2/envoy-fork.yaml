@@ -1,0 +1,9 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy-fork
+    dependencyOwner: solo-io
+    dependencyTag: v1.26.4
+    description: >
+      Migrate to fork that is based off of 1.26.4. It includes long term backports.
+      These backports are not fully merged upstream but make external processing actually function as needed.
+      Notably this implements several long time api notes that were never implemeented before.

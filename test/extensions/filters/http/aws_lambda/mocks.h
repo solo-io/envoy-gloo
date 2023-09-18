@@ -20,6 +20,7 @@ public:
   MOCK_METHOD(void, cancel, ());
   MOCK_METHOD(void, fetch,
               (const envoy::config::core::v3::HttpUri &uri,
+               const std::string region,
                const absl::string_view role_arn,
                const absl::string_view web_token,
                StsCredentialsConstSharedPtr creds,
@@ -92,6 +93,7 @@ public:
               (StsConnectionPool::Context::Callbacks * callback));
   MOCK_METHOD(void, init,
               (const envoy::config::core::v3::HttpUri &uri,
+               const std::string region,
                const absl::string_view web_token,
                StsCredentialsConstSharedPtr creds));
   MOCK_METHOD(void, addChained, (std::string role_arn));
