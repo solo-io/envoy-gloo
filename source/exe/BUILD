@@ -13,11 +13,13 @@ envoy_package()
 alias(
     name = "envoy",
     actual = ":envoy-static",
+    visibility = ["//visibility:public"],
 )
 
 envoy_cc_binary(
     name = "envoy-static",
     repository = "@envoy",
+    visibility = ["//visibility:public"],
     stamped = True,
     deps = [
         "//:envoy_gloo_all_filters_lib",
