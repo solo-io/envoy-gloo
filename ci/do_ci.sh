@@ -4,28 +4,25 @@ bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
 
+
+ENVOY_DEPENDENCY=$(awk '/envoy = dict/{p=1}; /commit/{print $3; exit}' bazel/repository_locations.bzl | sed -E 's|"([a-z0-9]+)",|\1|g')
+echo $ENVOY_DEPENDENCY
+
 # will be reverted or updated in https://github.com/solo-io/envoy-gloo/issues/246
 git clone https://github.com/envoyproxy/envoy.git /tmp/envoy
 pushd /tmp/envoy
-git checkout v1.25.7
+git remote add public https://github.com/solo-io/envoy-fork
+git fetch --all
+git checkout "$ENVOY_DEPENDENCY"
 popd
 
 $SOURCE_DIR/ci/verify_posture.sh verify
 
 export UPSTREAM_ENVOY_SRCDIR=/tmp/envoy
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelrc $SOURCE_DIR/
-# dont think this is needed... cp -f $UPSTREAM_ENVOY_SRCDIR/*.bazelrc $SOURCE_DIR/
 cp -f $UPSTREAM_ENVOY_SRCDIR/.bazelversion $SOURCE_DIR/.bazelversion
-# cp -f $UPSTREAM_ENVOY_SRCDIR/bazel/get_workspace_status $SOURCE_DIR/bazel/get_workspace_status
 cp -f $UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example $SOURCE_DIR/ci/
 cp -f $UPSTREAM_ENVOY_SRCDIR/VERSION.txt $SOURCE_DIR/VERSION.txt
-
-# upstream removed the flaky_test
-mkdir -p $SOURCE_DIR/ci/flaky_test
-# These were removed upstream but the build seems to fail here.
-if [[ -d "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]] || [[ -f "$UPSTREAM_ENVOY_SRCDIR/ci/flaky_test" ]]; then
-  cp -a $UPSTREAM_ENVOY_SRCDIR/ci/flaky_test $SOURCE_DIR/ci
-fi
 
 cp -f $UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh $SOURCE_DIR/tools
 
@@ -51,21 +48,17 @@ export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test
 export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
 export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 
-# sudo apt-get install google-perftools -y
-# export PPROF_PATH=$(which google-pprof)
-
-if [ "x${BUILD_TYPE:-}" != "x" ] ; then
+if [ "${BUILD_TYPE:-}" != "" ] ; then
   BUILD_CONFIG="--config=$BUILD_TYPE"
 fi
 echo "$BUILD_CONFIG is ${BUILD_CONFIG}"
 
-echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/.bazelrc"
+echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 
 echo Building
-sed -i "s|//test/tools/schema_validator:schema_validator_tool|@envoy//test/tools/schema_validator:schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
-sed -i "s|bazel-bin/test/tools/schema_validator/schema_validator_tool|bazel-bin/external/envoy/test/tools/schema_validator/schema_validator_tool|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
-sed -i "s|VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
-sed -i "s|\${ENVOY_SRCDIR}/VERSION.txt|ci/FAKEVERSION.txt|" "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"
+sed -i 's|"//contrib/..."||' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
+sed -i 's|//distribution|@envoy//distribution|' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
+sed -i 's|bazel-bin/distribution|bazel-bin/external/envoy/distribution|' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
 
