@@ -10,7 +10,6 @@ envoy_package()
 bundled(
     name = "envoy",
     mode = "opt",
-    visibility = ["//visibility:public"],
     stripopts = ["--strip-all"],
     targets = {
         "//distribution:envoy-binary-stripped": "envoy",
