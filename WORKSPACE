@@ -24,10 +24,10 @@ envoy_dependencies()
 
 load("@envoy//bazel:repositories_extra.bzl", "envoy_dependencies_extra")
 
-# This ignore_root_error_user should be reverted if we ever get off of cloudbuild.
+# This ignore_root_user_error should be reverted if we ever get off of cloudbuild.
 # Currently cloudbuild requires root access in the initial stages of setup
 # https://github.com/GoogleCloudPlatform/cloud-sdk-docker/issues/214
-envoy_dependencies_extra(ignore_root_error_user=True)
+envoy_dependencies_extra(ignore_root_user_error=True)
 
 
 load("@envoy//bazel:python_dependencies.bzl", "envoy_python_dependencies")
