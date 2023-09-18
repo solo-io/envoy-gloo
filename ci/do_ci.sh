@@ -49,14 +49,14 @@ sed -i 's|"//contrib/..."||' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
-ENVOY_GLOO_STRIPPED_DIR="$ENVOY_GLOO_BIN_DIR"_stripped
+ENVOY_GLOO_STRIPPED_DIR="${ENVOY_GLOO_BIN_DIR}_stripped"
 mkdir -p "$ENVOY_GLOO_BIN_DIR"
 mkdir -p "$ENVOY_GLOO_STRIPPED_DIR"
 
 bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
-cp "$ENVOY_GLOO_BIN_DIR" "$ENVOY_GLOO_STRIPPED_DIR"
+cp "${ENVOY_GLOO_BIN_DIR}/envoy" "${ENVOY_GLOO_STRIPPED_DIR}/envoy"
 
 "$SOURCE_DIR/ci/static_analysis.sh"
 
