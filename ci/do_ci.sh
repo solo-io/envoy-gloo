@@ -63,6 +63,9 @@ sed -i 's|"//contrib/..."||' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
 
 bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@"
 
+bazel run @envoy//tools/ztsd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
+    | tar xfO - envoy > linux/amd64/build_envoy_release_stripped/envoy
+
 $SOURCE_DIR/ci/static_analysis.sh
 
 echo "CI completed"
