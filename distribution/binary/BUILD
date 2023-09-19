@@ -18,6 +18,15 @@ bundled(
     },
 )
 
+bundled(
+    name = "envoy-debug",
+    mode = "dbg",
+    targets = {
+        "//distribution:envoy-binary": "envoy",
+        "//distribution:envoy-dwarf": "envoy.dwp",
+    },
+)
+
 pkg_files(
     name = "release_files",
     srcs = [":envoy"],

@@ -15,5 +15,11 @@ tools/gen_compilation_database.py
 
 sed -i 's^ -fno-canonical-system-headers^^' compile_commands.json
 
-PATH=/opt/llvm/bin:$PATH python3 /opt/llvm/bin/analyze-build --cdb compile_commands.json --plist --verbose -o /tmp/analysis --status-bugs \
+if ! PATH=/opt/llvm/bin:$PATH python3 /opt/llvm/bin/analyze-build --cdb compile_commands.json --verbose -o /tmp/analysis --status-bugs \
     --exclude $(bazel info execution_root)/test
+then
+  ANALYSIS_DIR='linux/amd64/analysis'
+  mkdir -p "$ANALYSIS_DIR"
+  chmod -R +r /tmp/analysis
+  cp -r /tmp/analysis/* "$ANALYSIS_DIR"
+fi

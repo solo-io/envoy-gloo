@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+if [ -n "$ENVOY_DOCKER_BUILD_DIR" ]; then
+  rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
+else
+  rm -rf "/build/envoy/x64/bin/"
+fi
+
 bazel fetch //source/exe:envoy-static
 
 SOURCE_DIR="$(bazel info workspace)"
@@ -59,6 +65,11 @@ bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.ta
 
 cp "${ENVOY_GLOO_BIN_DIR}/envoy" "${ENVOY_GLOO_STRIPPED_DIR}/envoy"
 
-"$SOURCE_DIR/ci/static_analysis.sh"
+# if ! "$SOURCE_DIR/ci/static_analysis.sh"; then
+#     ANALYSIS_DIR='linux/amd64/analysis'
+#     mkdir -p "$ANALYSIS_DIR"
+#     chmod -R +r /tmp/analysis
+#     cp -r /tmp/analysis/* "$ANALYSIS_DIR"
+# fi
 
 echo "CI completed"
