@@ -72,4 +72,6 @@ def envoy_gloo_dependencies():
     # upstream at that point.
     _repository_impl("envoy")
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
-    _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
+    _repository_impl("inja",
+        patches = ["@envoy_gloo//bazel/foreign_cc:parser-dangling-reference.patch"],
+        build_file = "@envoy_gloo//bazel/external:inja.BUILD")
