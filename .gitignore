@@ -6,3 +6,12 @@ compile_commands.json
 
 clang.bazelrc
 user.bazelrc
+
+# files added by do_ci.sh
+VERSION.txt
+bazel.output.txt
+bazel/setup_clang.sh
+ci/WORKSPACE.filter.example
+test.bazelrc
+tools/shell_utils.sh
+upstream.bazelrc

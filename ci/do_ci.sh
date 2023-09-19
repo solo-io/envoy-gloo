@@ -15,7 +15,7 @@ SOURCE_DIR="$(bazel info workspace)"
 
 export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
 
-cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelrc"                    "$SOURCE_DIR/"
+cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelrc"                    "$SOURCE_DIR/upstream.bazelrc"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelversion"               "$SOURCE_DIR/.bazelversion"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example" "$SOURCE_DIR/ci/"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/VERSION.txt"                 "$SOURCE_DIR/VERSION.txt"
@@ -51,25 +51,16 @@ echo "BUILD_CONFIG is ${BUILD_CONFIG}"
 echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 
 echo Building
-sed -i 's|"//contrib/..."||' "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh"
-
 bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
+echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
-ENVOY_GLOO_STRIPPED_DIR="${ENVOY_GLOO_BIN_DIR}_stripped"
 mkdir -p "$ENVOY_GLOO_BIN_DIR"
-mkdir -p "$ENVOY_GLOO_STRIPPED_DIR"
-
 bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
+ENVOY_GLOO_STRIPPED_DIR="${ENVOY_GLOO_BIN_DIR}_stripped"
+mkdir -p "$ENVOY_GLOO_STRIPPED_DIR"
 cp "${ENVOY_GLOO_BIN_DIR}/envoy" "${ENVOY_GLOO_STRIPPED_DIR}/envoy"
-
-# if ! "$SOURCE_DIR/ci/static_analysis.sh"; then
-#     ANALYSIS_DIR='linux/amd64/analysis'
-#     mkdir -p "$ANALYSIS_DIR"
-#     chmod -R +r /tmp/analysis
-#     cp -r /tmp/analysis/* "$ANALYSIS_DIR"
-# fi
 
 echo "CI completed"

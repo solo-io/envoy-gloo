@@ -1,5 +1,9 @@
 # Envoy specific Bazel build/test options.
 
+# Use upstream's .bazelrc as a baseline, then override here where needed.
+# This file is copied from upstream in ci/do_ci.sh
+try-import %workspace%/upstream.bazelrc
+
 # Bazel doesn't need more than 200MB of memory for local build based on memory profiling:
 # https://docs.bazel.build/versions/master/skylark/performance.html#memory-profiling
 # The default JVM max heapsize is 1/4 of physical memory up to 32GB which could be large
@@ -441,4 +445,5 @@ build:windows --dynamic_mode=off
 
 try-import %workspace%/clang.bazelrc
 try-import %workspace%/user.bazelrc
+try-import %workspace%/test.bazelrc
 try-import %workspace%/local_tsan.bazelrc
