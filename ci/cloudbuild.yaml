@@ -1,6 +1,21 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu:321658b6b50abda6869f89fac275f59bf3b1e757'
-  args: ['ci/do_ci.sh', 'bazel.release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
+- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
+  id: 'do_ci'
+  args: ['ci/do_ci.sh', 'release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+  env:
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  - 'BUILD_TYPE=$_BUILD_TYPE'
+  secretEnv:
+  - 'GCP_SERVICE_ACCOUNT_KEY'
+
+- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
+  id: 'static_analysis'
+  allowFailure: true
+  args: ['ci/static_analysis.sh']
   volumes:
   - name: 'vol-build'
     path: '/build'
@@ -12,6 +27,7 @@ steps:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
 - name: 'gcr.io/cloud-builders/docker'
+  id: 'docker-release'
   entrypoint: 'bash'
   args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
   env:

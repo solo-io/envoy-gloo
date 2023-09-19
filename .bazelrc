@@ -1,5 +1,9 @@
 # Envoy specific Bazel build/test options.
 
+# Use upstream's .bazelrc as a baseline, then override here where needed.
+# This file is copied from upstream in ci/do_ci.sh
+try-import %workspace%/upstream.bazelrc
+
 # Bazel doesn't need more than 200MB of memory for local build based on memory profiling:
 # https://docs.bazel.build/versions/master/skylark/performance.html#memory-profiling
 # The default JVM max heapsize is 1/4 of physical memory up to 32GB which could be large
@@ -15,7 +19,6 @@ run --color=yes
 build --color=yes
 build --workspace_status_command="bash bazel/get_workspace_status"
 build --incompatible_strict_action_env
-build --host_force_python=PY3
 build --java_runtime_version=remotejdk_11
 build --tool_java_runtime_version=remotejdk_11
 build --platform_mappings=bazel/platform_mappings
@@ -60,10 +63,6 @@ build:linux --fission=dbg,opt
 build:linux --features=per_object_debug_info
 build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
 build:linux --action_env=BAZEL_LINKOPTS=-lm
-
-# TODO(keith): remove once https://github.com/DataDog/dd-opentracing-cpp/pull/252 is integrated
-# this avoids warnings/errors on arm64 Linux builds
-build:linux --per_file_copt=external/com_github_datadog_dd_opentracing_cpp/.*.cpp@-Wno-type-limits
 
 # We already have absl in the build, define absl=1 to tell googletest to use absl for backtrace.
 build --define absl=1
@@ -173,6 +172,10 @@ build:libc++ --action_env=BAZEL_CXXOPTS=-stdlib=libc++
 build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libc++.a:-l%:libc++abi.a
 build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread
 build:libc++ --define force_libcpp=enabled
+
+build:libc++20 --config=libc++
+# gRPC has a lot of deprecated-enum-enum-conversion warning. Remove once it is addressed
+build:libc++20 --cxxopt=-std=c++20 --copt=-Wno-error=deprecated-enum-enum-conversion
 
 # Optimize build for binary size reduction.
 build:sizeopt -c opt --copt -Os
@@ -309,7 +312,7 @@ build:remote-clang-cl --config=rbe-toolchain-clang-cl
 
 # Docker sandbox
 # NOTE: Update this from https://github.com/envoyproxy/envoy-build-tools/blob/main/toolchains/rbe_toolchains_config.bzl#L8
-build:docker-sandbox --experimental_docker_image=envoyproxy/envoy-build-ubuntu:321658b6b50abda6869f89fac275f59bf3b1e757
+build:docker-sandbox --experimental_docker_image=envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33
 build:docker-sandbox --spawn_strategy=docker
 build:docker-sandbox --strategy=Javac=docker
 build:docker-sandbox --strategy=Closure=docker
@@ -442,4 +445,5 @@ build:windows --dynamic_mode=off
 
 try-import %workspace%/clang.bazelrc
 try-import %workspace%/user.bazelrc
+try-import %workspace%/test.bazelrc
 try-import %workspace%/local_tsan.bazelrc

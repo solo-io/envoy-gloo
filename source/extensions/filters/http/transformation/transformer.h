@@ -106,7 +106,7 @@ public:
 
 class MatcherTransformerPair {
 public:
-  MatcherTransformerPair(Matcher::MatcherConstPtr matcher,
+  MatcherTransformerPair(MatcherCopy::MatcherConstPtr matcher,
                          TransformerPairConstSharedPtr transformer_pair)
       : matcher_(matcher), transformer_pair_(transformer_pair) {}
 
@@ -114,10 +114,10 @@ public:
     return transformer_pair_;
   }
 
-  Matcher::MatcherConstPtr matcher() const { return matcher_; }
+  MatcherCopy::MatcherConstPtr matcher() const { return matcher_; }
 
 private:
-  Matcher::MatcherConstPtr matcher_;
+  MatcherCopy::MatcherConstPtr matcher_;
   TransformerPairConstSharedPtr transformer_pair_;
 };
 

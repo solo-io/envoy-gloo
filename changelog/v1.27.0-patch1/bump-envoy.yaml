@@ -1,0 +1,9 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/246
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.27.0
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.27.0, including accommodating many CI changes
