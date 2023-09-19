@@ -13,9 +13,12 @@ set -ex
 
 tools/gen_compilation_database.py
 
+echo $(bazel info execution_root)
+echo $(bazel info bazel-bin)
 sed -i 's^ -fno-canonical-system-headers^^' compile_commands.json
 
-if ! PATH=/opt/llvm/bin:$PATH python3 /opt/llvm/bin/analyze-build --cdb compile_commands.json --verbose -o /tmp/analysis --status-bugs \
+if ! PATH=/opt/llvm/bin:$PATH python3 /opt/llvm/bin/analyze-build \
+    --cdb compile_commands.json --verbose -o /tmp/analysis --status-bugs \
     --exclude $(bazel info execution_root)/test
 then
   echo "analysis failed; copying files"
