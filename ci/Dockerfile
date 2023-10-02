@@ -1,7 +1,10 @@
-# This file was inspired by mesh Dockerfile:
-# https://github.com/solo-io/gloo-mesh-enterprise/blob/c40b21c3ef260de1acc92ba25bd1794b17074c8c/docker/Dockerfile.ubuntu#L4
-# as it previously was based off of envoys old alpine setup. 
-FROM ubuntu:focal-20220826
+# This file was inspired by a combination of the following:
+# Istio and platform's mesh derivative approach
+# Uses upstream envoy's ubuntu versioning
+# Consuemd by edge to buld gateway-proxy and gloo pods
+# May be used as is or as a builder intermediate (e.g. for distroless)
+# ON_MINOR_UPDATE: Pull from https://github.com/envoyproxy/envoy/blob/4d46da0bba54dfb849d8bf68b600e53d87310a1a/ci/Dockerfile-envoy#L1-L2
+FROM ubuntu:focal
 
 ENV loglevel=info
 
