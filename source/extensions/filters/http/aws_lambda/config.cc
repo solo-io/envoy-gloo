@@ -125,12 +125,15 @@ void AWSLambdaConfigImpl::loadSTSData() {
         fmt::format("Web token file {} does not exist", token_file_));
   }
 
-  web_token_ = api_.fileSystem().fileReadToEnd(token_file_);
+  auto file_or_error = api_.fileSystem().fileReadToEnd(token_file_);
   // File should not be empty
-  if (web_token_ == "") {
+  if (!file_or_error.ok()) {
     throw EnvoyException(
         fmt::format("Web token file {} exists but is empty", token_file_));
   }
+  web_token_ = file_or_error.value();
+
+
   this->stats_.webtoken_state_.set(1);
 }
 
@@ -155,19 +158,20 @@ void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatc
     shared_this->timer_ = dispatcher.createTimer([shared_this] { 
         try {
            
-            const auto web_token = shared_this->parent_->api_.fileSystem().fileReadToEnd(
+            auto file_or_error = shared_this->parent_->api_.fileSystem().fileReadToEnd(
                 shared_this->parent_->token_file_);
-             shared_this->parent_->stats_.webtoken_rotated_.inc();
+
+            shared_this->parent_->stats_.webtoken_rotated_.inc();
              // We enforce that it should not be empty at start up
              // but are more lenient at this point.
-            if (web_token == "") {
+            if (!file_or_error.ok()) {
               shared_this->parent_->stats_.webtoken_state_.set(0);
               shared_this->parent_->stats_.webtoken_failure_.inc();
             }else{
               shared_this->parent_->stats_.webtoken_state_.set(1);
               shared_this->parent_->tls_.runOnAllThreads(
-                  [web_token](OptRef<ThreadLocalCredentials> prev_config) {
-                    prev_config->sts_credentials_->setWebToken(web_token);
+                  [file_or_error](OptRef<ThreadLocalCredentials> prev_config) {
+                    prev_config->sts_credentials_->setWebToken(file_or_error.value());
                   });
             }
             // TODO: check if web_token is valid
