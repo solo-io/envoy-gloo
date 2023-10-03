@@ -11,6 +11,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
 import "validate/validate.proto";
 
+import "xds/type/matcher/v3/matcher.proto";
 import "envoy/config/route/v3/route_components.proto";
 import "envoy/type/matcher/v3/string.proto";
 import "envoy/config/core/v3/extension.proto";
@@ -20,6 +21,9 @@ message FilterTransformations {
   // transformation will be applied. If there are overlapped match conditions,
   // please put the most specific match first.
   repeated TransformationRule transformations = 1;
+
+  // If provided, transformations fields here are ignored. The transformation will be the action from this matcher.
+  xds.type.matcher.v3.Matcher matcher = 4;
 
   // Only RouteTransformations.RouteTransformation with matching stage will be
   // used with this filter.
@@ -96,9 +100,13 @@ message RouteTransformations {
       RequestMatch request_match = 2;
       ResponseMatch response_match = 3;
     }
+    // If provided, transformations with request_match in transformations field are ignored.
+    // The transformation will be the action from this matcher.
+    xds.type.matcher.v3.Matcher matcher = 5;
   }
 
   repeated RouteTransformation transformations = 4;
+
 }
 
 message ResponseMatcher {
