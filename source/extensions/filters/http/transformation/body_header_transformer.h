@@ -3,6 +3,7 @@
 #include <map>
 
 #include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/common/http/header_utility.h"
 
 namespace Envoy {
 namespace Extensions {

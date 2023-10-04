@@ -6,6 +6,7 @@
 #include "nlohmann/json.hpp"
 
 #include "source/extensions/filters/http/transformation/transformation_filter_config.h"
+#include "source/extensions/filters/http/transformation/transformation_factory.h"
 #include "api/envoy/config/transformer/aws_lambda/v2/api_gateway_transformer.pb.h"
 #include "api/envoy/config/transformer/aws_lambda/v2/api_gateway_transformer.pb.validate.h"
 
