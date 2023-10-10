@@ -1,0 +1,8 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.25.10
+  description: > 
+    Bump envoy to v1.25.10
+    This resolves CVE-2023-44487 
