@@ -28,7 +28,7 @@ namespace Transformation {
 using FakeTransformerProto = envoy::test::extensions::transformation::FakeTransformer;
 
 
-TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
+TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration) {
   envoy::api::v2::filter::http::Transformation transformation;
   auto factoryConfig = transformation.mutable_transformer_config();
   factoryConfig->set_name("io.solo.transformer.fake");
@@ -38,7 +38,7 @@ TEST(TransformerExtensionFactory, TestTransformerExtensionFactoryRegistration){
   EXPECT_EQ(factory.name(), "io.solo.transformer.fake");
 }
 
-TEST(Transformation, TestGetTransformer){
+TEST(Transformation, TestGetTransformer) {
   NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
 
   Transformation t;

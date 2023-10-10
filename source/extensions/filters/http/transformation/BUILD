@@ -20,14 +20,55 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        ":body_header_transformer_lib",
-        ":inja_transformer_lib",
-        ":transformer_lib",
+        ":filter_config_lib",
+        ":transformation_logger_lib",
+        ":transformation_factory_lib",
+        ":matcher_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//envoy/router:router_interface",
         "@envoy//envoy/config:typed_config_interface",
         "@envoy//source/common/protobuf:message_validator_lib",
+    ],
+)
+envoy_cc_library(
+    name = "transformation_factory_lib",
+    srcs = [
+        "transformation_factory.cc",
+    ],
+    hdrs = [
+        "transformation_factory.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":body_header_transformer_lib",
+        ":inja_transformer_lib",
+        ":transformer_lib",
+        ":transformation_logger_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
+        "@envoy//envoy/router:router_interface",
+        "@envoy//envoy/config:typed_config_interface",
+        "@envoy//source/common/protobuf:message_validator_lib",
+        "@envoy//source/common/config:utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "matcher_lib",
+    srcs = [
+        "matcher.cc",
+    ],
+    hdrs = [
+        "matcher.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":transformer_lib",
+        ":transformation_factory_lib",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
+        "@envoy//source/common/http/matching:data_impl_lib",
+        "@envoy//source/common/matcher:matcher_lib",
     ],
 )
 
@@ -101,11 +142,29 @@ envoy_cc_library(
     hdrs = [
         "transformer.h",
     ],
+    repository = "@envoy",
+    deps = [
+        "@envoy//envoy/buffer:buffer_interface",
+        "@envoy//envoy/http:header_map_interface",
+        "@envoy//envoy/http:filter_interface",
+        "@envoy//envoy/router:router_interface",
+        "@envoy//source/common/http:header_utility_lib",
+        "@envoy//source/extensions/filters/http/common:factory_base_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "filter_config_lib",
+    hdrs = [
+        "filter_config.h",
+    ],
     srcs = [
-        "transformer.cc",
+        "filter_config.cc",
     ],
     repository = "@envoy",
     deps = [
+        ":transformer_lib",
+        ":matcher_lib",
         "//source/common/matcher:matchers_lib",
         "@envoy//envoy/buffer:buffer_interface",
         "@envoy//envoy/http:header_map_interface",

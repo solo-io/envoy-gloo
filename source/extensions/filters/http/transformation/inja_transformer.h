@@ -7,6 +7,8 @@
 
 #include "source/common/common/base64.h"
 
+#include "envoy/thread_local/thread_local_object.h"
+#include "envoy/thread_local/thread_local.h"
 #include "source/extensions/filters/http/transformation/transformer.h"
 
 // clang-format off

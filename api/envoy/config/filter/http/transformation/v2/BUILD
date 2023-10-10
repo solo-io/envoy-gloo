@@ -16,6 +16,7 @@ api_proto_package(
         "@envoy_api//envoy/type:pkg",
         "@envoy_api//envoy/type/matcher/v3:pkg",
         "@envoy_api//envoy/type/matcher:pkg",
+        "@com_github_cncf_udpa//xds/type/matcher/v3:pkg",
     ],
     visibility = ["//visibility:public"],
 )

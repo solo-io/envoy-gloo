@@ -771,6 +771,214 @@ TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
 
 }
 
+struct MockLogSink : Envoy::Logger::SinkDelegate {
+  MockLogSink(Logger::DelegatingLogSinkSharedPtr log_sink) : SinkDelegate(log_sink) { setDelegate(); }
+  ~MockLogSink() override { restoreDelegate(); }
+
+  MOCK_METHOD(void, log, (absl::string_view, const spdlog::details::log_msg&));
+  MOCK_METHOD(void, logWithStableName,
+              (absl::string_view, absl::string_view, absl::string_view, absl::string_view));
+  void flush() override {}
+};
+
+TEST_F(TransformationFilterTest, LogWithLogDetailsTransformationLevel) {
+  Envoy::Logger::Registry::setLogLevel(spdlog::level::debug);
+
+  MockLogSink sink(Envoy::Logger::Registry::getSink());
+
+  EXPECT_CALL(sink, log(_, _)).WillRepeatedly(Invoke([](auto msg, __attribute__((unused)) auto& log) {
+    EXPECT_THAT(msg, testing::HasSubstr("[debug]"));
+    EXPECT_THAT(msg, testing::AnyOf(testing::HasSubstr("headers before transformation: "),
+                                    testing::HasSubstr("body before transformation: "),
+                                    testing::HasSubstr("headers after transformation: "),
+                                    testing::HasSubstr("body after transformation: ")));
+  }));
+
+  // set log_request_response_info on transformation config
+  transformation_rule_.mutable_route_transformations()
+                ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(true);
+  // confirm that log_request_response_info on listener config is ignored when transformation-level setting is true
+  listener_config_.set_log_request_response_info(false);
+  happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+}
+
+TEST_F(TransformationFilterTest, LogWithLogDetailsListenerLevel) {
+  Envoy::Logger::Registry::setLogLevel(spdlog::level::debug);
+
+  MockLogSink sink(Envoy::Logger::Registry::getSink());
+
+  EXPECT_CALL(sink, log(_, _)).WillRepeatedly(Invoke([](auto msg, __attribute__((unused)) auto& log) {
+    EXPECT_THAT(msg, testing::HasSubstr("[debug]"));
+    EXPECT_THAT(msg, testing::AnyOf(testing::HasSubstr("headers before transformation: "),
+                                    testing::HasSubstr("body before transformation: "),
+                                    testing::HasSubstr("headers after transformation: "),
+                                    testing::HasSubstr("body after transformation: ")));
+  }));
+
+  // set log_request_response_info on listener config
+  listener_config_.set_log_request_response_info(true);
+
+  happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+}
+
+TEST_F(TransformationFilterTest, LogWithLogDetailsListenerLevelTransformationLevelFalse) {
+  Envoy::Logger::Registry::setLogLevel(spdlog::level::debug);
+
+  MockLogSink sink(Envoy::Logger::Registry::getSink());
+
+  EXPECT_CALL(sink, log(_, _)).WillOnce(Invoke([](auto msg, __attribute__((unused)) auto& log) {
+    EXPECT_THAT(msg, testing::HasSubstr("test"));
+  }));
+
+  // set log_request_response_info on listener config
+  listener_config_.set_log_request_response_info(true);
+  // confirm that log_request_response_info on transformation-level setting is respected when listener config is true
+  transformation_rule_.mutable_route_transformations()
+            ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(false);
+  happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+
+  // if processing the transformation generates a log, then this line will cause the "WillOnce" expectation above to fail
+  sink.log("test", spdlog::details::log_msg());
+}
+
+TEST_F(TransformationFilterTest, NoLogWhenLogWithDetailsDisabled) {
+    Envoy::Logger::Registry::setLogLevel(spdlog::level::debug);
+
+  MockLogSink sink(Envoy::Logger::Registry::getSink());
+
+  EXPECT_CALL(sink, log(_, _)).WillOnce(Invoke([](auto msg, __attribute__((unused)) auto& log) {
+    EXPECT_THAT(msg, testing::HasSubstr("test"));
+  }));
+
+  // set log_request_response_info false on both transformation and listener config
+  listener_config_.set_log_request_response_info(false);
+  transformation_rule_.mutable_route_transformations()
+            ->mutable_request_transformation()->mutable_log_request_response_info()->set_value(false);
+  happyPathWithBody(TransformationFilterTest::ConfigType::Route, 1U);
+
+  // if processing the transformation generates a log, then this line will cause the "WillOnce" expectation above to fail
+  sink.log("test", spdlog::details::log_msg());
+}
+
+TEST_F(TransformationFilterTest, MatcherOnListenerConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+  null_route_config_ = true;
+  const std::string match_string = R"EOF(
+  matcher:
+    matcher_list:
+      matchers:
+      - predicate:
+          single_predicate:
+            input:
+              name: envoy.matching.inputs.request_headers
+              typed_config:
+                "@type": type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                header_name: ":path"
+            value_match:
+              prefix: "/pathprefix"
+        on_match:
+          action:
+            name: action
+            typed_config:
+              "@type": type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations
+              request_transformation:
+                transformation_template:
+                  passthrough: {}
+                  headers:
+                    "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, listener_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+TEST_F(TransformationFilterTest, MatcherOnRouteConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+
+    const std::string match_string = R"EOF(
+  transformations:
+  - matcher:
+      matcher_list:
+        matchers:
+        - predicate:
+            single_predicate:
+              input:
+                name: envoy.matching.inputs.request_headers
+                typed_config:
+                  "@type": type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                  header_name: ":path"
+              value_match:
+                prefix: "/pathprefix"
+          on_match:
+            action:
+              name: action
+              typed_config:
+                "@type": type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations
+                request_transformation:
+                  transformation_template:
+                    passthrough: {}
+                    headers:
+                      "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+TEST_F(TransformationFilterTest, MatcherOnRouteConfigTypedStruct) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+
+    const std::string match_string = R"EOF(
+  transformations:
+  - matcher:
+      matcher_list:
+        matchers:
+        - predicate:
+            single_predicate:
+              input:
+                name: envoy.matching.inputs.request_headers
+                typed_config:
+                  "@type": "type.googleapis.com/xds.type.v3.TypedStruct"
+                  type_url: "type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput"
+                  value:
+                    header_name: ":path"
+              value_match:
+                prefix: "/pathprefix"
+          on_match:
+            action:
+              name: action
+              typed_config:
+                "@type": "type.googleapis.com/xds.type.v3.TypedStruct"
+                type_url: "type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations"
+                value:
+                  request_transformation:
+                    transformation_template:
+                      passthrough: {}
+                      headers:
+                        "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
