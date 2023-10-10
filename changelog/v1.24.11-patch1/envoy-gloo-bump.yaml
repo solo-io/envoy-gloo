@@ -3,3 +3,4 @@ changelog:
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
   dependencyTag: v1.24.11
+  description: Bump envoy for CVE-2023-44487
