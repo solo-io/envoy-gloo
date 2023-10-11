@@ -31,7 +31,7 @@ void TransformationFilterConfig::addTransformationLegacy(
   if (rule.has_route_transformations()) {
     transformer_pair = createTransformations(rule.route_transformations(), context);
   }
-  transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
+  transformer_pairs_.emplace_back(MatcherCopy::Matcher::create(rule.match()),
                                   transformer_pair);
 }
 
