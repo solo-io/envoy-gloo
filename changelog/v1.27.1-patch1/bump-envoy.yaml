@@ -1,0 +1,9 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.27.1
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.27.1, 6b9db09c69965d5bfb37bdd29693f8b7f9e9e9ec
+    CVE-2023-44487 
