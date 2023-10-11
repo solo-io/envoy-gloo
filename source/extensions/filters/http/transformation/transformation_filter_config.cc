@@ -152,10 +152,10 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     auto &&request_match = transformation.request_match();
     TransformerConstSharedPtr request_transformation;
     TransformerConstSharedPtr response_transformation;
-    Matcher::MatcherConstPtr matcher;
+    MatcherCopy::MatcherConstPtr matcher;
 
     if (request_match.has_match()) {
-      matcher = Matcher::Matcher::create(request_match.match());
+      matcher = MatcherCopy::Matcher::create(request_match.match());
     }
 
     bool clear_route_cache = request_match.clear_route_cache();

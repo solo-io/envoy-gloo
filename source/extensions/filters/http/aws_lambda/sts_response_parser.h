@@ -1,6 +1,7 @@
 #pragma once
 
-#include "source/common/common/regex.h"
+// #include "source/common/common/regex.h"
+#include "source/common/regex/regex.h"
 #include "source/common/singleton/const_singleton.h"
 
 namespace Envoy {
@@ -32,13 +33,13 @@ public:
 
     // Initialize regex strings, should never fail
     regex_access_key =
-        Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
-    regex_secret_key = Regex::Utility::parseStdRegex(
+        Solo::Regex::Utility::parseStdRegex("<AccessKeyId>(.*?)</AccessKeyId>");
+    regex_secret_key = Solo::Regex::Utility::parseStdRegex(
         "<SecretAccessKey>(.*?)</SecretAccessKey>");
     regex_session_token =
-        Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
+        Solo::Regex::Utility::parseStdRegex("<SessionToken>(.*?)</SessionToken>");
     regex_expiration =
-        Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
+        Solo::Regex::Utility::parseStdRegex("<Expiration>(.*?)</Expiration>");
   };
 
   std::regex regex_access_key;

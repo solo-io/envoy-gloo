@@ -7,6 +7,7 @@
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
 #include "source/common/common/regex.h"
+#include "source/common/regex/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
 
@@ -55,7 +56,7 @@ getHeader(const Http::RequestOrResponseHeaderMap &header_map,
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
-      extract_regex_(Regex::Utility::parseStdRegex(extractor.regex())) {
+      extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/

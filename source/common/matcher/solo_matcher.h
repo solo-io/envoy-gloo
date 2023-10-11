@@ -4,7 +4,7 @@
 #include "envoy/http/header_map.h"
 
 namespace Envoy {
-namespace Matcher {
+namespace MatcherCopy {
 
 class Matcher;
 using MatcherConstPtr = std::shared_ptr<const Matcher>;
