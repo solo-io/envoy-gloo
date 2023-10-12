@@ -1,4 +1,4 @@
-diff --git changelogs/current.yaml changelogs/current.yaml
+diff --git a/changelogs/current.yaml b/changelogs/current.yaml
 index dc3bec0b53..e19cc976ab 100644
 --- changelogs/current.yaml
 +++ changelogs/current.yaml
@@ -25,7 +25,7 @@ index dc3bec0b53..e19cc976ab 100644
  
  bug_fixes:
  - area: cors
-diff --git source/common/http/conn_manager_impl.cc source/common/http/conn_manager_impl.cc
+diff --git a/source/common/http/conn_manager_impl.cc b/source/common/http/conn_manager_impl.cc
 index 2ff254767d..f5511dc24d 100644
 --- source/common/http/conn_manager_impl.cc
 +++ source/common/http/conn_manager_impl.cc
@@ -184,7 +184,7 @@ index 2ff254767d..f5511dc24d 100644
 +
  } // namespace Http
  } // namespace Envoy
-diff --git source/common/http/conn_manager_impl.h source/common/http/conn_manager_impl.h
+diff --git a/source/common/http/conn_manager_impl.h b/source/common/http/conn_manager_impl.h
 index 41412f624b..41c6e49fca 100644
 --- source/common/http/conn_manager_impl.h
 +++ source/common/http/conn_manager_impl.h
@@ -274,7 +274,7 @@ index 41412f624b..41c6e49fca 100644
  };
  
  } // namespace Http
-diff --git test/common/http/conn_manager_impl_test_2.cc test/common/http/conn_manager_impl_test_2.cc
+diff --git a/test/common/http/conn_manager_impl_test_2.cc b/test/common/http/conn_manager_impl_test_2.cc
 index 220a9f40f0..9e0b2a9106 100644
 --- test/common/http/conn_manager_impl_test_2.cc
 +++ test/common/http/conn_manager_impl_test_2.cc
@@ -793,7 +793,7 @@ index 220a9f40f0..9e0b2a9106 100644
 +
  } // namespace Http
  } // namespace Envoy
-diff --git test/common/http/conn_manager_impl_test_base.cc test/common/http/conn_manager_impl_test_base.cc
+diff --git a/test/common/http/conn_manager_impl_test_base.cc b/test/common/http/conn_manager_impl_test_base.cc
 index 1048162bd1..48d733bf05 100644
 --- test/common/http/conn_manager_impl_test_base.cc
 +++ test/common/http/conn_manager_impl_test_base.cc
@@ -829,7 +829,7 @@ index 1048162bd1..48d733bf05 100644
 +
  } // namespace Http
  } // namespace Envoy
-diff --git test/common/http/conn_manager_impl_test_base.h test/common/http/conn_manager_impl_test_base.h
+diff --git a/test/common/http/conn_manager_impl_test_base.h b/test/common/http/conn_manager_impl_test_base.h
 index 9796fa473f..daef35fc24 100644
 --- test/common/http/conn_manager_impl_test_base.h
 +++ test/common/http/conn_manager_impl_test_base.h
@@ -842,7 +842,7 @@ index 9796fa473f..daef35fc24 100644
    Envoy::Event::SimulatedTimeSystem test_time_;
    NiceMock<Router::MockRouteConfigProvider> route_config_provider_;
    std::shared_ptr<Router::MockConfig> route_config_{new NiceMock<Router::MockConfig>()};
-diff --git test/common/http/http2/http2_frame.cc test/common/http/http2/http2_frame.cc
+diff --git a/test/common/http/http2/http2_frame.cc b/test/common/http/http2/http2_frame.cc
 index 68569c0daf..f7f2ad117d 100644
 --- test/common/http/http2/http2_frame.cc
 +++ test/common/http/http2/http2_frame.cc
@@ -872,7 +872,7 @@ index 68569c0daf..f7f2ad117d 100644
    frame.appendHeaderWithoutIndexing(StaticHeaderIndex::Authority, host);
    frame.adjustPayloadSize();
    return frame;
-diff --git test/common/http/http2/http2_frame.h test/common/http/http2/http2_frame.h
+diff --git a/test/common/http/http2/http2_frame.h b/test/common/http/http2/http2_frame.h
 index dca17c4804..1b2ba0fea5 100644
 --- test/common/http/http2/http2_frame.h
 +++ test/common/http/http2/http2_frame.h
@@ -906,7 +906,7 @@ index dca17c4804..1b2ba0fea5 100644
    DataContainer data_;
  };
  
-diff --git test/integration/multiplexed_integration_test.cc test/integration/multiplexed_integration_test.cc
+diff --git a/test/integration/multiplexed_integration_test.cc b/test/integration/multiplexed_integration_test.cc
 index b9dd6c58c3..74630a2a4d 100644
 --- test/integration/multiplexed_integration_test.cc
 +++ test/integration/multiplexed_integration_test.cc
