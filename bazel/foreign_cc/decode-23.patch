@@ -1,0 +1,92 @@
+diff --git a/source/common/http/conn_manager_impl.cc b/source/common/http/conn_manager_impl.cc
+index f5511dc24d..9c858a8e46 100644
+--- source/common/http/conn_manager_impl.cc
++++ source/common/http/conn_manager_impl.cc
+@@ -884,6 +884,15 @@ uint32_t ConnectionManagerImpl::ActiveStream::localPort() {
+   return ip->port();
+ }
+ 
++void ConnectionManagerImpl::ActiveStream::maybeEndDecode(bool end_stream) {
++  // If recreateStream is called, the HCM rewinds state and may send more encodeData calls.
++  if (end_stream && !filter_manager_.remoteDecodeComplete()) {
++    filter_manager_.streamInfo().downstreamTiming().onLastDownstreamRxByteReceived(
++        connection_manager_.read_callbacks_->connection().dispatcher().timeSource());
++    ENVOY_STREAM_LOG(debug, "request end stream", *this);
++  }
++}
++
+ // Ordering in this function is complicated, but important.
+ //
+ // We want to do minimal work before selecting route and creating a filter
+@@ -926,10 +935,8 @@ void ConnectionManagerImpl::ActiveStream::decodeHeaders(RequestHeaderMapPtr&& he
+   ENVOY_STREAM_LOG(debug, "request headers complete (end_stream={}):\n{}", *this, end_stream,
+                    *request_headers_);
+ 
+-  // We end the decode here only if the request is header only. If we convert the request to a
+-  // header only, the stream will be marked as done once a subsequent decodeData/decodeTrailers is
+-  // called with end_stream=true.
+-  filter_manager_.maybeEndDecode(end_stream);
++  // We end the decode here to mark that the downstream stream is complete.
++  maybeEndDecode(end_stream);
+ 
+   // Drop new requests when overloaded as soon as we have decoded the headers.
+   if (connection_manager_.random_generator_.bernoulli(
+@@ -1214,7 +1221,7 @@ void ConnectionManagerImpl::ActiveStream::traceRequest() {
+ void ConnectionManagerImpl::ActiveStream::decodeData(Buffer::Instance& data, bool end_stream) {
+   ScopeTrackerScopeState scope(this,
+                                connection_manager_.read_callbacks_->connection().dispatcher());
+-  filter_manager_.maybeEndDecode(end_stream);
++  maybeEndDecode(end_stream);
+   filter_manager_.streamInfo().addBytesReceived(data.length());
+   if (!state_.deferred_to_next_io_iteration_) {
+     filter_manager_.decodeData(data, end_stream);
+diff --git a/source/common/http/conn_manager_impl.h b/source/common/http/conn_manager_impl.h
+index 41c6e49fca..5c6ceb5afe 100644
+--- source/common/http/conn_manager_impl.h
++++ source/common/http/conn_manager_impl.h
+@@ -196,6 +196,9 @@ private:
+     void decodeData(Buffer::Instance& data, bool end_stream) override;
+     void decodeMetadata(MetadataMapPtr&&) override;
+ 
++    // Mark that the last downstream byte is received, and the downstream stream is complete.
++    void maybeEndDecode(bool end_stream);
++
+     // Http::RequestDecoder
+     void decodeHeaders(RequestHeaderMapPtr&& headers, bool end_stream) override;
+     void decodeTrailers(RequestTrailerMapPtr&& trailers) override;
+diff --git a/source/common/http/filter_manager.cc b/source/common/http/filter_manager.cc
+index 4cf3d769a3..12d77e2ab9 100644
+--- source/common/http/filter_manager.cc
++++ source/common/http/filter_manager.cc
+@@ -783,14 +783,6 @@ void FilterManager::decodeMetadata(ActiveStreamDecoderFilter* filter, MetadataMa
+   }
+ }
+ 
+-void FilterManager::maybeEndDecode(bool end_stream) {
+-  // If recreateStream is called, the HCM rewinds state and may send more encodeData calls.
+-  if (end_stream && !remoteDecodeComplete()) {
+-    stream_info_.downstreamTiming().onLastDownstreamRxByteReceived(dispatcher_.timeSource());
+-    ENVOY_STREAM_LOG(debug, "request end stream", *this);
+-  }
+-}
+-
+ void FilterManager::disarmRequestTimeout() { filter_manager_callbacks_.disarmRequestTimeout(); }
+ 
+ std::list<ActiveStreamEncoderFilterPtr>::iterator
+diff --git a/source/common/http/filter_manager.h b/source/common/http/filter_manager.h
+index d709e78f8f..9ea86f675c 100644
+--- source/common/http/filter_manager.h
++++ source/common/http/filter_manager.h
+@@ -748,12 +748,6 @@ public:
+ 
+   void disarmRequestTimeout();
+ 
+-  /**
+-   * If end_stream is true, marks decoding as complete. This is a noop if end_stream is false.
+-   * @param end_stream whether decoding is complete.
+-   */
+-  void maybeEndDecode(bool end_stream);
+-
+   /**
+    * If end_stream is true, marks encoding as complete. This is a noop if end_stream is false.
+    * @param end_stream whether encoding is complete.

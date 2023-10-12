@@ -1,0 +1,5 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/solo-projects/issues/5391
+  resolvesIssue: false
+  description: Address envoy CVE-2023-44487
