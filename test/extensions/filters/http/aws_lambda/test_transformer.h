@@ -1,4 +1,5 @@
 #include "source/extensions/filters/http/transformation/transformation_filter_config.h"
+#include "source/extensions/filters/http/transformation/transformation_factory.h"
 #include "test/extensions/filters/http/aws_lambda/api_gateway_test_transformer.pb.h"
 
 namespace Envoy {

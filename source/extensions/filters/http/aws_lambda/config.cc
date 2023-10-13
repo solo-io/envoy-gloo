@@ -1,6 +1,7 @@
 #include "source/extensions/filters/http/aws_lambda/config.h"
 
 #include "source/extensions/filters/http/transformation/transformation_filter_config.h"
+#include "source/extensions/filters/http/transformation/transformation_factory.h"
 
 #include "envoy/thread_local/thread_local.h"
 

@@ -52,6 +52,20 @@ envoy_gloo_cc_test(
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
+        "@envoy//test/common/common:logger_test",
+        "@envoy//source/common/http/matching:inputs_lib",
+    ],
+)
+
+envoy_gloo_cc_test(
+    name = "matcher_test",
+    srcs = ["matcher_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:matcher_lib",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/stream_info:stream_info_mocks",
+        "@envoy//source/common/http/matching:inputs_lib",
     ],
 )
 

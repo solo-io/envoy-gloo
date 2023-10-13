@@ -6,7 +6,7 @@
 #include "envoy/config/typed_config.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
-#include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/filter_config.h"
 #include "source/extensions/filters/http/common/factory_base.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
@@ -50,17 +50,16 @@ public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config,
                              const std::string &prefix, Server::Configuration::FactoryContext &context);
 
-  const std::vector<MatcherTransformerPair> &transformerPairs() const override {
-    return transformer_pairs_;
-  };
-
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
   }
 
 private:
+  void addTransformationLegacy(const envoy::api::v2::filter::http::TransformationRule& rule, Server::Configuration::FactoryContext &context);
+
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
+  Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher_;
 };
 
 class PerStageRouteTransformationFilterConfig : public TransformConfig {
@@ -70,14 +69,18 @@ public:
       const envoy::api::v2::filter::http::
           RouteTransformations_RouteTransformation &transformations,
           Server::Configuration::CommonFactoryContext &context);
+  void setMatcher(Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher);
 
   TransformerPairConstSharedPtr
-  findTransformers(const Http::RequestHeaderMap &headers) const override;
+  findTransformers(const Http::RequestHeaderMap &headers, StreamInfo::StreamInfo& info) const override;
   TransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &,
                         StreamInfo::StreamInfo &) const override;
 
 private:
+
+  Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher_;
+
   std::vector<MatcherTransformerPair> transformer_pairs_;
   std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr>>
       response_transformations_;

@@ -173,7 +173,7 @@ void TransformationFilter::setupTransformationPair() {
       config_to_use = staged_config;
     }
   }
-  active_transformer_pair = config_to_use->findTransformers(*request_headers_);
+  active_transformer_pair = config_to_use->findTransformers(*request_headers_, decoder_callbacks_->streamInfo());
 
   if (active_transformer_pair != nullptr) {
     should_clear_cache_ = active_transformer_pair->shouldClearCache();
