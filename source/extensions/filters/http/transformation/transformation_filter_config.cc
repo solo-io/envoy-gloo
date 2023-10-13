@@ -2,13 +2,11 @@
 
 #include "source/common/common/assert.h"
 #include "source/common/common/matchers.h"
-#include "source/common/protobuf/protobuf.h"
 #include "source/common/protobuf/message_validator_impl.h"
-#include "source/common/config/utility.h"
-
-
-#include "source/extensions/filters/http/transformation/body_header_transformer.h"
-#include "source/extensions/filters/http/transformation/inja_transformer.h"
+#include "source/common/protobuf/protobuf.h"
+#include "source/extensions/filters/http/transformation/matcher.h"
+#include "source/extensions/filters/http/transformation/transformation_factory.h"
+#include "source/common/matcher/matcher.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -38,59 +36,40 @@ TransformerConstSharedPtr Transformation::getTransformer(
   default:
     throw EnvoyException("non existent transformation");
   }
+  
+void TransformationFilterConfig::addTransformationLegacy(
+    const envoy::api::v2::filter::http::TransformationRule &rule,
+    Server::Configuration::FactoryContext &context) {
+  if (!rule.has_match()) {
+    return;
+  }
+  TransformerConstSharedPtr request_transformation;
+  TransformerConstSharedPtr response_transformation;
+  TransformerConstSharedPtr on_stream_completion_transformation;
+  bool clear_route_cache = false;
+
+  TransformerPairConstSharedPtr transformer_pair = 
+      std::make_unique<TransformerPair>(
+          request_transformation, response_transformation,
+          on_stream_completion_transformation, clear_route_cache);
+  if (rule.has_route_transformations()) {
+    transformer_pair = createTransformations(rule.route_transformations(), context);
+  }
+  transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
+                                  transformer_pair);
 }
 
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
-    : FilterConfig(prefix, context.scope(), proto_config.stage(), proto_config.log_request_response_info()) {
-
+    : FilterConfig(prefix, context.scope(), proto_config.stage(),
+                   proto_config.log_request_response_info()) {
+    if (proto_config.has_matcher()) {
+      matcher_ = createTransformationMatcher(proto_config.matcher(), context.getServerFactoryContext());
+      return;
+    }
   for (const auto &rule : proto_config.transformations()) {
-    if (!rule.has_match()) {
-      continue;
-    }
-    TransformerConstSharedPtr request_transformation;
-    TransformerConstSharedPtr response_transformation;
-    TransformerConstSharedPtr on_stream_completion_transformation;
-    bool clear_route_cache = false;
-    if (rule.has_route_transformations()) {
-      const auto &route_transformation = rule.route_transformations();
-      clear_route_cache = route_transformation.clear_route_cache();
-      if (route_transformation.has_request_transformation()) {
-        try {
-          request_transformation = Transformation::getTransformer(
-              route_transformation.request_transformation(), context);
-        } catch (const std::exception &e) {
-          throw EnvoyException(
-              fmt::format("Failed to parse request template: {}", e.what()));
-        }
-      }
-      if (route_transformation.has_response_transformation()) {
-        try {
-          response_transformation = Transformation::getTransformer(
-              route_transformation.response_transformation(), context);
-        } catch (const std::exception &e) {
-          throw EnvoyException(
-              fmt::format("Failed to parse response template: {}", e.what()));
-        }
-      }
-      if (route_transformation.has_on_stream_completion_transformation()) {
-        try {
-          on_stream_completion_transformation = Transformation::getTransformer(
-              route_transformation.on_stream_completion_transformation(), context);
-        } catch (const std::exception &e) {
-          throw EnvoyException(
-              fmt::format("Failed to get the on stream completion transformation: {}", e.what()));
-        }
-      }
-    }
-    TransformerPairConstSharedPtr transformer_pair =
-        std::make_unique<TransformerPair>(request_transformation,
-                                          response_transformation,
-                                          on_stream_completion_transformation,
-                                          clear_route_cache);
-    transformer_pairs_.emplace_back(Matcher::Matcher::create(rule.match()),
-                                    transformer_pair);
+      addTransformationLegacy(rule, context);
   }
 }
 
@@ -168,11 +147,23 @@ RouteTransformationFilterConfig::RouteTransformationFilterConfig(
       temp_stages[transformation.stage()].reset(
           new PerStageRouteTransformationFilterConfig());
     }
-    temp_stages[transformation.stage()]->addTransformation(transformation, context);
+
+    if (transformation.has_matcher()) {
+      temp_stages[transformation.stage()]->setMatcher(createTransformationMatcher(transformation.matcher(), context));
+    } else {
+      temp_stages[transformation.stage()]->addTransformation(transformation, context);
+    }
   }
   for (uint32_t i = 0; i < stages_.size(); i++) {
     stages_[i] = std::move(temp_stages[i]);
   }
+}
+
+void PerStageRouteTransformationFilterConfig::setMatcher(Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher){
+  if (matcher_ != nullptr){
+    throw EnvoyException(fmt::format("Only one matcher is allowed per stage"));
+  }
+  matcher_ = matcher;
 }
 
 void PerStageRouteTransformationFilterConfig::addTransformation(
@@ -213,7 +204,6 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
 
     if (request_transformation != nullptr ||
         response_transformation != nullptr) {
-
       TransformerPairConstSharedPtr transformer_pair =
           std::make_unique<TransformerPair>(request_transformation,
                                             response_transformation,
@@ -250,7 +240,14 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
 
 TransformerPairConstSharedPtr
 PerStageRouteTransformationFilterConfig::findTransformers(
-    const Http::RequestHeaderMap &headers) const {
+    const Http::RequestHeaderMap &headers, StreamInfo::StreamInfo& info) const {
+
+  if (matcher_) {
+      Http::Matching::HttpMatchingDataImpl data(info);
+      data.onRequestHeaders(headers);
+      return matchTransform(std::move(data), matcher_); 
+  }
+
   for (const auto &pair : transformer_pairs_) {
     if (pair.matcher() == nullptr || pair.matcher()->matches(headers)) {
       return pair.transformer_pair();
