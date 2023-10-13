@@ -861,6 +861,125 @@ TEST_F(TransformationFilterTest, NoLogWhenLogWithDetailsDisabled) {
   sink.log("test", spdlog::details::log_msg());
 }
 
+TEST_F(TransformationFilterTest, MatcherOnListenerConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+  null_route_config_ = true;
+  const std::string match_string = R"EOF(
+  matcher:
+    matcher_list:
+      matchers:
+      - predicate:
+          single_predicate:
+            input:
+              name: envoy.matching.inputs.request_headers
+              typed_config:
+                "@type": type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                header_name: ":path"
+            value_match:
+              prefix: "/pathprefix"
+        on_match:
+          action:
+            name: action
+            typed_config:
+              "@type": type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations
+              request_transformation:
+                transformation_template:
+                  passthrough: {}
+                  headers:
+                    "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, listener_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+TEST_F(TransformationFilterTest, MatcherOnRouteConfig) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+
+    const std::string match_string = R"EOF(
+  transformations:
+  - matcher:
+      matcher_list:
+        matchers:
+        - predicate:
+            single_predicate:
+              input:
+                name: envoy.matching.inputs.request_headers
+                typed_config:
+                  "@type": type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                  header_name: ":path"
+              value_match:
+                prefix: "/pathprefix"
+          on_match:
+            action:
+              name: action
+              typed_config:
+                "@type": type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations
+                request_transformation:
+                  transformation_template:
+                    passthrough: {}
+                    headers:
+                      "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+TEST_F(TransformationFilterTest, MatcherOnRouteConfigTypedStruct) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/pathprefix"}};
+
+    const std::string match_string = R"EOF(
+  transformations:
+  - matcher:
+      matcher_list:
+        matchers:
+        - predicate:
+            single_predicate:
+              input:
+                name: envoy.matching.inputs.request_headers
+                typed_config:
+                  "@type": "type.googleapis.com/xds.type.v3.TypedStruct"
+                  type_url: "type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput"
+                  value:
+                    header_name: ":path"
+              value_match:
+                prefix: "/pathprefix"
+          on_match:
+            action:
+              name: action
+              typed_config:
+                "@type": "type.googleapis.com/xds.type.v3.TypedStruct"
+                type_url: "type.googleapis.com/envoy.api.v2.filter.http.TransformationRule.Transformations"
+                value:
+                  request_transformation:
+                    transformation_template:
+                      passthrough: {}
+                      headers:
+                        "x-foo": {text: "matcher"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_("x-foo"), "matcher");
+}
+
+
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
