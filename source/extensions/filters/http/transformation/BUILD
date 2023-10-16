@@ -76,6 +76,7 @@ envoy_cc_library(
         ":transformer_lib",
         ":transformation_factory_lib",
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
+        "//source/common/matcher:solo_matcher_data_impl_lib",
         "@envoy//source/common/http/matching:data_impl_lib",
         "@envoy//source/common/matcher:matcher_lib",
     ],

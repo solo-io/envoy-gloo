@@ -1,5 +1,7 @@
 #include "source/extensions/filters/http/transformation/matcher.h"
 
+#include "source/common/matcher/data_impl.h"
+
 #include "fmt/format.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -32,7 +34,7 @@ TransformerPairConstSharedPtr getFromMatcher(std::string s){
 
   auto m = createTransformationMatcher(matcher, server_factory_context);
 
-  Http::Matching::HttpMatchingDataImpl data(stream_info);
+  Http::Matching::SoloHttpMatchingDataImpl data(stream_info);
 
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/path"}};

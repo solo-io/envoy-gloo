@@ -24,3 +24,9 @@ envoy_cc_library(
     ],
 )
 
+# CC library for data_impl.h
+envoy_cc_library(
+    name = "solo_matcher_data_impl_lib",
+    hdrs = ["data_impl.h"],
+    repository = "@envoy",
+)

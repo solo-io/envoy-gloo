@@ -20,7 +20,7 @@ private:
   TransformerPairConstSharedPtr transformations_;
 };
 
-TransformerPairConstSharedPtr matchTransform(Http::Matching::HttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher) {
+TransformerPairConstSharedPtr matchTransform(Http::Matching::SoloHttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher) {
     auto match = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
     if (match.result_) {
       auto action = match.result_();

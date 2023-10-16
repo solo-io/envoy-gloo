@@ -7,12 +7,14 @@
 #include "source/extensions/filters/http/transformation/transformer.h"
 #include "envoy/server/factory_context.h"
 
+#include "source/common/matcher/data_impl.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-TransformerPairConstSharedPtr matchTransform(Http::Matching::HttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher);
+TransformerPairConstSharedPtr matchTransform(Http::Matching::SoloHttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher);
 
 Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> createTransformationMatcher(
     const xds::type::matcher::v3::Matcher &matcher,
