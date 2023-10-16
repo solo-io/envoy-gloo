@@ -193,7 +193,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":transformation_filter_lib",
-        "//source/common/matcher:matchers_data_impl_lib",
+        "//source/common/matcher:solo_matcher_data_impl_lib",
         "@envoy//source/extensions/filters/http/common:pass_through_filter_lib",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
     ],
