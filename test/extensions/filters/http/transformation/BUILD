@@ -64,7 +64,7 @@ envoy_gloo_cc_test(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:matcher_lib",
-        "//source/common/matcher:matchers_data_impl_lib",
+        "//source/common/matcher:solo_matcher_data_impl_lib",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/stream_info:stream_info_mocks",
         "@envoy//source/common/http/matching:inputs_lib",
