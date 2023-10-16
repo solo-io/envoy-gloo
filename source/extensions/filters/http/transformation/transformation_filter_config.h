@@ -12,6 +12,8 @@
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 #include "envoy/server/factory_context.h"
 
+#include "source/common/matcher/data_impl.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {

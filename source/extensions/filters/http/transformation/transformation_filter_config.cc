@@ -6,36 +6,14 @@
 #include "source/common/protobuf/protobuf.h"
 #include "source/extensions/filters/http/transformation/matcher.h"
 #include "source/extensions/filters/http/transformation/transformation_factory.h"
+#include "source/extensions/filters/http/transformation/body_header_transformer.h"
+#include "source/extensions/filters/http/transformation/inja_transformer.h"
 #include "source/common/matcher/matcher.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
-
-TransformerConstSharedPtr Transformation::getTransformer(
-    const envoy::api::v2::filter::http::Transformation &transformation,
-    Server::Configuration::CommonFactoryContext &context) {
-  switch (transformation.transformation_type_case()) {
-  case envoy::api::v2::filter::http::Transformation::kTransformationTemplate:
-    return std::make_unique<InjaTransformer>(
-        transformation.transformation_template(), context.api().randomGenerator(), transformation.log_request_response_info());
-  case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
-    const auto& header_body_transform = transformation.header_body_transform();
-    return std::make_unique<BodyHeaderTransformer>(header_body_transform.add_request_metadata(), transformation.log_request_response_info());
-  }
-  case envoy::api::v2::filter::http::Transformation::kTransformerConfig: {
-    auto &factory = Config::Utility::getAndCheckFactory<TransformerExtensionFactory>(transformation.transformer_config());
-    auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
-    return factory.createTransformer(*config, transformation.log_request_response_info(), context);
-  }
-  case envoy::api::v2::filter::http::Transformation::
-      TRANSFORMATION_TYPE_NOT_SET:
-    ENVOY_LOG(trace, "Request transformation type not set");
-    FALLTHRU;
-  default:
-    throw EnvoyException("non existent transformation");
-  }
   
 void TransformationFilterConfig::addTransformationLegacy(
     const envoy::api::v2::filter::http::TransformationRule &rule,
@@ -243,7 +221,7 @@ PerStageRouteTransformationFilterConfig::findTransformers(
     const Http::RequestHeaderMap &headers, StreamInfo::StreamInfo& info) const {
 
   if (matcher_) {
-      Http::Matching::HttpMatchingDataImpl data(info);
+      Http::Matching::SoloHttpMatchingDataImpl data(info);
       data.onRequestHeaders(headers);
       return matchTransform(std::move(data), matcher_); 
   }

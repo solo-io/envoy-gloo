@@ -1,5 +1,6 @@
 #include "source/extensions/filters/http/transformation/filter_config.h"
 #include "source/extensions/filters/http/transformation/matcher.h"
+#include "source/common/matcher/data_impl.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -14,7 +15,7 @@ TransformerPairConstSharedPtr
 FilterConfig::findTransformers(const Http::RequestHeaderMap &headers, StreamInfo::StreamInfo& si) const {
   auto match = matcher();
   if (match) {
-      Http::Matching::HttpMatchingDataImpl data(si);
+      Http::Matching::SoloHttpMatchingDataImpl data(si);
       data.onRequestHeaders(headers);
       return matchTransform(std::move(data), match); 
   }
