@@ -6,7 +6,7 @@
 #include "envoy/config/typed_config.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
-#include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/extensions/filters/http/transformation/filter_config.h"
 #include "source/extensions/filters/http/common/factory_base.h"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
@@ -16,13 +16,6 @@ namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
-
-class Transformation : public Envoy::Logger::Loggable<Envoy::Logger::Id::filter> {
-public:
-  static TransformerConstSharedPtr getTransformer(
-      const envoy::api::v2::filter::http::Transformation &transformation,
-      Server::Configuration::CommonFactoryContext &context );
-};
 
 class ResponseMatcher;
 using ResponseMatcherConstPtr = std::unique_ptr<const ResponseMatcher>;
@@ -50,10 +43,6 @@ public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config,
                              const std::string &prefix, Server::Configuration::FactoryContext &context);
 
-  const std::vector<MatcherTransformerPair> &transformerPairs() const override {
-    return transformer_pairs_;
-  };
-
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
   }
@@ -61,10 +50,19 @@ public:
   bool logRequestResponseInfo() const {
     return log_request_response_info_;
   }
+protected:
+
+  const std::vector<MatcherTransformerPair> &transformerPairs() const override {
+    return transformer_pairs_;
+  };
+  Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher() const override {return matcher_;};
 
 private:
+  void addTransformationLegacy(const envoy::api::v2::filter::http::TransformationRule& rule, Server::Configuration::FactoryContext &context);
+
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
+  Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher_;
 
   bool log_request_response_info_{};
 };
@@ -76,14 +74,18 @@ public:
       const envoy::api::v2::filter::http::
           RouteTransformations_RouteTransformation &transformations,
           Server::Configuration::CommonFactoryContext &context);
+  void setMatcher(Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher);
 
   TransformerPairConstSharedPtr
-  findTransformers(const Http::RequestHeaderMap &headers) const override;
+  findTransformers(const Http::RequestHeaderMap &headers, StreamInfo::StreamInfo& info) const override;
   TransformerConstSharedPtr
   findResponseTransform(const Http::ResponseHeaderMap &,
                         StreamInfo::StreamInfo &) const override;
 
 private:
+
+  Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher_;
+
   std::vector<MatcherTransformerPair> transformer_pairs_;
   std::vector<std::pair<ResponseMatcherConstPtr, TransformerConstSharedPtr>>
       response_transformations_;
@@ -93,30 +95,6 @@ class RouteTransformationFilterConfig : public RouteFilterConfig {
 public:
   RouteTransformationFilterConfig(RouteTransformationConfigProto proto_config,
     Server::Configuration::ServerFactoryContext &context);
-};
-
-
-/**
- * Implemented for transformation extensions and registered via Registry::registerFactory or the
- * convenience class RegisterFactory.
- */
-class TransformerExtensionFactory :  public Config::TypedFactory{
-public:
-  ~TransformerExtensionFactory() override = default;
-
-/**
- * Create a particular transformation extension implementation from a config proto. If the
- * implementation is unable to produce a factory with the provided parameters, it should throw
- * EnvoyException. The returned pointer should never be nullptr.
- * @param config the custom configuration for this transformer extension type.
- */
-  virtual TransformerConstSharedPtr createTransformer(const Protobuf::Message &config,
-    google::protobuf::BoolValue log_request_response_info,
-    Server::Configuration::CommonFactoryContext &context) PURE;
-
-  virtual std::string name() const override PURE;
-
-  std::string category() const override {return "io.solo.transformer"; }
 };
 
 } // namespace Transformation

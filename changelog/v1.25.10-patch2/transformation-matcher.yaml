@@ -1,0 +1,6 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo-mesh-enterprise/issues/12181
+  resolvesIssue: false
+  description: >-
+    Support using unified matcher API for transformation filter.
