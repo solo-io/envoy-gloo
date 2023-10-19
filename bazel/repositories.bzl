@@ -66,6 +66,8 @@ def _repository_impl(name, **kwargs):
             )
 
 def envoy_gloo_dependencies():
-    _repository_impl("envoy")
+    _repository_impl("envoy", patches = [
+        "@envoy_gloo//bazel/foreign_cc:matcher-updates-24.patch"
+    ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
