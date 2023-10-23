@@ -1,0 +1,625 @@
+diff --git a/envoy/http/filter.h b/envoy/http/filter.h
+index 03df0a36a7..d1be8baaf2 100644
+--- envoy/http/filter.h
++++ envoy/http/filter.h
+@@ -1016,6 +1016,7 @@ public:
+   virtual RequestTrailerMapOptConstRef requestTrailers() const PURE;
+   virtual ResponseHeaderMapOptConstRef responseHeaders() const PURE;
+   virtual ResponseTrailerMapOptConstRef responseTrailers() const PURE;
++  virtual const StreamInfo::StreamInfo& streamInfo() const PURE;
+   virtual const Network::ConnectionInfoProvider& connectionInfoProvider() const PURE;
+ 
+   const Network::Address::Instance& localAddress() const {
+diff --git a/source/common/http/match_delegate/config.h b/source/common/http/match_delegate/config.h
+index 61aa93ad01..5d29bd096a 100644
+--- source/common/http/match_delegate/config.h
++++ source/common/http/match_delegate/config.h
+@@ -30,8 +30,7 @@ public:
+     bool skipFilter() const { return skip_filter_; }
+     void onStreamInfo(const StreamInfo::StreamInfo& stream_info) {
+       if (has_match_tree_ && matching_data_ == nullptr) {
+-        matching_data_ = std::make_shared<Envoy::Http::Matching::HttpMatchingDataImpl>(
+-            stream_info.downstreamAddressProvider());
++        matching_data_ = std::make_shared<Envoy::Http::Matching::HttpMatchingDataImpl>(stream_info);
+       }
+     }
+     void setBaseFilter(Envoy::Http::StreamFilterBase* base_filter) { base_filter_ = base_filter; }
+diff --git a/source/common/http/matching/data_impl.h b/source/common/http/matching/data_impl.h
+index 6a8f1d9c59..ded401d855 100644
+--- source/common/http/matching/data_impl.h
++++ source/common/http/matching/data_impl.h
+@@ -13,8 +13,8 @@ namespace Matching {
+  */
+ class HttpMatchingDataImpl : public HttpMatchingData {
+ public:
+-  explicit HttpMatchingDataImpl(const Network::ConnectionInfoProvider& connection_info_provider)
+-      : connection_info_provider_(connection_info_provider) {}
++  explicit HttpMatchingDataImpl(const StreamInfo::StreamInfo& stream_info)
++      : stream_info_(stream_info) {}
+ 
+   static absl::string_view name() { return "http"; }
+ 
+@@ -50,12 +50,14 @@ public:
+     return makeOptRefFromPtr(response_trailers_);
+   }
+ 
++  const StreamInfo::StreamInfo& streamInfo() const override { return stream_info_; }
++
+   const Network::ConnectionInfoProvider& connectionInfoProvider() const override {
+-    return connection_info_provider_;
++    return stream_info_.downstreamAddressProvider();
+   }
+ 
+ private:
+-  const Network::ConnectionInfoProvider& connection_info_provider_;
++  const StreamInfo::StreamInfo& stream_info_;
+   const RequestHeaderMap* request_headers_{};
+   const ResponseHeaderMap* response_headers_{};
+   const RequestTrailerMap* request_trailers_{};
+diff --git a/source/common/router/config_impl.cc b/source/common/router/config_impl.cc
+index af16d6955d..73e2199aec 100644
+--- source/common/router/config_impl.cc
++++ source/common/router/config_impl.cc
+@@ -1765,7 +1765,7 @@ RouteConstSharedPtr VirtualHostImpl::getRouteFromEntries(const RouteCallback& cb
+   }
+ 
+   if (matcher_) {
+-    Http::Matching::HttpMatchingDataImpl data(stream_info.downstreamAddressProvider());
++    Http::Matching::HttpMatchingDataImpl data(stream_info);
+     data.onRequestHeaders(headers);
+ 
+     auto match = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher_, data);
+diff --git a/source/common/router/router_ratelimit.cc b/source/common/router/router_ratelimit.cc
+index 3ffb1a271c..11432b2001 100644
+--- source/common/router/router_ratelimit.cc
++++ source/common/router/router_ratelimit.cc
+@@ -58,7 +58,7 @@ public:
+   bool populateDescriptor(RateLimit::DescriptorEntry& descriptor_entry, const std::string&,
+                           const Http::RequestHeaderMap& headers,
+                           const StreamInfo::StreamInfo& info) const override {
+-    Http::Matching::HttpMatchingDataImpl data(info.downstreamAddressProvider());
++    Http::Matching::HttpMatchingDataImpl data(info);
+     data.onRequestHeaders(headers);
+     auto result = data_input_->get(data);
+     if (result.data_) {
+diff --git a/source/extensions/filters/common/rbac/engine_impl.cc b/source/extensions/filters/common/rbac/engine_impl.cc
+index 33ef236939..76d010c562 100644
+--- source/extensions/filters/common/rbac/engine_impl.cc
++++ source/extensions/filters/common/rbac/engine_impl.cc
+@@ -129,9 +129,9 @@ bool RoleBasedAccessControlMatcherEngineImpl::handleAction(const Network::Connec
+ }
+ 
+ bool RoleBasedAccessControlMatcherEngineImpl::handleAction(
+-    const Network::Connection& connection, const Envoy::Http::RequestHeaderMap& headers,
++    const Network::Connection&, const Envoy::Http::RequestHeaderMap& headers,
+     StreamInfo::StreamInfo& info, std::string* effective_policy_id) const {
+-  Http::Matching::HttpMatchingDataImpl data(connection.connectionInfoProvider());
++  Http::Matching::HttpMatchingDataImpl data(info);
+   data.onRequestHeaders(headers);
+   const auto& result = Envoy::Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher_, data);
+   ASSERT(result.match_state_ == Envoy::Matcher::MatchState::MatchComplete);
+diff --git a/test/common/http/matching/BUILD b/test/common/http/matching/BUILD
+index 7546fc4e99..3af15dcec0 100644
+--- test/common/http/matching/BUILD
++++ test/common/http/matching/BUILD
+@@ -16,5 +16,6 @@ envoy_cc_test(
+         "//source/common/http/matching:inputs_lib",
+         "//source/common/network:address_lib",
+         "//source/common/network:socket_lib",
++        "//test/test_common:test_time_lib",
+     ],
+ )
+diff --git a/test/common/http/matching/inputs_test.cc b/test/common/http/matching/inputs_test.cc
+index d90924dd14..933280eea2 100644
+--- test/common/http/matching/inputs_test.cc
++++ test/common/http/matching/inputs_test.cc
+@@ -1,22 +1,37 @@
++#include <memory>
++
+ #include "envoy/http/filter.h"
+ 
+ #include "source/common/http/matching/data_impl.h"
+ #include "source/common/http/matching/inputs.h"
+ #include "source/common/network/address_impl.h"
+ #include "source/common/network/socket_impl.h"
++#include "source/common/stream_info/stream_info_impl.h"
+ 
++#include "test/test_common/test_time.h"
+ #include "test/test_common/utility.h"
+ 
+ namespace Envoy {
+ namespace Http {
+ namespace Matching {
+ 
++std::shared_ptr<Network::ConnectionInfoSetterImpl> connectionInfoProvider() {
++  CONSTRUCT_ON_FIRST_USE(std::shared_ptr<Network::ConnectionInfoSetterImpl>,
++                         std::make_shared<Network::ConnectionInfoSetterImpl>(
++                             std::make_shared<Network::Address::Ipv4Instance>(80),
++                             std::make_shared<Network::Address::Ipv4Instance>(80)));
++}
++
++StreamInfo::StreamInfoImpl createStreamInfo() {
++  CONSTRUCT_ON_FIRST_USE(StreamInfo::StreamInfoImpl,
++                         StreamInfo::StreamInfoImpl(Http::Protocol::Http2,
++                                                    Event::GlobalTimeSystem().timeSystem(),
++                                                    connectionInfoProvider()));
++}
++
+ TEST(MatchingData, HttpRequestHeadersDataInput) {
+   HttpRequestHeadersDataInput input("header");
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
+-  HttpMatchingDataImpl data(connection_info_provider);
++  HttpMatchingDataImpl data(createStreamInfo());
+ 
+   {
+     TestRequestHeaderMapImpl request_headers({{"header", "bar"}});
+@@ -37,10 +52,7 @@ TEST(MatchingData, HttpRequestHeadersDataInput) {
+ 
+ TEST(MatchingData, HttpRequestTrailersDataInput) {
+   HttpRequestTrailersDataInput input("header");
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
+-  HttpMatchingDataImpl data(connection_info_provider);
++  HttpMatchingDataImpl data(createStreamInfo());
+ 
+   {
+     TestRequestTrailerMapImpl request_trailers({{"header", "bar"}});
+@@ -64,7 +76,7 @@ TEST(MatchingData, HttpResponseHeadersDataInput) {
+   Network::ConnectionInfoSetterImpl connection_info_provider(
+       std::make_shared<Network::Address::Ipv4Instance>(80),
+       std::make_shared<Network::Address::Ipv4Instance>(80));
+-  HttpMatchingDataImpl data(connection_info_provider);
++  HttpMatchingDataImpl data(createStreamInfo());
+ 
+   {
+     TestResponseHeaderMapImpl response_headers({{"header", "bar"}});
+@@ -88,7 +100,7 @@ TEST(MatchingData, HttpResponseTrailersDataInput) {
+   Network::ConnectionInfoSetterImpl connection_info_provider(
+       std::make_shared<Network::Address::Ipv4Instance>(80),
+       std::make_shared<Network::Address::Ipv4Instance>(80));
+-  HttpMatchingDataImpl data(connection_info_provider);
++  HttpMatchingDataImpl data(createStreamInfo());
+ 
+   {
+     TestResponseTrailerMapImpl response_trailers({{"header", "bar"}});
+diff --git a/test/common/network/matching/inputs_test.cc b/test/common/network/matching/inputs_test.cc
+index c673a6220f..cf412193ab 100644
+--- test/common/network/matching/inputs_test.cc
++++ test/common/network/matching/inputs_test.cc
+@@ -36,14 +36,16 @@ TEST(MatchingData, DestinationIPInput) {
+ }
+ 
+ TEST(MatchingData, HttpDestinationIPInput) {
+-  ConnectionInfoSetterImpl connection_info_provider(
++  auto connection_info_provider = std::make_shared<Network::ConnectionInfoSetterImpl>(
+       std::make_shared<Address::Ipv4Instance>("127.0.0.1", 8080),
+       std::make_shared<Address::Ipv4Instance>("10.0.0.1", 9090));
+-  connection_info_provider.setDirectRemoteAddressForTest(
++  connection_info_provider->setDirectRemoteAddressForTest(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.2", 8081));
+   auto host = "example.com";
+-  connection_info_provider.setRequestedServerName(host);
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++  connection_info_provider->setRequestedServerName(host);
++  StreamInfo::StreamInfoImpl stream_info(
++      Http::Protocol::Http2, Event::GlobalTimeSystem().timeSystem(), connection_info_provider);
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+   {
+     DestinationIPInput<Http::HttpMatchingData> input;
+     const auto result = input.get(data);
+@@ -87,7 +89,7 @@ TEST(MatchingData, HttpDestinationIPInput) {
+     EXPECT_EQ(result.data_, host);
+   }
+ 
+-  connection_info_provider.setRemoteAddress(
++  connection_info_provider->setRemoteAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8081));
+   {
+     SourceTypeInput<Http::HttpMatchingData> input;
+diff --git a/test/common/ssl/matching/BUILD b/test/common/ssl/matching/BUILD
+index a0800713b7..da634091d2 100644
+--- test/common/ssl/matching/BUILD
++++ test/common/ssl/matching/BUILD
+@@ -17,6 +17,7 @@ envoy_cc_test(
+         "//source/common/network:socket_lib",
+         "//source/common/ssl/matching:inputs_lib",
+         "//test/mocks/ssl:ssl_mocks",
++        "//test/mocks/stream_info:stream_info_mocks",
+     ],
+ )
+ 
+@@ -30,5 +31,6 @@ envoy_cc_test(
+         "//test/common/matcher:test_utility_lib",
+         "//test/mocks/matcher:matcher_mocks",
+         "//test/mocks/server:factory_context_mocks",
++        "//test/test_common:test_time_lib",
+     ],
+ )
+diff --git a/test/common/ssl/matching/inputs_integration_test.cc b/test/common/ssl/matching/inputs_integration_test.cc
+index 99439ca9f8..3d4126ec7b 100644
+--- test/common/ssl/matching/inputs_integration_test.cc
++++ test/common/ssl/matching/inputs_integration_test.cc
+@@ -8,6 +8,7 @@
+ #include "test/mocks/matcher/mocks.h"
+ #include "test/mocks/server/factory_context.h"
+ #include "test/mocks/ssl/mocks.h"
++#include "test/test_common/test_time.h"
+ 
+ #include "gtest/gtest.h"
+ 
+@@ -116,14 +117,12 @@ TEST_F(HttpInputsIntegrationTest, UriSanInput) {
+ 
+   initialize("UriSanInput", host);
+ 
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
+   std::vector<std::string> uri_sans{host};
+   EXPECT_CALL(*ssl, uriSanPeerCertificate()).WillOnce(Return(uri_sans));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+@@ -135,14 +134,12 @@ TEST_F(HttpInputsIntegrationTest, DnsSanInput) {
+ 
+   initialize("DnsSanInput", host);
+ 
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
+   std::vector<std::string> dns_sans{host};
+   EXPECT_CALL(*ssl, dnsSansPeerCertificate()).WillOnce(Return(dns_sans));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+@@ -154,13 +151,11 @@ TEST_F(HttpInputsIntegrationTest, SubjectInput) {
+ 
+   initialize("SubjectInput", host);
+ 
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
+   EXPECT_CALL(*ssl, subjectPeerCertificate()).WillOnce(testing::ReturnRef(host));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+diff --git a/test/common/ssl/matching/inputs_test.cc b/test/common/ssl/matching/inputs_test.cc
+index 63bdaee166..56c9510e72 100644
+--- test/common/ssl/matching/inputs_test.cc
++++ test/common/ssl/matching/inputs_test.cc
+@@ -4,6 +4,7 @@
+ #include "source/common/ssl/matching/inputs.h"
+ 
+ #include "test/mocks/ssl/mocks.h"
++#include "test/mocks/stream_info/mocks.h"
+ 
+ namespace Envoy {
+ namespace Ssl {
+@@ -14,10 +15,8 @@ using testing::ReturnRef;
+ 
+ TEST(Authentication, UriSanInput) {
+   UriSanInput<Http::HttpMatchingData> input;
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+ 
+   {
+     const auto result = input.get(data);
+@@ -27,7 +26,7 @@ TEST(Authentication, UriSanInput) {
+   }
+ 
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
+ 
+   {
+     std::vector<std::string> uri_sans;
+@@ -62,11 +61,8 @@ TEST(Authentication, UriSanInput) {
+ 
+ TEST(Authentication, DnsSanInput) {
+   DnsSanInput<Http::HttpMatchingData> input;
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
+-
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+   {
+     const auto result = input.get(data);
+     EXPECT_EQ(result.data_availability_,
+@@ -75,8 +71,7 @@ TEST(Authentication, DnsSanInput) {
+   }
+ 
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
+-
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
+   {
+     std::vector<std::string> dns_sans;
+     EXPECT_CALL(*ssl, dnsSansPeerCertificate()).WillRepeatedly(Return(dns_sans));
+@@ -110,10 +105,9 @@ TEST(Authentication, DnsSanInput) {
+ 
+ TEST(Authentication, SubjectInput) {
+   SubjectInput<Http::HttpMatchingData> input;
+-  Network::ConnectionInfoSetterImpl connection_info_provider(
+-      std::make_shared<Network::Address::Ipv4Instance>(80),
+-      std::make_shared<Network::Address::Ipv4Instance>(80));
+-  Http::Matching::HttpMatchingDataImpl data(connection_info_provider);
++
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
++  Http::Matching::HttpMatchingDataImpl data(stream_info);
+ 
+   {
+     const auto result = input.get(data);
+@@ -123,7 +117,8 @@ TEST(Authentication, SubjectInput) {
+   }
+ 
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+-  connection_info_provider.setSslConnection(ssl);
++  stream_info.downstream_connection_info_provider_->setSslConnection(ssl);
++  // connection_info_provider->setSslConnection(ssl);
+   std::string subject;
+   EXPECT_CALL(*ssl, subjectPeerCertificate()).WillRepeatedly(ReturnRef(subject));
+ 
+diff --git a/test/extensions/filters/common/rbac/engine_impl_test.cc b/test/extensions/filters/common/rbac/engine_impl_test.cc
+index 8b2c6d975a..872336d674 100644
+--- test/extensions/filters/common/rbac/engine_impl_test.cc
++++ test/extensions/filters/common/rbac/engine_impl_test.cc
+@@ -18,6 +18,7 @@
+ #include "gtest/gtest.h"
+ 
+ using testing::Const;
++using testing::ReturnPointee;
+ using testing::ReturnRef;
+ 
+ namespace Envoy {
+@@ -66,7 +67,6 @@ void checkMatcherEngine(
+     StreamInfo::StreamInfo& info,
+     const Envoy::Network::Connection& connection = Envoy::Network::MockConnection(),
+     const Envoy::Http::RequestHeaderMap& headers = Envoy::Http::TestRequestHeaderMapImpl()) {
+-
+   bool engineRes = engine.handleAction(connection, headers, info, nullptr);
+   EXPECT_EQ(expected, engineRes);
+ 
+@@ -88,7 +88,6 @@ void checkMatcherEngine(
+     RBAC::RoleBasedAccessControlMatcherEngineImpl& engine, bool expected, LogResult expected_log,
+     const Envoy::Network::Connection& connection,
+     const Envoy::Http::RequestHeaderMap& headers = Envoy::Http::TestRequestHeaderMapImpl()) {
+-
+   NiceMock<StreamInfo::MockStreamInfo> empty_info;
+   checkMatcherEngine(engine, expected, expected_log, empty_info, connection, headers);
+ }
+@@ -473,11 +472,7 @@ TEST(RoleBasedAccessControlMatcherEngineImpl, Disabled) {
+   RBAC::RoleBasedAccessControlMatcherEngineImpl engine(matcher, factory_context,
+                                                        validation_visitor);
+ 
+-  Envoy::Network::MockConnection conn;
+-  Network::ConnectionInfoSetterImpl provider(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                                             std::make_shared<Network::Address::Ipv4Instance>(80));
+-  EXPECT_CALL(conn, connectionInfoProvider()).WillRepeatedly(ReturnRef(provider));
+-
++  NiceMock<Envoy::Network::MockConnection> conn;
+   checkMatcherEngine(engine, false, LogResult::Undecided, conn);
+ }
+ 
+@@ -510,20 +505,24 @@ TEST(RoleBasedAccessControlMatcherEngineImpl, AllowedAllowlist) {
+   RBAC::RoleBasedAccessControlMatcherEngineImpl engine(matcher, factory_context,
+                                                        validation_visitor);
+ 
+-  Envoy::Network::MockConnection conn;
++  NiceMock<Envoy::Network::MockConnection> conn;
+   Envoy::Http::TestRequestHeaderMapImpl headers;
+-  NiceMock<StreamInfo::MockStreamInfo> info;
+-  Network::ConnectionInfoSetterImpl provider(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                                             std::make_shared<Network::Address::Ipv4Instance>(80));
+-  EXPECT_CALL(conn, connectionInfoProvider()).WillRepeatedly(ReturnRef(provider));
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
++
++  EXPECT_CALL(conn, streamInfo()).WillRepeatedly(ReturnRef(stream_info));
++
+   Envoy::Network::Address::InstanceConstSharedPtr addr =
+       Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 123, false);
+-  provider.setLocalAddress(addr);
+-  checkMatcherEngine(engine, true, LogResult::Undecided, info, conn, headers);
++  stream_info.downstream_connection_info_provider_->setLocalAddress(addr);
++
++  EXPECT_CALL(stream_info, downstreamAddressProvider())
++      .WillRepeatedly(ReturnRef(stream_info.downstreamAddressProvider()));
++
++  checkMatcherEngine(engine, true, LogResult::Undecided, stream_info, conn, headers);
+ 
+   addr = Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 456, false);
+-  provider.setLocalAddress(addr);
+-  checkMatcherEngine(engine, false, LogResult::Undecided, info, conn, headers);
++  stream_info.downstream_connection_info_provider_->setLocalAddress(addr);
++  checkMatcherEngine(engine, false, LogResult::Undecided, stream_info, conn, headers);
+ }
+ 
+ TEST(RoleBasedAccessControlMatcherEngineImpl, DeniedDenylist) {
+@@ -555,19 +554,19 @@ TEST(RoleBasedAccessControlMatcherEngineImpl, DeniedDenylist) {
+   RBAC::RoleBasedAccessControlMatcherEngineImpl engine(matcher, factory_context,
+                                                        validation_visitor);
+ 
+-  Envoy::Network::MockConnection conn;
++  NiceMock<Envoy::Network::MockConnection> conn;
+   Envoy::Http::TestRequestHeaderMapImpl headers;
+   NiceMock<StreamInfo::MockStreamInfo> info;
+-  Network::ConnectionInfoSetterImpl provider(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                                             std::make_shared<Network::Address::Ipv4Instance>(80));
+-  EXPECT_CALL(conn, connectionInfoProvider()).WillRepeatedly(ReturnRef(provider));
++
+   Envoy::Network::Address::InstanceConstSharedPtr addr =
+       Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 123, false);
+-  provider.setLocalAddress(addr);
++  info.downstream_connection_info_provider_->setLocalAddress(addr);
++  EXPECT_CALL(info, downstreamAddressProvider())
++      .WillRepeatedly(ReturnPointee(info.downstream_connection_info_provider_));
+   checkMatcherEngine(engine, false, LogResult::Undecided, info, conn, headers);
+ 
+   addr = Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 456, false);
+-  provider.setLocalAddress(addr);
++  info.downstream_connection_info_provider_->setLocalAddress(addr);
+   checkMatcherEngine(engine, true, LogResult::Undecided, info, conn, headers);
+ }
+ 
+@@ -638,21 +637,21 @@ TEST(RoleBasedAccessControlMatcherEngineImpl, LogIfMatched) {
+   RBAC::RoleBasedAccessControlMatcherEngineImpl engine(matcher, factory_context,
+                                                        validation_visitor);
+ 
+-  Envoy::Network::MockConnection conn;
++  NiceMock<Envoy::Network::MockConnection> conn;
+   Envoy::Http::TestRequestHeaderMapImpl headers;
+   NiceMock<StreamInfo::MockStreamInfo> info;
+-  Network::ConnectionInfoSetterImpl provider(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                                             std::make_shared<Network::Address::Ipv4Instance>(80));
+-  EXPECT_CALL(conn, connectionInfoProvider()).WillRepeatedly(ReturnRef(provider));
+   onMetadata(info);
+ 
+   Envoy::Network::Address::InstanceConstSharedPtr addr =
+       Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 123, false);
+-  provider.setLocalAddress(addr);
++  info.downstream_connection_info_provider_->setLocalAddress(addr);
++  EXPECT_CALL(info, downstreamAddressProvider())
++      .WillRepeatedly(ReturnPointee(info.downstream_connection_info_provider_));
++  EXPECT_CALL(conn, streamInfo()).WillRepeatedly(ReturnRef(info));
+   checkMatcherEngine(engine, true, RBAC::LogResult::Yes, info, conn, headers);
+ 
+   addr = Envoy::Network::Utility::parseInternetAddress("1.2.3.4", 456, false);
+-  provider.setLocalAddress(addr);
++  info.downstream_connection_info_provider_->setLocalAddress(addr);
+   checkMatcherEngine(engine, true, RBAC::LogResult::No, info, conn, headers);
+ }
+ 
+diff --git a/test/extensions/filters/http/rbac/rbac_filter_test.cc b/test/extensions/filters/http/rbac/rbac_filter_test.cc
+index 49b15e5688..aadb760a5b 100644
+--- test/extensions/filters/http/rbac/rbac_filter_test.cc
++++ test/extensions/filters/http/rbac/rbac_filter_test.cc
+@@ -22,6 +22,7 @@
+ using testing::_;
+ using testing::NiceMock;
+ using testing::Return;
++using testing::ReturnPointee;
+ using testing::ReturnRef;
+ 
+ namespace Envoy {
+@@ -169,24 +170,23 @@ on_no_match:
+     filter_->setDecoderFilterCallbacks(callbacks_);
+   }
+ 
+-  RoleBasedAccessControlFilterTest()
+-      : provider_(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                  std::make_shared<Network::Address::Ipv4Instance>(80)){};
++  RoleBasedAccessControlFilterTest() = default;
+ 
+   void setDestinationPort(uint16_t port) {
+     address_ = Envoy::Network::Utility::parseInternetAddress("1.2.3.4", port, false);
+     req_info_.downstream_connection_info_provider_->setLocalAddress(address_);
+ 
+-    provider_.setLocalAddress(address_);
+-    ON_CALL(connection_, connectionInfoProvider()).WillByDefault(ReturnRef(provider_));
++    ON_CALL(connection_.stream_info_, downstreamAddressProvider())
++        .WillByDefault(ReturnPointee(req_info_.downstream_connection_info_provider_));
+   }
+ 
+   void setRequestedServerName(std::string server_name) {
+     requested_server_name_ = server_name;
+     ON_CALL(connection_, requestedServerName()).WillByDefault(Return(requested_server_name_));
+ 
+-    provider_.setRequestedServerName(server_name);
+-    ON_CALL(connection_, connectionInfoProvider()).WillByDefault(ReturnRef(provider_));
++    req_info_.downstream_connection_info_provider_->setRequestedServerName(server_name);
++    ON_CALL(connection_.stream_info_, downstreamAddressProvider())
++        .WillByDefault(ReturnPointee(req_info_.downstream_connection_info_provider_));
+   }
+ 
+   void checkAccessLogMetadata(LogResult expected) {
+@@ -230,7 +230,6 @@ on_no_match:
+   std::unique_ptr<RoleBasedAccessControlFilter> filter_;
+ 
+   Network::Address::InstanceConstSharedPtr address_;
+-  Network::ConnectionInfoSetterImpl provider_;
+   std::string requested_server_name_;
+   Http::TestRequestHeaderMapImpl headers_;
+   Http::TestRequestTrailerMapImpl trailers_;
+diff --git a/test/extensions/filters/network/rbac/filter_test.cc b/test/extensions/filters/network/rbac/filter_test.cc
+index 56f2981172..6e2dd419c4 100644
+--- test/extensions/filters/network/rbac/filter_test.cc
++++ test/extensions/filters/network/rbac/filter_test.cc
+@@ -17,6 +17,7 @@
+ 
+ using testing::NiceMock;
+ using testing::Return;
++using testing::ReturnPointee;
+ using testing::ReturnRef;
+ 
+ namespace Envoy {
+@@ -167,9 +168,7 @@ on_no_match:
+     filter_->initializeReadFilterCallbacks(callbacks_);
+   }
+ 
+-  RoleBasedAccessControlNetworkFilterTest()
+-      : provider_(std::make_shared<Network::Address::Ipv4Instance>(80),
+-                  std::make_shared<Network::Address::Ipv4Instance>(80)) {
++  RoleBasedAccessControlNetworkFilterTest() {
+     EXPECT_CALL(callbacks_, connection()).WillRepeatedly(ReturnRef(callbacks_.connection_));
+     EXPECT_CALL(callbacks_.connection_, streamInfo()).WillRepeatedly(ReturnRef(stream_info_));
+ 
+@@ -179,10 +178,10 @@ on_no_match:
+ 
+   void setDestinationPort(uint16_t port) {
+     address_ = Envoy::Network::Utility::parseInternetAddress("1.2.3.4", port, false);
+-    stream_info_.downstream_connection_info_provider_->setLocalAddress(address_);
+ 
+-    provider_.setLocalAddress(address_);
+-    ON_CALL(callbacks_.connection_, connectionInfoProvider()).WillByDefault(ReturnRef(provider_));
++    stream_info_.downstream_connection_info_provider_->setLocalAddress(address_);
++    ON_CALL(callbacks_.connection_.stream_info_, downstreamAddressProvider())
++        .WillByDefault(ReturnPointee(stream_info_.downstream_connection_info_provider_));
+   }
+ 
+   void setRequestedServerName(std::string server_name) {
+@@ -190,8 +189,10 @@ on_no_match:
+     ON_CALL(callbacks_.connection_, requestedServerName())
+         .WillByDefault(Return(requested_server_name_));
+ 
+-    provider_.setRequestedServerName(requested_server_name_);
+-    ON_CALL(callbacks_.connection_, connectionInfoProvider()).WillByDefault(ReturnRef(provider_));
++    stream_info_.downstream_connection_info_provider_->setRequestedServerName(
++        requested_server_name_);
++    ON_CALL(callbacks_.connection_.stream_info_, downstreamAddressProvider())
++        .WillByDefault(ReturnPointee(stream_info_.downstream_connection_info_provider_));
+   }
+ 
+   void checkAccessLogMetadata(bool expected) {
+@@ -230,7 +231,6 @@ on_no_match:
+ 
+   std::unique_ptr<RoleBasedAccessControlFilter> filter_;
+   Network::Address::InstanceConstSharedPtr address_;
+-  Network::ConnectionInfoSetterImpl provider_;
+   std::string requested_server_name_;
+ };
+ 
