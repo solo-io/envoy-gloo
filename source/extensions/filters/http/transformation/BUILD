@@ -21,7 +21,6 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         ":filter_config_lib",
-        ":transformation_logger_lib",
         ":transformation_factory_lib",
         ":matcher_lib",
         "//source/extensions/filters/http:solo_well_known_names",

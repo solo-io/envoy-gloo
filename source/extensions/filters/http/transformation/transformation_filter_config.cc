@@ -61,8 +61,7 @@ void TransformationFilterConfig::addTransformationLegacy(
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
-    : FilterConfig(prefix, context.scope(), proto_config.stage(),
-                   proto_config.log_request_response_info()) {
+    : FilterConfig(prefix, context.scope(), proto_config.stage()) {
     if (proto_config.has_matcher()) {
       matcher_ = createTransformationMatcher(proto_config.matcher(), context.getServerFactoryContext());
       return;
