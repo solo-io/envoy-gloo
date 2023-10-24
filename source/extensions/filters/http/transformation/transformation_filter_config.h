@@ -94,14 +94,6 @@ public:
 
 
 /**
- * Implemented for transformation extensions and registered via Registry::registerFactory or the
- * convenience class RegisterFactory.
- */
-class TransformerExtensionFactory :  public Config::TypedFactory{
-public:
-  ~TransformerExtensionFactory() override = default;
-
-/**
  * Create a particular transformation extension implementation from a config proto. If the 
  * implementation is unable to produce a factory with the provided parameters, it should throw
  * EnvoyException. The returned pointer should never be nullptr.
