@@ -42,7 +42,6 @@ envoy_cc_library(
     deps = [
         ":body_header_transformer_lib",
         ":inja_transformer_lib",
-        ":transformation_logger_lib",
         "//source/extensions/filters/http:solo_well_known_names",
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "@envoy//envoy/router:router_interface",
