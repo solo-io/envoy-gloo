@@ -1,0 +1,1207 @@
+diff --git a/envoy/network/filter.h b/envoy/network/filter.h
+index aeac901194..a4595e9c82 100644
+--- envoy/network/filter.h
++++ envoy/network/filter.h
+@@ -431,10 +431,13 @@ public:
+   /**
+    * Find filter chain that's matching metadata from the new connection.
+    * @param socket supplies connection metadata that's going to be used for the filter chain lookup.
++   * @param info supplies the dynamic metadata and the filter state populated by the listener
++   * filters.
+    * @return const FilterChain* filter chain to be used by the new connection,
+    *         nullptr if no matching filter chain was found.
+    */
+-  virtual const FilterChain* findFilterChain(const ConnectionSocket& socket) const PURE;
++  virtual const FilterChain* findFilterChain(const ConnectionSocket& socket,
++                                             const StreamInfo::StreamInfo& info) const PURE;
+ };
+ 
+ /**
+diff --git a/source/common/quic/BUILD b/source/common/quic/BUILD
+index afbb7571df..2edfe42d3e 100644
+--- source/common/quic/BUILD
++++ source/common/quic/BUILD
+@@ -103,6 +103,7 @@ envoy_cc_library(
+         ":quic_io_handle_wrapper_lib",
+         ":quic_transport_socket_factory_lib",
+         "//envoy/ssl:tls_certificate_config_interface",
++        "//source/common/stream_info:stream_info_lib",
+         "//source/server:connection_handler_lib",
+         "@com_github_google_quiche//:quic_core_crypto_certificate_view_lib",
+     ],
+diff --git a/source/common/quic/active_quic_listener.cc b/source/common/quic/active_quic_listener.cc
+index 8cf1db5699..0aa9c1f681 100644
+--- source/common/quic/active_quic_listener.cc
++++ source/common/quic/active_quic_listener.cc
+@@ -51,8 +51,8 @@ ActiveQuicListener::ActiveQuicListener(
+   crypto_config_ = std::make_unique<quic::QuicCryptoServerConfig>(
+       absl::string_view(reinterpret_cast<char*>(random_seed_), sizeof(random_seed_)),
+       quic::QuicRandom::GetInstance(),
+-      proof_source_factory.createQuicProofSource(listen_socket_,
+-                                                 listener_config.filterChainManager(), stats_),
++      proof_source_factory.createQuicProofSource(
++          listen_socket_, listener_config.filterChainManager(), stats_, dispatcher.timeSource()),
+       quic::KeyExchangeSource::Default());
+   auto connection_helper = std::make_unique<EnvoyQuicConnectionHelper>(dispatcher_);
+   crypto_config_->AddDefaultConfig(random, connection_helper->GetClock(),
+diff --git a/source/common/quic/envoy_quic_client_session.cc b/source/common/quic/envoy_quic_client_session.cc
+index 6c3aa32237..5a5a732d82 100644
+--- source/common/quic/envoy_quic_client_session.cc
++++ source/common/quic/envoy_quic_client_session.cc
+@@ -40,9 +40,12 @@ EnvoyQuicClientSession::EnvoyQuicClientSession(
+     QuicStatNames& quic_stat_names, OptRef<Http::HttpServerPropertiesCache> rtt_cache,
+     Stats::Scope& scope,
+     const Network::TransportSocketOptionsConstSharedPtr& transport_socket_options)
+-    : QuicFilterManagerConnectionImpl(*connection, connection->connection_id(), dispatcher,
+-                                      send_buffer_limit,
+-                                      std::make_shared<QuicSslConnectionInfo>(*this)),
++    : QuicFilterManagerConnectionImpl(
++          *connection, connection->connection_id(), dispatcher, send_buffer_limit,
++          std::make_shared<QuicSslConnectionInfo>(*this),
++          std::make_unique<StreamInfo::StreamInfoImpl>(
++              dispatcher.timeSource(),
++              connection->connectionSocket()->connectionInfoProviderSharedPtr())),
+       quic::QuicSpdyClientSession(config, supported_versions, connection.release(), server_id,
+                                   crypto_config.get(), push_promise_index),
+       crypto_config_(crypto_config), crypto_stream_factory_(crypto_stream_factory),
+diff --git a/source/common/quic/envoy_quic_dispatcher.cc b/source/common/quic/envoy_quic_dispatcher.cc
+index 2a5b283a32..39da759870 100644
+--- source/common/quic/envoy_quic_dispatcher.cc
++++ source/common/quic/envoy_quic_dispatcher.cc
+@@ -53,8 +53,10 @@ std::unique_ptr<quic::QuicSession> EnvoyQuicDispatcher::CreateQuicSession(
+   // ALPN.
+   Network::ConnectionSocketPtr connection_socket = createServerConnectionSocket(
+       listen_socket_.ioHandle(), self_address, peer_address, std::string(parsed_chlo.sni), "h3");
++  auto stream_info = std::make_unique<StreamInfo::StreamInfoImpl>(
++      dispatcher_.timeSource(), connection_socket->connectionInfoProviderSharedPtr());
+   const Network::FilterChain* filter_chain =
+-      listener_config_->filterChainManager().findFilterChain(*connection_socket);
++      listener_config_->filterChainManager().findFilterChain(*connection_socket, *stream_info);
+ 
+   auto quic_connection = std::make_unique<EnvoyQuicServerConnection>(
+       server_connection_id, self_address, peer_address, *helper(), *alarm_factory(), writer(),
+@@ -63,7 +65,7 @@ std::unique_ptr<quic::QuicSession> EnvoyQuicDispatcher::CreateQuicSession(
+       quic_config, quic::ParsedQuicVersionVector{version}, std::move(quic_connection), this,
+       session_helper(), crypto_config(), compressed_certs_cache(), dispatcher_,
+       listener_config_->perConnectionBufferLimitBytes(), quic_stat_names_,
+-      listener_config_->listenerScope(), crypto_server_stream_factory_);
++      listener_config_->listenerScope(), crypto_server_stream_factory_, std::move(stream_info));
+   if (filter_chain != nullptr) {
+     // Setup filter chain before Initialize().
+     const bool has_filter_initialized =
+diff --git a/source/common/quic/envoy_quic_proof_source.cc b/source/common/quic/envoy_quic_proof_source.cc
+index ac5d5a7a61..337ef148d1 100644
+--- source/common/quic/envoy_quic_proof_source.cc
++++ source/common/quic/envoy_quic_proof_source.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "source/common/quic/envoy_quic_utils.h"
+ #include "source/common/quic/quic_io_handle_wrapper.h"
++#include "source/common/stream_info/stream_info_impl.h"
+ 
+ #include "openssl/bytestring.h"
+ #include "quiche/quic/core/crypto/certificate_view.h"
+@@ -102,8 +103,10 @@ EnvoyQuicProofSource::getTlsCertConfigAndFilterChain(const quic::QuicSocketAddre
+   // TODO(danzh) modify QUICHE to make quic session or ALPN accessible to avoid hard-coded ALPN.
+   Network::ConnectionSocketPtr connection_socket = createServerConnectionSocket(
+       listen_socket_.ioHandle(), server_address, client_address, hostname, "h3");
++  StreamInfo::StreamInfoImpl info(time_source_,
++                                  connection_socket->connectionInfoProviderSharedPtr());
+   const Network::FilterChain* filter_chain =
+-      filter_chain_manager_->findFilterChain(*connection_socket);
++      filter_chain_manager_->findFilterChain(*connection_socket, info);
+ 
+   if (filter_chain == nullptr) {
+     listener_stats_.no_filter_chain_match_.inc();
+diff --git a/source/common/quic/envoy_quic_proof_source.h b/source/common/quic/envoy_quic_proof_source.h
+index ade036bb53..acfb457074 100644
+--- source/common/quic/envoy_quic_proof_source.h
++++ source/common/quic/envoy_quic_proof_source.h
+@@ -13,9 +13,9 @@ class EnvoyQuicProofSource : public EnvoyQuicProofSourceBase {
+ public:
+   EnvoyQuicProofSource(Network::Socket& listen_socket,
+                        Network::FilterChainManager& filter_chain_manager,
+-                       Server::ListenerStats& listener_stats)
++                       Server::ListenerStats& listener_stats, TimeSource& time_source)
+       : listen_socket_(listen_socket), filter_chain_manager_(&filter_chain_manager),
+-        listener_stats_(listener_stats) {}
++        listener_stats_(listener_stats), time_source_(time_source) {}
+ 
+   ~EnvoyQuicProofSource() override = default;
+ 
+@@ -48,6 +48,7 @@ private:
+   Network::Socket& listen_socket_;
+   Network::FilterChainManager* filter_chain_manager_{nullptr};
+   Server::ListenerStats& listener_stats_;
++  TimeSource& time_source_;
+ };
+ 
+ } // namespace Quic
+diff --git a/source/common/quic/envoy_quic_proof_source_factory_interface.h b/source/common/quic/envoy_quic_proof_source_factory_interface.h
+index 92df7df9fd..ca3780b734 100644
+--- source/common/quic/envoy_quic_proof_source_factory_interface.h
++++ source/common/quic/envoy_quic_proof_source_factory_interface.h
+@@ -21,7 +21,7 @@ public:
+   virtual std::unique_ptr<quic::ProofSource>
+   createQuicProofSource(Network::Socket& listen_socket,
+                         Network::FilterChainManager& filter_chain_manager,
+-                        Server::ListenerStats& listener_stats) PURE;
++                        Server::ListenerStats& listener_stats, TimeSource& time_source) PURE;
+ };
+ 
+ } // namespace Quic
+diff --git a/source/common/quic/envoy_quic_server_session.cc b/source/common/quic/envoy_quic_server_session.cc
+index 42c18e7c2c..784fde846e 100644
+--- source/common/quic/envoy_quic_server_session.cc
++++ source/common/quic/envoy_quic_server_session.cc
+@@ -18,12 +18,13 @@ EnvoyQuicServerSession::EnvoyQuicServerSession(
+     quic::QuicCryptoServerStream::Helper* helper, const quic::QuicCryptoServerConfig* crypto_config,
+     quic::QuicCompressedCertsCache* compressed_certs_cache, Event::Dispatcher& dispatcher,
+     uint32_t send_buffer_limit, QuicStatNames& quic_stat_names, Stats::Scope& listener_scope,
+-    EnvoyQuicCryptoServerStreamFactoryInterface& crypto_server_stream_factory)
++    EnvoyQuicCryptoServerStreamFactoryInterface& crypto_server_stream_factory,
++    std::unique_ptr<StreamInfo::StreamInfo>&& stream_info)
+     : quic::QuicServerSessionBase(config, supported_versions, connection.get(), visitor, helper,
+                                   crypto_config, compressed_certs_cache),
+-      QuicFilterManagerConnectionImpl(*connection, connection->connection_id(), dispatcher,
+-                                      send_buffer_limit,
+-                                      std::make_shared<QuicSslConnectionInfo>(*this)),
++      QuicFilterManagerConnectionImpl(
++          *connection, connection->connection_id(), dispatcher, send_buffer_limit,
++          std::make_shared<QuicSslConnectionInfo>(*this), std::move(stream_info)),
+       quic_connection_(std::move(connection)), quic_stat_names_(quic_stat_names),
+       listener_scope_(listener_scope), crypto_server_stream_factory_(crypto_server_stream_factory) {
+ }
+diff --git a/source/common/quic/envoy_quic_server_session.h b/source/common/quic/envoy_quic_server_session.h
+index 818049ace3..de872ac2b8 100644
+--- source/common/quic/envoy_quic_server_session.h
++++ source/common/quic/envoy_quic_server_session.h
+@@ -52,7 +52,8 @@ public:
+                          quic::QuicCompressedCertsCache* compressed_certs_cache,
+                          Event::Dispatcher& dispatcher, uint32_t send_buffer_limit,
+                          QuicStatNames& quic_stat_names, Stats::Scope& listener_scope,
+-                         EnvoyQuicCryptoServerStreamFactoryInterface& crypto_server_stream_factory);
++                         EnvoyQuicCryptoServerStreamFactoryInterface& crypto_server_stream_factory,
++                         std::unique_ptr<StreamInfo::StreamInfo>&& stream_info);
+ 
+   ~EnvoyQuicServerSession() override;
+ 
+diff --git a/source/common/quic/quic_filter_manager_connection_impl.cc b/source/common/quic/quic_filter_manager_connection_impl.cc
+index 51e0513cda..66d8573871 100644
+--- source/common/quic/quic_filter_manager_connection_impl.cc
++++ source/common/quic/quic_filter_manager_connection_impl.cc
+@@ -11,19 +11,19 @@ namespace Quic {
+ QuicFilterManagerConnectionImpl::QuicFilterManagerConnectionImpl(
+     QuicNetworkConnection& connection, const quic::QuicConnectionId& connection_id,
+     Event::Dispatcher& dispatcher, uint32_t send_buffer_limit,
+-    std::shared_ptr<QuicSslConnectionInfo>&& info)
++    std::shared_ptr<QuicSslConnectionInfo>&& info,
++    std::unique_ptr<StreamInfo::StreamInfo>&& stream_info)
+     // Using this for purpose other than logging is not safe. Because QUIC connection id can be
+     // 18 bytes, so there might be collision when it's hashed to 8 bytes.
+     : Network::ConnectionImplBase(dispatcher, /*id=*/connection_id.Hash()),
+       network_connection_(&connection), quic_ssl_info_(std::move(info)),
+       filter_manager_(
+           std::make_unique<Network::FilterManagerImpl>(*this, *connection.connectionSocket())),
+-      stream_info_(dispatcher.timeSource(),
+-                   connection.connectionSocket()->connectionInfoProviderSharedPtr()),
++      stream_info_(std::move(stream_info)),
+       write_buffer_watermark_simulation_(
+           send_buffer_limit / 2, send_buffer_limit, [this]() { onSendBufferLowWatermark(); },
+           [this]() { onSendBufferHighWatermark(); }, ENVOY_LOGGER()) {
+-  stream_info_.protocol(Http::Protocol::Http3);
++  stream_info_->protocol(Http::Protocol::Http3);
+   network_connection_->connectionSocket()->connectionInfoProvider().setSslConnection(
+       Ssl::ConnectionInfoConstSharedPtr(quic_ssl_info_));
+ }
+diff --git a/source/common/quic/quic_filter_manager_connection_impl.h b/source/common/quic/quic_filter_manager_connection_impl.h
+index a205ed1846..195ed0d93c 100644
+--- source/common/quic/quic_filter_manager_connection_impl.h
++++ source/common/quic/quic_filter_manager_connection_impl.h
+@@ -33,7 +33,8 @@ public:
+   QuicFilterManagerConnectionImpl(QuicNetworkConnection& connection,
+                                   const quic::QuicConnectionId& connection_id,
+                                   Event::Dispatcher& dispatcher, uint32_t send_buffer_limit,
+-                                  std::shared_ptr<QuicSslConnectionInfo>&& info);
++                                  std::shared_ptr<QuicSslConnectionInfo>&& info,
++                                  std::unique_ptr<StreamInfo::StreamInfo>&& stream_info);
+   // Network::FilterManager
+   // Overridden to delegate calls to filter_manager_.
+   void addWriteFilter(Network::WriteFilterSharedPtr filter) override;
+@@ -116,8 +117,8 @@ public:
+   bool aboveHighWatermark() const override;
+ 
+   const Network::ConnectionSocket::OptionsSharedPtr& socketOptions() const override;
+-  StreamInfo::StreamInfo& streamInfo() override { return stream_info_; }
+-  const StreamInfo::StreamInfo& streamInfo() const override { return stream_info_; }
++  StreamInfo::StreamInfo& streamInfo() override { return *stream_info_; }
++  const StreamInfo::StreamInfo& streamInfo() const override { return *stream_info_; }
+   absl::string_view transportFailureReason() const override { return transport_failure_reason_; }
+   bool startSecureTransport() override { return false; }
+   absl::optional<std::chrono::milliseconds> lastRoundTripTime() const override;
+@@ -191,7 +192,7 @@ private:
+   // and the rest incoming data bypasses these filters.
+   std::unique_ptr<Network::FilterManagerImpl> filter_manager_;
+ 
+-  StreamInfo::StreamInfoImpl stream_info_;
++  std::unique_ptr<StreamInfo::StreamInfo> stream_info_;
+   std::string transport_failure_reason_;
+   uint32_t bytes_to_send_{0};
+   uint32_t max_headers_count_{std::numeric_limits<uint32_t>::max()};
+diff --git a/source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.cc b/source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.cc
+index 3b459c4ca3..b82d9b82a4 100644
+--- source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.cc
++++ source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.cc
+@@ -5,9 +5,9 @@ namespace Quic {
+ 
+ std::unique_ptr<quic::ProofSource> EnvoyQuicProofSourceFactoryImpl::createQuicProofSource(
+     Network::Socket& listen_socket, Network::FilterChainManager& filter_chain_manager,
+-    Server::ListenerStats& listener_stats) {
+-  return std::make_unique<EnvoyQuicProofSource>(listen_socket, filter_chain_manager,
+-                                                listener_stats);
++    Server::ListenerStats& listener_stats, TimeSource& time_source) {
++  return std::make_unique<EnvoyQuicProofSource>(listen_socket, filter_chain_manager, listener_stats,
++                                                time_source);
+ }
+ 
+ REGISTER_FACTORY(EnvoyQuicProofSourceFactoryImpl, EnvoyQuicProofSourceFactoryInterface);
+diff --git a/source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.h b/source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.h
+index 39384fcfbc..b158f6f61c 100644
+--- source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.h
++++ source/extensions/quic/proof_source/envoy_quic_proof_source_factory_impl.h
+@@ -19,7 +19,7 @@ public:
+   std::unique_ptr<quic::ProofSource>
+   createQuicProofSource(Network::Socket& listen_socket,
+                         Network::FilterChainManager& filter_chain_manager,
+-                        Server::ListenerStats& listener_stats) override;
++                        Server::ListenerStats& listener_stats, TimeSource& time_source) override;
+ };
+ 
+ DECLARE_FACTORY(EnvoyQuicProofSourceFactoryImpl);
+diff --git a/source/server/active_stream_listener_base.cc b/source/server/active_stream_listener_base.cc
+index c6aa7d1261..a33a3e9bde 100644
+--- source/server/active_stream_listener_base.cc
++++ source/server/active_stream_listener_base.cc
+@@ -27,7 +27,7 @@ void ActiveStreamListenerBase::emitLogs(Network::ListenerConfig& config,
+ void ActiveStreamListenerBase::newConnection(Network::ConnectionSocketPtr&& socket,
+                                              std::unique_ptr<StreamInfo::StreamInfo> stream_info) {
+   // Find matching filter chain.
+-  const auto filter_chain = config_->filterChainManager().findFilterChain(*socket);
++  const auto filter_chain = config_->filterChainManager().findFilterChain(*socket, *stream_info);
+   if (filter_chain == nullptr) {
+     RELEASE_ASSERT(socket->connectionInfoProvider().remoteAddress() != nullptr, "");
+     ENVOY_LOG(debug, "closing connection from {}: no matching filter chain found",
+diff --git a/source/server/admin/admin.h b/source/server/admin/admin.h
+index 887dafbae9..8cec74cc4b 100644
+--- source/server/admin/admin.h
++++ source/server/admin/admin.h
+@@ -98,7 +98,8 @@ public:
+   uint32_t concurrency() const override { return server_.options().concurrency(); }
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return admin_filter_chain_.get();
+   }
+ 
+diff --git a/source/server/filter_chain_manager_impl.cc b/source/server/filter_chain_manager_impl.cc
+index f655325d98..319ba50042 100644
+--- source/server/filter_chain_manager_impl.cc
++++ source/server/filter_chain_manager_impl.cc
+@@ -547,9 +547,10 @@ std::pair<T, std::vector<Network::Address::CidrRange>> makeCidrListEntry(const s
+ }; // namespace
+ 
+ const Network::FilterChain*
+-FilterChainManagerImpl::findFilterChain(const Network::ConnectionSocket& socket) const {
++FilterChainManagerImpl::findFilterChain(const Network::ConnectionSocket& socket,
++                                        const StreamInfo::StreamInfo& info) const {
+   if (matcher_) {
+-    return findFilterChainUsingMatcher(socket);
++    return findFilterChainUsingMatcher(socket, info);
+   }
+ 
+   const auto& address = socket.connectionInfoProvider().localAddress();
+diff --git a/source/server/filter_chain_manager_impl.h b/source/server/filter_chain_manager_impl.h
+index c9503eafd8..e0b865bfe8 100644
+--- source/server/filter_chain_manager_impl.h
++++ source/server/filter_chain_manager_impl.h
+@@ -213,8 +213,8 @@ public:
+       const ::envoy::config::listener::v3::FilterChain* const filter_chain) override;
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain*
+-  findFilterChain(const Network::ConnectionSocket& socket) const override;
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket& socket,
++                                              const StreamInfo::StreamInfo& info) const override;
+ 
+   // Add all filter chains into this manager. During the lifetime of FilterChainManagerImpl this
+   // should be called at most once.
+@@ -240,8 +240,8 @@ public:
+ 
+ private:
+   void convertIPsToTries();
+-  const Network::FilterChain*
+-  findFilterChainUsingMatcher(const Network::ConnectionSocket& socket) const;
++  const Network::FilterChain* findFilterChainUsingMatcher(const Network::ConnectionSocket& socket,
++                                                          const StreamInfo::StreamInfo& info) const;
+ 
+   // Build default filter chain from filter chain message. Skip the build but copy from original
+   // filter chain manager if the default filter chain message duplicates the message in origin
+diff --git a/test/common/quic/active_quic_listener_test.cc b/test/common/quic/active_quic_listener_test.cc
+index e54bf114f5..368ab346bb 100644
+--- test/common/quic/active_quic_listener_test.cc
++++ test/common/quic/active_quic_listener_test.cc
+@@ -149,7 +149,7 @@ protected:
+   }
+ 
+   void maybeConfigureMocks(int connection_count) {
+-    EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
++    EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
+         .Times(connection_count)
+         .WillRepeatedly(Return(filter_chain_));
+     EXPECT_CALL(listener_config_, filterChainFactory()).Times(connection_count);
+diff --git a/test/common/quic/envoy_quic_dispatcher_test.cc b/test/common/quic/envoy_quic_dispatcher_test.cc
+index dc81609b25..4a123eba32 100644
+--- test/common/quic/envoy_quic_dispatcher_test.cc
++++ test/common/quic/envoy_quic_dispatcher_test.cc
+@@ -183,12 +183,13 @@ public:
+               {read_total, read_current, write_total, write_current, nullptr, nullptr});
+         }});
+     EXPECT_CALL(listener_config_, filterChainManager()).WillOnce(ReturnRef(filter_chain_manager));
+-    EXPECT_CALL(filter_chain_manager, findFilterChain(_))
+-        .WillOnce(Invoke([this](const Network::ConnectionSocket& socket) {
+-          EXPECT_EQ("h3", socket.requestedApplicationProtocols()[0]);
+-          EXPECT_EQ("test.example.com", socket.requestedServerName());
+-          return &proof_source_->filterChain();
+-        }));
++    EXPECT_CALL(filter_chain_manager, findFilterChain(_, _))
++        .WillOnce(
++            Invoke([this](const Network::ConnectionSocket& socket, const StreamInfo::StreamInfo&) {
++              EXPECT_EQ("h3", socket.requestedApplicationProtocols()[0]);
++              EXPECT_EQ("test.example.com", socket.requestedServerName());
++              return &proof_source_->filterChain();
++            }));
+     EXPECT_CALL(proof_source_->filterChain(), networkFilterFactories())
+         .WillOnce(ReturnRef(filter_factory));
+     EXPECT_CALL(listener_config_, filterChainFactory());
+@@ -311,7 +312,7 @@ TEST_P(EnvoyQuicDispatcherTest, CloseWithGivenFilterChain) {
+             {read_total, read_current, write_total, write_current, nullptr, nullptr});
+       }});
+   EXPECT_CALL(listener_config_, filterChainManager()).WillOnce(ReturnRef(filter_chain_manager));
+-  EXPECT_CALL(filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(&proof_source_->filterChain()));
+   EXPECT_CALL(proof_source_->filterChain(), networkFilterFactories())
+       .WillOnce(ReturnRef(filter_factory));
+diff --git a/test/common/quic/envoy_quic_proof_source_test.cc b/test/common/quic/envoy_quic_proof_source_test.cc
+index 59feb33f52..3225c376df 100644
+--- test/common/quic/envoy_quic_proof_source_test.cc
++++ test/common/quic/envoy_quic_proof_source_test.cc
+@@ -145,7 +145,7 @@ public:
+         listener_stats_({ALL_LISTENER_STATS(POOL_COUNTER(listener_config_.listenerScope()),
+                                             POOL_GAUGE(listener_config_.listenerScope()),
+                                             POOL_HISTOGRAM(listener_config_.listenerScope()))}),
+-        proof_source_(listen_socket_, filter_chain_manager_, listener_stats_) {
++        proof_source_(listen_socket_, filter_chain_manager_, listener_stats_, time_system_) {
+     EXPECT_CALL(*mock_context_config_, setSecretUpdateCallback(_)).Times(testing::AtLeast(1u));
+     transport_socket_factory_ = std::make_unique<QuicServerTransportSocketFactory>(
+         true, listener_config_.listenerScope(),
+@@ -156,16 +156,17 @@ public:
+ 
+   void expectCertChainAndPrivateKey(const std::string& cert, bool expect_private_key) {
+     EXPECT_CALL(listen_socket_, ioHandle()).Times(expect_private_key ? 2u : 1u);
+-    EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-        .WillRepeatedly(Invoke([&](const Network::ConnectionSocket& connection_socket) {
+-          EXPECT_EQ(*quicAddressToEnvoyAddressInstance(server_address_),
+-                    *connection_socket.connectionInfoProvider().localAddress());
+-          EXPECT_EQ(*quicAddressToEnvoyAddressInstance(client_address_),
+-                    *connection_socket.connectionInfoProvider().remoteAddress());
+-          EXPECT_EQ("quic", connection_socket.detectedTransportProtocol());
+-          EXPECT_EQ("h3", connection_socket.requestedApplicationProtocols()[0]);
+-          return &filter_chain_;
+-        }));
++    EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++        .WillRepeatedly(Invoke(
++            [&](const Network::ConnectionSocket& connection_socket, const StreamInfo::StreamInfo&) {
++              EXPECT_EQ(*quicAddressToEnvoyAddressInstance(server_address_),
++                        *connection_socket.connectionInfoProvider().localAddress());
++              EXPECT_EQ(*quicAddressToEnvoyAddressInstance(client_address_),
++                        *connection_socket.connectionInfoProvider().remoteAddress());
++              EXPECT_EQ("quic", connection_socket.detectedTransportProtocol());
++              EXPECT_EQ("h3", connection_socket.requestedApplicationProtocols()[0]);
++              return &filter_chain_;
++            }));
+     EXPECT_CALL(filter_chain_, transportSocketFactory())
+         .WillRepeatedly(ReturnRef(*transport_socket_factory_));
+ 
+@@ -196,6 +197,7 @@ protected:
+   std::unique_ptr<QuicServerTransportSocketFactory> transport_socket_factory_;
+   Ssl::MockTlsCertificateConfig tls_cert_config_;
+   Server::ListenerStats listener_stats_;
++  Event::GlobalTimeSystem time_system_;
+   EnvoyQuicProofSource proof_source_;
+ };
+ 
+@@ -223,15 +225,19 @@ TEST_F(EnvoyQuicProofSourceTest, TestGetCerChainAndSignatureAndVerify) {
+ TEST_F(EnvoyQuicProofSourceTest, GetCertChainFailBadConfig) {
+   // No filter chain.
+   EXPECT_CALL(listen_socket_, ioHandle()).Times(3);
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillOnce(Invoke([&](const Network::ConnectionSocket&) { return nullptr; }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillOnce(Invoke([&](const Network::ConnectionSocket&, const StreamInfo::StreamInfo&) {
++        return nullptr;
++      }));
+   bool cert_matched_sni;
+   EXPECT_EQ(nullptr, proof_source_.GetCertChain(server_address_, client_address_, hostname_,
+                                                 &cert_matched_sni));
+ 
+   // Cert not ready.
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillOnce(Invoke([&](const Network::ConnectionSocket&) { return &filter_chain_; }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillOnce(Invoke([&](const Network::ConnectionSocket&, const StreamInfo::StreamInfo&) {
++        return &filter_chain_;
++      }));
+   EXPECT_CALL(filter_chain_, transportSocketFactory())
+       .WillOnce(ReturnRef(*transport_socket_factory_));
+   EXPECT_CALL(*mock_context_config_, isReady()).WillOnce(Return(false));
+@@ -239,16 +245,17 @@ TEST_F(EnvoyQuicProofSourceTest, GetCertChainFailBadConfig) {
+                                                 &cert_matched_sni));
+ 
+   // No certs in config.
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillRepeatedly(Invoke([&](const Network::ConnectionSocket& connection_socket) {
+-        EXPECT_EQ(*quicAddressToEnvoyAddressInstance(server_address_),
+-                  *connection_socket.connectionInfoProvider().localAddress());
+-        EXPECT_EQ(*quicAddressToEnvoyAddressInstance(client_address_),
+-                  *connection_socket.connectionInfoProvider().remoteAddress());
+-        EXPECT_EQ("quic", connection_socket.detectedTransportProtocol());
+-        EXPECT_EQ("h3", connection_socket.requestedApplicationProtocols()[0]);
+-        return &filter_chain_;
+-      }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillRepeatedly(Invoke(
++          [&](const Network::ConnectionSocket& connection_socket, const StreamInfo::StreamInfo&) {
++            EXPECT_EQ(*quicAddressToEnvoyAddressInstance(server_address_),
++                      *connection_socket.connectionInfoProvider().localAddress());
++            EXPECT_EQ(*quicAddressToEnvoyAddressInstance(client_address_),
++                      *connection_socket.connectionInfoProvider().remoteAddress());
++            EXPECT_EQ("quic", connection_socket.detectedTransportProtocol());
++            EXPECT_EQ("h3", connection_socket.requestedApplicationProtocols()[0]);
++            return &filter_chain_;
++          }));
+   EXPECT_CALL(filter_chain_, transportSocketFactory())
+       .WillOnce(ReturnRef(*transport_socket_factory_));
+   EXPECT_CALL(*mock_context_config_, isReady()).WillOnce(Return(true));
+@@ -297,8 +304,10 @@ GUy+n0vQNB0cXGzgcGI=
+ 
+ TEST_F(EnvoyQuicProofSourceTest, ComputeSignatureFailNoFilterChain) {
+   EXPECT_CALL(listen_socket_, ioHandle());
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillOnce(Invoke([&](const Network::ConnectionSocket&) { return nullptr; }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillOnce(Invoke([&](const Network::ConnectionSocket&, const StreamInfo::StreamInfo&) {
++        return nullptr;
++      }));
+ 
+   std::string signature;
+   proof_source_.ComputeTlsSignature(
+@@ -308,8 +317,10 @@ TEST_F(EnvoyQuicProofSourceTest, ComputeSignatureFailNoFilterChain) {
+ 
+ TEST_F(EnvoyQuicProofSourceTest, UnexpectedPrivateKey) {
+   EXPECT_CALL(listen_socket_, ioHandle());
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillOnce(Invoke([&](const Network::ConnectionSocket&) { return &filter_chain_; }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillOnce(Invoke([&](const Network::ConnectionSocket&, const StreamInfo::StreamInfo&) {
++        return &filter_chain_;
++      }));
+   EXPECT_CALL(filter_chain_, transportSocketFactory())
+       .WillRepeatedly(ReturnRef(*transport_socket_factory_));
+ 
+@@ -342,8 +353,10 @@ qGm130brdD+1U1EJnEFmleLZ/W6mEi3MxcKpWOpTqQ==
+ 
+ TEST_F(EnvoyQuicProofSourceTest, InvalidPrivateKey) {
+   EXPECT_CALL(listen_socket_, ioHandle());
+-  EXPECT_CALL(filter_chain_manager_, findFilterChain(_))
+-      .WillOnce(Invoke([&](const Network::ConnectionSocket&) { return &filter_chain_; }));
++  EXPECT_CALL(filter_chain_manager_, findFilterChain(_, _))
++      .WillOnce(Invoke([&](const Network::ConnectionSocket&, const StreamInfo::StreamInfo&) {
++        return &filter_chain_;
++      }));
+   EXPECT_CALL(filter_chain_, transportSocketFactory())
+       .WillRepeatedly(ReturnRef(*transport_socket_factory_));
+ 
+diff --git a/test/common/quic/envoy_quic_server_session_test.cc b/test/common/quic/envoy_quic_server_session_test.cc
+index f33cf84705..6a20d4c26e 100644
+--- test/common/quic/envoy_quic_server_session_test.cc
++++ test/common/quic/envoy_quic_server_session_test.cc
+@@ -150,13 +150,16 @@ public:
+             connection_helper_, alarm_factory_, writer_, quic_version_, *listener_config_.socket_)),
+         crypto_config_(quic::QuicCryptoServerConfig::TESTING, quic::QuicRandom::GetInstance(),
+                        std::make_unique<TestProofSource>(), quic::KeyExchangeSource::Default()),
+-        envoy_quic_session_(quic_config_, quic_version_,
+-                            std::unique_ptr<MockEnvoyQuicServerConnection>(quic_connection_),
+-                            /*visitor=*/nullptr, &crypto_stream_helper_, &crypto_config_,
+-                            &compressed_certs_cache_, *dispatcher_,
+-                            /*send_buffer_limit*/ quic::kDefaultFlowControlSendWindow * 1.5,
+-                            quic_stat_names_, listener_config_.listenerScope(),
+-                            crypto_stream_factory_),
++        envoy_quic_session_(
++            quic_config_, quic_version_,
++            std::unique_ptr<MockEnvoyQuicServerConnection>(quic_connection_),
++            /*visitor=*/nullptr, &crypto_stream_helper_, &crypto_config_, &compressed_certs_cache_,
++            *dispatcher_,
++            /*send_buffer_limit*/ quic::kDefaultFlowControlSendWindow * 1.5, quic_stat_names_,
++            listener_config_.listenerScope(), crypto_stream_factory_,
++            std::make_unique<StreamInfo::StreamInfoImpl>(
++                dispatcher_->timeSource(),
++                quic_connection_->connectionSocket()->connectionInfoProviderSharedPtr())),
+         stats_({ALL_HTTP3_CODEC_STATS(
+             POOL_COUNTER_PREFIX(listener_config_.listenerScope(), "http3."),
+             POOL_GAUGE_PREFIX(listener_config_.listenerScope(), "http3."))}) {
+diff --git a/test/common/quic/quic_filter_manager_connection_impl_test.cc b/test/common/quic/quic_filter_manager_connection_impl_test.cc
+index aa6352b06b..aa91840e69 100644
+--- test/common/quic/quic_filter_manager_connection_impl_test.cc
++++ test/common/quic/quic_filter_manager_connection_impl_test.cc
+@@ -17,8 +17,11 @@ public:
+                                       const quic::QuicConnectionId& connection_id,
+                                       Event::Dispatcher& dispatcher, uint32_t send_buffer_limit,
+                                       std::shared_ptr<QuicSslConnectionInfo>&& ssl_info)
+-      : QuicFilterManagerConnectionImpl(connection, connection_id, dispatcher, send_buffer_limit,
+-                                        std::move(ssl_info)) {}
++      : QuicFilterManagerConnectionImpl(
++            connection, connection_id, dispatcher, send_buffer_limit, std::move(ssl_info),
++            std::make_unique<StreamInfo::StreamInfoImpl>(
++                dispatcher.timeSource(),
++                connection.connectionSocket()->connectionInfoProviderSharedPtr())) {}
+ 
+   void dumpState(std::ostream& /*os*/, int /*indent_level = 0*/) const override {}
+   absl::string_view requestedServerName() const override { return {}; }
+diff --git a/test/common/quic/test_utils.h b/test/common/quic/test_utils.h
+index c5312b6d11..e6d1e0fbf4 100644
+--- test/common/quic/test_utils.h
++++ test/common/quic/test_utils.h
+@@ -75,8 +75,11 @@ public:
+                        EnvoyQuicServerConnection* connection, Event::Dispatcher& dispatcher,
+                        uint32_t send_buffer_limit)
+       : quic::QuicSpdySession(connection, /*visitor=*/nullptr, config, supported_versions),
+-        QuicFilterManagerConnectionImpl(*connection, connection->connection_id(), dispatcher,
+-                                        send_buffer_limit, {nullptr}),
++        QuicFilterManagerConnectionImpl(
++            *connection, connection->connection_id(), dispatcher, send_buffer_limit, {nullptr},
++            std::make_unique<StreamInfo::StreamInfoImpl>(
++                dispatcher.timeSource(),
++                connection->connectionSocket()->connectionInfoProviderSharedPtr())),
+         crypto_stream_(std::make_unique<TestQuicCryptoStream>(this)) {}
+ 
+   void Initialize() override {
+diff --git a/test/extensions/bootstrap/internal_listener/active_internal_listener_test.cc b/test/extensions/bootstrap/internal_listener/active_internal_listener_test.cc
+index 44a72207e9..f43da0e3e2 100644
+--- test/extensions/bootstrap/internal_listener/active_internal_listener_test.cc
++++ test/extensions/bootstrap/internal_listener/active_internal_listener_test.cc
+@@ -107,7 +107,7 @@ TEST_F(ActiveInternalListenerTest, AcceptSocketAndCreateListenerFilter) {
+         return Network::FilterStatus::Continue;
+       }));
+   EXPECT_CALL(*test_listener_filter, destroy_());
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   internal_listener_->onAccept(Network::ConnectionSocketPtr{accepted_socket});
+   EXPECT_CALL(*generic_listener_, onDestroy());
+ }
+@@ -167,7 +167,7 @@ TEST_F(ActiveInternalListenerTest, AcceptSocketAndCreateNetworkFilter) {
+   filter_chain_ = std::make_shared<NiceMock<Network::MockFilterChain>>();
+   auto transport_socket_factory = Network::Test::createRawBufferDownstreamSocketFactory();
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   EXPECT_CALL(*filter_chain_, transportSocketFactory)
+       .WillOnce(testing::ReturnRef(*transport_socket_factory));
+   EXPECT_CALL(*filter_chain_, networkFilterFactories).WillOnce(ReturnRef(*filter_factory_callback));
+@@ -198,7 +198,7 @@ TEST_F(ActiveInternalListenerTest, PausedListenerAcceptNewSocket) {
+ 
+   EXPECT_CALL(filter_chain_factory_, createListenerFilterChain(_))
+       .WillRepeatedly(Invoke([&](Network::ListenerFilterManager&) -> bool { return true; }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   internal_listener_->onAccept(Network::ConnectionSocketPtr{accepted_socket});
+ }
+ 
+@@ -215,7 +215,7 @@ TEST_F(ActiveInternalListenerTest, DestroyListenerCloseAllConnections) {
+ 
+   EXPECT_CALL(filter_chain_factory_, createListenerFilterChain(_))
+       .WillRepeatedly(Invoke([&](Network::ListenerFilterManager&) -> bool { return true; }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   EXPECT_CALL(*filter_chain_, transportSocketFactory)
+       .WillOnce(testing::ReturnRef(*transport_socket_factory));
+   EXPECT_CALL(*filter_chain_, networkFilterFactories).WillOnce(ReturnRef(*filter_factory_callback));
+@@ -447,8 +447,8 @@ TEST_F(ConnectionHandlerTest, InternalListenerInplaceUpdate) {
+ 
+   auto internal_listener_cb = handler_->findByAddress(local_address);
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
+-  EXPECT_CALL(*overridden_filter_chain_manager, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
++  EXPECT_CALL(*overridden_filter_chain_manager, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   internal_listener_cb.value().get().onAccept(Network::ConnectionSocketPtr{connection});
+   EXPECT_EQ(0UL, handler_->numConnections());
+diff --git a/test/extensions/common/proxy_protocol/proxy_protocol_regression_test.cc b/test/extensions/common/proxy_protocol/proxy_protocol_regression_test.cc
+index 0808c061ee..80adf6f21b 100644
+--- test/extensions/common/proxy_protocol/proxy_protocol_regression_test.cc
++++ test/extensions/common/proxy_protocol/proxy_protocol_regression_test.cc
+@@ -100,7 +100,8 @@ public:
+   bool ignoreGlobalConnLimit() const override { return false; }
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return filter_chain_.get();
+   }
+ 
+diff --git a/test/extensions/filters/listener/common/fuzz/listener_filter_fuzzer.h b/test/extensions/filters/listener/common/fuzz/listener_filter_fuzzer.h
+index 286f7cad22..3de69191ec 100644
+--- test/extensions/filters/listener/common/fuzz/listener_filter_fuzzer.h
++++ test/extensions/filters/listener/common/fuzz/listener_filter_fuzzer.h
+@@ -81,7 +81,8 @@ public:
+   bool ignoreGlobalConnLimit() const override { return false; }
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return filter_chain_.get();
+   }
+ 
+diff --git a/test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc b/test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
+index d2f7d18899..6c83537e78 100644
+--- test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
++++ test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
+@@ -117,7 +117,8 @@ public:
+   bool ignoreGlobalConnLimit() const override { return false; }
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return filter_chain_.get();
+   }
+ 
+@@ -1820,7 +1821,8 @@ public:
+   bool ignoreGlobalConnLimit() const override { return false; }
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return filter_chain_.get();
+   }
+ 
+diff --git a/test/integration/fake_upstream.h b/test/integration/fake_upstream.h
+index ff22ecbb50..56965a501a 100644
+--- test/integration/fake_upstream.h
++++ test/integration/fake_upstream.h
+@@ -683,7 +683,8 @@ public:
+                        const Network::Address::InstanceConstSharedPtr& peer);
+ 
+   // Network::FilterChainManager
+-  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&) const override {
++  const Network::FilterChain* findFilterChain(const Network::ConnectionSocket&,
++                                              const StreamInfo::StreamInfo&) const override {
+     return filter_chain_.get();
+   }
+ 
+diff --git a/test/mocks/network/mocks.h b/test/mocks/network/mocks.h
+index 597598bb12..485605bc9f 100644
+--- test/mocks/network/mocks.h
++++ test/mocks/network/mocks.h
+@@ -242,7 +242,8 @@ public:
+   ~MockFilterChainManager() override;
+ 
+   // Network::FilterChainManager
+-  MOCK_METHOD(const FilterChain*, findFilterChain, (const ConnectionSocket& socket), (const));
++  MOCK_METHOD(const FilterChain*, findFilterChain,
++              (const ConnectionSocket& socket, const StreamInfo::StreamInfo& info), (const));
+ };
+ 
+ class MockFilterChainFactory : public FilterChainFactory {
+diff --git a/test/server/BUILD b/test/server/BUILD
+index 44b4329227..80905839d5 100644
+--- test/server/BUILD
++++ test/server/BUILD
+@@ -283,6 +283,7 @@ envoy_cc_test_library(
+         "//test/mocks/server:listener_component_factory_mocks",
+         "//test/mocks/server:worker_factory_mocks",
+         "//test/mocks/server:worker_mocks",
++        "//test/mocks/stream_info:stream_info_mocks",
+         "//test/test_common:environment_lib",
+         "//test/test_common:simulated_time_system_lib",
+         "//test/test_common:test_runtime_lib",
+@@ -367,6 +368,7 @@ envoy_cc_test(
+         "//test/mocks/network:network_mocks",
+         "//test/mocks/server:drain_manager_mocks",
+         "//test/mocks/server:factory_context_mocks",
++        "//test/mocks/stream_info:stream_info_mocks",
+         "//test/test_common:environment_lib",
+         "//test/test_common:registry_lib",
+         "//test/test_common:simulated_time_system_lib",
+@@ -503,6 +505,7 @@ envoy_cc_benchmark_binary(
+         "//test/test_common:environment_lib",
+         "//test/mocks/network:network_mocks",
+         "//test/mocks/server:factory_context_mocks",
++        "//test/mocks/stream_info:stream_info_mocks",
+         # tranport socket config registration
+         "//source/extensions/transport_sockets/tls:config",
+     ],
+diff --git a/test/server/active_tcp_listener_test.cc b/test/server/active_tcp_listener_test.cc
+index 9cc116b002..634338b60b 100644
+--- test/server/active_tcp_listener_test.cc
++++ test/server/active_tcp_listener_test.cc
+@@ -153,7 +153,7 @@ TEST_F(ActiveTcpListenerTest, ListenerFilterWithInspectData) {
+           Api::IoCallUint64Result(inspect_size_, Api::IoErrorPtr(nullptr, [](Api::IoError*) {})))));
+   // the filter get enough data, then return Network::FilterStatus::Continue
+   EXPECT_CALL(*filter_, onData(_)).WillOnce(Return(Network::FilterStatus::Continue));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(io_handle_, resetFileEvents());
+   file_event_callback(Event::FileReadyType::Read);
+ }
+@@ -282,7 +282,7 @@ TEST_F(ActiveTcpListenerTest, ListenerFilterWithInspectDataMultipleFilters) {
+   file_event_callback(Event::FileReadyType::Read);
+ 
+   EXPECT_CALL(*inspect_data_filter3, onData(_)).WillOnce(Return(Network::FilterStatus::Continue));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+ 
+   file_event_callback(Event::FileReadyType::Read);
+ }
+@@ -375,7 +375,7 @@ TEST_F(ActiveTcpListenerTest, ListenerFilterWithInspectDataMultipleFilters2) {
+   file_event_callback(Event::FileReadyType::Read);
+ 
+   EXPECT_CALL(*inspect_data_filter3, onData(_)).WillOnce(Return(Network::FilterStatus::Continue));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+ 
+   file_event_callback(Event::FileReadyType::Read);
+ }
+@@ -560,7 +560,7 @@ TEST_F(ActiveTcpListenerTest, RedirectedRebalancer) {
+         return Network::FilterStatus::Continue;
+       }));
+   // Verify that listener1 hands off the connection by not creating network filter chain.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+ 
+   // 2. Redirect to Listener2.
+   EXPECT_CALL(conn_handler_, getBalancedHandlerByAddress(_))
+@@ -577,7 +577,7 @@ TEST_F(ActiveTcpListenerTest, RedirectedRebalancer) {
+   filter_chain_ = std::make_shared<NiceMock<Network::MockFilterChain>>();
+ 
+   EXPECT_CALL(conn_handler_, incNumConnections());
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   EXPECT_CALL(*filter_chain_, transportSocketFactory)
+       .WillOnce(testing::ReturnRef(*transport_socket_factory));
+   EXPECT_CALL(*filter_chain_, networkFilterFactories).WillOnce(ReturnRef(*filter_factory_callback));
+@@ -659,7 +659,7 @@ TEST_F(ActiveTcpListenerTest, Rebalance) {
+   filter_chain_ = std::make_shared<NiceMock<Network::MockFilterChain>>();
+ 
+   EXPECT_CALL(conn_handler_, incNumConnections());
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   EXPECT_CALL(*filter_chain_, transportSocketFactory)
+       .WillOnce(testing::ReturnRef(*transport_socket_factory));
+   EXPECT_CALL(*filter_chain_, networkFilterFactories).WillOnce(ReturnRef(*filter_factory_callback));
+diff --git a/test/server/connection_handler_test.cc b/test/server/connection_handler_test.cc
+index f280cbc900..ab23dc7496 100644
+--- test/server/connection_handler_test.cc
++++ test/server/connection_handler_test.cc
+@@ -448,7 +448,7 @@ public:
+           return Network::FilterStatus::Continue;
+         }));
+     EXPECT_CALL(*test_filter, destroy_());
+-    EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++    EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+     auto* connection = new NiceMock<Network::MockServerConnection>();
+     EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+     EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -548,7 +548,7 @@ TEST_F(ConnectionHandlerTest, ListenerConnectionLimitEnforced) {
+   test_listener2->setMaxConnections(0);
+   handler_->addListener(absl::nullopt, *test_listener2, runtime_);
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillRepeatedly(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillRepeatedly(Return(filter_chain_.get()));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillRepeatedly(Return(true));
+   Network::MockListenerFilter* test_filter = new Network::MockListenerFilter();
+   EXPECT_CALL(*test_filter, destroy_());
+@@ -775,7 +775,7 @@ TEST_F(ConnectionHandlerTest, RebalanceWithMultiAddressListener) {
+   EXPECT_CALL(*mock_connection_balancer1, pickTargetHandler(_))
+       .WillOnce(ReturnRef(*current_handler1));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+ 
+   current_handler1->incNumConnections();
+   listener_callbacks1->onAccept(std::make_unique<NiceMock<Network::MockConnectionSocket>>());
+@@ -785,7 +785,7 @@ TEST_F(ConnectionHandlerTest, RebalanceWithMultiAddressListener) {
+   EXPECT_CALL(*mock_connection_balancer2, pickTargetHandler(_))
+       .WillOnce(ReturnRef(*current_handler2));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+ 
+   current_handler2->incNumConnections();
+   listener_callbacks2->onAccept(std::make_unique<NiceMock<Network::MockConnectionSocket>>());
+@@ -900,7 +900,7 @@ TEST_F(ConnectionHandlerTest, SetsTransportSocketConnectTimeout) {
+ 
+   auto server_connection = new NiceMock<Network::MockServerConnection>();
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(server_connection));
+   EXPECT_CALL(*filter_chain_, transportSocketConnectTimeout)
+       .WillOnce(Return(std::chrono::seconds(5)));
+@@ -941,7 +941,7 @@ TEST_F(ConnectionHandlerTest, CloseDuringFilterChainCreate) {
+       addListener(1, true, false, "test_listener", listener, &listener_callbacks);
+   handler_->addListener(absl::nullopt, *test_listener, runtime_);
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -964,7 +964,7 @@ TEST_F(ConnectionHandlerTest, CloseConnectionOnEmptyFilterChain) {
+       addListener(1, true, false, "test_listener", listener, &listener_callbacks);
+   handler_->addListener(absl::nullopt, *test_listener, runtime_);
+ 
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(false));
+@@ -1013,7 +1013,7 @@ TEST_F(ConnectionHandlerTest, NormalRedirect) {
+         cb.socket().connectionInfoProvider().restoreLocalAddress(alt_address);
+         return Network::FilterStatus::Continue;
+       }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -1083,7 +1083,7 @@ TEST_F(ConnectionHandlerTest, NormalRedirectWithMultiAddrs) {
+         cb.socket().connectionInfoProvider().restoreLocalAddress(alt_address);
+         return Network::FilterStatus::Continue;
+       }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -1175,11 +1175,11 @@ TEST_F(ConnectionHandlerTest, MatchLatestListener) {
+         return Network::FilterStatus::Continue;
+       }));
+   // Ensure the request is going to the listener3.
+-  EXPECT_CALL(*listener3_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*listener3_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   // Ensure the request isn't going to the listener1 and listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
+-  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
++  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+ 
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1238,9 +1238,9 @@ TEST_F(ConnectionHandlerTest, EnsureNotMatchStoppedListener) {
+         return Network::FilterStatus::Continue;
+       }));
+   // Ensure the request isn't going to the listener2.
+-  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   // Ensure the request is going to the listener1.
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+ 
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1298,9 +1298,9 @@ TEST_F(ConnectionHandlerTest, EnsureNotMatchStoppedAnyAddressListener) {
+         return Network::FilterStatus::Continue;
+       }));
+   // Ensure the request isn't going to the listener2.
+-  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   // Ensure the request is going to the listener1.
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+ 
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1350,7 +1350,7 @@ TEST_F(ConnectionHandlerTest, FallbackToWildcardListener) {
+         cb.socket().connectionInfoProvider().restoreLocalAddress(alt_address);
+         return Network::FilterStatus::Continue;
+       }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -1417,9 +1417,9 @@ TEST_F(ConnectionHandlerTest, MatchIPv6WildcardListener) {
+         cb.socket().connectionInfoProvider().restoreLocalAddress(alt_address);
+         return Network::FilterStatus::Continue;
+       }));
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
+-  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
++  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1483,9 +1483,9 @@ TEST_F(ConnectionHandlerTest, MatchIPv6WildcardListenerWithAnyAddressAndIpv4Comp
+         return Network::FilterStatus::Continue;
+       }));
+   // The listener1 will balance the request to listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+   // The listener2 gets the connection.
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1548,9 +1548,9 @@ TEST_F(ConnectionHandlerTest, MatchhIpv4CompatiableIPv6ListenerWithIpv4CompatFla
+         return Network::FilterStatus::Continue;
+       }));
+   // The listener1 will balance the request to listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+   // The listener2 gets the connection.
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1613,9 +1613,9 @@ TEST_F(ConnectionHandlerTest, NotMatchIPv6WildcardListenerWithoutIpv4CompatFlag)
+         return Network::FilterStatus::Continue;
+       }));
+   // The listener1 gets the connection.
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   // The listener2 doesn't get the connection.
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -1689,11 +1689,11 @@ TEST_F(ConnectionHandlerTest, MatchhIpv4WhenBothIpv4AndIPv6WithIpv4CompatFlag) {
+         return Network::FilterStatus::Continue;
+       }));
+   // The listener1 will balance the request to listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+   // The listener2 won't get the connection.
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   // The listener3 gets the connection.
+-  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1769,11 +1769,11 @@ TEST_F(ConnectionHandlerTest, MatchhIpv4WhenBothIpv4AndIPv6WithIpv4CompatFlag2)
+         return Network::FilterStatus::Continue;
+       }));
+   // The listener1 will balance the request to listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+   // The listener2 won't get the connection.
+-  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*ipv6_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   // The listener3 gets the connection.
+-  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*ipv4_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+@@ -1848,11 +1848,11 @@ TEST_F(ConnectionHandlerTest, UpdateIpv4MappedListener) {
+       }));
+ 
+   // The listener1 will balance the request to listener2.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+   // The listener2 won't get the connection since it is override by the listener3.
+-  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_)).Times(0);
++  EXPECT_CALL(*listener2_overridden_filter_chain_manager, findFilterChain(_, _)).Times(0);
+   // The listener3 gets the connection.
+-  EXPECT_CALL(*listener3_overridden_filter_chain_manager, findFilterChain(_))
++  EXPECT_CALL(*listener3_overridden_filter_chain_manager, findFilterChain(_, _))
+       .WillOnce(Return(filter_chain_.get()));
+ 
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+@@ -1906,7 +1906,7 @@ TEST_F(ConnectionHandlerTest, WildcardListenerWithNoOriginalDst) {
+         return true;
+       }));
+   EXPECT_CALL(*test_filter, onAccept(_)).WillOnce(Return(Network::FilterStatus::Continue));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -1928,7 +1928,7 @@ TEST_F(ConnectionHandlerTest, TransportProtocolDefault) {
+   EXPECT_CALL(*accepted_socket, detectedTransportProtocol())
+       .WillOnce(Return(absl::string_view("")));
+   EXPECT_CALL(*accepted_socket, setDetectedTransportProtocol(absl::string_view("raw_buffer")));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   listener_callbacks->onAccept(Network::ConnectionSocketPtr{accepted_socket});
+ 
+@@ -1958,7 +1958,7 @@ TEST_F(ConnectionHandlerTest, TransportProtocolCustom) {
+   Network::MockConnectionSocket* accepted_socket = new NiceMock<Network::MockConnectionSocket>();
+   EXPECT_CALL(*accepted_socket, setDetectedTransportProtocol(dummy));
+   EXPECT_CALL(*accepted_socket, detectedTransportProtocol()).WillOnce(Return(dummy));
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   listener_callbacks->onAccept(Network::ConnectionSocketPtr{accepted_socket});
+ 
+@@ -2054,7 +2054,7 @@ TEST_F(ConnectionHandlerTest, ContinueOnListenerFilterTimeout) {
+   EXPECT_EQ(1UL, downstream_pre_cx_active.value());
+   EXPECT_CALL(*test_filter, destroy_());
+   // Barrier: test_filter must be destructed before findFilterChain
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   EXPECT_CALL(*timeout, disableTimer());
+   timeout->invokeCallback();
+@@ -2112,7 +2112,7 @@ TEST_F(ConnectionHandlerTest, ListenerFilterTimeoutResetOnSuccess) {
+   listener_callbacks->onAccept(Network::ConnectionSocketPtr{accepted_socket});
+ 
+   EXPECT_CALL(*test_filter, destroy_());
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   EXPECT_CALL(*timeout, disableTimer());
+   listener_filter_cb->continueFilterChain(true);
+@@ -2201,7 +2201,7 @@ TEST_F(ConnectionHandlerTest, ListenerFilterReportError) {
+   // Make sure the error leads to no listener timer created.
+   EXPECT_CALL(dispatcher_, createTimer_(_)).Times(0);
+   // Make sure we never try to match the filter chain since listener filter doesn't complete.
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
+ 
+   EXPECT_CALL(*listener, onDestroy());
+ }
+@@ -2305,8 +2305,8 @@ TEST_F(ConnectionHandlerTest, TcpListenerInplaceUpdate) {
+ 
+   EXPECT_CALL(*mock_connection_balancer, pickTargetHandler(_))
+       .WillOnce(ReturnRef(*current_handler));
+-  EXPECT_CALL(manager_, findFilterChain(_)).Times(0);
+-  EXPECT_CALL(*overridden_filter_chain_manager, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).Times(0);
++  EXPECT_CALL(*overridden_filter_chain_manager, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   EXPECT_CALL(*mock_connection_balancer, unregisterHandler(_));
+   old_listener_callbacks->onAccept(Network::ConnectionSocketPtr{connection});
+@@ -2324,7 +2324,7 @@ TEST_F(ConnectionHandlerTest, TcpListenerRemoveFilterChain) {
+   handler_->addListener(absl::nullopt, *test_listener, runtime_);
+ 
+   Network::MockConnectionSocket* connection = new NiceMock<Network::MockConnectionSocket>();
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* server_connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(server_connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -2371,7 +2371,7 @@ TEST_F(ConnectionHandlerTest, TcpListenerRemoveFilterChainCalledAfterListenerIsR
+   handler_->addListener(absl::nullopt, *test_listener, runtime_);
+ 
+   Network::MockConnectionSocket* connection = new NiceMock<Network::MockConnectionSocket>();
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(filter_chain_.get()));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(filter_chain_.get()));
+   auto* server_connection = new NiceMock<Network::MockServerConnection>();
+   EXPECT_CALL(dispatcher_, createServerConnection_()).WillOnce(Return(server_connection));
+   EXPECT_CALL(factory_, createNetworkFilterChain(_, _)).WillOnce(Return(true));
+@@ -2615,7 +2615,7 @@ TEST_F(ConnectionHandlerTest, ListenerFilterWorks) {
+   EXPECT_CALL(*enabled_filter, onAccept(_)).WillOnce(Return(Network::FilterStatus::Continue));
+   EXPECT_CALL(*disabled_listener_filter, destroy_());
+   EXPECT_CALL(*enabled_filter, destroy_());
+-  EXPECT_CALL(manager_, findFilterChain(_)).WillOnce(Return(nullptr));
++  EXPECT_CALL(manager_, findFilterChain(_, _)).WillOnce(Return(nullptr));
+   EXPECT_CALL(*access_log_, log(_, _, _, _));
+   listener_callbacks->onAccept(std::make_unique<NiceMock<Network::MockConnectionSocket>>());
+   EXPECT_CALL(*listener, onDestroy());
+diff --git a/test/server/filter_chain_benchmark_test.cc b/test/server/filter_chain_benchmark_test.cc
+index a610aa2f3d..d4a3ea0bfb 100644
+--- test/server/filter_chain_benchmark_test.cc
++++ test/server/filter_chain_benchmark_test.cc
+@@ -13,6 +13,7 @@
+ #include "test/benchmark/main.h"
+ #include "test/mocks/network/mocks.h"
+ #include "test/mocks/server/factory_context.h"
++#include "test/mocks/stream_info/mocks.h"
+ #include "test/test_common/environment.h"
+ #include "test/test_common/utility.h"
+ 
+@@ -258,10 +259,11 @@ BENCHMARK_DEFINE_F(FilterChainBenchmarkFixture, FilterChainFindTest)
+ 
+   filter_chain_manager.addFilterChains(nullptr, filter_chains_, nullptr, dummy_builder_,
+                                        filter_chain_manager);
++  NiceMock<StreamInfo::MockStreamInfo> stream_info;
+   for (auto _ : state) {
+     UNREFERENCED_PARAMETER(_);
+     for (int i = 0; i < state.range(0); i++) {
+-      filter_chain_manager.findFilterChain(sockets[i]);
++      filter_chain_manager.findFilterChain(sockets[i], stream_info);
+     }
+   }
+ }
+diff --git a/test/server/filter_chain_manager_impl_test.cc b/test/server/filter_chain_manager_impl_test.cc
+index 4c9e3e39a9..f3db9f5db0 100644
+--- test/server/filter_chain_manager_impl_test.cc
++++ test/server/filter_chain_manager_impl_test.cc
+@@ -25,6 +25,7 @@
+ #include "test/mocks/network/mocks.h"
+ #include "test/mocks/server/drain_manager.h"
+ #include "test/mocks/server/factory_context.h"
++#include "test/mocks/stream_info/mocks.h"
+ #include "test/server/utility.h"
+ #include "test/test_common/environment.h"
+ #include "test/test_common/registry.h"
+@@ -98,7 +99,8 @@ public:
+       remote_address_ = Network::Utility::parseInternetAddress(source_address, source_port);
+     }
+     mock_socket->connection_info_provider_->setRemoteAddress(remote_address_);
+-    return filter_chain_manager_->findFilterChain(*mock_socket);
++    NiceMock<StreamInfo::MockStreamInfo> stream_info;
++    return filter_chain_manager_->findFilterChain(*mock_socket, stream_info);
+   }
+ 
+   void addSingleFilterChainHelper(
+diff --git a/test/server/listener_manager_impl_test.h b/test/server/listener_manager_impl_test.h
+index 1369b8b1c6..ddd1918479 100644
+--- test/server/listener_manager_impl_test.h
++++ test/server/listener_manager_impl_test.h
+@@ -19,6 +19,7 @@
+ #include "test/mocks/server/listener_component_factory.h"
+ #include "test/mocks/server/worker.h"
+ #include "test/mocks/server/worker_factory.h"
++#include "test/mocks/stream_info/mocks.h"
+ #include "test/test_common/environment.h"
+ #include "test/test_common/simulated_time_system.h"
+ #include "test/test_common/test_runtime.h"
+@@ -224,8 +225,10 @@ protected:
+           Network::Utility::parseInternetAddress(direct_source_address, source_port);
+     }
+     socket_->connection_info_provider_->setDirectRemoteAddressForTest(direct_remote_address_);
++    NiceMock<StreamInfo::MockStreamInfo> stream_info;
+ 
+-    return manager_->listeners().back().get().filterChainManager().findFilterChain(*socket_);
++    return manager_->listeners().back().get().filterChainManager().findFilterChain(*socket_,
++                                                                                   stream_info);
+   }
+ 
+   /**
