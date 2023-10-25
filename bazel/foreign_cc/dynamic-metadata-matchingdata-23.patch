@@ -1,0 +1,456 @@
+diff --git a/changelogs/current.yaml b/changelogs/current.yaml
+index e19cc976ab..fdd3f9a6ee 100644
+--- changelogs/current.yaml
++++ changelogs/current.yaml
+@@ -14,6 +14,9 @@ minor_behavior_changes:
+     resets is applied. The connection is disconnected if more than 50% of resets are premature.
+     Setting the runtime key ``envoy.restart_features.send_goaway_for_premature_rst_streams`` to ``false`` completely disables
+     this check.
++- area: matchers
++  change: |
++    Added dynamic metadata to the MatchingData object to enable writing matcher_tree input objects that can parse provided dynamic metadata.
+ - area: http
+   change: |
+     Add runtime flag ``http.max_requests_per_io_cycle`` for setting the limit on the number of HTTP requests processed
+diff --git a/envoy/network/filter.h b/envoy/network/filter.h
+index ec6d14f904..aeac901194 100644
+--- envoy/network/filter.h
++++ envoy/network/filter.h
+@@ -546,6 +546,8 @@ public:
+   virtual ~MatchingData() = default;
+ 
+   virtual const ConnectionSocket& socket() const PURE;
++  virtual const StreamInfo::FilterState& filterState() const PURE;
++  virtual const envoy::config::core::v3::Metadata& dynamicMetadata() const PURE;
+ 
+   const ConnectionInfoProvider& connectionInfoProvider() const {
+     return socket().connectionInfoProvider();
+diff --git a/source/common/network/matching/data_impl.h b/source/common/network/matching/data_impl.h
+index 344ab90476..374ab0c5e3 100644
+--- source/common/network/matching/data_impl.h
++++ source/common/network/matching/data_impl.h
+@@ -12,11 +12,20 @@ namespace Matching {
+  */
+ class MatchingDataImpl : public MatchingData {
+ public:
+-  explicit MatchingDataImpl(const ConnectionSocket& socket) : socket_(socket) {}
++  explicit MatchingDataImpl(const ConnectionSocket& socket,
++                            const StreamInfo::FilterState& filter_state,
++                            const envoy::config::core::v3::Metadata& dynamic_metadata)
++      : socket_(socket), filter_state_(filter_state), dynamic_metadata_(dynamic_metadata) {}
+   const ConnectionSocket& socket() const override { return socket_; }
++  const StreamInfo::FilterState& filterState() const override { return filter_state_; }
++  const envoy::config::core::v3::Metadata& dynamicMetadata() const override {
++    return dynamic_metadata_;
++  }
+ 
+ private:
+   const ConnectionSocket& socket_;
++  const StreamInfo::FilterState& filter_state_;
++  const envoy::config::core::v3::Metadata& dynamic_metadata_;
+ };
+ 
+ /**
+diff --git a/source/server/filter_chain_manager_impl.cc b/source/server/filter_chain_manager_impl.cc
+index 6dde01909d..f655325d98 100644
+--- source/server/filter_chain_manager_impl.cc
++++ source/server/filter_chain_manager_impl.cc
+@@ -581,8 +581,9 @@ FilterChainManagerImpl::findFilterChain(const Network::ConnectionSocket& socket)
+ }
+ 
+ const Network::FilterChain*
+-FilterChainManagerImpl::findFilterChainUsingMatcher(const Network::ConnectionSocket& socket) const {
+-  Network::Matching::MatchingDataImpl data(socket);
++FilterChainManagerImpl::findFilterChainUsingMatcher(const Network::ConnectionSocket& socket,
++                                                    const StreamInfo::StreamInfo& info) const {
++  Network::Matching::MatchingDataImpl data(socket, info.filterState(), info.dynamicMetadata());
+   const auto& match_result = Matcher::evaluateMatch<Network::MatchingData>(*matcher_, data);
+   ASSERT(match_result.match_state_ == Matcher::MatchState::MatchComplete,
+          "Matching must complete for network streams.");
+diff --git a/test/common/network/matching/inputs_integration_test.cc b/test/common/network/matching/inputs_integration_test.cc
+index f3f9203b89..3ba4ebeb4c 100644
+--- test/common/network/matching/inputs_integration_test.cc
++++ test/common/network/matching/inputs_integration_test.cc
+@@ -59,7 +59,9 @@ TEST_F(InputsIntegrationTest, DestinationIPInput) {
+   initialize("DestinationIPInput", "127.0.0.1");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setLocalAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -72,7 +74,9 @@ TEST_F(InputsIntegrationTest, DestinationPortInput) {
+   initialize("DestinationPortInput", "8080");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setLocalAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -85,7 +89,9 @@ TEST_F(InputsIntegrationTest, SourceIPInput) {
+   initialize("SourceIPInput", "127.0.0.1");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setRemoteAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -98,7 +104,9 @@ TEST_F(InputsIntegrationTest, SourcePortInput) {
+   initialize("SourcePortInput", "8080");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setRemoteAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -111,7 +119,9 @@ TEST_F(InputsIntegrationTest, DirectSourceIPInput) {
+   initialize("DirectSourceIPInput", "127.0.0.1");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setDirectRemoteAddressForTest(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -124,7 +134,9 @@ TEST_F(InputsIntegrationTest, SourceTypeInput) {
+   initialize("SourceTypeInput", "local");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setRemoteAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1", 8080));
+ 
+@@ -138,7 +150,9 @@ TEST_F(InputsIntegrationTest, ServerNameInput) {
+   initialize("ServerNameInput", host);
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   socket.connection_info_provider_->setRequestedServerName(host);
+ 
+   const auto result = match_tree_()->match(data);
+@@ -150,7 +164,9 @@ TEST_F(InputsIntegrationTest, TransportProtocolInput) {
+   initialize("TransportProtocolInput", "tls");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   EXPECT_CALL(socket, detectedTransportProtocol).WillOnce(testing::Return("tls"));
+ 
+   const auto result = match_tree_()->match(data);
+@@ -162,7 +178,9 @@ TEST_F(InputsIntegrationTest, ApplicationProtocolInput) {
+   initialize("ApplicationProtocolInput", "'http/1.1'");
+ 
+   Network::MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+   std::vector<std::string> protocols = {"http/1.1"};
+   EXPECT_CALL(socket, requestedApplicationProtocols).WillOnce(testing::ReturnRef(protocols));
+ 
+@@ -171,6 +189,77 @@ TEST_F(InputsIntegrationTest, ApplicationProtocolInput) {
+   EXPECT_TRUE(result.on_match_.has_value());
+ }
+ 
++TEST_F(InputsIntegrationTest, FilterStateInput) {
++  std::string key = "filter_state_key";
++  std::string value = "filter_state_value";
++  initializeFilterStateCase(key, value);
++
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  filter_state.setData(key, std::make_shared<Router::StringAccessorImpl>(value),
++                       StreamInfo::FilterState::StateType::Mutable,
++                       StreamInfo::FilterState::LifeSpan::Connection);
++
++  Network::MockConnectionSocket socket;
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
++
++  const auto result = match_tree_()->match(data);
++  EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
++  EXPECT_TRUE(result.on_match_.has_value());
++}
++
++TEST_F(InputsIntegrationTest, DynamicMetadataInput) {
++  Network::MockConnectionSocket socket;
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
++
++  std::string metadata_key("metadata_key");
++  std::string label_key("label_key");
++  auto label = MessageUtil::keyValueStruct(label_key, "bar");
++  metadata.mutable_filter_metadata()->insert(
++      Protobuf::MapPair<std::string, ProtobufWkt::Struct>(metadata_key, label));
++  auto stored_metadata = data.dynamicMetadata().filter_metadata();
++  EXPECT_EQ(label.fields_size(), 1);
++  EXPECT_EQ(stored_metadata[metadata_key].fields_size(), 1);
++  EXPECT_EQ((*label.mutable_fields())[label_key].string_value(),
++            (*stored_metadata[metadata_key].mutable_fields())[label_key].string_value());
++}
++
++TEST_F(InputsIntegrationTest, FilterStateInputFailure) {
++  std::string key = "filter_state_key";
++  std::string value = "filter_state_value";
++  initializeFilterStateCase(key, value);
++
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  Network::MockConnectionSocket socket;
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
++
++  // No filter state object - no match
++  const auto result_no_fs = match_tree_()->match(data);
++  EXPECT_EQ(result_no_fs.match_state_, Matcher::MatchState::MatchComplete);
++  EXPECT_FALSE(result_no_fs.on_match_.has_value());
++
++  filter_state.setData("unknown_key", std::make_shared<Router::StringAccessorImpl>(value),
++                       StreamInfo::FilterState::StateType::Mutable,
++                       StreamInfo::FilterState::LifeSpan::Connection);
++
++  // Unknown key in filter state - no match
++  const auto result_no_key = match_tree_()->match(data);
++  EXPECT_EQ(result_no_key.match_state_, Matcher::MatchState::MatchComplete);
++  EXPECT_FALSE(result_no_key.on_match_.has_value());
++
++  filter_state.setData(key, std::make_shared<Router::StringAccessorImpl>("unknown_value"),
++                       StreamInfo::FilterState::StateType::Mutable,
++                       StreamInfo::FilterState::LifeSpan::Connection);
++
++  // Known key in filter state but unknown value - no match
++  const auto result_no_value = match_tree_()->match(data);
++  EXPECT_EQ(result_no_value.match_state_, Matcher::MatchState::MatchComplete);
++  EXPECT_FALSE(result_no_value.on_match_.has_value());
++}
++
+ class UdpInputsIntegrationTest : public ::testing::Test {
+ public:
+   UdpInputsIntegrationTest()
+diff --git a/test/common/network/matching/inputs_test.cc b/test/common/network/matching/inputs_test.cc
+index cf412193ab..6c40bc9e0d 100644
+--- test/common/network/matching/inputs_test.cc
++++ test/common/network/matching/inputs_test.cc
+@@ -14,7 +14,9 @@ namespace Matching {
+ TEST(MatchingData, DestinationIPInput) {
+   DestinationIPInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setLocalAddress(
+@@ -103,7 +105,9 @@ TEST(MatchingData, HttpDestinationIPInput) {
+ TEST(MatchingData, DestinationPortInput) {
+   DestinationPortInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setLocalAddress(
+@@ -127,7 +131,9 @@ TEST(MatchingData, DestinationPortInput) {
+ TEST(MatchingData, SourceIPInput) {
+   SourceIPInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setRemoteAddress(
+@@ -151,7 +157,9 @@ TEST(MatchingData, SourceIPInput) {
+ TEST(MatchingData, SourcePortInput) {
+   SourcePortInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setRemoteAddress(
+@@ -175,7 +183,9 @@ TEST(MatchingData, SourcePortInput) {
+ TEST(MatchingData, DirectSourceIPInput) {
+   DirectSourceIPInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setDirectRemoteAddressForTest(
+@@ -199,7 +209,9 @@ TEST(MatchingData, DirectSourceIPInput) {
+ TEST(MatchingData, SourceTypeInput) {
+   SourceTypeInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     socket.connection_info_provider_->setRemoteAddress(
+@@ -223,7 +235,9 @@ TEST(MatchingData, SourceTypeInput) {
+ TEST(MatchingData, ServerNameInput) {
+   ServerNameInput<MatchingData> input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     const auto result = input.get(data);
+@@ -245,7 +259,9 @@ TEST(MatchingData, ServerNameInput) {
+ TEST(MatchingData, TransportProtocolInput) {
+   TransportProtocolInput input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     EXPECT_CALL(socket, detectedTransportProtocol).WillOnce(testing::Return(""));
+@@ -268,7 +284,9 @@ TEST(MatchingData, TransportProtocolInput) {
+ TEST(MatchingData, ApplicationProtocolInput) {
+   ApplicationProtocolInput input;
+   MockConnectionSocket socket;
+-  MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   {
+     std::vector<std::string> protocols = {};
+@@ -298,6 +316,50 @@ TEST(MatchingData, ApplicationProtocolInput) {
+   }
+ }
+ 
++TEST(MatchingData, FilterStateInput) {
++  std::string key = "filter_state_key";
++
++  envoy::extensions::matching::common_inputs::network::v3::FilterStateInput input_config;
++  input_config.set_key(key);
++
++  FilterStateInput input(input_config);
++
++  MockConnectionSocket socket;
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  MatchingDataImpl data(socket, filter_state, metadata);
++
++  {
++    const auto result = input.get(data);
++    EXPECT_EQ(result.data_availability_,
++              Matcher::DataInputGetResult::DataAvailability::AllDataAvailable);
++    EXPECT_EQ(result.data_, absl::nullopt);
++  }
++
++  filter_state.setData("unknown_key", std::make_shared<Router::StringAccessorImpl>("some_value"),
++                       StreamInfo::FilterState::StateType::Mutable,
++                       StreamInfo::FilterState::LifeSpan::Connection);
++
++  {
++    const auto result = input.get(data);
++    EXPECT_EQ(result.data_availability_,
++              Matcher::DataInputGetResult::DataAvailability::AllDataAvailable);
++    EXPECT_EQ(result.data_, absl::nullopt);
++  }
++
++  std::string value = "filter_state_value";
++  filter_state.setData(key, std::make_shared<Router::StringAccessorImpl>(value),
++                       StreamInfo::FilterState::StateType::Mutable,
++                       StreamInfo::FilterState::LifeSpan::Connection);
++
++  {
++    const auto result = input.get(data);
++    EXPECT_EQ(result.data_availability_,
++              Matcher::DataInputGetResult::DataAvailability::AllDataAvailable);
++    EXPECT_EQ(result.data_, value);
++  }
++}
++
+ TEST(UdpMatchingData, UdpDestinationIPInput) {
+   DestinationIPInput<UdpMatchingData> input;
+   const Address::Ipv4Instance ip("127.0.0.1", 8080);
+diff --git a/test/common/ssl/matching/inputs_integration_test.cc b/test/common/ssl/matching/inputs_integration_test.cc
+index 3d4126ec7b..74fd11a072 100644
+--- test/common/ssl/matching/inputs_integration_test.cc
++++ test/common/ssl/matching/inputs_integration_test.cc
+@@ -70,7 +70,9 @@ TEST_F(NetworkInputsIntegrationTest, UriSanInput) {
+   socket.connection_info_provider_->setSslConnection(ssl);
+   std::vector<std::string> uri_sans{host};
+   EXPECT_CALL(*ssl, uriSanPeerCertificate()).WillOnce(Return(uri_sans));
+-  Network::Matching::MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  Network::Matching::MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+@@ -87,7 +89,9 @@ TEST_F(NetworkInputsIntegrationTest, DnsSanInput) {
+   socket.connection_info_provider_->setSslConnection(ssl);
+   std::vector<std::string> dns_sans{host};
+   EXPECT_CALL(*ssl, dnsSansPeerCertificate()).WillOnce(Return(dns_sans));
+-  Network::Matching::MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  Network::Matching::MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+@@ -103,7 +107,9 @@ TEST_F(NetworkInputsIntegrationTest, SubjectInput) {
+   std::shared_ptr<Ssl::MockConnectionInfo> ssl = std::make_shared<Ssl::MockConnectionInfo>();
+   socket.connection_info_provider_->setSslConnection(ssl);
+   EXPECT_CALL(*ssl, subjectPeerCertificate()).WillOnce(testing::ReturnRef(host));
+-  Network::Matching::MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  Network::Matching::MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   const auto result = match_tree_()->match(data);
+   EXPECT_EQ(result.match_state_, Matcher::MatchState::MatchComplete);
+diff --git a/test/extensions/common/matcher/trie_matcher_test.cc b/test/extensions/common/matcher/trie_matcher_test.cc
+index bf589a0e92..4de7a2fae2 100644
+--- test/extensions/common/matcher/trie_matcher_test.cc
++++ test/extensions/common/matcher/trie_matcher_test.cc
+@@ -535,7 +535,9 @@ matcher_tree:
+   Network::MockConnectionSocket socket;
+   socket.connection_info_provider_->setLocalAddress(
+       std::make_shared<Network::Address::Ipv4Instance>("192.168.0.1", 8080));
+-  Network::Matching::MatchingDataImpl data(socket);
++  StreamInfo::FilterStateImpl filter_state(StreamInfo::FilterState::LifeSpan::Connection);
++  envoy::config::core::v3::Metadata metadata;
++  Network::Matching::MatchingDataImpl data(socket, filter_state, metadata);
+ 
+   const auto result = match_tree()->match(data);
+   EXPECT_EQ(result.match_state_, MatchState::MatchComplete);
