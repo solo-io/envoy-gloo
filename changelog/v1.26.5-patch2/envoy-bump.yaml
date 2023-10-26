@@ -1,0 +1,8 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy-fork
+    dependencyOwner: solo-io
+    dependencyTag: 2d0040ccb6f24d69d4a5b101c9b95b3e192fc345
+    description: >
+      Update envoy-fork to incorporate changes to support custom output sinks from the tap filter.
+
