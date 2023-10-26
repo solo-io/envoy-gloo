@@ -1,0 +1,8 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy
+    dependencyOwner: envoyproxy
+    dependencyTag: v1.26.5
+    description: >
+      Bump Envoy to v1.26.5 on our fork for 
+      CVE-2023-44487
