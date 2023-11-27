@@ -49,6 +49,7 @@ envoy_cc_library(
     hdrs = ["connect_response_handler.h"],
     repository = "@envoy",
     deps = [
+        "@envoy//envoy/common:pure_lib",
         "//include/envoy/nats/streaming:inbox_handler_interface",
         "//source/common/nats/streaming:message_utility_lib",
     ],
