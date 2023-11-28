@@ -1,0 +1,6 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Upstream moved xDs code extensions. In order to use these extensions, we have to 
+    modify our extensions_build_config. See here:
+    https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.27/v1.27.0
