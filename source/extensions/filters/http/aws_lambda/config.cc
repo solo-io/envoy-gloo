@@ -126,7 +126,8 @@ void AWSLambdaConfigImpl::loadSTSData() {
         fmt::format("Web token file {} does not exist", token_file_));
   }
 
-  web_token_ = api_.fileSystem().fileReadToEnd(token_file_);
+  auto file_or_error = api_.fileSystem().fileReadToEnd(token_file_);
+  const std::string web_token = file_or_error.value();
   // File should not be empty
   if (web_token_ == "") {
     throw EnvoyException(
@@ -157,7 +158,7 @@ void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatc
         try {
            
             const auto web_token = shared_this->parent_->api_.fileSystem().fileReadToEnd(
-                shared_this->parent_->token_file_);
+                shared_this->parent_->token_file_).value();
              shared_this->parent_->stats_.webtoken_rotated_.inc();
              // We enforce that it should not be empty at start up
              // but are more lenient at this point.
