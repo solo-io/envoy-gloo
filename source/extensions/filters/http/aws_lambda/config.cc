@@ -126,7 +126,7 @@ void AWSLambdaConfigImpl::loadSTSData() {
         fmt::format("Web token file {} does not exist", token_file_));
   }
 
-  auto web_token = api_.fileSystem().fileReadToEnd(token_file_).value();
+  web_token_ = api_.fileSystem().fileReadToEnd(token_file_).value();
   // File should not be empty
   if (web_token_ == "") {
     throw EnvoyException(
