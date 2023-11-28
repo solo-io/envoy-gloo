@@ -1,0 +1,7 @@
+changelog:
+- type: NON_USER_FACING
+  description: >
+    Make envoy binary executable after extracting it from the tarball
+    in do_ci.sh. This is intended to resolve an issue where published
+    envoy-gloo docker images exit on startup with a permission denied
+    error when trying to execute the envoy binary.
