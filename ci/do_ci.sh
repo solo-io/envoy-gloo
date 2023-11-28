@@ -58,6 +58,7 @@ mkdir -p "$ENVOY_GLOO_BIN_DIR"
 bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
+chmod +x "${ENVOY_GLOO_BIN_DIR}/envoy"
 ENVOY_GLOO_STRIPPED_DIR="${ENVOY_GLOO_BIN_DIR}_stripped"
 mkdir -p "$ENVOY_GLOO_STRIPPED_DIR"
 cp "${ENVOY_GLOO_BIN_DIR}/envoy" "${ENVOY_GLOO_STRIPPED_DIR}/envoy"
