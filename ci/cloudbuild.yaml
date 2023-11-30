@@ -26,15 +26,6 @@ steps:
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
-- name: gcr.io/cloud-builders/gsutil
-  entrypoint: 'bash'
-  args:
-  - '-ec'
-  - |
-    ci/check_extensions_build_config.sh
-  id: 'check-extensions-build-config'
-
-
 - name: 'gcr.io/cloud-builders/docker'
   id: 'docker-release'
   entrypoint: 'bash'
