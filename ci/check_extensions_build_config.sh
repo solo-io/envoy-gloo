@@ -50,6 +50,12 @@ fi
 # Update the URL to point to the specific envoy commit
 UPSTREAM_URL="https://raw.githubusercontent.com/$UPSTREAM_REPO/$ENVOY_COMMIT_HASH/$UPSTREAM_FILE_PATH"
 
+curl -s "$UPSTREAM_URL" -o upstream_file.tmp
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to fetch the upstream file from $UPSTREAM_URL"
+    exit 1
+fi
+
 # Initialize arrays to store the upstream and envoy-gloo versions of the file
 declare -a UPSTREAM_LINES ENVOY_GLOO_LINES
 
