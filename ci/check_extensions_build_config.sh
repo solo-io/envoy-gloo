@@ -68,7 +68,12 @@ done < "$ENVOY_GLOO_FILE"
 # Preprocess the envoy-gloo lines for faster lookup
 declare -a PROCESSED_ENVOY_GLOO_LINES
 for line in "${ENVOY_GLOO_LINES[@]}"; do
-    trimmed_line=$(trim "${line##\#}")
+    # Remove only the first leading '#' character (if present) and any spaces before it
+    trimmed_line=$(echo "$line" | sed 's/^[[:space:]]*#//')
+
+    # remove any remaining whitespace
+    trimmed_line=$(trim "$trimmed_line")
+
     PROCESSED_ENVOY_GLOO_LINES+=("$trimmed_line")
 done
 
