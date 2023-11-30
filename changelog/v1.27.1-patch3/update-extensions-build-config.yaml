@@ -4,3 +4,7 @@ changelog:
     Upstream moved xDs code extensions. In order to use these extensions, we have to 
     modify our extensions_build_config. See here:
     https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.27/v1.27.0
+- type: NON_USER_FACING
+  description: >-
+    Introduce check-extensions-build-config script and github action to ensure that
+    the extensions_build_config.bzl is up to date with the current envoy version.
