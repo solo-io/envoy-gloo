@@ -14,9 +14,11 @@ ENVOY_GLOO_FILE="./bazel/extensions/extensions_build_config.bzl"
 
 # Function to extract the envoy commit hash from repository_locations.bzl
 get_envoy_commit_hash() {
+    # the number of lines to read after the line containing "envoy =" to find the commit hash
+    local n_lines=4
     local file_path="$1"
     local commit_hash
-    commit_hash=$(grep -A 2 "envoy =" "$file_path" | grep commit | cut -d '"' -f 2)
+    commit_hash=$(grep -A "$n_lines" "envoy =" "$file_path" | grep commit | cut -d '"' -f 2)
     echo "$commit_hash"
 }
 
