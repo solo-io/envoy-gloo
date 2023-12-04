@@ -54,7 +54,7 @@ steps:
 
 options:
   machineType: 'N1_HIGHCPU_32'
-timeout: 7200s
+timeout: 10000s
 
 artifacts:
   objects:
