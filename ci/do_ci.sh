@@ -50,7 +50,9 @@ echo "BUILD_CONFIG is ${BUILD_CONFIG}"
 
 echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 
-echo Building
+bash -x $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh "$@" &
+
+"$(dirname $0)/report_memory_usage.sh" $!
 bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
 echo Extracting release binaries
