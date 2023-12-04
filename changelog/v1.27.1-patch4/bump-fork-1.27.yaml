@@ -1,0 +1,8 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: dcf8bfb08a20fbbb4f4dd479d1e2bf6747b9f206
+  description: >
+    Update envoy dep to point to 1.27-backportedfork branch on solo-io/envoy-fork.
+    This branch contains backports of tap and ext-proc work which are not yet in envoyproxy/envoy.
