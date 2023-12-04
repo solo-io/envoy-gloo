@@ -1,9 +1,9 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.27.1 forked with extproc changes
+        # envoy 1.27.2 forked with extproc changes
         # sourced from release/v1.27-backportedfork
         # should go back to upstream once 1.29 or wherever the associated (extproc + tap) prs are merged
-        commit = "dcf8bfb08a20fbbb4f4dd479d1e2bf6747b9f206",
+        commit = "974f2c13f86abf8252c672636730ae642b3473cf",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
