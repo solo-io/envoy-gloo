@@ -6,7 +6,7 @@ REPOSITORY_LOCATIONS = dict(
         # additionally, add cherry-picked tap filter output sink changes on top
         # of above-mentioned ext-proc changes
         commit = "da9e3341ab7aa35d6b4980aa0709a7412de79ff6",
-        remote = "https://github.com/solo-io/envoy",
+        remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
         # Includes unmerged modifications for
