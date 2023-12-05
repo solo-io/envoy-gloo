@@ -5,8 +5,8 @@ REPOSITORY_LOCATIONS = dict(
         # should go back to upstream once 1.28or wherever the associated prs are merged
         # additionally, add cherry-picked tap filter output sink changes on top
         # of above-mentioned ext-proc changes
-        commit = "2d0040ccb6f24d69d4a5b101c9b95b3e192fc345",
-        remote = "https://github.com/solo-io/envoy-fork",
+        commit = "https://github.com/envoyproxy/envoy/issues/13388",
+        remote = "https://github.com/solo-io/envoy",
     ),
     inja = dict(
         # Includes unmerged modifications for
