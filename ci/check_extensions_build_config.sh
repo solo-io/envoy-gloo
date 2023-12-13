@@ -16,7 +16,7 @@ ENVOY_GLOO_FILE="./bazel/extensions/extensions_build_config.bzl"
 get_envoy_commit_hash() {
     local file_path="$1"
     local commit_hash
-    commit_hash=$(grep -A 2 "envoy =" "$file_path" | grep commit | cut -d '"' -f 2)
+    commit_hash=$(grep -A 6 "envoy =" "$file_path" | grep commit | cut -d '"' -f 2)
     echo "$commit_hash"
 }
 
