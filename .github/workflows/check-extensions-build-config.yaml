@@ -16,9 +16,3 @@ jobs:
       run: git config --global --add safe.directory /__w/envoy-gloo-ee/envoy-gloo-ee
     - name: Run check-extensions-build-config.sh
       run: ci/check_extensions_build_config.sh
-    # - name: Archive check results
-      # if: ${{ !cancelled() }}
-      # uses: actions/upload-artifact@v3
-      # with:
-      #   name: static-analysis-report
-      #   path: linux/amd64/analysis/scan-build-*/
