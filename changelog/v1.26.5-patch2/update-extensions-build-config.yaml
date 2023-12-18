@@ -1,0 +1,5 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Introduce check-extensions-build-config script and github action to ensure that
+    the extensions_build_config.bzl is up to date with the current envoy version.
