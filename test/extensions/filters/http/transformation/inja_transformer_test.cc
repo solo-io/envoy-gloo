@@ -1242,6 +1242,25 @@ TEST_F(InjaTransformerTest, EscapeCharactersRawStringCallback) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
+TEST_F(InjaTransformerTest, ReplaceHappyPath) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{ replace(body(), \"foo\", \"bar\") }}");
+  // set parse body behavior to DontParse so that the body is not parsed as JSON
+  // this is not necessary to use the replace callback, but personally I think it makes the 
+  // test easier to read
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("foo bar baz");
+  auto expected_body = "bar bar baz";
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), expected_body);
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
