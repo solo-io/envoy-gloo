@@ -1261,6 +1261,57 @@ TEST_F(InjaTransformerTest, ReplaceHappyPath) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
+TEST_F(InjaTransformerTest, ReplaceNoMatch) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{ replace(body(), \"foo\", \"bar\") }}");
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("baz");
+  auto expected_body = "baz";
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), expected_body);
+}
+
+TEST_F(InjaTransformerTest, ReplaceInvalidRegex) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  envoy::api::v2::filter::http::TransformationTemplate transformation;
+  // Use an invalid regex pattern. In this case, an unbalanced bracket.
+  transformation.mutable_body()->set_text("{{ replace(body(), \"(foo\", \"bar\") }}");
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  // We should return an empty string if the regex pattern is invalid
+  Buffer::OwnedImpl body("foo");
+  auto expected_body = "";
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), expected_body);
+}
+
+TEST_F(InjaTransformerTest, ReplaceMultipleInstances) {
+    Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/multi"}};
+    envoy::api::v2::filter::http::TransformationTemplate transformation;
+    // The regex pattern here is "foo", which should be replaced by "bar" in all occurrences
+    transformation.mutable_body()->set_text("{{ replace(body(), \"foo\", \"bar\") }}");
+    transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+
+    InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+    NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+    Buffer::OwnedImpl body("foo foo foo");
+    auto expected_body = "bar bar bar";  // All instances of "foo" should be replaced by "bar"
+    transformer.transform(headers, &headers, body, callbacks);
+    EXPECT_EQ(body.toString(), expected_body);
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions

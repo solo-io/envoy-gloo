@@ -385,10 +385,14 @@ json TransformerInstance::replace_callback(const inja::Arguments& args) const {
   const std::string& regexToSearchFor = args.at(1)->get_ref<const std::string&>();
   const std::string& stringToReplaceWith = args.at(2)->get_ref<const std::string&>();
 
-  std::regex regex(regexToSearchFor);
-  std::string result = std::regex_replace(textToOperateOn, regex, stringToReplaceWith);
-
-  return result;
+  try {
+    std::regex regex(regexToSearchFor);
+    std::string result = std::regex_replace(textToOperateOn, regex, stringToReplaceWith);
+    return result;
+  } catch (const std::regex_error& e) {
+    // return an empty string if the regex is invalid
+    return "";
+  }
 }
 
 // parse calls Inja::Environment::parse which uses non-const references to member
