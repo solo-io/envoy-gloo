@@ -147,6 +147,11 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("raw_string", 1, [this](Arguments &args) {
     return raw_string_callback(args);
   });
+  // `replace(textToOperateOn: string, regexToSearchFor: string, stringToReplaceWith: string)`:
+  //  replaces each substring of `textToOperateOn` that matches the regular expression `regexToSearchFor` with `stringToReplaceWith`.
+  env_.add_callback("replace", 3, [this](Arguments &args) {
+    return replace_callback(args);
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -373,6 +378,17 @@ json TransformerInstance::raw_string_callback(const inja::Arguments &args) const
       ? val.substr(1, val.length()-2)
       : val;
   return val;
+}
+
+json TransformerInstance::replace_callback(const inja::Arguments& args) const {
+  const std::string& textToOperateOn = args.at(0)->get_ref<const std::string&>();
+  const std::string& regexToSearchFor = args.at(1)->get_ref<const std::string&>();
+  const std::string& stringToReplaceWith = args.at(2)->get_ref<const std::string&>();
+
+  std::regex regex(regexToSearchFor);
+  std::string result = std::regex_replace(textToOperateOn, regex, stringToReplaceWith);
+
+  return result;
 }
 
 // parse calls Inja::Environment::parse which uses non-const references to member
