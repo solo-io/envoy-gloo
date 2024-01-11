@@ -703,4 +703,50 @@ TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformRawStringCa
   auto expected_response_body = R"({"Bar":"\\\"baz\\\""})"_json;
   EXPECT_EQ(expected_response_body, actual_response_body);
 }
+
+TEST_P(TransformationFilterIntegrationTest, ReplaceCallback) {
+  using json = nlohmann::json;
+  // 1 is DONT_PARSE -- The request/response body will be treated as plain text
+  transformation_string_ =
+    R"EOF(
+  request_transformation:
+    transformation_template:
+      advanced_templates: false
+      parse_body_behavior: 1
+      body:
+        text: "{{ replace(body(), \"bar\", \"baz\") }}"
+  response_transformation:
+    transformation_template:
+      advanced_templates: false
+      parse_body_behavior: 1
+      body:
+        text: "{{ replace(body(), \"baz\", \"bat\") }}"
+
+)EOF";
+  initialize();
+  std::string origReqBody = R"EOF({"foo":"bar"})EOF";
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data(origReqBody);
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response, R"EOF({"foo":"baz"})EOF");
+
+  auto actual_request_body = json::parse(upstream_request_->body().toString());
+  auto expected_request_body = R"({"foo":"baz"})"_json;
+  EXPECT_EQ(expected_request_body, actual_request_body);
+
+  // make sure response works as well
+  auto actual_response_body = json::parse(response->body());
+  auto expected_response_body = R"({"foo":"bat"})"_json;
+  EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+
 } // namespace Envoy
