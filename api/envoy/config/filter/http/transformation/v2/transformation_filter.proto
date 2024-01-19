@@ -173,6 +173,18 @@ message Extraction {
   uint32 subgroup = 3;
 }
 
+message Regex {
+  // Only strings matching this regular expression will be part of the
+  // extraction. The most simple value for this field is '.*', which matches the
+  // whole source. The field is required. If extraction fails the result is an
+  // empty value.
+  string regex = 1;
+  // If your regex contains capturing groups, use this field to determine which
+  // group should be selected.
+  // uint32 subgroup = 2;
+  // string name = 2;
+}
+
 // Defines a transformation template.
 message TransformationTemplate {
 
@@ -194,6 +206,8 @@ message TransformationTemplate {
   // templates, e.g. "{{ my-extractor }}" will render to the value of the
   // "my-extractor" extractor.
   map<string, Extraction> extractors = 2;
+
+  map<string, Regex> regexes = 13;
 
   // Use this attribute to transform request/response headers. It consists of a
   // map of strings to templates. The string key determines the name of the

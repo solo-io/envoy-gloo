@@ -34,6 +34,7 @@ public:
   const Http::RequestHeaderMap *request_headers_;
   const GetBodyFunc *body_;
   const std::unordered_map<std::string, absl::string_view> *extractions_;
+  const std::unordered_map<std::string, std::regex> *regexes_;
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
@@ -123,6 +124,7 @@ private:
   std::vector<Http::LowerCaseString> headers_to_remove_;
   std::vector<DynamicMetadataValue> dynamic_metadata_;
   std::unordered_map<std::string, std::string> environ_;
+  std::vector<std::pair<std::string, std::regex>> regexes_;
 
   envoy::api::v2::filter::http::TransformationTemplate::RequestBodyParse
       parse_body_behavior_;

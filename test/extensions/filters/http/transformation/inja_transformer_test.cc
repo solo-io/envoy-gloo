@@ -1245,7 +1245,12 @@ TEST_F(InjaTransformerTest, EscapeCharactersRawStringCallback) {
 TEST_F(InjaTransformerTest, ReplaceHappyPath) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   envoy::api::v2::filter::http::TransformationTemplate transformation;
-  transformation.mutable_body()->set_text("{{ replace(body(), \"foo\", \"bar\") }}");
+
+  envoy::api::v2::filter::http::Regex regex;
+  regex.set_regex("foo");
+  (*transformation.mutable_regexes())["regex_1"] = regex;
+
+  transformation.mutable_body()->set_text("{{ replace(body(), \"regex_1\", \"bar\") }}");
   // set parse body behavior to DontParse so that the body is not parsed as JSON
   // this is not necessary to use the replace callback, but personally I think it makes the 
   // test easier to read
@@ -1280,26 +1285,28 @@ TEST_F(InjaTransformerTest, ReplaceNoMatch) {
 TEST_F(InjaTransformerTest, ReplaceInvalidRegex) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   envoy::api::v2::filter::http::TransformationTemplate transformation;
+
+  envoy::api::v2::filter::http::Regex regex;
+  regex.set_regex("(foo");
+  (*transformation.mutable_regexes())["regex_1"] = regex;
+
   // Use an invalid regex pattern. In this case, an unbalanced bracket.
-  transformation.mutable_body()->set_text("{{ replace(body(), \"(foo\", \"bar\") }}");
+  transformation.mutable_body()->set_text("{{ replace(body(), \"regex_1\", \"bar\") }}");
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
 
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
-
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
-  // We should return an empty string if the regex pattern is invalid
-  Buffer::OwnedImpl body("foo");
-  auto expected_body = "";
-  transformer.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), expected_body);
+  EXPECT_THROW(InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_), EnvoyException);
 }
 
 TEST_F(InjaTransformerTest, ReplaceMultipleInstances) {
     Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/multi"}};
     envoy::api::v2::filter::http::TransformationTemplate transformation;
+
+    envoy::api::v2::filter::http::Regex regex;
+    regex.set_regex("foo");
+    (*transformation.mutable_regexes())["regex_1"] = regex;
+
     // The regex pattern here is "foo", which should be replaced by "bar" in all occurrences
-    transformation.mutable_body()->set_text("{{ replace(body(), \"foo\", \"bar\") }}");
+    transformation.mutable_body()->set_text("{{ replace(body(), \"regex_1\", \"bar\") }}");
     transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
 
     InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
@@ -1311,6 +1318,8 @@ TEST_F(InjaTransformerTest, ReplaceMultipleInstances) {
     transformer.transform(headers, &headers, body, callbacks);
     EXPECT_EQ(body.toString(), expected_body);
 }
+
+// TODO: maybe test some advanced regex features like lookaheads
 
 } // namespace Transformation
 } // namespace HttpFilters

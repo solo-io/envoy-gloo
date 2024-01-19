@@ -380,18 +380,30 @@ json TransformerInstance::raw_string_callback(const inja::Arguments &args) const
   return val;
 }
 
-json TransformerInstance::replace_callback(const inja::Arguments& args) const {
+// NTS: maybe call this regex_replace_callback?
+json TransformerInstance::replace_callback(const inja::Arguments &args) const {
   const std::string& textToOperateOn = args.at(0)->get_ref<const std::string&>();
-  const std::string& regexToSearchFor = args.at(1)->get_ref<const std::string&>();
+  const std::string &regexNameToSearchFor = args.at(1)->get_ref<const std::string &>();
   const std::string& stringToReplaceWith = args.at(2)->get_ref<const std::string&>();
+  
+  // look for the regex in the map of compiled regexes
+  auto regexes = *tls_.getTyped<ThreadLocalTransformerContext>().regexes_;
+  auto found = regexes.find(regexNameToSearchFor);
+  // if the regex is not found, return the original text
+  if (found == regexes.end()) {
+    // TODO: log the error
+    return textToOperateOn;
+  }
 
+  const std::regex regex = found->second;
   try {
-    std::regex regex(regexToSearchFor);
+    // replace the regex with the string
     std::string result = std::regex_replace(textToOperateOn, regex, stringToReplaceWith);
     return result;
   } catch (const std::regex_error& e) {
-    // return an empty string if the regex is invalid
-    return "";
+    // TODO: log the error
+    // return original text if the regex is invalid
+    return textToOperateOn;
   }
 }
 
@@ -452,6 +464,20 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
           "Failed to parse header template '{}': {}", it->first, e.what()));
     }
   }
+
+  const auto &regexes = transformation.regexes();
+  for (auto it = regexes.begin(); it != regexes.end(); it++) {
+    std::string name(it->first);
+    try {
+      // try to compile regex. if valid, add it to the map of compiled regexes
+      std::regex regex_pattern(it->second.regex());
+      regexes_.emplace_back(std::make_pair(name, regex_pattern));
+    } catch (const std::exception &e) {
+      throw EnvoyException(fmt::format(
+          "Failed to parse regex template '{}': {}", name, e.what()));
+    }
+  }
+
   const auto &headers_to_remove = transformation.headers_to_remove();
   for (auto idx : headers_to_remove) {
     Http::LowerCaseString header_name(idx);
@@ -589,6 +615,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
 
+  // copy regexes to thread local storage
+  std::unordered_map<std::string, std::regex> regexes;
+  regexes.reserve(regexes_.size());
+  for (const auto &regex : regexes_) {
+    regexes[regex.first] = regex.second;
+  }
+
   // get cluster metadata
   const envoy::config::core::v3::Metadata *cluster_metadata{};
   Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
@@ -604,6 +637,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.request_headers_ = request_headers;
   typed_tls_data.body_ = &get_body;
   typed_tls_data.extractions_ = &extractions;
+  typed_tls_data.regexes_ = &regexes;
   typed_tls_data.context_ = &json_body;
   typed_tls_data.environ_ = &environ_;
   typed_tls_data.cluster_metadata_ = cluster_metadata;
