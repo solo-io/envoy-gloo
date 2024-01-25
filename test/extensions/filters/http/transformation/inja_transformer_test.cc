@@ -540,6 +540,42 @@ TEST_F(TransformerTest, transformMergeExtractorsToBody) {
   EXPECT_EQ("{\"ext1\":\"123\"}", res);
 }
 
+TEST_F(TransformerTest, transformMergeReplaceExtractorsToBody) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  // in passthrough mode the filter gives us an empty body
+  std::string emptyBody = "";
+  Buffer::OwnedImpl body(emptyBody);
+
+  TransformationTemplate transformation;
+
+  transformation.mutable_merge_extractors_to_body();
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/users/(\\d+)");
+  extractor.set_subgroup(1);
+  auto replacement_text = "456";
+  extractor.mutable_replacement_text()->set_value(replacement_text);
+  (*transformation.mutable_extractors())["ext1"] = extractor;
+
+  transformation.set_advanced_templates(false);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  transformer.transform(headers, &headers, body, callbacks);
+
+  std::string res = body.toString();
+
+  // With replacement text, we replace the portion of the header value
+  // in the specified subgroup with the replacement text, and then the
+  // value of the replaced input is the value of the extraction. 
+  EXPECT_EQ("{\"ext1\":\"/users/456\"}", res);
+}
+
 TEST_F(TransformerTest, transformBodyNotSet) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
@@ -635,6 +671,31 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "json");
+}
+
+TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Buffer::OwnedImpl body("not json body");
+
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.mutable_body();
+  extractor.set_regex("not ([\\-._[:alnum:]]+) body");
+  extractor.set_subgroup(1);
+  auto replacement_text = "JSON";
+  extractor.mutable_replacement_text()->set_value(replacement_text);
+  (*transformation.mutable_extractors())["param"] = extractor;
+
+  transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "not JSON body");
 }
 
 TEST_F(InjaTransformerTest, UseBodyFunction) {

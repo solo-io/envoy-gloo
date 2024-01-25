@@ -151,7 +151,7 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
   // if there are no matches, return an empty string
   if (!std::regex_search(value.begin(), value.end(), regex_result, extract_regex_)) {
     ENVOY_STREAM_LOG(debug, "replaceValue: extractor regex did not match input", callbacks);
-    return ""
+    return "";
   }
 
   // if the subgroup specified is greater than the number of subgroups in the regex, return an empty string
@@ -194,10 +194,11 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
 
   // set matchFound to true if at least one match is found
   if (it != end_it) {
-      matchFound = true; 
+    matchFound = true; 
   }
 
   if (!matchFound) {
+    ENVOY_STREAM_LOG(debug, "replaceAllValues: extractor regex did not match input", callbacks);
     return "";
   }
 
