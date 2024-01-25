@@ -171,6 +171,12 @@ message Extraction {
   // If your regex contains capturing groups, use this field to determine which
   // group should be selected.
   uint32 subgroup = 3;
+
+  // The string to replace the matched portion of the source with
+  google.protobuf.StringValue replacement_text = 5;
+
+  // If set to true, all matches of the regex in the source will be replaced by the replacement_text.
+  bool replace_all = 6;
 }
 
 // Defines a transformation template.

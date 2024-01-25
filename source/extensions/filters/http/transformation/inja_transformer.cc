@@ -56,7 +56,10 @@ getHeader(const Http::RequestOrResponseHeaderMap &header_map,
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
-      extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())) {
+      extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
+      has_replacement_text_(extractor.has_replacement_text()),
+      replacement_text_(extractor.replacement_text().value()),
+      replace_all_(extractor.replace_all()) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
@@ -64,6 +67,26 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     throw EnvoyException(
         fmt::format("group {} requested for regex with only {} sub groups",
                     group_, extract_regex_.mark_count()));
+  }
+
+  // if replace_all is set, we must have replacement text
+  if (replace_all_ && !has_replacement_text_) {
+    throw EnvoyException(
+        fmt::format("replace_all set but no replacement text provided"));
+  }
+
+  // if replace_all is set, subgroup should be 0
+  if (replace_all_ && group_ != 0) {
+    throw EnvoyException(
+        fmt::format("replace_all set but subgroup is not 0"));
+  }
+
+  // extractionFunc is either replaceValue or extractValue depending on whether 
+  // replacement_text_ is empty or not
+  if (has_replacement_text_) {
+    extraction_func_ = std::bind(&Extractor::replaceValue, this, _1, _2);
+  } else {
+    extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
   }
 }
 
@@ -74,13 +97,14 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
   if (body_) {
     const std::string &string_body = body();
     absl::string_view sv(string_body);
-    return extractValue(callbacks, sv);
+    return extraction_func_(callbacks, sv);
   } else {
     const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
     if (header_entries.empty()) {
       return "";
     }
-    return extractValue(callbacks, header_entries[0]->value().getStringView());
+    const auto &header_value = header_entries[0]->value().getStringView();
+    return extraction_func_(callbacks, header_value);
   }
 }
 
@@ -103,6 +127,86 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
     ENVOY_STREAM_LOG(debug, "extractor regex did not match input", callbacks);
   }
   return "";
+}
+
+// Match a regex against the input value and replace the matched subgroup with the replacement_text_ value
+// writes the result to replaced_value_ and returns a absl::string_view to it
+// if replace_all_ is true, __all__ substrings matching the regex in the input value will be replaced
+// with the replacement_text_ value
+absl::string_view
+Extractor::replaceValue(Http::StreamFilterCallbacks &callbacks,
+                        absl::string_view value) const {
+  if (replace_all_) {
+    return replaceAllValues(callbacks, value);
+  } else {
+    return replaceIndividualValue(callbacks, value);
+  }
+}
+
+absl::string_view
+Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
+                                  absl::string_view value) const {
+  std::match_results<absl::string_view::const_iterator> regex_result;
+
+  // if there are no matches, return an empty string
+  if (!std::regex_search(value.begin(), value.end(), regex_result, extract_regex_)) {
+    ENVOY_STREAM_LOG(debug, "replaceValue: extractor regex did not match input", callbacks);
+    return ""
+  }
+
+  // if the subgroup specified is greater than the number of subgroups in the regex, return an empty string
+  if (group_ >= regex_result.size()) {
+    ASSERT("no such group in the regex");
+    ENVOY_STREAM_LOG(debug, "replaceValue: invalid group specified for regex", callbacks);
+    return "";
+  }
+
+  // if the regex doesn't match the entire input value, return an empty string
+  if (regex_result[0].length() != long(value.length())) {
+    ENVOY_STREAM_LOG(debug, "replaceValue: Regex did not match entire input value. This is not allowed when replace_all is false", callbacks);
+    return "";
+  }
+
+  // Create a new string with the input value
+  std::string replaced(value.begin(), value.end());
+
+  // Replace the specified subgroup with the replacement_text_ value
+  const auto &sub_match = regex_result[group_];
+  auto start_pos = sub_match.first - value.begin();
+  auto length = sub_match.length();
+  replaced.replace(start_pos, length, replacement_text_);
+
+  // Store the replaced string in replaced_value_ and return an absl::string_view to it
+  replaced_value_ = std::move(replaced);
+  return absl::string_view(replaced_value_);
+}
+
+absl::string_view
+Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
+                            absl::string_view value) const {
+  std::string input(value.begin(), value.end());
+  std::string replaced;
+  bool matchFound = false;
+
+  // create an iterator to search for matches of extract_regex_ in the input string
+  std::sregex_iterator it(input.begin(), input.end(), extract_regex_);
+  std::sregex_iterator end_it; // default end iterator for comparison
+
+  // set matchFound to true if at least one match is found
+  if (it != end_it) {
+      matchFound = true; 
+  }
+
+  if (!matchFound) {
+    return "";
+  }
+
+  // If a match was found, replace all instances of the regex in the input value with the replacement_text_ value
+  replaced = std::regex_replace(input, extract_regex_, replacement_text_);
+
+  // Store the replaced string in replaced_value_ and return an absl::string_view to it
+  replaced_value_ = std::move(replaced);
+  return absl::string_view(replaced_value_);
 }
 
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
