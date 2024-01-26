@@ -84,10 +84,15 @@ public:
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
 
+  // Matching enum with the protobuf definition
+  enum class Mode {
+    EXTRACT = 0,
+    SINGLE_REPLACE = 1,
+    REPLACE_ALL = 2
+  };
+
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
-                                 absl::string_view value) const;
-  absl::string_view replaceValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
   absl::string_view replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
                                            absl::string_view value) const;
@@ -100,7 +105,7 @@ private:
   const std::regex extract_regex_;
   const bool has_replacement_text_;
   const std::string replacement_text_;
-  const bool replace_all_;
+  const Mode mode_;
 
   ExtractionFunc extraction_func_;
   mutable std::string replaced_value_;

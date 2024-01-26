@@ -559,6 +559,7 @@ TEST_F(TransformerTest, transformMergeReplaceExtractorsToBody) {
   extractor.set_subgroup(1);
   auto replacement_text = "456";
   extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["ext1"] = extractor;
 
   transformation.set_advanced_templates(false);
@@ -662,6 +663,7 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   extractor.mutable_body();
   extractor.set_regex("not ([\\-._[:alnum:]]+) body");
   extractor.set_subgroup(1);
+  extractor.set_mode(envoy::api::v2::filter::http::Extraction::EXTRACT);
   (*transformation.mutable_extractors())["param"] = extractor;
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
@@ -687,6 +689,7 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
   extractor.set_subgroup(1);
   auto replacement_text = "JSON";
   extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["param"] = extractor;
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");

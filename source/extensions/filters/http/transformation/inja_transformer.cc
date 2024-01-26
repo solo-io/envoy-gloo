@@ -59,7 +59,7 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
       extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
       has_replacement_text_(extractor.has_replacement_text()),
       replacement_text_(extractor.replacement_text().value()),
-      replace_all_(extractor.replace_all()) {
+      mode_(static_cast<Mode>(extractor.mode())) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
@@ -69,24 +69,27 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
                     group_, extract_regex_.mark_count()));
   }
 
-  // if replace_all is set, we must have replacement text
-  if (replace_all_ && !has_replacement_text_) {
-    throw EnvoyException(
-        fmt::format("replace_all set but no replacement text provided"));
-  }
-
-  // if replace_all is set, subgroup should be 0
-  if (replace_all_ && group_ != 0) {
-    throw EnvoyException(
-        fmt::format("replace_all set but subgroup is not 0"));
-  }
-
-  // extractionFunc is either replaceValue or extractValue depending on whether 
-  // replacement_text_ is empty or not
-  if (has_replacement_text_) {
-    extraction_func_ = std::bind(&Extractor::replaceValue, this, _1, _2);
-  } else {
-    extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
+  switch (mode_) {
+    case Mode::EXTRACT:
+      extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
+      break;
+    case Mode::SINGLE_REPLACE:
+      if (!has_replacement_text_) {
+        throw EnvoyException("SINGLE_REPLACE mode set but no replacement text provided");
+      }
+      extraction_func_ = std::bind(&Extractor::replaceIndividualValue, this, _1, _2);
+      break;
+    case Mode::REPLACE_ALL:
+      if (!has_replacement_text_) {
+        throw EnvoyException("REPLACE_ALL mode set but no replacement text provided");
+      }
+      if (group_ != 0) {
+        throw EnvoyException("REPLACE_ALL mode set but subgroup is not 0");
+      }
+      extraction_func_ = std::bind(&Extractor::replaceAllValues, this, _1, _2);
+      break;
+    default:
+      throw EnvoyException("Unknown mode");
   }
 }
 
@@ -131,18 +134,6 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
 
 // Match a regex against the input value and replace the matched subgroup with the replacement_text_ value
 // writes the result to replaced_value_ and returns a absl::string_view to it
-// if replace_all_ is true, __all__ substrings matching the regex in the input value will be replaced
-// with the replacement_text_ value
-absl::string_view
-Extractor::replaceValue(Http::StreamFilterCallbacks &callbacks,
-                        absl::string_view value) const {
-  if (replace_all_) {
-    return replaceAllValues(callbacks, value);
-  } else {
-    return replaceIndividualValue(callbacks, value);
-  }
-}
-
 absl::string_view
 Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
                                   absl::string_view value) const {
@@ -181,6 +172,8 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
   return absl::string_view(replaced_value_);
 }
 
+// Match a regex against the input value and replace all instances of the regex with the replacement_text_ value
+// writes the result to replaced_value_ and returns a absl::string_view to it
 absl::string_view
 Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
                             absl::string_view value) const {
