@@ -26,6 +26,7 @@ namespace Transformation {
 
 using GetBodyFunc = std::function<const std::string &()>;
 using ExtractionFunc = std::function<absl::string_view(Http::StreamFilterCallbacks &callbacks, absl::string_view value)>;
+using ExtractionApi = envoy::api::v2::filter::http::Extraction;
 
 struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
 public:
@@ -83,14 +84,6 @@ public:
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
-
-  // Matching enum with the protobuf definition
-  enum class Mode {
-    EXTRACT = 0,
-    SINGLE_REPLACE = 1,
-    REPLACE_ALL = 2
-  };
-
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
@@ -104,7 +97,7 @@ private:
   const unsigned int group_;
   const std::regex extract_regex_;
   const std::optional<std::string> replacement_text_;
-  const Mode mode_;
+  const ExtractionApi::Mode mode_;
 
   ExtractionFunc extraction_func_;
   mutable std::string replaced_value_;

@@ -58,7 +58,7 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
       group_(extractor.subgroup()),
       extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
       replacement_text_(extractor.has_replacement_text() ? std::make_optional(extractor.replacement_text().value()) : std::nullopt),
-      mode_(static_cast<Mode>(extractor.mode())) {
+      mode_(extractor.mode()) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
@@ -69,16 +69,16 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
   }
 
   switch (mode_) {
-    case Mode::EXTRACT:
+    case ExtractionApi::EXTRACT:
       extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
       break;
-    case Mode::SINGLE_REPLACE:
+    case ExtractionApi::SINGLE_REPLACE:
       if (!replacement_text_.has_value()) {
         throw EnvoyException("SINGLE_REPLACE mode set but no replacement text provided");
       }
       extraction_func_ = std::bind(&Extractor::replaceIndividualValue, this, _1, _2);
       break;
-    case Mode::REPLACE_ALL:
+    case ExtractionApi::REPLACE_ALL:
       if (!replacement_text_.has_value()) {
         throw EnvoyException("REPLACE_ALL mode set but no replacement text provided");
       }
