@@ -57,8 +57,7 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
       extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
-      has_replacement_text_(extractor.has_replacement_text()),
-      replacement_text_(extractor.replacement_text().value()),
+      replacement_text_(extractor.has_replacement_text() ? std::make_optional(extractor.replacement_text().value()) : std::nullopt),
       mode_(static_cast<Mode>(extractor.mode())) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
@@ -74,13 +73,13 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
       extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
       break;
     case Mode::SINGLE_REPLACE:
-      if (!has_replacement_text_) {
+      if (!replacement_text_.has_value()) {
         throw EnvoyException("SINGLE_REPLACE mode set but no replacement text provided");
       }
       extraction_func_ = std::bind(&Extractor::replaceIndividualValue, this, _1, _2);
       break;
     case Mode::REPLACE_ALL:
-      if (!has_replacement_text_) {
+      if (!replacement_text_.has_value()) {
         throw EnvoyException("REPLACE_ALL mode set but no replacement text provided");
       }
       if (group_ != 0) {
@@ -165,7 +164,7 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
   const auto &sub_match = regex_result[group_];
   auto start_pos = sub_match.first - value.begin();
   auto length = sub_match.length();
-  replaced.replace(start_pos, length, replacement_text_);
+  replaced.replace(start_pos, length, replacement_text_.value());
 
   // Store the replaced string in replaced_value_ and return an absl::string_view to it
   replaced_value_ = std::move(replaced);
@@ -196,7 +195,7 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
   }
 
   // If a match was found, replace all instances of the regex in the input value with the replacement_text_ value
-  replaced = std::regex_replace(input, extract_regex_, replacement_text_);
+  replaced = std::regex_replace(input, extract_regex_, replacement_text_.value());
 
   // Store the replaced string in replaced_value_ and return an absl::string_view to it
   replaced_value_ = std::move(replaced);

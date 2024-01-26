@@ -103,8 +103,7 @@ private:
   const bool body_;
   const unsigned int group_;
   const std::regex extract_regex_;
-  const bool has_replacement_text_;
-  const std::string replacement_text_;
+  const std::optional<std::string> replacement_text_;
   const Mode mode_;
 
   ExtractionFunc extraction_func_;
