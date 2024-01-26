@@ -134,7 +134,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatch) {
 
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
-  // Unless replace_all is set, we require regexes to match the entire target string
+  // Unless we are in `REPLACE_ALL` mode, we require regexes to match the entire target string
   // because this only matches a substring, it should not be replaced
   extractor.set_regex("body");
   extractor.set_subgroup(0);
@@ -155,7 +155,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
 
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
-  // Unless replace_all is set, we require regexes to match the entire target string
+  // Unless we are in `REPLACE_ALL` mode, we require regexes to match the entire target string
   // because this only matches a substring, it should not be replaced
   // Note -- the subgroup in the regex is introduced here so that this config is not
   // rejected when constructing the extractor

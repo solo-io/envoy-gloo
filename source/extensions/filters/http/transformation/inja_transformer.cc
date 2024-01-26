@@ -154,7 +154,7 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
 
   // if the regex doesn't match the entire input value, return an empty string
   if (regex_result[0].length() != long(value.length())) {
-    ENVOY_STREAM_LOG(debug, "replaceValue: Regex did not match entire input value. This is not allowed when replace_all is false", callbacks);
+    ENVOY_STREAM_LOG(debug, "replaceValue: Regex did not match entire input value. This is not allowed in SINGLE_REPLACE mode.", callbacks);
     return "";
   }
 
