@@ -153,7 +153,7 @@ message Transformation {
 // Extractions can be used to extract information from the request/response.
 // The extracted information can then be referenced in template fields.
 message Extraction {
-  // Define the Mode enum within the Extraction message
+  // The mode of operation for the extraction.
   enum Mode {
     // Default mode. Extract the value of the subgroup-th capturing group.
     EXTRACT = 0; 
@@ -163,7 +163,7 @@ message Extraction {
     // Replace all matches of the regex in the source with the replacement_text.
     // Note: replacement_text must be set for this mode.
     // Note: subgroup is ignored for this mode. configuration will fail if subgroup is set.
-    // Note: restrictions on the regex are different for this mode. See
+    // Note: restrictions on the regex are different for this mode. See the regex field for more details.
     REPLACE_ALL = 2;
   }
 
