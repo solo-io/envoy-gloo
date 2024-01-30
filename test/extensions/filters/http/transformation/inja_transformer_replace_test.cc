@@ -178,10 +178,6 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
 
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
-  // Unless we are in `REPLACE_ALL` mode, we require regexes to match the entire target string
-  // because this only matches a substring, it should not be replaced
-  // Note -- the subgroup in the regex is introduced here so that this config is not
-  // rejected when constructing the extractor
   extractor.set_regex("(does not match)");
   extractor.set_subgroup(1);
   auto replacement_text = "BAZ";
@@ -195,7 +191,6 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
 
   EXPECT_EQ("", res);
 }
-
 
 TEST(Extraction, ReplaceFromFullLiteralMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
@@ -273,7 +268,6 @@ TEST(Extraction, ReplaceWithSubgroupUnset) {
   EXPECT_EQ("BAZ", res);
 }
 
-// In regular extractor, I expect that this will hit the "this should never happen" block
 TEST(Extraction, ReplaceNoMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
@@ -291,6 +285,25 @@ TEST(Extraction, ReplaceNoMatch) {
   std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
+}
+
+TEST(Extraction, ReplacementTextLongerThanOriginalString) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+
+  envoy::api::v2::filter::http::Extraction extractor;
+  extractor.mutable_body();
+  extractor.set_regex(".*(body)");
+  extractor.set_subgroup(1);
+  auto replacement_text = "this is a longer string than the original";
+  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  std::string body("not json body");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
+  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+
+  EXPECT_EQ("not json this is a longer string than the original", res);
 }
 
 TEST(Extraction, NilReplace) {

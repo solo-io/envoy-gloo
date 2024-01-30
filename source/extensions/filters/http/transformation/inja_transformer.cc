@@ -158,14 +158,22 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
     return "";
   }
 
-  // Create a new string with the input value
-  std::string replaced(value.begin(), value.end());
+  // Create a new string with the maximum possible length after replacement
+  auto max_possible_length = value.length() + replacement_text_.value().length();
+  std::string replaced;
+  replaced.reserve(max_possible_length);
 
-  // Replace the specified subgroup with the replacement_text_ value
-  const auto &sub_match = regex_result[group_];
-  auto start_pos = sub_match.first - value.begin();
-  auto length = sub_match.length();
-  replaced.replace(start_pos, length, replacement_text_.value());
+  auto subgroup_start = regex_result[group_].first;
+  auto subgroup_end = regex_result[group_].second;
+
+  // Copy the initial part of the string until the match
+  replaced.assign(value.begin(), subgroup_start);
+
+  // Append the replacement text
+  replaced += replacement_text_.value();
+
+  // Append the remaining part of the string after the match
+  replaced.append(subgroup_end, value.end());
 
   // Store the replaced string in replaced_value_ and return an absl::string_view to it
   replaced_value_ = std::move(replaced);
