@@ -146,6 +146,7 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
 
   // if the subgroup specified is greater than the number of subgroups in the regex, return an empty string
   if (group_ >= regex_result.size()) {
+    // this should never happen as we test this in the ctor.
     ASSERT("no such group in the regex");
     ENVOY_STREAM_LOG(debug, "replaceValue: invalid group specified for regex", callbacks);
     return "";
