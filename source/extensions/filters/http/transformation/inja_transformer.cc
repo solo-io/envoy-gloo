@@ -187,18 +187,13 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
                             absl::string_view value) const {
   std::string input(value.begin(), value.end());
   std::string replaced;
-  bool matchFound = false;
 
   // create an iterator to search for matches of extract_regex_ in the input string
   std::sregex_iterator it(input.begin(), input.end(), extract_regex_);
   std::sregex_iterator end_it; // default end iterator for comparison
 
-  // set matchFound to true if at least one match is found
-  if (it != end_it) {
-    matchFound = true; 
-  }
-
-  if (!matchFound) {
+  // return an empty string if the regex doesn't match any part of the input value
+  if (it == end_it) {
     ENVOY_STREAM_LOG(debug, "replaceAllValues: extractor regex did not match input", callbacks);
     return "";
   }
