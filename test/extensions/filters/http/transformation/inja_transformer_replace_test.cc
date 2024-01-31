@@ -74,8 +74,7 @@ TEST(Extraction, ExtractAndReplaceValueFromBodySubgroup) {
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
-  auto replacement_text = "BAZ";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -93,8 +92,7 @@ TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -113,8 +111,7 @@ TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -138,8 +135,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatch) {
   // because this only matches a substring, it should not be replaced
   extractor.set_regex("body");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -161,8 +157,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
   // rejected when constructing the extractor
   extractor.set_regex("(body)");
   extractor.set_subgroup(1);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -180,8 +175,7 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
   extractor.mutable_body();
   extractor.set_regex("(does not match)");
   extractor.set_subgroup(1);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -201,8 +195,7 @@ TEST(Extraction, ReplaceFromFullLiteralMatch) {
   // because this only matches a substring, it should not be replaced
   extractor.set_regex("not json body");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -220,8 +213,7 @@ TEST(Extraction, AttemptToReplaceFromInvalidSubgroup) {
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(1);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -275,8 +267,7 @@ TEST(Extraction, ReplaceNoMatch) {
   extractor.mutable_body();
   extractor.set_regex("this will not match the input string");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -294,8 +285,7 @@ TEST(Extraction, ReplacementTextLongerThanOriginalString) {
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
-  auto replacement_text = "this is a longer string than the original";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("this is a longer string than the original");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -313,8 +303,7 @@ TEST(Extraction, NilReplace) {
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
-  auto replacement_text = "";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -332,8 +321,7 @@ TEST(Extraction, NilReplaceWithSubgroupUnset) {
   envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
-  auto replacement_text = "";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -350,8 +338,7 @@ TEST(Extraction, HeaderReplaceHappyPath) {
   extractor.set_header("foo");
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -388,8 +375,7 @@ TEST(Extraction, ReplaceAllWithSubgroupSet) {
   // Note that the regex contains enough capture groups
   // that this (in theory) could be valid subgroup
   extractor.set_subgroup(1);
-  auto replacement_text = "BAZ";
-	extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   // However, subgroup needs to be unset (i.e., 0) for replace all to work
   // so this config should be rejected
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
@@ -408,8 +394,7 @@ TEST(Extraction, ReplaceAllHappyPath) {
   extractor.mutable_body();
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -430,8 +415,7 @@ TEST(Extraction, IndividualReplaceIdentity) {
   extractor.mutable_body();
   extractor.set_regex(".*(bar).*");
   extractor.set_subgroup(1);
-  auto replacement_text = "bar";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("bar");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -450,8 +434,7 @@ TEST(Extraction, ReplaceAllIdentity) {
   extractor.mutable_body();
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
-  auto replacement_text = "bar";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("bar");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
@@ -472,8 +455,7 @@ TEST(Extraction, ReplaceAllNoMatch) {
   extractor.mutable_body();
   extractor.set_regex("this will not match the input string");
   extractor.set_subgroup(0);
-  auto replacement_text = "BAZ";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("BAZ");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
