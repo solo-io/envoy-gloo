@@ -557,8 +557,7 @@ TEST_F(TransformerTest, transformMergeReplaceExtractorsToBody) {
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
-  auto replacement_text = "456";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("456");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["ext1"] = extractor;
 
@@ -687,8 +686,7 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
   extractor.mutable_body();
   extractor.set_regex("not ([\\-._[:alnum:]]+) body");
   extractor.set_subgroup(1);
-  auto replacement_text = "JSON";
-  extractor.mutable_replacement_text()->set_value(replacement_text);
+  extractor.mutable_replacement_text()->set_value("JSON");
   extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["param"] = extractor;
 
