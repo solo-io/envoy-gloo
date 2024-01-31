@@ -70,12 +70,12 @@ void fill_slot(
 TEST(Extraction, ExtractAndReplaceValueFromBodySubgroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -88,12 +88,12 @@ TEST(Extraction, ExtractAndReplaceValueFromBodySubgroup) {
 TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -107,12 +107,12 @@ TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
 TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -129,14 +129,14 @@ TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
 TEST(Extraction, AttemptReplaceFromPartialMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   // Unless we are in `REPLACE_ALL` mode, we require regexes to match the entire target string
   // because this only matches a substring, it should not be replaced
   extractor.set_regex("body");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -149,7 +149,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatch) {
 TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   // Unless we are in `REPLACE_ALL` mode, we require regexes to match the entire target string
   // because this only matches a substring, it should not be replaced
@@ -158,7 +158,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
   extractor.set_regex("(body)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -171,12 +171,12 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
 TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("(does not match)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -189,14 +189,12 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
 TEST(Extraction, ReplaceFromFullLiteralMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
-  // We require regexes to match the entire target string
-  // because this only matches a substring, it should not be replaced
   extractor.set_regex("not json body");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -209,12 +207,12 @@ TEST(Extraction, ReplaceFromFullLiteralMatch) {
 TEST(Extraction, AttemptToReplaceFromInvalidSubgroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -225,13 +223,13 @@ TEST(Extraction, AttemptToReplaceFromInvalidSubgroup) {
 TEST(Extraction, ReplaceInNestedSubgroups) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(not (json) body)");
   extractor.set_subgroup(2);
   auto replacement_text = "BAZ";
 	extractor.mutable_replacement_text()->set_value(replacement_text);
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -244,13 +242,13 @@ TEST(Extraction, ReplaceInNestedSubgroups) {
 TEST(Extraction, ReplaceWithSubgroupUnset) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(not (json) body)");
   // subgroup is unset
   auto replacement_text = "BAZ";
 	extractor.mutable_replacement_text()->set_value(replacement_text);
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -263,12 +261,12 @@ TEST(Extraction, ReplaceWithSubgroupUnset) {
 TEST(Extraction, ReplaceNoMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("this will not match the input string");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -281,12 +279,12 @@ TEST(Extraction, ReplaceNoMatch) {
 TEST(Extraction, ReplacementTextLongerThanOriginalString) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("this is a longer string than the original");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -299,12 +297,12 @@ TEST(Extraction, ReplacementTextLongerThanOriginalString) {
 TEST(Extraction, NilReplace) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -318,11 +316,11 @@ TEST(Extraction, NilReplaceWithSubgroupUnset) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
   // subgroup is unset
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(body)");
   extractor.mutable_replacement_text()->set_value("");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -334,12 +332,12 @@ TEST(Extraction, NilReplaceWithSubgroupUnset) {
 TEST(Extraction, HeaderReplaceHappyPath) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header("foo");
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
@@ -353,11 +351,11 @@ TEST(Extraction, HeaderReplaceHappyPath) {
 TEST(Extraction, ReplaceAllWithReplacementTextUnset) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("bar bar bar");
@@ -369,7 +367,7 @@ TEST(Extraction, ReplaceAllWithReplacementTextUnset) {
 TEST(Extraction, ReplaceAllWithSubgroupSet) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(bar).*");
   // Note that the regex contains enough capture groups
@@ -378,7 +376,7 @@ TEST(Extraction, ReplaceAllWithSubgroupSet) {
   extractor.mutable_replacement_text()->set_value("BAZ");
   // However, subgroup needs to be unset (i.e., 0) for replace all to work
   // so this config should be rejected
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("bar bar bar");
@@ -390,12 +388,12 @@ TEST(Extraction, ReplaceAllWithSubgroupSet) {
 TEST(Extraction, ReplaceAllHappyPath) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("bar bar bar");
@@ -409,14 +407,12 @@ TEST(Extraction, ReplaceAllHappyPath) {
 TEST(Extraction, IndividualReplaceIdentity) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  // Note that the regex contains enough capture groups
-  // that this (in theory) could be valid subgroup
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*(bar).*");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("bar");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("bar bar bar");
@@ -430,12 +426,12 @@ TEST(Extraction, IndividualReplaceIdentity) {
 TEST(Extraction, ReplaceAllIdentity) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("bar");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("bar");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("bar bar bar");
@@ -449,14 +445,12 @@ TEST(Extraction, ReplaceAllIdentity) {
 TEST(Extraction, ReplaceAllNoMatch) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
 
-  // Note that the regex contains enough capture groups
-  // that this (in theory) could be valid subgroup
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("this will not match the input string");
   extractor.set_subgroup(0);
   extractor.mutable_replacement_text()->set_value("BAZ");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::REPLACE_ALL);
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");

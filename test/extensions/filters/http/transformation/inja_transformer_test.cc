@@ -269,7 +269,7 @@ TEST(Extraction, ExtractIdFromHeader) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -284,7 +284,7 @@ TEST(Extraction, ExtractorWorkWithNewlines) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("[\\S\\s]*");
   extractor.set_subgroup(0);
@@ -302,7 +302,7 @@ TEST(Extraction, ExtractorFail) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("ILLEGAL REGEX \\ \\ \\ \\ a\\ \\a\\ a\\  \\d+)");
   extractor.set_subgroup(1);
@@ -314,7 +314,7 @@ TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("(\\d+)");
   extractor.set_subgroup(123);
@@ -332,7 +332,7 @@ TEST_F(TransformerTest, transform) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -364,7 +364,7 @@ TEST_F(TransformerTest, transformSimple) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -458,7 +458,7 @@ TEST_F(TransformerTest, transformSimpleNestedStructs) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -523,7 +523,7 @@ TEST_F(TransformerTest, transformMergeExtractorsToBody) {
 
   transformation.mutable_merge_extractors_to_body();
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -553,12 +553,12 @@ TEST_F(TransformerTest, transformMergeReplaceExtractorsToBody) {
 
   transformation.mutable_merge_extractors_to_body();
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("456");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["ext1"] = extractor;
 
   transformation.set_advanced_templates(false);
@@ -610,7 +610,7 @@ TEST_F(InjaTransformerTest, transformWithHyphens) {
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
   Buffer::OwnedImpl body("{}");
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.set_header(":path");
   extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
   extractor.set_subgroup(1);
@@ -658,11 +658,11 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("not ([\\-._[:alnum:]]+) body");
   extractor.set_subgroup(1);
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::EXTRACT);
+  extractor.set_mode(ExtractionApi::EXTRACT);
   (*transformation.mutable_extractors())["param"] = extractor;
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
@@ -682,12 +682,12 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
 
-  envoy::api::v2::filter::http::Extraction extractor;
+  ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex("not ([\\-._[:alnum:]]+) body");
   extractor.set_subgroup(1);
   extractor.mutable_replacement_text()->set_value("JSON");
-  extractor.set_mode(envoy::api::v2::filter::http::Extraction::SINGLE_REPLACE);
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
   (*transformation.mutable_extractors())["param"] = extractor;
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
