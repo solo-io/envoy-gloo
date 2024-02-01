@@ -28,6 +28,21 @@ envoy_gloo_cc_test(
     ],
 )
 
+envoy_gloo_cc_test(
+    name = "inja_transformer_replace_test",
+    srcs = ["inja_transformer_replace_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:inja_transformer_lib",
+        "@envoy//source/common/common:random_generator_lib",
+        "@envoy//source/common/common:base64_lib",
+        "@envoy//test/test_common:environment_lib",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks",
+    ],
+)
+
 envoy_cc_test_binary(
     name = "inja_transformer_speed_test",
     srcs = ["inja_transformer_speed_test.cc"],
