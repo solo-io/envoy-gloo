@@ -269,7 +269,7 @@ TEST(Extraction, ExtractIdFromHeader) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -284,7 +284,7 @@ TEST(Extraction, ExtractorWorkWithNewlines) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
   extractor.set_regex("[\\S\\s]*");
   extractor.set_subgroup(0);
@@ -302,7 +302,7 @@ TEST(Extraction, ExtractorFail) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("ILLEGAL REGEX \\ \\ \\ \\ a\\ \\a\\ a\\  \\d+)");
   extractor.set_subgroup(1);
@@ -314,7 +314,7 @@ TEST(Extraction, ExtractorFailOnOutOfRangeGroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/users/123"}};
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("(\\d+)");
   extractor.set_subgroup(123);
@@ -332,7 +332,7 @@ TEST_F(TransformerTest, transform) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -364,7 +364,7 @@ TEST_F(TransformerTest, transformSimple) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -458,7 +458,7 @@ TEST_F(TransformerTest, transformSimpleNestedStructs) {
                                          {":path", "/users/123"}};
   Buffer::OwnedImpl body("{\"a\":\"456\"}");
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -523,7 +523,7 @@ TEST_F(TransformerTest, transformMergeExtractorsToBody) {
 
   transformation.mutable_merge_extractors_to_body();
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/users/(\\d+)");
   extractor.set_subgroup(1);
@@ -538,42 +538,6 @@ TEST_F(TransformerTest, transformMergeExtractorsToBody) {
   std::string res = body.toString();
 
   EXPECT_EQ("{\"ext1\":\"123\"}", res);
-}
-
-TEST_F(TransformerTest, transformMergeReplaceExtractorsToBody) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  // in passthrough mode the filter gives us an empty body
-  std::string emptyBody = "";
-  Buffer::OwnedImpl body(emptyBody);
-
-  TransformationTemplate transformation;
-
-  transformation.mutable_merge_extractors_to_body();
-
-  ExtractionApi extractor;
-  extractor.set_header(":path");
-  extractor.set_regex("/users/(\\d+)");
-  extractor.set_subgroup(1);
-  extractor.mutable_replacement_text()->set_value("456");
-  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
-  (*transformation.mutable_extractors())["ext1"] = extractor;
-
-  transformation.set_advanced_templates(false);
-
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
-  transformer.transform(headers, &headers, body, callbacks);
-
-  std::string res = body.toString();
-
-  // With replacement text, we replace the portion of the header value
-  // in the specified subgroup with the replacement text, and then the
-  // value of the replaced input is the value of the extraction. 
-  EXPECT_EQ("{\"ext1\":\"/users/456\"}", res);
 }
 
 TEST_F(TransformerTest, transformBodyNotSet) {
@@ -610,7 +574,7 @@ TEST_F(InjaTransformerTest, transformWithHyphens) {
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
   Buffer::OwnedImpl body("{}");
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.set_header(":path");
   extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
   extractor.set_subgroup(1);
@@ -658,11 +622,10 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
 
-  ExtractionApi extractor;
+  envoy::api::v2::filter::http::Extraction extractor;
   extractor.mutable_body();
   extractor.set_regex("not ([\\-._[:alnum:]]+) body");
   extractor.set_subgroup(1);
-  extractor.set_mode(ExtractionApi::EXTRACT);
   (*transformation.mutable_extractors())["param"] = extractor;
 
   transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
@@ -672,31 +635,6 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromIt) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "json");
-}
-
-TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
-  Buffer::OwnedImpl body("not json body");
-
-  TransformationTemplate transformation;
-  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
-  transformation.set_advanced_templates(true);
-
-  ExtractionApi extractor;
-  extractor.mutable_body();
-  extractor.set_regex("not ([\\-._[:alnum:]]+) body");
-  extractor.set_subgroup(1);
-  extractor.mutable_replacement_text()->set_value("JSON");
-  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
-  (*transformation.mutable_extractors())["param"] = extractor;
-
-  transformation.mutable_body()->set_text("{{extraction(\"param\")}}");
-
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
-
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), "not JSON body");
 }
 
 TEST_F(InjaTransformerTest, UseBodyFunction) {

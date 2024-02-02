@@ -25,8 +25,6 @@ namespace HttpFilters {
 namespace Transformation {
 
 using GetBodyFunc = std::function<const std::string &()>;
-using ExtractionFunc = std::function<absl::string_view(Http::StreamFilterCallbacks &callbacks, absl::string_view value)>;
-using ExtractionApi = envoy::api::v2::filter::http::Extraction;
 
 struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
 public:
@@ -84,23 +82,15 @@ public:
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
+
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
-  absl::string_view replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
-                                           absl::string_view value) const;
-  absl::string_view replaceAllValues(Http::StreamFilterCallbacks &callbacks,
-                                     absl::string_view value) const;
 
   const Http::LowerCaseString headername_;
   const bool body_;
   const unsigned int group_;
   const std::regex extract_regex_;
-  const std::optional<std::string> replacement_text_;
-  const ExtractionApi::Mode mode_;
-
-  ExtractionFunc extraction_func_;
-  mutable std::string replaced_value_;
 };
 
 class InjaTransformer : public Transformer {
