@@ -14,7 +14,7 @@ diff --git a/source/common/network/address_impl.cc b/source/common/network/addre
 index 416492d4e0..ef569d310c 100644
 --- source/common/network/address_impl.cc
 +++ source/common/network/address_impl.cc
-@@ -211,9 +211,22 @@ std::string Ipv4Instance::sockaddrToString(const sockaddr_in& addr) {
+@@ -211,9 +211,19 @@ std::string Ipv4Instance::sockaddrToString(const sockaddr_in& addr) {
    return std::string(start, str + BufferSize - start);
  }
 
@@ -23,9 +23,6 @@ index 416492d4e0..ef569d310c 100644
 +}
 +
 +Cleanup Ipv4Instance::forceProtocolUnsupportedForTest(bool new_val) {
-+  // DO_NOT_SUBMIT this should cause some mayhem
-+  int* i = (int*)(-1);
-+  auto oops = *i;
 +  bool old_val = force_ipv4_unsupported_for_test;
 +  force_ipv4_unsupported_for_test = new_val;
 +  return Cleanup([old_val]() { force_ipv4_unsupported_for_test = old_val; });
