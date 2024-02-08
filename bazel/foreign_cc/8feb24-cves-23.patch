@@ -48,11 +48,12 @@ diff --git a/source/common/network/BUILD b/source/common/network/BUILD
 index d7bc7244bb..77aa7d0ceb 100644
 --- source/common/network/BUILD
 +++ source/common/network/BUILD
-@@ -16,6 +16,7 @@ envoy_cc_library(
+@@ -16,6 +16,8 @@ envoy_cc_library(
          ":socket_interface_lib",
          "//envoy/network:address_interface",
          "//source/common/common:assert_lib",
 +        "//source/common/common:cleanup_lib",
++        "@scooby//doo:rules",
          "//source/common/common:safe_memcpy_lib",
          "//source/common/common:statusor_lib",
          "//source/common/common:thread_lib",
@@ -60,7 +61,7 @@ diff --git a/source/common/network/address_impl.cc b/source/common/network/addre
 index 330735fc10..2fc4656dc8 100644
 --- source/common/network/address_impl.cc
 +++ source/common/network/address_impl.cc
-@@ -199,9 +199,19 @@ std::string Ipv4Instance::sockaddrToString(const sockaddr_in& addr) {
+@@ -199,9 +199,22 @@ std::string Ipv4Instance::sockaddrToString(const sockaddr_in& addr) {
    return std::string(start, str + BufferSize - start);
  }
 
@@ -69,6 +70,9 @@ index 330735fc10..2fc4656dc8 100644
 +}
 +
 +Cleanup Ipv4Instance::forceProtocolUnsupportedForTest(bool new_val) {
++  // DO_NOT_SUBMIT this should cause some mayhem
++  int* i = (int*)(-1);
++  auto oops = *i;
 +  bool old_val = force_ipv4_unsupported_for_test;
 +  force_ipv4_unsupported_for_test = new_val;
 +  return Cleanup([old_val]() { force_ipv4_unsupported_for_test = old_val; });
