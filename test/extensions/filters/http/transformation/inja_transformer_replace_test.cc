@@ -45,28 +45,6 @@ protected:
   NiceMock<ThreadLocal::MockInstance> tls_;
 };
 
-void fill_slot(
-      ThreadLocal::SlotPtr& slot,
-      const Http::RequestOrResponseHeaderMap &header_map,
-      const Http::RequestHeaderMap *request_headers,
-      GetBodyFunc &body,
-      const std::unordered_map<std::string, absl::string_view> &extractions,
-      const nlohmann::json &context,
-      const std::unordered_map<std::string, std::string> &environ,
-      const envoy::config::core::v3::Metadata *cluster_metadata) {
-  slot->set([](Event::Dispatcher&) -> ThreadLocal::ThreadLocalObjectSharedPtr {
-          return std::make_shared<ThreadLocalTransformerContext>();
-  });
-  auto& typed_slot = slot->getTyped<ThreadLocalTransformerContext>();
-  typed_slot.header_map_ = &header_map;
-  typed_slot.request_headers_ = request_headers;
-  typed_slot.body_ = &body;
-  typed_slot.extractions_ = &extractions;
-  typed_slot.context_ = &context;
-  typed_slot.environ_ = &environ;
-  typed_slot.cluster_metadata_ = cluster_metadata;
-}
-
 TEST(Extraction, ExtractAndReplaceValueFromBodySubgroup) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
@@ -80,14 +58,13 @@ TEST(Extraction, ExtractAndReplaceValueFromBodySubgroup) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("not json BAZ", res);
 }
 
 TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
-
   ExtractionApi extractor;
   extractor.mutable_body();
   extractor.set_regex(".*");
@@ -98,7 +75,7 @@ TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("BAZ", res);
 }
@@ -117,7 +94,7 @@ TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   // Note to self/reviewers: this is the current behavior, which is a kind of 
   // confusing edge case in std::regex_replace when the regex is .*
@@ -141,7 +118,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatch) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }
@@ -163,7 +140,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }
@@ -181,7 +158,7 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }
@@ -199,7 +176,7 @@ TEST(Extraction, ReplaceFromFullLiteralMatch) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("BAZ", res);
 }
@@ -217,7 +194,7 @@ TEST(Extraction, AttemptToReplaceFromInvalidSubgroup) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  EXPECT_THROW_WITH_MESSAGE(Extractor(extractor).extract(callbacks, headers, bodyfunc), EnvoyException, "group 1 requested for regex with only 0 sub groups");
+  EXPECT_THROW_WITH_MESSAGE(Extractor(extractor).replace(callbacks, headers, bodyfunc), EnvoyException, "group 1 requested for regex with only 0 sub groups");
 }
 
 TEST(Extraction, ReplaceInNestedSubgroups) {
@@ -234,7 +211,7 @@ TEST(Extraction, ReplaceInNestedSubgroups) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("not BAZ body", res);
 }
@@ -253,7 +230,7 @@ TEST(Extraction, ReplaceWithSubgroupUnset) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("BAZ", res);
 }
@@ -271,7 +248,7 @@ TEST(Extraction, ReplaceNoMatch) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }
@@ -289,7 +266,7 @@ TEST(Extraction, ReplacementTextLongerThanOriginalString) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("not json this is a longer string than the original", res);
 }
@@ -307,7 +284,7 @@ TEST(Extraction, NilReplace) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("not json ", res);
 }
@@ -324,7 +301,7 @@ TEST(Extraction, NilReplaceWithSubgroupUnset) {
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   std::string body("not json body");
-  std::string res(Extractor(extractor).extract(callbacks, headers, empty_body));
+  std::string res(Extractor(extractor).replace(callbacks, headers, empty_body));
 
   EXPECT_EQ("", res);
 }
@@ -343,7 +320,7 @@ TEST(Extraction, HeaderReplaceHappyPath) {
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("BAZ", res);
 }
@@ -361,7 +338,7 @@ TEST(Extraction, ReplaceAllWithReplacementTextUnset) {
   std::string body("bar bar bar");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  EXPECT_THROW(std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc)), EnvoyException);
+  EXPECT_THROW(std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc)), EnvoyException);
 }
 
 TEST(Extraction, ReplaceAllWithSubgroupSet) {
@@ -382,7 +359,7 @@ TEST(Extraction, ReplaceAllWithSubgroupSet) {
   std::string body("bar bar bar");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  EXPECT_THROW(std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc)), EnvoyException);
+  EXPECT_THROW(std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc)), EnvoyException);
 }
 
 TEST(Extraction, ReplaceAllHappyPath) {
@@ -399,7 +376,7 @@ TEST(Extraction, ReplaceAllHappyPath) {
   std::string body("bar bar bar");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("BAZ BAZ BAZ", res);
 }
@@ -418,7 +395,7 @@ TEST(Extraction, IndividualReplaceIdentity) {
   std::string body("bar bar bar");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("bar bar bar", res);
 }
@@ -437,7 +414,7 @@ TEST(Extraction, ReplaceAllIdentity) {
   std::string body("bar bar bar");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("bar bar bar", res);
 }
@@ -456,7 +433,7 @@ TEST(Extraction, ReplaceAllNoMatch) {
   std::string body("not json body");
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
 
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }

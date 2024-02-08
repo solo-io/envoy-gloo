@@ -70,13 +70,11 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
 
   switch (mode_) {
     case ExtractionApi::EXTRACT:
-      extraction_func_ = std::bind(&Extractor::extractValue, this, _1, _2);
       break;
     case ExtractionApi::SINGLE_REPLACE:
       if (!replacement_text_.has_value()) {
         throw EnvoyException("SINGLE_REPLACE mode set but no replacement text provided");
       }
-      extraction_func_ = std::bind(&Extractor::replaceIndividualValue, this, _1, _2);
       break;
     case ExtractionApi::REPLACE_ALL:
       if (!replacement_text_.has_value()) {
@@ -85,7 +83,6 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
       if (group_ != 0) {
         throw EnvoyException("REPLACE_ALL mode set but subgroup is not 0");
       }
-      extraction_func_ = std::bind(&Extractor::replaceAllValues, this, _1, _2);
       break;
     default:
       throw EnvoyException("Unknown mode");
@@ -99,14 +96,40 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
   if (body_) {
     const std::string &string_body = body();
     absl::string_view sv(string_body);
-    return extraction_func_(callbacks, sv);
+    return extractValue(callbacks, sv);
   } else {
     const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
     if (header_entries.empty()) {
       return "";
     }
     const auto &header_value = header_entries[0]->value().getStringView();
-    return extraction_func_(callbacks, header_value);
+    return extractValue(callbacks, header_value);
+  }
+}
+
+std::string
+Extractor::replace(Http::StreamFilterCallbacks &callbacks,
+                   const Http::RequestOrResponseHeaderMap &header_map,
+                   GetBodyFunc &body) const {
+  if (body_) {
+    const std::string &string_body = body();
+    absl::string_view sv(string_body);
+    if (mode_ == ExtractionApi::SINGLE_REPLACE) {
+      return replaceIndividualValue(callbacks, sv);
+    } else {
+      return replaceAllValues(callbacks, sv);
+    }
+  } else {
+    const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
+    if (header_entries.empty()) {
+      return "";
+    }
+    const auto &header_value = header_entries[0]->value().getStringView();
+    if (mode_ == ExtractionApi::SINGLE_REPLACE) {
+      return replaceIndividualValue(callbacks, header_value);
+    } else {
+      return replaceAllValues(callbacks, header_value);
+    }
   }
 }
 
@@ -132,8 +155,7 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
 }
 
 // Match a regex against the input value and replace the matched subgroup with the replacement_text_ value
-// writes the result to replaced_value_ and returns a absl::string_view to it
-absl::string_view
+std::string
 Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
                                   absl::string_view value) const {
   std::match_results<absl::string_view::const_iterator> regex_result;
@@ -175,14 +197,11 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
   // Append the remaining part of the string after the match
   replaced.append(subgroup_end, value.end());
 
-  // Store the replaced string in replaced_value_ and return an absl::string_view to it
-  replaced_value_ = std::move(replaced);
-  return absl::string_view(replaced_value_);
+  return replaced;
 }
 
 // Match a regex against the input value and replace all instances of the regex with the replacement_text_ value
-// writes the result to replaced_value_ and returns a absl::string_view to it
-absl::string_view
+std::string
 Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
                             absl::string_view value) const {
   std::string input(value.begin(), value.end());
@@ -199,11 +218,7 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
   }
 
   // If a match was found, replace all instances of the regex in the input value with the replacement_text_ value
-  replaced = std::regex_replace(input, extract_regex_, replacement_text_.value());
-
-  // Store the replaced string in replaced_value_ and return an absl::string_view to it
-  replaced_value_ = std::move(replaced);
-  return absl::string_view(replaced_value_);
+  return std::regex_replace(input, extract_regex_, replacement_text_.value());
 }
 
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
@@ -646,16 +661,22 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
   // get the extractions
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   if (advanced_templates_) {
     extractions.reserve(extractors_.size());
   }
 
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
+    const ExtractionApi::Mode mode = named_extractor.second.mode();
     if (advanced_templates_) {
-      extractions[name] =
+      if (mode == ExtractionApi::REPLACE_ALL || mode == ExtractionApi::SINGLE_REPLACE) {
+        extractions[name] =
+          named_extractor.second.replace(callbacks, header_map, get_body);
+      } else {
+        extractions[name] =
           named_extractor.second.extract(callbacks, header_map, get_body);
+      }
     } else {
       absl::string_view name_to_split = name;
       json *current = &json_body;
@@ -665,8 +686,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
         current = &(*current)[std::string(field_name)];
         name_to_split = name_to_split.substr(pos + 1);
       }
-      (*current)[std::string(name_to_split)] =
+      if (mode == ExtractionApi::REPLACE_ALL || mode == ExtractionApi::SINGLE_REPLACE) {
+        (*current)[std::string(name_to_split)] =
+          named_extractor.second.replace(callbacks, header_map, get_body);
+      } else {
+        (*current)[std::string(name_to_split)] =
           named_extractor.second.extract(callbacks, header_map, get_body);
+      }
     }
   }
 

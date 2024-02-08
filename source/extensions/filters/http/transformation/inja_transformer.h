@@ -25,7 +25,6 @@ namespace HttpFilters {
 namespace Transformation {
 
 using GetBodyFunc = std::function<const std::string &()>;
-using ExtractionFunc = std::function<absl::string_view(Http::StreamFilterCallbacks &callbacks, absl::string_view value)>;
 using ExtractionApi = envoy::api::v2::filter::http::Extraction;
 
 struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
@@ -35,7 +34,7 @@ public:
   const Http::RequestOrResponseHeaderMap *header_map_;
   const Http::RequestHeaderMap *request_headers_;
   const GetBodyFunc *body_;
-  const std::unordered_map<std::string, absl::string_view> *extractions_;
+  const std::unordered_map<std::string, std::string> *extractions_;
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
@@ -84,12 +83,16 @@ public:
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
+  std::string replace(Http::StreamFilterCallbacks &callbacks,
+                      const Http::RequestOrResponseHeaderMap &header_map,
+                      GetBodyFunc &body) const;
+  ExtractionApi::Mode mode() const { return mode_; }
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
-  absl::string_view replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
+  std::string replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
                                            absl::string_view value) const;
-  absl::string_view replaceAllValues(Http::StreamFilterCallbacks &callbacks,
+  std::string replaceAllValues(Http::StreamFilterCallbacks &callbacks,
                                      absl::string_view value) const;
 
   const Http::LowerCaseString headername_;
@@ -98,9 +101,6 @@ private:
   const std::regex extract_regex_;
   const std::optional<std::string> replacement_text_;
   const ExtractionApi::Mode mode_;
-
-  ExtractionFunc extraction_func_;
-  mutable std::string replaced_value_;
 };
 
 class InjaTransformer : public Transformer {
