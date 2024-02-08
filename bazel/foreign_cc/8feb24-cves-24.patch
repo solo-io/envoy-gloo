@@ -1,0 +1,471 @@
+diff --git a/source/common/network/BUILD b/source/common/network/BUILD
+index e14c45f0cd..b778684d90 100644
+--- source/common/network/BUILD
++++ source/common/network/BUILD
+@@ -16,6 +16,7 @@ envoy_cc_library(
+         ":socket_interface_lib",
+         "//envoy/network:address_interface",
+         "//source/common/common:assert_lib",
++        "//source/common/common:cleanup_lib",
+         "//source/common/common:safe_memcpy_lib",
+         "//source/common/common:statusor_lib",
+         "//source/common/common:thread_lib",
+diff --git a/source/common/network/address_impl.cc b/source/common/network/address_impl.cc
+index 46e0da5701..821663707b 100644
+--- source/common/network/address_impl.cc
++++ source/common/network/address_impl.cc
+@@ -211,9 +211,19 @@ std::string Ipv4Instance::sockaddrToString(const sockaddr_in& addr) {
+   return std::string(start, str + BufferSize - start);
+ }
+
++namespace {
++bool force_ipv4_unsupported_for_test = false;
++}
++
++Cleanup Ipv4Instance::forceProtocolUnsupportedForTest(bool new_val) {
++  bool old_val = force_ipv4_unsupported_for_test;
++  force_ipv4_unsupported_for_test = new_val;
++  return Cleanup([old_val]() { force_ipv4_unsupported_for_test = old_val; });
++}
++
+ absl::Status Ipv4Instance::validateProtocolSupported() {
+   static const bool supported = SocketInterfaceSingleton::get().ipFamilySupported(AF_INET);
+-  if (supported) {
++  if (supported && !force_ipv4_unsupported_for_test) {
+     return absl::OkStatus();
+   }
+   return absl::FailedPreconditionError("IPv4 addresses are not supported on this machine");
+@@ -307,9 +317,19 @@ Ipv6Instance::Ipv6Instance(absl::Status& status, const sockaddr_in6& address, bo
+   initHelper(address, v6only);
+ }
+
++namespace {
++bool force_ipv6_unsupported_for_test = false;
++}
++
++Cleanup Ipv6Instance::forceProtocolUnsupportedForTest(bool new_val) {
++  bool old_val = force_ipv6_unsupported_for_test;
++  force_ipv6_unsupported_for_test = new_val;
++  return Cleanup([old_val]() { force_ipv6_unsupported_for_test = old_val; });
++}
++
+ absl::Status Ipv6Instance::validateProtocolSupported() {
+   static const bool supported = SocketInterfaceSingleton::get().ipFamilySupported(AF_INET6);
+-  if (supported) {
++  if (supported && !force_ipv6_unsupported_for_test) {
+     return absl::OkStatus();
+   }
+   return absl::FailedPreconditionError("IPv6 addresses are not supported on this machine");
+diff --git a/source/common/network/address_impl.h b/source/common/network/address_impl.h
+index 661f065397..53987bf546 100644
+--- source/common/network/address_impl.h
++++ source/common/network/address_impl.h
+@@ -11,6 +11,7 @@
+ #include "envoy/network/socket.h"
+
+ #include "source/common/common/assert.h"
++#include "source/common/common/cleanup.h"
+ #include "source/common/common/statusor.h"
+
+ namespace Envoy {
+@@ -144,6 +145,12 @@ public:
+   // given address if not.
+   static absl::Status validateProtocolSupported();
+
++  /**
++   * For use in tests only.
++   * Force validateProtocolSupported() to return false for IPv4.
++   */
++  static Envoy::Cleanup forceProtocolUnsupportedForTest(bool new_val);
++
+ private:
+   /**
+    * Construct from an existing unix IPv4 socket address (IP v4 address and port).
+@@ -226,6 +233,12 @@ public:
+   // Validate that IPv6 is supported on this platform
+   static absl::Status validateProtocolSupported();
+
++  /**
++   * For use in tests only.
++   * Force validateProtocolSupported() to return false for IPv6.
++   */
++  static Envoy::Cleanup forceProtocolUnsupportedForTest(bool new_val);
++
+ private:
+   /**
+    * Construct from an existing unix IPv6 socket address (IP v6 address and port).
+diff --git a/source/common/router/router.cc b/source/common/router/router.cc
+index 4c5140b334..5564c62491 100644
+--- source/common/router/router.cc
++++ source/common/router/router.cc
+@@ -995,6 +995,7 @@ void Filter::onResponseTimeout() {
+ // Called when the per try timeout is hit but we didn't reset the request
+ // (hedge_on_per_try_timeout enabled).
+ void Filter::onSoftPerTryTimeout(UpstreamRequest& upstream_request) {
++  ASSERT(!upstream_request.retried());
+   // Track this as a timeout for outlier detection purposes even though we didn't
+   // cancel the request yet and might get a 2xx later.
+   updateOutlierDetection(Upstream::Outlier::Result::LocalOriginTimeout, upstream_request,
+diff --git a/source/common/router/upstream_request.cc b/source/common/router/upstream_request.cc
+index d6075e4863..0bfba2a251 100644
+--- source/common/router/upstream_request.cc
++++ source/common/router/upstream_request.cc
+@@ -511,11 +511,20 @@ void UpstreamRequest::setupPerTryTimeout() {
+
+ void UpstreamRequest::onPerTryIdleTimeout() {
+   ENVOY_STREAM_LOG(debug, "upstream per try idle timeout", *parent_.callbacks());
++  if (per_try_timeout_) {
++    // Disable the per try idle timer, so it does not trigger further retries
++    per_try_timeout_->disableTimer();
++  }
+   stream_info_.setResponseFlag(StreamInfo::ResponseFlag::StreamIdleTimeout);
+   parent_.onPerTryIdleTimeout(*this);
+ }
+
+ void UpstreamRequest::onPerTryTimeout() {
++  if (per_try_idle_timeout_) {
++    // Delete the per try idle timer, so it does not trigger further retries.
++    // The timer has to be deleted to prevent data flow from re-arming it.
++    per_try_idle_timeout_.reset();
++  }
+   // If we've sent anything downstream, ignore the per try timeout and let the response continue
+   // up to the global timeout
+   if (!parent_.downstreamResponseStarted()) {
+diff --git a/source/extensions/filters/listener/proxy_protocol/proxy_protocol.cc b/source/extensions/filters/listener/proxy_protocol/proxy_protocol.cc
+index 22267d1e9c..7134e3b767 100644
+--- source/extensions/filters/listener/proxy_protocol/proxy_protocol.cc
++++ source/extensions/filters/listener/proxy_protocol/proxy_protocol.cc
+@@ -21,6 +21,7 @@
+ #include "source/common/common/utility.h"
+ #include "source/common/network/address_impl.h"
+ #include "source/common/network/utility.h"
++#include "source/common/protobuf/utility.h"
+ #include "source/extensions/common/proxy_protocol/proxy_protocol_header.h"
+
+ using Envoy::Extensions::Common::ProxyProtocol::PROXY_PROTO_V1_SIGNATURE;
+@@ -218,11 +219,20 @@ bool Filter::parseV2Header(const char* buf) {
+         la4.sin_family = AF_INET;
+         la4.sin_port = v4->dst_port;
+         la4.sin_addr.s_addr = v4->dst_addr;
+-        proxy_protocol_header_.emplace(
+-            WireHeader{PROXY_PROTO_V2_HEADER_LEN, hdr_addr_len, PROXY_PROTO_V2_ADDR_LEN_INET,
+-                       hdr_addr_len - PROXY_PROTO_V2_ADDR_LEN_INET, Network::Address::IpVersion::v4,
+-                       std::make_shared<Network::Address::Ipv4Instance>(&ra4),
+-                       std::make_shared<Network::Address::Ipv4Instance>(&la4)});
++
++        try {
++          // TODO(ggreenway): make this work without requiring operating system support for an
++          // address family.
++          proxy_protocol_header_.emplace(WireHeader{
++              PROXY_PROTO_V2_HEADER_LEN, hdr_addr_len, PROXY_PROTO_V2_ADDR_LEN_INET,
++              hdr_addr_len - PROXY_PROTO_V2_ADDR_LEN_INET, Network::Address::IpVersion::v4,
++              std::make_shared<Network::Address::Ipv4Instance>(&ra4),
++              std::make_shared<Network::Address::Ipv4Instance>(&la4)});
++        } catch (const EnvoyException& e) {
++          ENVOY_LOG(debug, "Proxy protocol failure: {}", e.what());
++          return false;
++        }
++
+         return true;
+       } else if (((proto_family & 0xf0) >> 4) == PROXY_PROTO_V2_AF_INET6) {
+         PACKED_STRUCT(struct pp_ipv6_addr {
+@@ -244,11 +254,18 @@ bool Filter::parseV2Header(const char* buf) {
+         la6.sin6_port = v6->dst_port;
+         safeMemcpy(&(la6.sin6_addr.s6_addr), &(v6->dst_addr));
+
+-        proxy_protocol_header_.emplace(WireHeader{
+-            PROXY_PROTO_V2_HEADER_LEN, hdr_addr_len, PROXY_PROTO_V2_ADDR_LEN_INET6,
+-            hdr_addr_len - PROXY_PROTO_V2_ADDR_LEN_INET6, Network::Address::IpVersion::v6,
+-            std::make_shared<Network::Address::Ipv6Instance>(ra6),
+-            std::make_shared<Network::Address::Ipv6Instance>(la6)});
++        try {
++          proxy_protocol_header_.emplace(WireHeader{
++              PROXY_PROTO_V2_HEADER_LEN, hdr_addr_len, PROXY_PROTO_V2_ADDR_LEN_INET6,
++              hdr_addr_len - PROXY_PROTO_V2_ADDR_LEN_INET6, Network::Address::IpVersion::v6,
++              std::make_shared<Network::Address::Ipv6Instance>(ra6),
++              std::make_shared<Network::Address::Ipv6Instance>(la6)});
++        } catch (const EnvoyException& e) {
++          // TODO(ggreenway): make this work without requiring operating system support for an
++          // address family.
++          ENVOY_LOG(debug, "Proxy protocol failure: {}", e.what());
++          return false;
++        }
+         return true;
+       }
+     }
+@@ -361,9 +378,12 @@ bool Filter::parseTlvs(const uint8_t* buf, size_t len) {
+
+     // Only save to dynamic metadata if this type of TLV is needed.
+     auto key_value_pair = config_->isTlvTypeNeeded(tlv_type);
++    absl::string_view tlv_value(reinterpret_cast<char const*>(buf + idx), tlv_value_length);
+     if (nullptr != key_value_pair) {
+       ProtobufWkt::Value metadata_value;
+-      metadata_value.set_string_value(reinterpret_cast<char const*>(buf + idx), tlv_value_length);
++      // Sanitize any non utf8 characters.
++      auto sanitised_tlv_value = MessageUtil::sanitizeUtf8String(tlv_value);
++      metadata_value.set_string_value(sanitised_tlv_value.data(), sanitised_tlv_value.size());
+
+       std::string metadata_key = key_value_pair->metadata_namespace().empty()
+                                      ? "envoy.filters.listener.proxy_protocol"
+diff --git a/source/extensions/path/match/uri_template/uri_template_match.cc b/source/extensions/path/match/uri_template/uri_template_match.cc
+index a156508b9a..4884332316 100644
+--- source/extensions/path/match/uri_template/uri_template_match.cc
++++ source/extensions/path/match/uri_template/uri_template_match.cc
+@@ -18,9 +18,8 @@ namespace UriTemplate {
+ namespace Match {
+
+ bool UriTemplateMatcher::match(absl::string_view path) const {
+-  RE2 matching_pattern_regex = RE2(convertPathPatternSyntaxToRegex(path_template_).value());
+   return RE2::FullMatch(Internal::toStringPiece(Http::PathUtil::removeQueryAndFragment(path)),
+-                        matching_pattern_regex);
++                        matching_pattern_regex_);
+ }
+
+ absl::string_view UriTemplateMatcher::uriTemplate() const { return path_template_; }
+diff --git a/source/extensions/path/match/uri_template/uri_template_match.h b/source/extensions/path/match/uri_template/uri_template_match.h
+index 23ecd89a23..fbbe9ce5e1 100644
+--- source/extensions/path/match/uri_template/uri_template_match.h
++++ source/extensions/path/match/uri_template/uri_template_match.h
+@@ -29,7 +29,8 @@ class UriTemplateMatcher : public Router::PathMatcher {
+ public:
+   explicit UriTemplateMatcher(
+       const envoy::extensions::path::match::uri_template::v3::UriTemplateMatchConfig& config)
+-      : path_template_(config.path_template()) {}
++      : path_template_(config.path_template()),
++        matching_pattern_regex_(convertPathPatternSyntaxToRegex(path_template_).value()) {}
+
+   // Router::PathMatcher
+   bool match(absl::string_view path) const override;
+@@ -38,6 +39,7 @@ public:
+
+ private:
+   const std::string path_template_;
++  const RE2 matching_pattern_regex_;
+ };
+
+ } // namespace Match
+diff --git a/test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc b/test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
+index 5abfff0ea9..a19868d64b 100644
+--- test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
++++ test/extensions/filters/listener/proxy_protocol/proxy_protocol_test.cc
+@@ -9,6 +9,7 @@
+ #include "source/common/api/os_sys_calls_impl.h"
+ #include "source/common/buffer/buffer_impl.h"
+ #include "source/common/event/dispatcher_impl.h"
++#include "source/common/network/address_impl.h"
+ #include "source/common/network/connection_balancer_impl.h"
+ #include "source/common/network/listen_socket_impl.h"
+ #include "source/common/network/raw_buffer_socket.h"
+@@ -230,6 +231,20 @@ INSTANTIATE_TEST_SUITE_P(IpVersions, ProxyProtocolTest,
+                          testing::ValuesIn(TestEnvironment::getIpVersionsForTest()),
+                          TestUtility::ipTestParamsToString);
+
++TEST_P(ProxyProtocolTest, V1UnsupportedIPv4) {
++  connect(false);
++  Cleanup cleaner = Network::Address::Ipv4Instance::forceProtocolUnsupportedForTest(true);
++  write("PROXY TCP4 1.2.3.4 253.253.253.253 65535 1234\r\nmore data");
++  expectProxyProtoError();
++}
++
++TEST_P(ProxyProtocolTest, V1UnsupportedIPv6) {
++  connect(false);
++  Cleanup cleaner = Network::Address::Ipv6Instance::forceProtocolUnsupportedForTest(true);
++  write("PROXY TCP6 1:2:3::4 5:6::7:8 65535 1234\r\nmore data");
++  expectProxyProtoError();
++}
++
+ TEST_P(ProxyProtocolTest, V1Basic) {
+   connect();
+   write("PROXY TCP4 1.2.3.4 253.253.253.253 65535 1234\r\nmore data");
+@@ -384,6 +399,34 @@ TEST_P(ProxyProtocolTest, V2BasicV6) {
+   disconnect();
+ }
+
++TEST_P(ProxyProtocolTest, V2UnsupportedIPv4) {
++  // A well-formed ipv4/tcp message, no extensions
++  constexpr uint8_t buffer[] = {0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x0d, 0x0a, 0x51, 0x55, 0x49,
++                                0x54, 0x0a, 0x21, 0x11, 0x00, 0x0c, 0x01, 0x02, 0x03, 0x04,
++                                0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x00, 0x02, 'm',  'o',
++                                'r',  'e',  ' ',  'd',  'a',  't',  'a'};
++
++  connect(false);
++  Cleanup cleaner = Network::Address::Ipv4Instance::forceProtocolUnsupportedForTest(true);
++  write(buffer, sizeof(buffer));
++  expectProxyProtoError();
++}
++
++TEST_P(ProxyProtocolTest, V2UnsupportedIPv6) {
++  // A well-formed ipv6/tcp message, no extensions
++  constexpr uint8_t buffer[] = {0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x0d, 0x0a, 0x51, 0x55, 0x49, 0x54,
++                                0x0a, 0x21, 0x22, 0x00, 0x24, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03,
++                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00,
++                                0x01, 0x01, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00,
++                                0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x02, 'm',  'o',  'r',
++                                'e',  ' ',  'd',  'a',  't',  'a'};
++
++  connect(false);
++  Cleanup cleaner = Network::Address::Ipv6Instance::forceProtocolUnsupportedForTest(true);
++  write(buffer, sizeof(buffer));
++  expectProxyProtoError();
++}
++
+ TEST_P(ProxyProtocolTest, V2UnsupportedAF) {
+   // A well-formed message with an unsupported address family
+   constexpr uint8_t buffer[] = {0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x0d, 0x0a, 0x51, 0x55, 0x49,
+@@ -1455,6 +1498,70 @@ TEST_P(ProxyProtocolTest, V2ExtractMultipleTlvsOfInterest) {
+   disconnect();
+ }
+
++TEST_P(ProxyProtocolTest, V2ExtractMultipleTlvsOfInterestAndSanitiseNonUtf8) {
++  // A well-formed ipv4/tcp with a pair of TLV extensions is accepted.
++  constexpr uint8_t buffer[] = {0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x0d, 0x0a, 0x51, 0x55, 0x49,
++                                0x54, 0x0a, 0x21, 0x11, 0x00, 0x39, 0x01, 0x02, 0x03, 0x04,
++                                0x00, 0x01, 0x01, 0x02, 0x03, 0x05, 0x00, 0x02};
++  // A TLV of type 0x00 with size of 4 (1 byte is value).
++  constexpr uint8_t tlv1[] = {0x00, 0x00, 0x01, 0xff};
++  // A TLV of type 0x02 with size of 10 bytes (7 bytes are value). Second and last bytes in the
++  // value are non utf8 characters.
++  constexpr uint8_t tlv_type_authority[] = {0x02, 0x00, 0x07, 0x66, 0xfe,
++                                            0x6f, 0x2e, 0x63, 0x6f, 0xc1};
++  // A TLV of type 0x0f with size of 6 bytes (3 bytes are value).
++  constexpr uint8_t tlv3[] = {0x0f, 0x00, 0x03, 0xf0, 0x00, 0x0f};
++  // A TLV of type 0xea with size of 25 bytes (22 bytes are value). 7th and 21st bytes are non utf8
++  // characters.
++  constexpr uint8_t tlv_vpc_id[] = {0xea, 0x00, 0x16, 0x01, 0x76, 0x70, 0x63, 0x2d, 0x30,
++                                    0xc0, 0x35, 0x74, 0x65, 0x73, 0x74, 0x32, 0x66, 0x61,
++                                    0x36, 0x63, 0x36, 0x33, 0x68, 0xf9, 0x37};
++  constexpr uint8_t data[] = {'D', 'A', 'T', 'A'};
++
++  envoy::extensions::filters::listener::proxy_protocol::v3::ProxyProtocol proto_config;
++  auto rule_type_authority = proto_config.add_rules();
++  rule_type_authority->set_tlv_type(0x02);
++  rule_type_authority->mutable_on_tlv_present()->set_key("PP2 type authority");
++
++  auto rule_vpc_id = proto_config.add_rules();
++  rule_vpc_id->set_tlv_type(0xea);
++  rule_vpc_id->mutable_on_tlv_present()->set_key("PP2 vpc id");
++
++  connect(true, &proto_config);
++  write(buffer, sizeof(buffer));
++  dispatcher_->run(Event::Dispatcher::RunType::NonBlock);
++
++  write(tlv1, sizeof(tlv1));
++  write(tlv_type_authority, sizeof(tlv_type_authority));
++  write(tlv3, sizeof(tlv3));
++  write(tlv_vpc_id, sizeof(tlv_vpc_id));
++  write(data, sizeof(data));
++  expectData("DATA");
++
++  EXPECT_EQ(1, server_connection_->streamInfo().dynamicMetadata().filter_metadata_size());
++
++  auto metadata = server_connection_->streamInfo().dynamicMetadata().filter_metadata();
++  EXPECT_EQ(1, metadata.size());
++  EXPECT_EQ(1, metadata.count(ProxyProtocol));
++
++  auto fields = metadata.at(ProxyProtocol).fields();
++  EXPECT_EQ(2, fields.size());
++  EXPECT_EQ(1, fields.count("PP2 type authority"));
++  EXPECT_EQ(1, fields.count("PP2 vpc id"));
++
++  const char replacement = 0x21;
++  auto value_type_authority = fields.at("PP2 type authority").string_value();
++  // Non utf8 characters have been replaced with `0x21` (`!` character).
++  ASSERT_THAT(value_type_authority,
++              ElementsAre(0x66, replacement, 0x6f, 0x2e, 0x63, 0x6f, replacement));
++
++  auto value_vpc_id = fields.at("PP2 vpc id").string_value();
++  ASSERT_THAT(value_vpc_id,
++              ElementsAre(0x01, 0x76, 0x70, 0x63, 0x2d, 0x30, replacement, 0x35, 0x74, 0x65, 0x73,
++                          0x74, 0x32, 0x66, 0x61, 0x36, 0x63, 0x36, 0x33, 0x68, replacement, 0x37));
++  disconnect();
++}
++
+ TEST_P(ProxyProtocolTest, V2WillNotOverwriteTLV) {
+   // A well-formed ipv4/tcp with a pair of TLV extensions is accepted
+   constexpr uint8_t buffer[] = {0x0d, 0x0a, 0x0d, 0x0a, 0x00, 0x0d, 0x0a, 0x51, 0x55, 0x49,
+diff --git a/test/integration/http_timeout_integration_test.cc b/test/integration/http_timeout_integration_test.cc
+index 2d6b657cc6..d2b465b5df 100644
+--- test/integration/http_timeout_integration_test.cc
++++ test/integration/http_timeout_integration_test.cc
+@@ -546,4 +546,81 @@ TEST_P(HttpTimeoutIntegrationTest, RequestHeaderTimeout) {
+   EXPECT_THAT(response, AllOf(HasSubstr("408"), HasSubstr("header")));
+ }
+
++// Validate that Envoy correctly handles per try and per try IDLE timeouts
++// that are firing within the backoff interval.
++TEST_P(HttpTimeoutIntegrationTest, OriginalRequestCompletesBeforeBackoffTimer) {
++  auto host = config_helper_.createVirtualHost("example.com", "/test_retry");
++  host.set_include_is_timeout_retry_header(true);
++  config_helper_.addVirtualHost(host);
++  config_helper_.addConfigModifier(
++      [&](envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager&
++              hcm) -> void {
++        auto* route_config = hcm.mutable_route_config();
++        auto* virtual_host = route_config->mutable_virtual_hosts(1);
++        auto* route = virtual_host->mutable_routes(0)->mutable_route();
++        auto* retry_policy = route->mutable_retry_policy();
++        retry_policy->mutable_per_try_idle_timeout()->set_seconds(0);
++        // per try IDLE timeout is 400 ms
++        retry_policy->mutable_per_try_idle_timeout()->set_nanos(400 * 1000 * 1000);
++      });
++  initialize();
++
++  codec_client_ = makeHttpConnection(makeClientConnection(lookupPort("http")));
++  auto encoder_decoder = codec_client_->startRequest(Http::TestRequestHeaderMapImpl{
++      {":method", "POST"},
++      {":path", "/test_retry"},
++      {":scheme", "http"},
++      {":authority", "example.com"},
++      {"x-forwarded-for", "10.0.0.1"},
++      {"x-envoy-retry-on", "5xx"},
++      // Enable hedge_on_per_try_timeout so that original request is not reset
++      {"x-envoy-hedge-on-per-try-timeout", "true"},
++      {"x-envoy-upstream-rq-timeout-ms", "500"},
++      // Make per try timeout the same as the per try idle timeout
++      // NOTE: it can be a bit longer, within the back off interval
++      {"x-envoy-upstream-rq-per-try-timeout-ms", "400"}});
++  auto response = std::move(encoder_decoder.second);
++  request_encoder_ = &encoder_decoder.first;
++
++  ASSERT_TRUE(fake_upstreams_[0]->waitForHttpConnection(*dispatcher_, fake_upstream_connection_));
++  ASSERT_TRUE(fake_upstream_connection_->waitForNewStream(*dispatcher_, upstream_request_));
++  ASSERT_TRUE(upstream_request_->waitForHeadersComplete());
++  codec_client_->sendData(*request_encoder_, 0, true);
++
++  ASSERT_TRUE(upstream_request_->waitForEndStream(*dispatcher_));
++
++  // Trigger per try timeout (but not global timeout). This will actually trigger
++  // both IDLE and request timeouts in the same I/O operation.
++  timeSystem().advanceTimeWait(std::chrono::milliseconds(400));
++
++  // Trigger retry (there's a 25ms backoff before it's issued).
++  timeSystem().advanceTimeWait(std::chrono::milliseconds(26));
++
++  // Wait for a second request to be sent upstream
++  FakeStreamPtr upstream_request2;
++
++  ASSERT_TRUE(fake_upstream_connection_->waitForNewStream(*dispatcher_, upstream_request2));
++
++  ASSERT_TRUE(upstream_request2->waitForHeadersComplete());
++
++  // Expect the x-envoy-is-timeout-header to set to indicate to the upstream this is a retry
++  // initiated by a previous per try timeout.
++  EXPECT_EQ(upstream_request2->headers().getEnvoyIsTimeoutRetryValue(), "true");
++
++  ASSERT_TRUE(upstream_request2->waitForEndStream(*dispatcher_));
++
++  Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
++
++  // Respond to the second request (it does not matter which request gets response).
++  upstream_request2->encodeHeaders(response_headers, true);
++  ASSERT_TRUE(response->waitForEndStream());
++
++  // The first request should be reset since we used the response from the second request.
++  ASSERT_TRUE(upstream_request_->waitForReset(std::chrono::seconds(15)));
++
++  codec_client_->close();
++  EXPECT_TRUE(response->complete());
++  EXPECT_EQ("200", response->headers().getStatusValue());
++}
++
+ } // namespace Envoy
