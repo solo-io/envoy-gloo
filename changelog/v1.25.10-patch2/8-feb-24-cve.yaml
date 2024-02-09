@@ -1,0 +1,6 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/solo-projects/issues/5778
+  resolvesIssue: false
+  description: >-
+    Fixes Envoy CVEs announced 8 Feb 2024.

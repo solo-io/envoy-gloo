@@ -74,6 +74,7 @@ def envoy_gloo_dependencies():
             "@envoy_gloo//bazel/foreign_cc:filter-state-matching-input-25.patch", # https://github.com/envoyproxy/envoy/pull/25856
             "@envoy_gloo//bazel/foreign_cc:dynamic-metadata-matchingdata-25.patch", # https://github.com/envoyproxy/envoy/pull/26311
             "@envoy_gloo//bazel/foreign_cc:matcher-updates-25.patch",
+            "@envoy_gloo//bazel/foreign_cc:8feb24-cves-25.patch",
         ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
