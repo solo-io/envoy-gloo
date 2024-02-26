@@ -438,6 +438,72 @@ TEST(Extraction, ReplaceAllNoMatch) {
   EXPECT_EQ("", res);
 }
 
+TEST(Extraction, ReplaceAllValuesFromDynamicMetadata) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
+
+  std::string dynamic_metadata_key = "dynamic_key";
+  std::string dynamic_metadata_value = "foo foo foo";
+
+  ExtractionApi extractor;
+  extractor.set_dynamic_metadata(dynamic_metadata_key);
+  extractor.set_regex("foo");
+  extractor.set_subgroup(0);
+  extractor.mutable_replacement_text()->set_value("BAZ");
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
+  
+  // Mock callback setup to simulate environment
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  // Setup dynamic metadata within mock cluster info
+  envoy::config::core::v3::Metadata dynamic_metadata;
+  auto& metadata_map = (*dynamic_metadata.mutable_filter_metadata())[SoloHttpFilterNames::get().Transformation];
+  (*metadata_map.mutable_fields())[dynamic_metadata_key].set_string_value(dynamic_metadata_value);
+  
+  auto mock_cluster_info = std::make_shared<NiceMock<Upstream::MockClusterInfo>>();
+  ON_CALL(*mock_cluster_info, metadata()).WillByDefault(ReturnRef(dynamic_metadata));
+  ON_CALL(callbacks, clusterInfo()).WillByDefault(Return(mock_cluster_info));
+
+  // Define the body function, though it's not used for dynamic metadata extraction
+  std::string body("not json body");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
+
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
+  EXPECT_EQ("BAZ BAZ BAZ", res);
+}
+
+TEST(Extraction, ReplaceIndividualValueFromDynamicMetadata) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
+
+  std::string dynamic_metadata_key = "dynamic_key";
+  std::string dynamic_metadata_value = "foo foo foo";
+
+  ExtractionApi extractor;
+  extractor.set_dynamic_metadata(dynamic_metadata_key);
+  extractor.set_regex("(foo).*");
+  extractor.set_subgroup(1);
+  extractor.mutable_replacement_text()->set_value("BAZ");
+  extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
+  
+  // Mock callback setup to simulate environment
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  // Setup dynamic metadata within mock cluster info
+  envoy::config::core::v3::Metadata dynamic_metadata;
+  auto& metadata_map = (*dynamic_metadata.mutable_filter_metadata())[SoloHttpFilterNames::get().Transformation];
+  (*metadata_map.mutable_fields())[dynamic_metadata_key].set_string_value(dynamic_metadata_value);
+  
+  auto mock_cluster_info = std::make_shared<NiceMock<Upstream::MockClusterInfo>>();
+  ON_CALL(*mock_cluster_info, metadata()).WillByDefault(ReturnRef(dynamic_metadata));
+  ON_CALL(callbacks, clusterInfo()).WillByDefault(Return(mock_cluster_info));
+
+  // Define the body function, though it's not used for dynamic metadata extraction
+  std::string body("not json body");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
+
+  std::string res(Extractor(extractor).replace(callbacks, headers, bodyfunc));
+  EXPECT_EQ("BAZ foo foo", res);
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions

@@ -53,12 +53,25 @@ getHeader(const Http::RequestOrResponseHeaderMap &header_map,
 
 } // namespace
 
+ExtractionSource
+Extractor::determineSource(const envoy::api::v2::filter::http::Extraction &extractor) {
+  if (extractor.has_header()) {
+    return ExtractionSource::HEADER;
+  } else if (extractor.has_body()) {
+    return ExtractionSource::BODY;
+  } else if (extractor.has_dynamic_metadata()) {
+    return ExtractionSource::DYNAMIC_METADATA;
+  } else {
+    throw EnvoyException("No source specified for extraction");
+  }
+}
+
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
-    : headername_(extractor.header()), body_(extractor.has_body()),
+    : headername_(extractor.header()), body_(extractor.has_body()), dynamic_metadata_(extractor.dynamic_metadata()),
       group_(extractor.subgroup()),
       extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
       replacement_text_(extractor.has_replacement_text() ? std::make_optional(extractor.replacement_text().value()) : std::nullopt),
-      mode_(extractor.mode()) {
+      mode_(extractor.mode()), source_(determineSource(extractor)) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
@@ -89,21 +102,52 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
   }
 }
 
+absl::optional<std::string>
+Extractor::getDynamicMetadataValue(Http::StreamFilterCallbacks &callbacks) const {
+  Upstream::ClusterInfoConstSharedPtr ci = callbacks.clusterInfo();
+  if (!ci) {
+    ENVOY_STREAM_LOG(debug, "No cluster info found for dynamic metadata", callbacks);
+    return absl::nullopt;
+  }
+
+  const envoy::config::core::v3::Metadata *cluster_metadata{};
+  cluster_metadata = &ci->metadata();
+  const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(cluster_metadata, SoloHttpFilterNames::get().Transformation, dynamic_metadata_);
+
+  if (value.kind_case() == ProtobufWkt::Value::kStringValue && !value.string_value().empty()) {
+    return value.string_value();
+  } else if (value.string_value().empty()) {
+    ENVOY_STREAM_LOG(debug, "Dynamic metadata value not found at key: {}", callbacks, dynamic_metadata_);
+  }
+
+  return absl::nullopt; // Return empty if dynamic metadata not found or if value is empty
+}
+
 absl::string_view
 Extractor::extract(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
-  if (body_) {
-    const std::string &string_body = body();
-    absl::string_view sv(string_body);
-    return extractValue(callbacks, sv);
-  } else {
-    const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
-    if (header_entries.empty()) {
+  switch (source_) {
+    case ExtractionSource::BODY: {
+      const std::string &string_body = body();
+      return extractValue(callbacks, absl::string_view(string_body));
+    }
+    case ExtractionSource::HEADER: {
+      const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
+      if (header_entries.empty()) {
+        return "";
+      }
+      return extractValue(callbacks, header_entries[0]->value().getStringView());
+    }
+    case ExtractionSource::DYNAMIC_METADATA: {
+      auto value = getDynamicMetadataValue(callbacks);
+      if (value) {
+        return extractValue(callbacks, *value);
+      }
       return "";
     }
-    const auto &header_value = header_entries[0]->value().getStringView();
-    return extractValue(callbacks, header_value);
+    default:
+      throw EnvoyException("Unsupported extraction source");
   }
 }
 
@@ -111,25 +155,36 @@ std::string
 Extractor::replace(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
-  if (body_) {
-    const std::string &string_body = body();
-    absl::string_view sv(string_body);
+  // Lambda to decide between replaceIndividualValue and replaceAllValues
+  auto replaceValue = [&](absl::string_view value) -> std::string {
     if (mode_ == ExtractionApi::SINGLE_REPLACE) {
-      return replaceIndividualValue(callbacks, sv);
-    } else {
-      return replaceAllValues(callbacks, sv);
+      return replaceIndividualValue(callbacks, value);
+    } else { // Assume REPLACE_ALL
+      return replaceAllValues(callbacks, value);
     }
-  } else {
-    const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
-    if (header_entries.empty()) {
+  };
+
+  switch (source_) {
+    case ExtractionSource::HEADER: {
+      const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
+      if (header_entries.empty()) {
+        return "";
+      }
+      return replaceValue(header_entries[0]->value().getStringView());
+    }
+    case ExtractionSource::BODY: {
+      const std::string &string_body = body();
+      return replaceValue(absl::string_view(string_body));
+    }
+    case ExtractionSource::DYNAMIC_METADATA: {
+      auto value = getDynamicMetadataValue(callbacks);
+      if (value) {
+        return replaceValue(*value);
+      }
       return "";
     }
-    const auto &header_value = header_entries[0]->value().getStringView();
-    if (mode_ == ExtractionApi::SINGLE_REPLACE) {
-      return replaceIndividualValue(callbacks, header_value);
-    } else {
-      return replaceAllValues(callbacks, header_value);
-    }
+    default:
+      throw EnvoyException("Unsupported extraction source");
   }
 }
 
