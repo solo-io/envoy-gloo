@@ -669,29 +669,39 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
     const ExtractionApi::Mode mode = named_extractor.second.mode();
-    if (advanced_templates_) {
-      if (mode == ExtractionApi::REPLACE_ALL || mode == ExtractionApi::SINGLE_REPLACE) {
-        extractions[name] =
-          named_extractor.second.replace(callbacks, header_map, get_body);
-      } else {
-        extractions[name] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
-      }
-    } else {
-      absl::string_view name_to_split = name;
-      json *current = &json_body;
+    
+    // prepare variables for non-advanced_templates_ scenario
+    absl::string_view name_to_split;
+    json* current = nullptr;
+    if (!advanced_templates_) {
+      name_to_split = name;
+      current = &json_body;
       for (size_t pos = name_to_split.find("."); pos != std::string::npos;
            pos = name_to_split.find(".")) {
         auto &&field_name = name_to_split.substr(0, pos);
         current = &(*current)[std::string(field_name)];
         name_to_split = name_to_split.substr(pos + 1);
       }
-      if (mode == ExtractionApi::REPLACE_ALL || mode == ExtractionApi::SINGLE_REPLACE) {
-        (*current)[std::string(name_to_split)] =
-          named_extractor.second.replace(callbacks, header_map, get_body);
-      } else {
-        (*current)[std::string(name_to_split)] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
+    }
+
+    switch(mode) {
+      case ExtractionApi::REPLACE_ALL:
+      case ExtractionApi::SINGLE_REPLACE: {
+        if (advanced_templates_) {
+          extractions[name] = named_extractor.second.replace(callbacks, header_map, get_body);
+        } else {
+          (*current)[std::string(name_to_split)] = named_extractor.second.replace(callbacks, header_map, get_body);
+        }
+      }
+      case ExtractionApi::EXTRACT: {
+        if (advanced_templates_) {
+          extractions[name] = named_extractor.second.extract(callbacks, header_map, get_body);
+        } else {
+          (*current)[std::string(name_to_split)] = named_extractor.second.extract(callbacks, header_map, get_body);
+        }
+      }
+      default: {
+        PANIC_DUE_TO_CORRUPT_ENUM
       }
     }
   }
