@@ -1,8 +1,0 @@
-changelog:
-- type: DEPENDENCY_BUMP
-  dependencyOwner: envoyproxy
-  dependencyRepo: envoy
-  dependencyTag: v1.28.0
-  resolvesIssue: false
-  description: >-
-    Update Envoy to latest 1.28.0, b5ca88acee3453c9459474b8f22215796eff4dde
