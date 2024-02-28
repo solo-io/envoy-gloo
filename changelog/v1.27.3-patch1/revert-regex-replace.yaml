@@ -1,0 +1,5 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Revert regex replace functionality which accidentally merged earlier
+    than expected

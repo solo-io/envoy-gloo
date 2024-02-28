@@ -1,0 +1,7 @@
+changelog:
+- type: NEW_FEATURE
+  resolvesIssue: false
+  issueLink: https://github.com/solo-io/gloo/issues/8706
+  description: >
+    Update transformation filter extractors to support regex
+    replace/replace all operations on extracted values.

@@ -1,0 +1,9 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/solo-projects/issues/5315
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: v1.27.2
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.27.2, including changing to envoy fork for our extproc and tap changes
