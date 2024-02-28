@@ -5,6 +5,7 @@
 ########################
 
 # Define the upstream repository and file path to the upstream extensions_build_config.bzl
+# UPSTREAM_REPO will be overridden in get_UPSTREAM_REPO
 UPSTREAM_REPO="envoyproxy/envoy"
 UPSTREAM_FILE_PATH="source/extensions/extensions_build_config.bzl"
 # Define the path to the local repository_locations.bzl, which contains the envoy commit hash
@@ -12,20 +13,19 @@ REPOSITORY_LOCATIONS_FILE="./bazel/repository_locations.bzl"
 # Define the path to the local version
 ENVOY_GLOO_FILE="./bazel/extensions/extensions_build_config.bzl"
 
+get_UPSTREAM_REPO() {
+    local file_path="$1"
+    local remote
+    remote=$(grep -A 4 "envoy =" "$file_path" | grep remote | cut -d '"' -f 2 | cut -d '/' -f 4,5)
+    echo "$remote"
+}
+
 # Function to extract the envoy commit hash from repository_locations.bzl
 get_envoy_commit_hash() {
     local file_path="$1"
     local commit_hash
     commit_hash=$(grep -A 2 "envoy =" "$file_path" | grep commit | cut -d '"' -f 2)
     echo "$commit_hash"
-}
-
-# Function to trim leading and trailing whitespaces
-trim() {
-    local var="$*"
-    var="${var#"${var%%[![:space:]]*}"}"   # remove leading whitespace characters
-    var="${var%"${var##*[![:space:]]}"}"   # remove trailing whitespace characters
-    echo -n "$var"
 }
 
 # Function to report an error
@@ -39,6 +39,12 @@ report_error() {
 ########################
 #### Main execution ####
 ########################
+
+UPSTREAM_REPO=$(get_UPSTREAM_REPO "$REPOSITORY_LOCATIONS_FILE")
+if [ -z "$UPSTREAM_REPO" ]; then
+    echo "Error: Failed to extract envoy repo from $REPOSITORY_LOCATIONS_FILE"
+    exit 1
+fi
 
 # Extract the envoy commit hash
 ENVOY_COMMIT_HASH=$(get_envoy_commit_hash "$REPOSITORY_LOCATIONS_FILE")
@@ -56,68 +62,53 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Initialize arrays to store the upstream and envoy-gloo versions of the file
-declare -a UPSTREAM_LINES ENVOY_GLOO_LINES
+# Initialize associative arrays to store the upstream and envoy-gloo-ee KV pairs
+declare -A UPSTREAM_LINE_NUMBERS UPSTREAM_KV ENVOY_GLOO_KV
 
-# Read the upstream version of the file into an array, including empty lines
-UPSTREAM_LINES=()
+# Read the upstream version of the file into an array, including empty lines.
+# We skip commented lines here as we're not particularly concerned with extensions
+# that upstream doesn't compile in.
+UPSTREAM_LINE_NUM=1
 while IFS= read -r line || [[ -n "$line" ]]; do
-    UPSTREAM_LINES+=("$line")
+    if [[ $line == *#* ]]; then
+        UPSTREAM_LINE_NUM=$((UPSTREAM_LINE_NUM+1))
+        continue
+    fi
+
+    # Split line into an array (kv) at each double quote
+    # We are interested in lines of the form: "<extension name>": "<extension filepath>",
+    # where there may be signficant whitespace in any of the non-quoted regions.
+    # If the line matches this format, kv[1] is the extension name and kv[3] is the extension filepath
+    IFS='"' read -ra kv <<< "$line"
+    if [[ ${#kv[@]} = 5 ]]; then
+        UPSTREAM_KV[${kv[1]}]=${kv[3]}
+        UPSTREAM_LINE_NUMBERS[${kv[1]}]=${UPSTREAM_LINE_NUM}
+    fi
+    UPSTREAM_LINE_NUM=$((UPSTREAM_LINE_NUM+1))
 done < upstream_file.tmp
 
 # Read the envoy-gloo version of the file into an array, including empty lines
-ENVOY_GLOO_LINES=()
+# We allow commented lines here to enable us to not compile extensions we don't want
+# or need, but this makes sure that it was a deliberate omission.
 while IFS= read -r line || [[ -n "$line" ]]; do
-    ENVOY_GLOO_LINES+=("$line")
+    IFS='"' read -ra kv <<< "$line"
+    [[ ${#kv[@]} = 5 ]] && ENVOY_GLOO_KV[${kv[1]}]=${kv[3]}
 done < "$ENVOY_GLOO_FILE"
-
-# Preprocess the envoy-gloo lines for faster lookup
-declare -a PROCESSED_ENVOY_GLOO_LINES
-for line in "${ENVOY_GLOO_LINES[@]}"; do
-    # Remove only the first leading '#' character (if present) and any spaces before it
-    trimmed_line=$(echo "$line" | sed 's/^[[:space:]]*#//')
-
-    # remove any remaining whitespace
-    trimmed_line=$(trim "$trimmed_line")
-
-    PROCESSED_ENVOY_GLOO_LINES+=("$trimmed_line")
-done
 
 # Flag to track if any issues are found
 ISSUES_FOUND=false
 ERRORS=()
 
-# Loop through each line in the upstream version
-LINE_NUMBER=0
-for UPSTREAM_LINE in "${UPSTREAM_LINES[@]}"; do
-    ((LINE_NUMBER++))
-    TRIMMED_UPSTREAM_LINE=$(trim "$UPSTREAM_LINE")
-
-    # Skip if the line is empty or a comment
-    if [[ -z "$TRIMMED_UPSTREAM_LINE" || "$TRIMMED_UPSTREAM_LINE" =~ ^# ]]; then
-        continue
-    fi
-
-    # Reject any lines that don't match the format "key": "value". 
-    # Additional spaces around the colon and any content within the quotes are allowed.
-    if ! [[ "$TRIMMED_UPSTREAM_LINE" =~ ^[^\"]*\"[^\"]*\":\ *\"[^\"]*\" ]]; then
-        continue
-    fi
-
-    # Check if the trimmed line exists in the processed envoy-gloo lines
-    LINE_FOUND=false
-    for PROCESSED_LINE in "${PROCESSED_ENVOY_GLOO_LINES[@]}"; do
-        if [[ "$PROCESSED_LINE" == "$TRIMMED_UPSTREAM_LINE" ]]; then
-            LINE_FOUND=true
-            break
-        fi
-    done
-
-    if [ "$LINE_FOUND" = false ]; then
-        ERRORS+=("$(report_error "$LINE_NUMBER" "$UPSTREAM_LINE")")
+# Loop over the KVs we got from upstream and make sure we have them here
+for UPSTREAM_KV_ENTRY in "${!UPSTREAM_KV[@]}"; do
+    if [[ -z "${ENVOY_GLOO_KV[$UPSTREAM_KV_ENTRY]+exists}" ]]; then
         ISSUES_FOUND=true
+        ERRORS+=("$(report_error "${UPSTREAM_LINE_NUMBERS[$UPSTREAM_KV_ENTRY]}" "\"$UPSTREAM_KV_ENTRY\":\"${UPSTREAM_KV[$UPSTREAM_KV_ENTRY]}\"")")
     fi
 done
+
+# Cleanup
+rm upstream_file.tmp
 
 # Check if any issues were found
 if [ "$ISSUES_FOUND" = true ]; then
@@ -129,6 +120,3 @@ if [ "$ISSUES_FOUND" = true ]; then
 else
     echo "Envoy-gloo extensions_build_config.bzl is up to date with the upstream version."
 fi
-
-# Cleanup
-rm upstream_file.tmp
