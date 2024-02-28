@@ -50,7 +50,7 @@ void fill_slot(
       const Http::RequestOrResponseHeaderMap &header_map,
       const Http::RequestHeaderMap *request_headers,
       GetBodyFunc &body,
-      const std::unordered_map<std::string, std::string> &extractions,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
       const envoy::config::core::v3::Metadata *cluster_metadata) {
@@ -71,7 +71,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestRequestHeaderMapImpl headers;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
@@ -92,7 +92,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
 
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
@@ -115,7 +115,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"},
                                          {"x-custom-header", header}};
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
@@ -132,7 +132,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestRequestHeaderMapImpl headers;
@@ -152,7 +152,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   extractions["foo"] = absl::string_view("bar");
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
@@ -171,7 +171,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
 
 TEST_F(TransformerInstanceTest, Environment) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -189,7 +189,7 @@ TEST_F(TransformerInstanceTest, Environment) {
 
 TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -207,7 +207,7 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
 TEST_F(TransformerInstanceTest, ClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -229,7 +229,7 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -247,7 +247,7 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, RequestHeaders) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
   Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"}};
 
@@ -1304,100 +1304,6 @@ TEST_F(InjaTransformerTest, EscapeCharactersRawStringCallback) {
   EXPECT_EQ(body.toString(), expected_body);
 }
 
-TEST(Extraction, ExtractsValueFromDynamicMetadata) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
-
-  std::string dynamic_metadata_key = "dynamic_key";
-  std::string dynamic_metadata_value = "dynamic_value";
-
-  ExtractionApi extractor;
-  extractor.set_dynamic_metadata(dynamic_metadata_key);
-  extractor.set_regex(".*");
-  extractor.set_subgroup(0);
-  extractor.set_mode(ExtractionApi::EXTRACT);
-  
-  // Mock callback setup to simulate environment
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
-  // Setup dynamic metadata within mock cluster info
-  envoy::config::core::v3::Metadata dynamic_metadata;
-  auto& metadata_map = (*dynamic_metadata.mutable_filter_metadata())[SoloHttpFilterNames::get().Transformation];
-  (*metadata_map.mutable_fields())[dynamic_metadata_key].set_string_value(dynamic_metadata_value);
-  
-  auto mock_cluster_info = std::make_shared<NiceMock<Upstream::MockClusterInfo>>();
-  ON_CALL(*mock_cluster_info, metadata()).WillByDefault(ReturnRef(dynamic_metadata));
-  ON_CALL(callbacks, clusterInfo()).WillByDefault(Return(mock_cluster_info));
-
-  // Define the body function, though it's not used for dynamic metadata extraction
-  std::string body("not json body");
-  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
-  EXPECT_EQ(dynamic_metadata_value, res);
-}
-
-TEST(Extraction, ExtractFromDynamicMetadataMetadataMissing) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
-
-  std::string dynamic_metadata_key = "dynamic_key";
-  std::string dynamic_metadata_value = "dynamic_value";
-
-  ExtractionApi extractor;
-  extractor.set_dynamic_metadata(dynamic_metadata_key);
-  extractor.set_regex(".*");
-  extractor.set_subgroup(0);
-  extractor.set_mode(ExtractionApi::EXTRACT);
-  
-  // Mock callback setup to simulate environment
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
-  // Setup dynamic metadata within mock cluster info
-  // No dynamic metadata is set here
-  envoy::config::core::v3::Metadata dynamic_metadata;
-  
-  auto mock_cluster_info = std::make_shared<NiceMock<Upstream::MockClusterInfo>>();
-  ON_CALL(*mock_cluster_info, metadata()).WillByDefault(ReturnRef(dynamic_metadata));
-  ON_CALL(callbacks, clusterInfo()).WillByDefault(Return(mock_cluster_info));
-
-  // Define the body function, though it's not used for dynamic metadata extraction
-  std::string body("not json body");
-  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
-  EXPECT_EQ("", res);
-}
-
-TEST(Extraction, ExtractFromDynamicMetadataMissingKey) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
-
-  std::string dynamic_metadata_key = "dynamic_key";
-  std::string dynamic_metadata_value = "dynamic_value";
-
-  ExtractionApi extractor;
-  extractor.set_dynamic_metadata(dynamic_metadata_key);
-  extractor.set_regex(".*");
-  extractor.set_subgroup(0);
-  extractor.set_mode(ExtractionApi::EXTRACT);
-  
-  // Mock callback setup to simulate environment
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
-  // Setup dynamic metadata within mock cluster info
-  envoy::config::core::v3::Metadata dynamic_metadata;
-  auto& metadata_map = (*dynamic_metadata.mutable_filter_metadata())[SoloHttpFilterNames::get().Transformation];
-  (*metadata_map.mutable_fields())["invalid key"].set_string_value(dynamic_metadata_value);
-  
-  auto mock_cluster_info = std::make_shared<NiceMock<Upstream::MockClusterInfo>>();
-  ON_CALL(*mock_cluster_info, metadata()).WillByDefault(ReturnRef(dynamic_metadata));
-  ON_CALL(callbacks, clusterInfo()).WillByDefault(Return(mock_cluster_info));
-
-  // Define the body function, though it's not used for dynamic metadata extraction
-  std::string body("not json body");
-  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
-
-  std::string res(Extractor(extractor).extract(callbacks, headers, bodyfunc));
-  EXPECT_EQ("", res);
-}
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions

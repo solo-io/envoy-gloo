@@ -77,12 +77,6 @@ private:
   Envoy::Random::RandomGenerator &rng_;
 };
 
-enum class ExtractionSource {
-  HEADER,
-  BODY,
-  DYNAMIC_METADATA,
-};
-
 class Extractor : Logger::Loggable<Logger::Id::filter> {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
@@ -100,18 +94,13 @@ private:
                                            absl::string_view value) const;
   std::string replaceAllValues(Http::StreamFilterCallbacks &callbacks,
                                      absl::string_view value) const;
-  // Helper function to determine the extraction source type
-  static ExtractionSource determineSource(const envoy::api::v2::filter::http::Extraction &extractor);
-  absl::optional<std::string> getDynamicMetadataValue(Http::StreamFilterCallbacks &callbacks) const;
 
   const Http::LowerCaseString headername_;
   const bool body_;
-  const std::string dynamic_metadata_;
   const unsigned int group_;
   const std::regex extract_regex_;
   const std::optional<std::string> replacement_text_;
   const ExtractionApi::Mode mode_;
-  const ExtractionSource source_;
 };
 
 class InjaTransformer : public Transformer {
