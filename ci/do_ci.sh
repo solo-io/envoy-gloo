@@ -19,7 +19,6 @@ cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelrc"                    "$SOURCE_DIR/upstream
 cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelversion"               "$SOURCE_DIR/.bazelversion"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example" "$SOURCE_DIR/ci/"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/VERSION.txt"                 "$SOURCE_DIR/VERSION.txt"
-cp -f "$UPSTREAM_ENVOY_SRCDIR/tools/shell_utils.sh"        "$SOURCE_DIR/tools"
 
 
 if [ -f "$UPSTREAM_ENVOY_SRCDIR/bazel/setup_clang.sh" ]; then
