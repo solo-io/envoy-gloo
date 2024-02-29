@@ -47,11 +47,11 @@ public:
     uri_ = &uri;
 
     set_role(role_arn);
-  
+
     // Check if cluster is configured, fail the request if not.
     // Otherwise cm_.httpAsyncClientForCluster will throw exception.
     const auto thread_local_cluster = cm_.getThreadLocalCluster(uri.cluster());
-    
+
     if (thread_local_cluster == nullptr) {
       ENVOY_LOG(error,
                 "{}: assume role with token [uri = {}] failed: [cluster = {}] "
@@ -86,22 +86,22 @@ public:
                                            std::move(message),*this, options);
       return;
     }
-    
-    // Chained assumption specifics 
+
+    // Chained assumption specifics
     const std::string body = fmt::format(StsChainedFormatString, role_arn, now);
     message->body().add(body);
     // this call resets the sha so that our authenticator is in a fresh state
     // to be reused.
     AwsAuthenticator aws_authenticator(api_.timeSource(),
                                              &AWSStsHeaderNames::get().Service);
-    aws_authenticator.init(&creds->accessKeyId().value(), 
+    aws_authenticator.init(&creds->accessKeyId().value(),
         &creds->secretAccessKey().value(), &creds->sessionToken().value());
     aws_authenticator.updatePayloadHash(message->body());
     auto& hdrs = message->headers();
-    // region should never be NULL at this point, but if it is, we can use the 
+    // region should never be NULL at this point, but if it is, we can use the
     // default region.
     if (!region.empty()){
-      ENVOY_LOG(debug, "assume chained role from [uri = {}]: region is {}", 
+      ENVOY_LOG(debug, "assume chained role from [uri = {}]: region is {}",
                                                                 uri_->uri(), region);
       aws_authenticator.sign(&hdrs, HeadersToSign, region);
     } else {
@@ -109,9 +109,9 @@ public:
                                                                 uri_->uri());
       aws_authenticator.sign(&hdrs, HeadersToSign, DefaultRegion);
     }
-    // Log the accessKey but not the secret. This is to show that we have valid 
+    // Log the accessKey but not the secret. This is to show that we have valid
     // credentials but does not leak anything secret. This is due to our
-    // sessions being 
+    // sessions being
     ENVOY_LOG(trace, "assume chained [accesskey={}] ",
                 creds->accessKeyId().value());
     ENVOY_LOG(debug, "assume chained role from [uri = {}]: start", uri_->uri());
@@ -210,7 +210,7 @@ private:
   typedef ConstSingleton<AWSStsHeaderValues> AWSStsHeaderNames;
   const HeaderList HeadersToSign =
     AwsAuthenticator::createHeaderToSign(
-        { 
+        {
         Http::Headers::get().ContentType,
         AWSStsHeaderNames::get().DateHeader,
         Http::Headers::get().HostLegacy,

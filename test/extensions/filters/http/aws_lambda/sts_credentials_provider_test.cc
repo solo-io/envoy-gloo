@@ -153,7 +153,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
             EXPECT_EQ(success_creds->sessionToken(), "session_token2");
           }));
   sts_provider->find(role_arn, false, &ctx_callbacks_4);
-  
+
 }
 
 TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
@@ -174,7 +174,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   auto* chained_pool = unique_chained_pool.get();
   StsConnectionPool::Callbacks *credentials_provider_callbacks;
   StsConnectionPool::Callbacks *credentials_provider_callbacks_chained;
-  
+
   // Expect to see the chained pool created first and then the base pool
   EXPECT_CALL(*factory, build(_, _, _, _))
       .WillOnce(Invoke([&](const absl::string_view cache_lookup_arg,
@@ -194,7 +194,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
         credentials_provider_callbacks = callbacks;
         return std::move(unique_pool);
       }));
-    
+
   // expect the base pool to be initialized with fetch
   EXPECT_CALL(*sts_connection_pool, init(_, _, _, _))
       .WillOnce(Invoke([&](const envoy::config::core::v3::HttpUri &uri,

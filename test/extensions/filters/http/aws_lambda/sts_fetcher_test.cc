@@ -141,13 +141,13 @@ TEST_F(StsFetcherTest, TestChainedSts) {
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
   EXPECT_CALL(callbacks, onSuccess(valid_chained_response)).Times(1);
-  
+
   std::string secret_key = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY";
   std::string access_key = "AKIDEXAMPLE";
   std::string session_token = "session_token";
   SystemTime expiration_time(std::chrono::seconds(7956885722)); // set way in future
-  
-  StsCredentialsConstSharedPtr sub_creds = 
+
+  StsCredentialsConstSharedPtr sub_creds =
                         std::make_shared<const StsCredentials>(
                         access_key, secret_key, session_token, expiration_time);
 

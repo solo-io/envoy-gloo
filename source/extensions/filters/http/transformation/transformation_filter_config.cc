@@ -24,7 +24,7 @@ void TransformationFilterConfig::addTransformationLegacy(
   TransformerConstSharedPtr on_stream_completion_transformation;
   bool clear_route_cache = false;
 
-  TransformerPairConstSharedPtr transformer_pair = 
+  TransformerPairConstSharedPtr transformer_pair =
       std::make_unique<TransformerPair>(
           request_transformation, response_transformation,
           on_stream_completion_transformation, clear_route_cache);
@@ -221,7 +221,7 @@ PerStageRouteTransformationFilterConfig::findTransformers(
   if (matcher_) {
       Http::Matching::HttpMatchingDataImpl data(info);
       data.onRequestHeaders(headers);
-      return matchTransform(std::move(data), matcher_); 
+      return matchTransform(std::move(data), matcher_);
   }
 
   for (const auto &pair : transformer_pairs_) {

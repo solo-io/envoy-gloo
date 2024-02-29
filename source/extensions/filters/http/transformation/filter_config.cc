@@ -16,7 +16,7 @@ FilterConfig::findTransformers(const Http::RequestHeaderMap &headers, StreamInfo
   if (match) {
       Http::Matching::HttpMatchingDataImpl data(si);
       data.onRequestHeaders(headers);
-      return matchTransform(std::move(data), match); 
+      return matchTransform(std::move(data), match);
   }
   for (const auto &pair : transformerPairs()) {
     if (pair.matcher()->matches(headers)) {

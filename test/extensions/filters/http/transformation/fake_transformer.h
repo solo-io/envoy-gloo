@@ -5,7 +5,7 @@
 namespace Envoy {
 namespace Extensions {
 namespace Transformer {
-namespace Fake{ 
+namespace Fake{
 
 using namespace HttpFilters::Transformation;
 using FakeTransformerProto = envoy::test::extensions::transformation::FakeTransformer;

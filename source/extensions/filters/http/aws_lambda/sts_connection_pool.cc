@@ -39,8 +39,8 @@ public:
   void onSuccess(const absl::string_view body)override;
   void addChained( std::string role_arn ) override;
   void markFailed( CredentialsFailureStatus status) override;
-  
-  void onSuccess( 
+
+  void onSuccess(
     std::shared_ptr<const Envoy::Extensions::Common::Aws::Credentials>
                                       credential ) ;
 
@@ -99,7 +99,7 @@ StsConnectionPoolImpl::StsConnectionPoolImpl(
      const absl::string_view cache_key_arn, const absl::string_view role_arn,
      StsConnectionPool::Callbacks *callbacks, StsFetcherPtr fetcher)
     : fetcher_(std::move(fetcher)), api_(api), dispatcher_(dispatcher),
-      cache_key_arn_(cache_key_arn), role_arn_(role_arn), 
+      cache_key_arn_(cache_key_arn), role_arn_(role_arn),
       callbacks_(callbacks){};
 
 StsConnectionPoolImpl::~StsConnectionPoolImpl() {
@@ -142,7 +142,7 @@ void StsConnectionPoolImpl::markFailed( CredentialsFailureStatus status) {
 
 void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   ASSERT(!body.empty());
- 
+
   // using a macro as we need to return on error
   // TODO(yuval-k): we can use string_view instead of string when we upgrade to
   // newer absl.
@@ -191,7 +191,7 @@ void StsConnectionPoolImpl::onSuccess(const absl::string_view body) {
   // Report the existence of this credential to any pools that may be waitin
   callbacks_->onResult(result, cache_key_arn_, chained_requests_);
   request_in_flight_ = false;
-  
+
   // Send result back to all lambda filter contexts waiting in list
   while (!connection_list_.empty()) {
     connection_list_.back()->callbacks()->onSuccess(result);
@@ -217,7 +217,7 @@ StsConnectionPool::create(Api::Api &api, Event::Dispatcher &dispatcher,
                           StsConnectionPool::Callbacks *callbacks,
                           StsFetcherPtr fetcher) {
 
-  return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, cache_key_arn, 
+  return std::make_unique<StsConnectionPoolImpl>(api, dispatcher, cache_key_arn,
                                        role_arn, callbacks, std::move(fetcher));
 }
 
@@ -231,7 +231,7 @@ public:
                              StsConnectionPool::Callbacks *callbacks,
                              StsFetcherPtr fetcher) const override {
 
-    return StsConnectionPool::create(api_, dispatcher_, cache_key_arn, role_arn, 
+    return StsConnectionPool::create(api_, dispatcher_, cache_key_arn, role_arn,
                                       callbacks,std::move(fetcher));
   };
 

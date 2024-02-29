@@ -36,10 +36,10 @@ public:
   void setWebToken(std::string_view web_token) override;
 
   void onResult(std::shared_ptr<const StsCredentials>,
-              std::string role_arn, 
-              std::list<std::string>  &chained_requests) override;            
-  void onFailure(CredentialsFailureStatus status, 
-              std::list<std::string>  &chained_requests) override; 
+              std::string role_arn,
+              std::list<std::string>  &chained_requests) override;
+  void onFailure(CredentialsFailureStatus status,
+              std::list<std::string>  &chained_requests) override;
 
 private:
   Api::Api &api_;
@@ -129,7 +129,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
     StsConnectionPool::Context::Callbacks *callbacks) {
 
   std::string role_arn = default_role_arn_;
- 
+
   // If role_arn_arg is present, use that, otherwise use env
   if (role_arn_arg.has_value()) {
     role_arn = role_arn_arg.value();
@@ -137,11 +137,11 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
 
   std::string role_arn_lookup = role_arn;
   if (disable_role_chaining) {
-    // if disable_role_chaining is set on an upstream we need a distinction 
+    // if disable_role_chaining is set on an upstream we need a distinction
     // so that we can serve both chained and non-chained as needed
     role_arn_lookup = "no-chain-" + role_arn;
   }
-      
+
 
   ASSERT(!role_arn.empty());
 
@@ -163,7 +163,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   // Look for active connection pool for given role_arn
   auto conn_pool = connection_pools_.find(role_arn_lookup);
   if (conn_pool != connection_pools_.end()) {
-    // We have an existing connection pool, 
+    // We have an existing connection pool,
     // check if there is already a request in flight
     if (conn_pool->second->requestInFlight()) {
      // add new context to connection pool and return it to the caller
@@ -177,7 +177,7 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
           .first;
   }
 
-  // Short circuit any additional checks if we are the base arn 
+  // Short circuit any additional checks if we are the base arn
   // or are on an upstream that disables chaining so we can go ahead
   //  and use webtoken.
   if (role_arn == default_role_arn_  ||  disable_role_chaining) {
@@ -189,9 +189,9 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
   }
 
   // For chaining check to see if we need to get the base token in addition.
-  // Chained role expiration is not linked to base expiration so we just 
+  // Chained role expiration is not linked to base expiration so we just
   // need to make sure the creds are good for the duration of our sts call.
-  const auto existing_base_token = credentials_cache_.find(default_role_arn_); 
+  const auto existing_base_token = credentials_cache_.find(default_role_arn_);
   if (existing_base_token != credentials_cache_.end()) {
     const auto now = api_.timeSource().systemTime();
     auto time_left = existing_base_token->second->expirationTime() - now;
@@ -201,13 +201,13 @@ StsConnectionPool::Context *StsCredentialsProviderImpl::find(
       return conn_pool->second->add(callbacks);
     }
   }
-  
+
   // find/create default connection pool
   auto base_conn_pool = connection_pools_.find(default_role_arn_);
   if (base_conn_pool == connection_pools_.end()) {
      base_conn_pool =  connection_pools_
           .emplace(default_role_arn_, conn_pool_factory_->build(
-            default_role_arn_, default_role_arn_, this, 
+            default_role_arn_, default_role_arn_, this,
             StsFetcher::create(cm_, api_))).first;
   }
   // only recreate base request if its not in flight
@@ -262,7 +262,7 @@ StsCredentialsProviderPtr StsCredentialsProvider::create(
 }
 
 StsCredentialsProviderFactoryPtr
-StsCredentialsProviderFactory::create(Api::Api &api, 
+StsCredentialsProviderFactory::create(Api::Api &api,
                                               Upstream::ClusterManager &cm) {
   return std::make_unique<StsCredentialsProviderFactoryImpl>(api, cm);
 }

@@ -105,7 +105,7 @@ protected:
     filter_config_->credentials_ =
         std::make_shared<Envoy::Extensions::Common::Aws::Credentials>(
             "access key", "secret key");
-    
+
     filter_config_->propagate_original_routing_=false;
 
     ON_CALL(
@@ -201,7 +201,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignature){
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-    
+
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -243,7 +243,7 @@ TEST_F(AWSLambdaTransformerTest, TestConfigureRequestTransformerSignatureNoBody)
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  
+
   EXPECT_EQ(Http::FilterHeadersStatus::StopIteration,
             filter_->decodeHeaders(headers, false));
 
@@ -304,7 +304,7 @@ TEST_F(AWSLambdaTransformerTest, TestNoBodyRequestTransformation){
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"}};
-  
+
   time_system_.setSystemTime(std::chrono::milliseconds(1000000000000));
   EXPECT_EQ(Http::FilterHeadersStatus::Continue,
             filter_->decodeHeaders(headers, true));

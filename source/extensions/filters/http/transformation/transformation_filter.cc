@@ -27,9 +27,9 @@ TransformationFilter::TransformationFilter(FilterConfigSharedPtr config)
 
 TransformationFilter::~TransformationFilter() {}
 
-void TransformationFilter::onDestroy() { 
+void TransformationFilter::onDestroy() {
   destroyed_ = true;
-  resetInternalState(); 
+  resetInternalState();
 }
 
 void TransformationFilter::onStreamComplete() { transformOnStreamCompletion(); }
@@ -231,13 +231,13 @@ void TransformationFilter::transformOnStreamCompletion() {
 
   try {
     on_stream_completion_transformation_->transform(*response_headers_,
-                                                    request_headers_, 
-                                                    emptyBody, 
+                                                    request_headers_,
+                                                    emptyBody,
                                                     *encoder_callbacks_);
   } catch (std::exception &e)  {
-    ENVOY_STREAM_LOG(debug, 
-                     "failure transforming on stream completion {}", 
-                     *encoder_callbacks_, 
+    ENVOY_STREAM_LOG(debug,
+                     "failure transforming on stream completion {}",
+                     *encoder_callbacks_,
                      e.what());
     filter_config_->stats().on_stream_complete_error_.inc();
   }
@@ -253,15 +253,15 @@ void TransformationFilter::transformSomething(
   try {
     // if log_request_response_info_ is set on the transformation, log the
     // request body and request headers before transformation
-    TRANSFORMATION_SENSITIVE_LOG(debug, "headers before transformation: {}", 
+    TRANSFORMATION_SENSITIVE_LOG(debug, "headers before transformation: {}",
                           transformation, filter_config_, callbacks, header_map);
-    TRANSFORMATION_SENSITIVE_LOG(debug, "body before transformation: {}", 
+    TRANSFORMATION_SENSITIVE_LOG(debug, "body before transformation: {}",
                           transformation, filter_config_, callbacks, body.toString());
     transformation->transform(header_map, request_headers_, body, callbacks);
 
-    TRANSFORMATION_SENSITIVE_LOG(debug, "headers after transformation: {}", 
+    TRANSFORMATION_SENSITIVE_LOG(debug, "headers after transformation: {}",
                           transformation, filter_config_, callbacks, header_map);
-    TRANSFORMATION_SENSITIVE_LOG(debug, "body after transformation: {}", 
+    TRANSFORMATION_SENSITIVE_LOG(debug, "body after transformation: {}",
                           transformation, filter_config_, callbacks, body.toString());
 
     if (body.length() > 0) {

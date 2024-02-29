@@ -153,9 +153,9 @@ void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatc
 
     // While the filewatch should be sufficient we have seen instances where the calls are dropped.
     // Given the usual usage of sts this should only be of concern when web token is self managed.
-    shared_this->timer_ = dispatcher.createTimer([shared_this] { 
+    shared_this->timer_ = dispatcher.createTimer([shared_this] {
         try {
-           
+
             const auto web_token = shared_this->parent_->api_.fileSystem().fileReadToEnd(
                 shared_this->parent_->token_file_);
              shared_this->parent_->stats_.webtoken_rotated_.inc();
@@ -172,7 +172,7 @@ void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatc
                   });
             }
             // TODO: check if web_token is valid
-            // TODO: stats here 
+            // TODO: stats here
           } catch (const EnvoyException &e) {
             ENVOY_LOG_TO_LOGGER(
                 Envoy::Logger::Registry::getLog(Logger::Id::aws), warn,

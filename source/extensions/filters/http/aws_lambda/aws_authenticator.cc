@@ -35,7 +35,7 @@ AwsAuthenticator::AwsAuthenticator(TimeSource &time_source,
   method_ = &Http::Headers::get().MethodValues.Post;
 }
 
-// init sets up some needed tools for the authenticator 
+// init sets up some needed tools for the authenticator
 // but does not clean state and does not need to be the first
 // call to authenticator. Data may be added prior to this call.
 void AwsAuthenticator::init(const std::string *access_key,
@@ -92,7 +92,7 @@ AwsAuthenticator::prepareHeaders(const HeaderList &headers_to_sign) {
       if (!getter.empty()) {
         headerEntry = getter[0];
       }
-      
+
     }
 
     // Should not happen, need to check now that envoy does not default header entries
@@ -134,7 +134,7 @@ std::string AwsAuthenticator::getBodyHexSha() {
 
 void AwsAuthenticator::fetchUrl() {
   const Http::HeaderString &canonical_url = request_headers_->Path()->value();
-  
+
   url_base_ = std::string(canonical_url.getStringView());
   query_string_ = std::string(Http::Utility::findQueryStringStart(canonical_url));
   if (query_string_.length() != 0) {
