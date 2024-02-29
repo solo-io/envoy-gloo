@@ -102,8 +102,7 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
     if (header_entries.empty()) {
       return "";
     }
-    const auto &header_value = header_entries[0]->value().getStringView();
-    return extractValue(callbacks, header_value);
+    return extractValue(callbacks, header_entries[0]->value().getStringView());
   }
 }
 
@@ -111,25 +110,30 @@ std::string
 Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
+  // determines which destructive extraction function to call based on the mode
+  auto extractFunc = [&](Http::StreamFilterCallbacks& callbacks, absl::string_view sv) {
+    switch (mode_) {
+      case ExtractionApi::SINGLE_REPLACE:
+        return replaceIndividualValue(callbacks, sv);
+      case ExtractionApi::REPLACE_ALL:
+        return replaceAllValues(callbacks, sv);
+      default:
+        // Handle unknown mode
+        throw EnvoyException("Cannot use extractDestructive with unsupported mode");
+    }
+  };
+
   if (body_) {
     const std::string &string_body = body();
     absl::string_view sv(string_body);
-    if (mode_ == ExtractionApi::SINGLE_REPLACE) {
-      return replaceIndividualValue(callbacks, sv);
-    } else {
-      return replaceAllValues(callbacks, sv);
-    }
+    return extractFunc(callbacks, sv);
   } else {
     const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
     if (header_entries.empty()) {
       return "";
     }
     const auto &header_value = header_entries[0]->value().getStringView();
-    if (mode_ == ExtractionApi::SINGLE_REPLACE) {
-      return replaceIndividualValue(callbacks, header_value);
-    } else {
-      return replaceAllValues(callbacks, header_value);
-    }
+    return extractFunc(callbacks, header_value);
   }
 }
 
@@ -668,7 +672,6 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
-    const ExtractionApi::Mode mode = named_extractor.second.mode();
     
     // prepare variables for non-advanced_templates_ scenario
     absl::string_view name_to_split;
@@ -684,7 +687,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       }
     }
 
-    switch(mode) {
+    switch(named_extractor.second.mode()) {
       case ExtractionApi::REPLACE_ALL:
       case ExtractionApi::SINGLE_REPLACE: {
         if (advanced_templates_) {

@@ -86,7 +86,7 @@ public:
   std::string extractDestructive(Http::StreamFilterCallbacks &callbacks,
                       const Http::RequestOrResponseHeaderMap &header_map,
                       GetBodyFunc &body) const;
-  ExtractionApi::Mode mode() const { return mode_; }
+  const ExtractionApi::Mode& mode() const { return mode_; }
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
@@ -99,7 +99,7 @@ private:
   const bool body_;
   const unsigned int group_;
   const std::regex extract_regex_;
-  const std::optional<std::string> replacement_text_;
+  const std::optional<const std::string> replacement_text_;
   const ExtractionApi::Mode mode_;
 };
 
