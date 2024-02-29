@@ -5,4 +5,4 @@ changelog:
   dependencyTag: v1.28.1
   resolvesIssue: false
   description: >-
-    Update Envoy to latest from fork 1.28.1, 66ebbb61f317c01a6fa5d2c1be215a0213dbec84
+    Update Envoy to latest from forked 1.28.1
