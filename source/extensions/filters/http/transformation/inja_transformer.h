@@ -83,7 +83,7 @@ public:
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
-  std::string replace(Http::StreamFilterCallbacks &callbacks,
+  std::string extractDestructive(Http::StreamFilterCallbacks &callbacks,
                       const Http::RequestOrResponseHeaderMap &header_map,
                       GetBodyFunc &body) const;
   ExtractionApi::Mode mode() const { return mode_; }

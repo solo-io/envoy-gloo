@@ -108,7 +108,7 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
 }
 
 std::string
-Extractor::replace(Http::StreamFilterCallbacks &callbacks,
+Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
   if (body_) {
@@ -688,10 +688,11 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       case ExtractionApi::REPLACE_ALL:
       case ExtractionApi::SINGLE_REPLACE: {
         if (advanced_templates_) {
-          extractions[name] = named_extractor.second.replace(callbacks, header_map, get_body);
+          extractions[name] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
         } else {
-          (*current)[std::string(name_to_split)] = named_extractor.second.replace(callbacks, header_map, get_body);
+          (*current)[std::string(name_to_split)] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
         }
+        break;
       }
       case ExtractionApi::EXTRACT: {
         if (advanced_templates_) {
@@ -699,6 +700,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
         } else {
           (*current)[std::string(name_to_split)] = named_extractor.second.extract(callbacks, header_map, get_body);
         }
+        break;
       }
       default: {
         PANIC_DUE_TO_CORRUPT_ENUM
