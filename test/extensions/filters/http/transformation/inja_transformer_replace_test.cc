@@ -80,7 +80,11 @@ TEST(Extraction, ExtractAndReplaceValueFromFullBody) {
   EXPECT_EQ("BAZ", res);
 }
 
-// TODO: EDGE CASE !!!
+// Note to maintainers: if we don't use the `match_not_null` format specifier
+// when calling std::regex_replace, this regex will match the input string twice
+// and the replacement will be applied twice. Because we are using the `match_not_null`
+// format specifier, the regex will only match the input string once and the replacement
+// will only be applied once.
 TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
 
@@ -96,11 +100,7 @@ TEST(Extraction, ExtractAndReplaceAllFromFullBody) {
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  // Note to self/reviewers: this is the current behavior, which is a kind of 
-  // confusing edge case in std::regex_replace when the regex is .*
-  // apparently, this regex matches the whole input string __AND__ the 
-  // line ending, so the replacement is applied twice
-  EXPECT_EQ("BAZBAZ", res);
+  EXPECT_EQ("BAZ", res);
 }
 
 TEST(Extraction, AttemptReplaceFromPartialMatch) {

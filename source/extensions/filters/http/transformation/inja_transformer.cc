@@ -222,7 +222,8 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
   }
 
   // If a match was found, replace all instances of the regex in the input value with the replacement_text_ value
-  return std::regex_replace(input, extract_regex_, replacement_text_.value());
+  std::cout << "input: " << input << std::endl;
+  return std::regex_replace(input, extract_regex_, replacement_text_.value(), std::regex_constants::match_not_null);
 }
 
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
