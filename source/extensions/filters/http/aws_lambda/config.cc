@@ -301,13 +301,13 @@ AWSLambdaRouteConfig::AWSLambdaRouteConfig(
 
   if (protoconfig.has_transformer_config()) {
     auto &factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.transformer_config());
-    auto config = Config::Utility::translateAnyToFactoryConfig(protoconfig.transformer_config().typed_config(), context.serverFactoryContext().messageValidationContext().staticValidationVisitor(), factory);
+    auto config = Config::Utility::translateAnyToFactoryConfig(protoconfig.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
     transformer_config_ = factory.createTransformer(*config, google::protobuf::BoolValue(), context);
   }
 
   if (protoconfig.has_request_transformer_config()) {
     auto &request_transformer_factory = Config::Utility::getAndCheckFactory<Transformation::TransformerExtensionFactory>(protoconfig.request_transformer_config());
-    auto request_transformer_config = Config::Utility::translateAnyToFactoryConfig(protoconfig.request_transformer_config().typed_config(), context.serverFactoryContext().messageValidationContext().staticValidationVisitor(), request_transformer_factory);
+    auto request_transformer_config = Config::Utility::translateAnyToFactoryConfig(protoconfig.request_transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), request_transformer_factory);
     request_transformer_config_ = request_transformer_factory.createTransformer(*request_transformer_config, google::protobuf::BoolValue(), context);
   }
 }

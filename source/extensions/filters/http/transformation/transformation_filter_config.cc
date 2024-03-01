@@ -29,7 +29,7 @@ void TransformationFilterConfig::addTransformationLegacy(
           request_transformation, response_transformation,
           on_stream_completion_transformation, clear_route_cache);
   if (rule.has_route_transformations()) {
-    transformer_pair = createTransformations(rule.route_transformations(), context);
+    transformer_pair = createTransformations(rule.route_transformations(), context.serverFactoryContext());
   }
   transformer_pairs_.emplace_back(MatcherCopy::Matcher::create(rule.match()),
                                   transformer_pair);
