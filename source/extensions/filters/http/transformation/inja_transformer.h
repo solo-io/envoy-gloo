@@ -34,7 +34,8 @@ public:
   const Http::RequestOrResponseHeaderMap *header_map_;
   const Http::RequestHeaderMap *request_headers_;
   const GetBodyFunc *body_;
-  const std::unordered_map<std::string, std::string> *extractions_;
+  const std::unordered_map<std::string, std::string> *destructive_extractions_;
+  const std::unordered_map<std::string, absl::string_view> *extractions_;
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;

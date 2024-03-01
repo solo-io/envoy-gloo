@@ -301,6 +301,11 @@ json TransformerInstance::extracted_callback(const inja::Arguments &args) const 
   if (value_it != ctx.extractions_->end()) {
     return value_it->second;
   }
+
+  const auto destructive_value_it = ctx.destructive_extractions_->find(name);
+  if (destructive_value_it != ctx.destructive_extractions_->end()) {
+    return destructive_value_it->second;
+  }
   return "";
 }
 
@@ -665,9 +670,31 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
   // get the extractions
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
+  
   if (advanced_templates_) {
-    extractions.reserve(extractors_.size());
+    auto extractions_size = 0;
+    auto destructive_extractions_size = 0;
+    for (const auto &named_extractor : extractors_) {
+      switch(named_extractor.second.mode()) {
+        case ExtractionApi::REPLACE_ALL:
+        case ExtractionApi::SINGLE_REPLACE: {
+          destructive_extractions_size++;
+          break;
+        }
+        case ExtractionApi::EXTRACT: {
+          extractions_size++;
+          break;
+        }
+        default: {
+          PANIC_DUE_TO_CORRUPT_ENUM
+        }
+      }
+    }
+
+    extractions.reserve(extractions_size);
+    destructive_extractions.reserve(destructive_extractions_size);
   }
 
   for (const auto &named_extractor : extractors_) {
@@ -691,7 +718,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       case ExtractionApi::REPLACE_ALL:
       case ExtractionApi::SINGLE_REPLACE: {
         if (advanced_templates_) {
-          extractions[name] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
+          destructive_extractions[name] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
         } else {
           (*current)[std::string(name_to_split)] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
         }
@@ -726,6 +753,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.request_headers_ = request_headers;
   typed_tls_data.body_ = &get_body;
   typed_tls_data.extractions_ = &extractions;
+  typed_tls_data.destructive_extractions_ = &destructive_extractions;
   typed_tls_data.context_ = &json_body;
   typed_tls_data.environ_ = &environ_;
   typed_tls_data.cluster_metadata_ = cluster_metadata;

@@ -50,7 +50,8 @@ void fill_slot(
       const Http::RequestOrResponseHeaderMap &header_map,
       const Http::RequestHeaderMap *request_headers,
       GetBodyFunc &body,
-      const std::unordered_map<std::string, std::string> &extractions,
+      const std::unordered_map<std::string, absl::string_view> &extractions,
+      const std::unordered_map<std::string, std::string> &destructive_extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
       const envoy::config::core::v3::Metadata *cluster_metadata) {
@@ -62,6 +63,7 @@ void fill_slot(
   typed_slot.request_headers_ = request_headers;
   typed_slot.body_ = &body;
   typed_slot.extractions_ = &extractions;
+  typed_slot.destructive_extractions_ = &destructive_extractions;
   typed_slot.context_ = &context;
   typed_slot.environ_ = &environ;
   typed_slot.cluster_metadata_ = cluster_metadata;
@@ -71,13 +73,14 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestRequestHeaderMapImpl headers;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
   TransformerInstance t(*slot, rng_);
 
   auto res = t.render(t.parse("{{field1}}"));
@@ -92,13 +95,14 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
 
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -115,13 +119,14 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"},
                                          {"x-custom-header", header}};
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -132,7 +137,8 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   absl::string_view field = "res";
   extractions["f"] = field;
   Http::TestRequestHeaderMapImpl headers;
@@ -141,7 +147,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -152,7 +158,8 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   extractions["foo"] = absl::string_view("bar");
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
@@ -160,7 +167,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -171,7 +178,8 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
 
 TEST_F(TransformerInstanceTest, Environment) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -179,7 +187,7 @@ TEST_F(TransformerInstanceTest, Environment) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -189,7 +197,8 @@ TEST_F(TransformerInstanceTest, Environment) {
 
 TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -197,7 +206,7 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -207,7 +216,8 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
 TEST_F(TransformerInstanceTest, ClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -219,7 +229,7 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, &cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, &cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -229,7 +239,8 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
   std::unordered_map<std::string, std::string> env;
@@ -237,7 +248,7 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          headers, &headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          headers, &headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -247,7 +258,8 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, RequestHeaders) {
   json originalbody;
-  std::unordered_map<std::string, std::string> extractions;
+  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"}};
 
@@ -256,7 +268,7 @@ TEST_F(TransformerInstanceTest, RequestHeaders) {
 
   auto slot = tls_.allocateSlot();
   fill_slot(slot,
-          response_headers, &request_headers, empty_body, extractions, originalbody, env, cluster_metadata);
+          response_headers, &request_headers, empty_body, extractions, destructive_extractions, originalbody, env, cluster_metadata);
 
   TransformerInstance t(*slot, rng_);
 
@@ -697,6 +709,38 @@ TEST_F(InjaTransformerTest, DontParseBodyAndExtractFromReplacementText) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "not JSON body");
+}
+
+TEST_F(InjaTransformerTest, DestructiveAndNonDestructiveExtractors) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  Buffer::OwnedImpl body("not json body");
+
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  ExtractionApi extractor;
+  extractor.mutable_body();
+  extractor.set_regex("not ([\\-._[:alnum:]]+) body");
+  extractor.set_subgroup(1);
+  extractor.set_mode(ExtractionApi::EXTRACT);
+  (*transformation.mutable_extractors())["param"] = extractor;
+
+  ExtractionApi destructive_extractor;
+  destructive_extractor.mutable_body();
+  destructive_extractor.set_regex("not ([\\-._[:alnum:]]+) body");
+  destructive_extractor.set_subgroup(1);
+  destructive_extractor.mutable_replacement_text()->set_value("JSON");
+  destructive_extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
+  (*transformation.mutable_extractors())["destructive_param"] = destructive_extractor;
+
+  transformation.mutable_body()->set_text("{{extraction(\"param\")}} {{extraction(\"destructive_param\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "json not JSON body");
 }
 
 TEST_F(InjaTransformerTest, UseBodyFunction) {
