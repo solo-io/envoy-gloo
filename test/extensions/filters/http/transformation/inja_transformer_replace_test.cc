@@ -438,6 +438,25 @@ TEST(Extraction, ReplaceAllNoMatch) {
   EXPECT_EQ("", res);
 }
 
+TEST(Extraction, ReplaceAllCapture) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}, {"foo", "bar"}};
+
+  ExtractionApi extractor;
+  extractor.mutable_body();
+  extractor.set_regex("(not) (json) (body)");
+  extractor.set_subgroup(0);
+  extractor.mutable_replacement_text()->set_value("$2 $3");
+  extractor.set_mode(ExtractionApi::REPLACE_ALL);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  std::string body("not json body");
+  GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
+
+  std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
+
+  EXPECT_EQ("json body", res);
+}
+
 } // namespace Transformation
 } // namespace HttpFilters
 } // namespace Extensions
