@@ -79,7 +79,7 @@ TEST_F(StsCredentialsProviderTest, TestFullFlow) {
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
   auto* factory = factory_.get();
   auto sts_provider = StsCredentialsProvider::create(
-      config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
+      config_, mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.cluster_manager_,
       std::move(factory_), token, role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
@@ -164,7 +164,7 @@ TEST_F(StsCredentialsProviderTest, TestFullChainedFlow) {
   std::unique_ptr<testing::NiceMock<MockStsConnectionPoolFactory>> factory_ = std::move(sts_connection_pool_factory_);
   auto* factory = factory_.get();
   auto sts_provider = StsCredentialsProvider::create(
-      config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
+      config_, mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.cluster_manager_,
       std::move(factory_), token, base_role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 
@@ -253,7 +253,7 @@ TEST_F(StsCredentialsProviderTest, TestUnchainedFlow) {
   auto* factory = factory_.get();
 
   auto sts_provider = StsCredentialsProvider::create(
-      config_, mock_factory_ctx_.api_, mock_factory_ctx_.cluster_manager_,
+      config_, mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.cluster_manager_,
       std::move(factory_), token, role_arn);
   testing::NiceMock<MockStsContextCallbacks> ctx_callbacks_1;
 

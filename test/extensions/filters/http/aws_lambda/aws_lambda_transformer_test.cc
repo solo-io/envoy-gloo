@@ -76,8 +76,8 @@ protected:
   }
 
   void setupRoute(bool unwrapAsApiGateway = false, bool wrapAsApiGateway = false) {
-    factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
-    factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
+    factory_context_.server_factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
+    factory_context_.server_factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -109,14 +109,14 @@ protected:
     filter_config_->propagate_original_routing_=false;
 
     ON_CALL(
-        *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
+        *factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
         extensionProtocolOptions(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
                 protoextconfig)));
 
     filter_ = std::make_unique<AWSLambdaFilter>(
-        factory_context_.cluster_manager_, factory_context_.api_,
+        factory_context_.server_factory_context_.cluster_manager_, factory_context_.server_factory_context_.api_,
         filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
   }
