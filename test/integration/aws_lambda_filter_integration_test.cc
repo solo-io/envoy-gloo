@@ -13,6 +13,8 @@ namespace Envoy {
 const std::string DEFAULT_LAMBDA_FILTER =
     R"EOF(
 name: io.solo.aws_lambda
+typed_config:
+  "@type": type.googleapis.com/envoy.config.filter.http.aws_lambda.v2.AWSLambdaConfig
 )EOF";
 
 const std::string USE_CHAIN_LAMBDA_FILTER =
