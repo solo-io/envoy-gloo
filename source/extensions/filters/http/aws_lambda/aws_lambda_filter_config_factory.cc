@@ -20,7 +20,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
 
 
   auto chain = std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-          context.serverFactoryContext().api(), makeOptRef(context.serverFactoryContext()),
+          context.serverFactoryContext().api(), absl::nullopt,
           proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "TODO(jbohanon) figure this case out",
           Extensions::Common::Aws::Utility::fetchMetadata);
   auto sts_factory = StsCredentialsProviderFactory::create(context.serverFactoryContext().api(),

@@ -75,8 +75,8 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-    scoped_runtime_.mergeValues(
-        {{"envoy.reloadable_features.use_libcurl_to_fetch_aws_credentials", "true"}});
+    /* scoped_runtime_.mergeValues( */
+    /*     {{"envoy.reloadable_features.use_libcurl_to_fetch_aws_credentials", "true"}}); */
 
     if (add_transform_) {
       // not sure why but checking the "authorization" in the test succeeds.
