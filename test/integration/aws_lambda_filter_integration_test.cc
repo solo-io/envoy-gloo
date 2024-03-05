@@ -5,6 +5,7 @@
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
+#include "test/test_common/test_runtime.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
@@ -74,6 +75,8 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
+    scoped_runtime_.mergeValues(
+        {{"envoy.reloadable_features.use_libcurl_to_fetch_aws_credentials", true}});
 
     if (add_transform_) {
       // not sure why but checking the "authorization" in the test succeeds.
@@ -189,6 +192,7 @@ typed_config:
   enum class CredMode{DEFAULT, CHAIN, STS};
   CredMode cred_mode_{};
   bool add_transform_{};
+  TestScopedRuntime scoped_runtime_;
 };
 
 INSTANTIATE_TEST_SUITE_P(
