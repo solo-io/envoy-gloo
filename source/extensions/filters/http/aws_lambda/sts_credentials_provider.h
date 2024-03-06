@@ -62,6 +62,16 @@ public:
 
   static StsCredentialsProviderFactoryPtr create(Api::Api &api,
                                                  Upstream::ClusterManager &cm);
+
+  Envoy::Extensions::Common::Aws::CredentialsProviderSharedPtr createWebIdentityCredentialsProvider(
+    Api::Api& api, Server::Configuration::ServerFactoryContext context,
+    const Envoy::Extensions::Common::Aws::MetadataCredentialsProviderBase::CurlMetadataFetcher& fetch_metadata_using_curl,
+    Envoy::Extensions::Common::Aws::CreateMetadataFetcherCb create_metadata_fetcher_cb, absl::string_view cluster_name,
+    absl::string_view token_file_path, absl::string_view sts_endpoint, absl::string_view role_arn,
+    absl::string_view role_session_name) const override {
+    std::cout << "we have hit createWebIdentityCredentialsProvider" <<std::endl;
+  };
+
 };
 
 } // namespace AwsLambda
