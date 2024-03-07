@@ -17,23 +17,23 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
         &proto_config,
     const std::string &stats_prefix,
     Server::Configuration::FactoryContext &context) {
-
+  auto& server_context = context.serverFactoryContext();
 
   auto chain = std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-          context.serverFactoryContext().api(), makeOptRef(context.serverFactoryContext()),
+          server_context.api(), makeOptRef(server_context),
           proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "TODO(jbohanon) figure this case out",
           Extensions::Common::Aws::Utility::fetchMetadata);
-  auto sts_factory = StsCredentialsProviderFactory::create(context.serverFactoryContext().api(),
-                                            context.serverFactoryContext().clusterManager());
+  auto sts_factory = StsCredentialsProviderFactory::create(server_context.api(),
+                                            server_context.clusterManager());
   auto config = std::make_shared<AWSLambdaConfigImpl>(std::move(chain),
       std::move(sts_factory),
-      context.serverFactoryContext().mainThreadDispatcher(), context.serverFactoryContext().api(), context.serverFactoryContext().threadLocal(), stats_prefix,
-      context.serverFactoryContext().scope(), proto_config);
+      server_context.mainThreadDispatcher(), server_context.api(), server_context.threadLocal(), stats_prefix,
+      server_context.scope(), proto_config);
   return
-      [&context, config]
+      [&server_context, config]
       (Http::FilterChainFactoryCallbacks &callbacks) -> void {
         callbacks.addStreamFilter(std::make_shared<AWSLambdaFilter>(
-            context.serverFactoryContext().clusterManager(), context.serverFactoryContext().api(), config));
+            server_context.clusterManager(), server_context.api(), config));
       };
 }
 
