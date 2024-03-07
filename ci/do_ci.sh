@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e
 
-if [ -n "$ENVOY_DOCKER_BUILD_DIR" ]; then
+if [ -z "$ENVOY_DOCKER_BUILD_DIR" ]; then
   export ENVOY_DOCKER_BUILD_DIR=/build
+fi
+if [ -z "$ENVOY_BUILD_DIR" ]; then
+  export ENVOY_BUILD_DIR=/build
 fi
 rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
 
