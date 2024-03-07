@@ -1,0 +1,13 @@
+diff --git a/source/extensions/common/aws/credentials_provider_impl.cc b/source/extensions/common/aws/credentials_provider_impl.cc
+index 7b9744a87a..619d23a65c 100644
+--- source/extensions/common/aws/credentials_provider_impl.cc
++++ source/extensions/common/aws/credentials_provider_impl.cc
+@@ -108,7 +108,7 @@ MetadataCredentialsProviderBase::MetadataCredentialsProviderBase(
+       cluster_name_(std::string(cluster_name)), cluster_type_(cluster_type), uri_(std::string(uri)),
+       cache_duration_(getCacheDuration()),
+       debug_name_(absl::StrCat("Fetching aws credentials from cluster=", cluster_name)) {
+-  if (context_) {
++  if (false) {
+     context_->mainThreadDispatcher().post([this]() {
+       if (!Utility::addInternalClusterStatic(context_->clusterManager(), cluster_name_,
+                                              cluster_type_, uri_)) {
