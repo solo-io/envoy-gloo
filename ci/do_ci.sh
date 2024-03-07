@@ -2,10 +2,9 @@
 set -e
 
 if [ -n "$ENVOY_DOCKER_BUILD_DIR" ]; then
-  rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
-else
-  rm -rf "/build/envoy/x64/bin/"
+  export ENVOY_DOCKER_BUILD_DIR=/build
 fi
+rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
 
 bazel fetch //source/exe:envoy-static
 
