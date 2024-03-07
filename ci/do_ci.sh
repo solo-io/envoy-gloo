@@ -1,14 +1,16 @@
 #!/bin/bash
 set -e
 
+export ENVOY_DOCKER_BUILD_DIR
+export ENVOY_BUILD_DIR
 if [ -z "$ENVOY_DOCKER_BUILD_DIR" ]; then
-  export ENVOY_DOCKER_BUILD_DIR=/build
+  ENVOY_DOCKER_BUILD_DIR=/build
   echo "using docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
 else 
   echo "using pre-defined docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
 fi
 if [ -z "$ENVOY_BUILD_DIR" ]; then
-  export ENVOY_BUILD_DIR=/build/envoy/x64
+  ENVOY_BUILD_DIR=/build/envoy/x64
   echo "using build dir: ${ENVOY_BUILD_DIR}"
 else 
   echo "using pre-defined build dir: ${ENVOY_BUILD_DIR}"
