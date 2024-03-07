@@ -42,13 +42,13 @@ export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test
 export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
 export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 
-export BAZEL_BUILD_EXTRA_OPTIONS
-BAZEL_BUILD_EXTRA_OPTIONS+=" --remote_cache=${BAZEL_REMOTE_CACHE}"
+# export BAZEL_BUILD_EXTRA_OPTIONS
+# BAZEL_BUILD_EXTRA_OPTIONS+=" --remote_cache=${BAZEL_REMOTE_CACHE}"
 
-export GCP_SERVICE_ACCOUNT_KEY_PATH
-GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
-echo "${GCP_SERVICE_ACCOUNT_KEY}" | base64 --decode > "${GCP_SERVICE_ACCOUNT_KEY_PATH}"
-BAZEL_BUILD_EXTRA_OPTIONS+=" --google_credentials=${GCP_SERVICE_ACCOUNT_KEY_PATH}"
+# export GCP_SERVICE_ACCOUNT_KEY_PATH
+# GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
+# echo "${GCP_SERVICE_ACCOUNT_KEY}" | base64 --decode > "${GCP_SERVICE_ACCOUNT_KEY_PATH}"
+# BAZEL_BUILD_EXTRA_OPTIONS+=" --google_credentials=${GCP_SERVICE_ACCOUNT_KEY_PATH}"
 
 if [ "${BUILD_TYPE:-}" != "" ] ; then
   BUILD_CONFIG="--config=$BUILD_TYPE"
@@ -63,6 +63,10 @@ bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
 mkdir -p "$ENVOY_GLOO_BIN_DIR"
+ls -al /build/
+ls -al /build/envoy/
+ls -al /build/envoy/x64/
+ls -al /build/envoy/x64/bin/
 bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
