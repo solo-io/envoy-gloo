@@ -206,23 +206,12 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
 
 // Match a regex against the input value and replace all instances of the regex with the replacement_text_ value
 std::string
-Extractor::replaceAllValues(Http::StreamFilterCallbacks &callbacks,
+Extractor::replaceAllValues(Http::StreamFilterCallbacks&,
                             absl::string_view value) const {
   std::string input(value.begin(), value.end());
   std::string replaced;
 
-  // create an iterator to search for matches of extract_regex_ in the input string
-  std::sregex_iterator it(input.begin(), input.end(), extract_regex_);
-  std::sregex_iterator end_it; // default end iterator for comparison
-
-  // return an empty string if the regex doesn't match any part of the input value
-  if (it == end_it) {
-    ENVOY_STREAM_LOG(debug, "replaceAllValues: extractor regex did not match input", callbacks);
-    return "";
-  }
-
-  // If a match was found, replace all instances of the regex in the input value with the replacement_text_ value
-  std::cout << "input: " << input << std::endl;
+  // replace all instances of the regex in the input value with the replacement_text_ value
   return std::regex_replace(input, extract_regex_, replacement_text_.value(), std::regex_constants::match_not_null);
 }
 

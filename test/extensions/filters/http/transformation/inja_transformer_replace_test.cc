@@ -435,7 +435,7 @@ TEST(Extraction, ReplaceAllNoMatch) {
 
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  EXPECT_EQ("", res);
+  EXPECT_EQ("not json body", res);
 }
 
 TEST(Extraction, ReplaceAllCapture) {

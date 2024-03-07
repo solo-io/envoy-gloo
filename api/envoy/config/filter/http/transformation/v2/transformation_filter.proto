@@ -175,19 +175,20 @@ message Extraction {
     google.protobuf.Empty body = 4;
   }
 
-  // The regex field specifies the regular expression used for matching against the source content.
+  // The regex field specifies the regular expression used for matching against the source content. This field is required.
   // - In EXTRACT mode, the entire source must match the regex. The subgroup-th capturing group,
-  //   if specified, determines which part of the match is extracted.
+  //   if specified, determines which part of the match is extracted. if the regex does not match the source
+  //   the result of the extraction will be an empty value.
   // - In SINGLE_REPLACE mode, the regex also needs to match the entire source. The subgroup-th capturing group
-  //   is targeted for replacement with the replacement_text.
+  //   is targeted for replacement with the replacement_text. if the regex does not match the source
+  //   the result of the extraction will be an empty value.
   // - In REPLACE_ALL mode, the regex is applied repeatedly to find all occurrences within the source that match.
-  //   Each matching occurrence is replaced with the replacement_text, and the subgroup field is not used.
-  // This field is required, and if the regex does not match the source as per the selected mode, the result of
-  // the extraction will be an empty value.
+  //   Each matching occurrence is replaced with the replacement_text, and the subgroup field is not used. if the 
+  //   regex does not match the source the result of the extraction will be the source itself.
   string regex = 2;
 
   // If your regex contains capturing groups, use this field to determine which
-  // group should be selected.``
+  // group should be selected.
   // For EXTRACT and SINGLE_REPLACE, refers to the portion of the text
   // to extract/replace.
   // Config will be rejected if this is specified in REPLACE_ALL mode.
