@@ -3,11 +3,18 @@ set -e
 
 if [ -z "$ENVOY_DOCKER_BUILD_DIR" ]; then
   export ENVOY_DOCKER_BUILD_DIR=/build
+  echo "using docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
+else 
+  echo "using pre-defined docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
 fi
 if [ -z "$ENVOY_BUILD_DIR" ]; then
-  export ENVOY_BUILD_DIR=/build
+  export ENVOY_BUILD_DIR=/build/envoy/x64
+  echo "using build dir: ${ENVOY_BUILD_DIR}"
+else 
+  echo "using pre-defined build dir: ${ENVOY_BUILD_DIR}"
 fi
 rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
+mkdir -p ${ENVOY_BUILD_DIR}
 
 bazel fetch //source/exe:envoy-static
 
