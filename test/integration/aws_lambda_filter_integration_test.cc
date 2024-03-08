@@ -75,10 +75,6 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-    scoped_runtime_.mergeValues(
-        /* {{"envoy.reloadable_features.use_http_client_to_fetch_aws_credentials", "false"}}); */
-        {{"envoy.reloadable_features.use_http_client_to_fetch_aws_credentials", "true"}});
-
     if (add_transform_) {
       // not sure why but checking the "authorization" in the test succeeds.
       // what i really want to test is that the filter that follows the aws filter gets the auth header
