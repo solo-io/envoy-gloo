@@ -69,7 +69,7 @@ echo "BUILD_CONFIG is ${BUILD_CONFIG}"
 echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 
 echo Building
-bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
+bash -x "ENVOY_BUILD_DIR=${ENVOY_BUILD_DIR}" "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
 echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'

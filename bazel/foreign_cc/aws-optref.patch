@@ -1,29 +1,15 @@
-diff --git a/ci/do_ci.sh b/ci/do_ci.sh
-index e500dd8792..bfda75e998 100755
---- ci/do_ci.sh
-+++ ci/do_ci.sh
-@@ -820,6 +820,10 @@ case $CI_TARGET in
-             fi
-         fi
-         setup_clang_toolchain
-+        echo "before: ${ENVOY_BUILD_DIR}"
-+        echo "hardcoding ENVOY_BUILD_DIR"
-+        ENVOY_BUILD_DIR=/build/envoy/x64
-+        echo "after: ${ENVOY_BUILD_DIR}"
-         ENVOY_BINARY_DIR="${ENVOY_BUILD_DIR}/bin"
-         if [[ -e "${ENVOY_BINARY_DIR}" ]]; then
-             echo "Existing output directory found (${ENVOY_BINARY_DIR}), removing ..."
-diff --git a/source/extensions/common/aws/credentials_provider_impl.cc b/source/extensions/common/aws/credentials_provider_impl.cc
-index 7b9744a87a..619d23a65c 100644
---- source/extensions/common/aws/credentials_provider_impl.cc
-+++ source/extensions/common/aws/credentials_provider_impl.cc
-@@ -108,7 +108,7 @@ MetadataCredentialsProviderBase::MetadataCredentialsProviderBase(
-       cluster_name_(std::string(cluster_name)), cluster_type_(cluster_type), uri_(std::string(uri)),
-       cache_duration_(getCacheDuration()),
-       debug_name_(absl::StrCat("Fetching aws credentials from cluster=", cluster_name)) {
--  if (context_) {
-+  if (context_.has_value()) {
-     context_->mainThreadDispatcher().post([this]() {
--      if (!Utility::addInternalClusterStatic(context_->clusterManager(), cluster_name_,
-+      if (!Utility::addInternalClusterStatic(context_.ref().clusterManager(), cluster_name_,
-                                              cluster_type_, uri_)) {
+# diff --git a/ci/do_ci.sh b/ci/do_ci.sh
+# index e500dd8792..bfda75e998 100755
+# --- ci/do_ci.sh
+# +++ ci/do_ci.sh
+# @@ -820,6 +820,10 @@ case $CI_TARGET in
+#              fi
+#          fi
+#          setup_clang_toolchain
+# +        echo "before: ${ENVOY_BUILD_DIR}"
+# +        echo "hardcoding ENVOY_BUILD_DIR"
+# +        ENVOY_BUILD_DIR=/build/envoy/x64
+# +        echo "after: ${ENVOY_BUILD_DIR}"
+#          ENVOY_BINARY_DIR="${ENVOY_BUILD_DIR}/bin"
+#          if [[ -e "${ENVOY_BINARY_DIR}" ]]; then
+#              echo "Existing output directory found (${ENVOY_BINARY_DIR}), removing ..."
