@@ -65,10 +65,6 @@ bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
 mkdir -p "$ENVOY_GLOO_BIN_DIR"
-ls -al /build/
-ls -al /build/envoy/
-ls -al /build/envoy/x64/
-ls -al /build/envoy/x64/bin/
 bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
