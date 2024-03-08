@@ -1,22 +1,13 @@
 #!/bin/bash
 set -e
 
-export ENVOY_DOCKER_BUILD_DIR
-export ENVOY_BUILD_DIR
-if [ -z "$ENVOY_DOCKER_BUILD_DIR" ]; then
-  ENVOY_DOCKER_BUILD_DIR=/build
-  echo "using docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
+if [ -z "$BUILD_DIR" ]; then
+  BUILD_DIR=/build
+  echo "using build dir: ${BUILD_DIR}"
 else 
-  echo "using pre-defined docker build dir: ${ENVOY_DOCKER_BUILD_DIR}"
+  echo "using pre-defined build dir: ${BUILD_DIR}"
 fi
-if [ -z "$ENVOY_BUILD_DIR" ]; then
-  ENVOY_BUILD_DIR=/build/envoy/x64
-  echo "using build dir: ${ENVOY_BUILD_DIR}"
-else 
-  echo "using pre-defined build dir: ${ENVOY_BUILD_DIR}"
-fi
-rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
-mkdir -p ${ENVOY_BUILD_DIR}
+export BUILD_DIR
 
 bazel fetch //source/exe:envoy-static
 
@@ -69,7 +60,7 @@ echo "BUILD_CONFIG is ${BUILD_CONFIG}"
 echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 
 echo Building
-bash -xc "ENVOY_BUILD_DIR=${ENVOY_BUILD_DIR} $UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh $@"
+bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
 echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
