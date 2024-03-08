@@ -22,7 +22,8 @@ index 7b9744a87a..619d23a65c 100644
        cache_duration_(getCacheDuration()),
        debug_name_(absl::StrCat("Fetching aws credentials from cluster=", cluster_name)) {
 -  if (context_) {
-+  if (false) {
++  if (context_.has_value()) {
      context_->mainThreadDispatcher().post([this]() {
-       if (!Utility::addInternalClusterStatic(context_->clusterManager(), cluster_name_,
+-      if (!Utility::addInternalClusterStatic(context_->clusterManager(), cluster_name_,
++      if (!Utility::addInternalClusterStatic(context_.ref().clusterManager(), cluster_name_,
                                               cluster_type_, uri_)) {
