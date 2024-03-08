@@ -120,7 +120,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatch) {
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  EXPECT_EQ("", res);
+  EXPECT_EQ(body, res);
 }
 
 TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
@@ -142,7 +142,7 @@ TEST(Extraction, AttemptReplaceFromPartialMatchNonNilSubgroup) {
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  EXPECT_EQ("", res);
+  EXPECT_EQ(body, res);
 }
 
 TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
@@ -160,7 +160,7 @@ TEST(Extraction, AttemptReplaceFromNoMatchNonNilSubgroup) {
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  EXPECT_EQ("", res);
+  EXPECT_EQ(body, res);
 }
 
 TEST(Extraction, ReplaceFromFullLiteralMatch) {
@@ -250,7 +250,7 @@ TEST(Extraction, ReplaceNoMatch) {
   GetBodyFunc bodyfunc = [&body]() -> const std::string & { return body; };
   std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
-  EXPECT_EQ("", res);
+  EXPECT_EQ(body, res);
 }
 
 TEST(Extraction, ReplacementTextLongerThanOriginalString) {

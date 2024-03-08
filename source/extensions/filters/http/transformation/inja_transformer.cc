@@ -164,24 +164,24 @@ Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
                                   absl::string_view value) const {
   std::match_results<absl::string_view::const_iterator> regex_result;
 
-  // if there are no matches, return an empty string
+  // if there are no matches, return the original input value
   if (!std::regex_search(value.begin(), value.end(), regex_result, extract_regex_)) {
-    ENVOY_STREAM_LOG(debug, "replaceValue: extractor regex did not match input", callbacks);
-    return "";
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: extractor regex did not match input. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
   }
 
-  // if the subgroup specified is greater than the number of subgroups in the regex, return an empty string
+  // if the subgroup specified is greater than the number of subgroups in the regex, return the original input value
   if (group_ >= regex_result.size()) {
     // this should never happen as we test this in the ctor.
     ASSERT("no such group in the regex");
-    ENVOY_STREAM_LOG(debug, "replaceValue: invalid group specified for regex", callbacks);
-    return "";
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: invalid group specified for regex. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
   }
 
-  // if the regex doesn't match the entire input value, return an empty string
+  // if the regex doesn't match the entire input value, return the original input value
   if (regex_result[0].length() != long(value.length())) {
-    ENVOY_STREAM_LOG(debug, "replaceValue: Regex did not match entire input value. This is not allowed in SINGLE_REPLACE mode.", callbacks);
-    return "";
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: Regex did not match entire input value. This is not allowed in SINGLE_REPLACE mode. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
   }
 
   // Create a new string with the maximum possible length after replacement

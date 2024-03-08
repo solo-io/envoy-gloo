@@ -181,7 +181,7 @@ message Extraction {
   //   the result of the extraction will be an empty value.
   // - In SINGLE_REPLACE mode, the regex also needs to match the entire source. The subgroup-th capturing group
   //   is targeted for replacement with the replacement_text. if the regex does not match the source
-  //   the result of the extraction will be an empty value.
+  //   the result of the extraction will be the source itself.
   // - In REPLACE_ALL mode, the regex is applied repeatedly to find all occurrences within the source that match.
   //   Each matching occurrence is replaced with the replacement_text, and the subgroup field is not used. if the 
   //   regex does not match the source the result of the extraction will be the source itself.
