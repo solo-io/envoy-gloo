@@ -19,8 +19,11 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
   auto& server_context = context.serverFactoryContext();
 
+  // ServerFactoryContext::clusterManager() is not available during server initialization
+  // therefore we need to pass absl::nullopt in lieu of the server_context to prevent
+  // the upstream code from attempting to access the method. https://github.com/envoyproxy/envoy/issues/26653
   auto chain = std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-          server_context.api(), makeOptRef(server_context),
+          server_context.api(), absl::nullopt /* ServerFactoryContextOptRef context */,
           proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "TODO(jbohanon) figure this case out",
           Extensions::Common::Aws::Utility::fetchMetadata);
   auto sts_factory = StsCredentialsProviderFactory::create(server_context.api(),
