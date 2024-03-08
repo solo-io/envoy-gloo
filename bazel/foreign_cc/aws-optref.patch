@@ -8,7 +8,7 @@ index e500dd8792..bfda75e998 100755
          setup_clang_toolchain
 +        echo "before: ${ENVOY_BUILD_DIR}"
 +        echo "hardcoding ENVOY_BUILD_DIR"
-+        ENVOY_BUILD_DIR=/build
++        ENVOY_BUILD_DIR=/build/envoy/x64"
 +        echo "after: ${ENVOY_BUILD_DIR}"
          ENVOY_BINARY_DIR="${ENVOY_BUILD_DIR}/bin"
          if [[ -e "${ENVOY_BINARY_DIR}" ]]; then
