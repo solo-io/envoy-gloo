@@ -3,8 +3,8 @@ steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['builds','submit','--config=ci/cloudbuild.yaml','--substitutions','TAG_NAME=$TAG_NAME,COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=']
 
-# - name: 'gcr.io/cloud-builders/gcloud'
-#   args: ['builds','submit','--config=ci/cloudbuild.yaml','--substitutions','COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=clang-asan']
-#   waitFor: ['-']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['builds','submit','--config=ci/cloudbuild.yaml','--substitutions','COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=clang-asan']
+  waitFor: ['-']
 
 timeout: 20000s
