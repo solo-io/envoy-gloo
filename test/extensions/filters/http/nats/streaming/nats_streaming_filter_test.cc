@@ -33,11 +33,11 @@ protected:
     proto_config.mutable_op_timeout()->set_nanos(17 * 1000000);
     proto_config.set_max_connections(1);
     proto_config.set_cluster("cluster");
-    factory_context_.cluster_manager_.initializeClusters({"cluster"}, {});
-    factory_context_.cluster_manager_.initializeThreadLocalClusters({"cluster"});
+    factory_context_.server_factory_context_.cluster_manager_.initializeClusters({"cluster"}, {});
+    factory_context_.server_factory_context_.cluster_manager_.initializeThreadLocalClusters({"cluster"});
 
     config_.reset(new NatsStreamingFilterConfig(
-        proto_config, factory_context_.clusterManager()));
+        proto_config, factory_context_.server_factory_context_.clusterManager()));
     nats_streaming_client_.reset(
         new NiceMock<Envoy::Nats::Streaming::MockClient>);
     filter_.reset(new NatsStreamingFilter(config_, nats_streaming_client_));

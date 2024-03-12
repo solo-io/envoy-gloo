@@ -101,8 +101,8 @@ const std::string web_token = "web_token";
 class StsFetcherTest : public testing::Test {
 public:
   void SetUp() override {
-    mock_factory_ctx_.cluster_manager_.initializeClusters({"test"}, {});
-    mock_factory_ctx_.cluster_manager_.initializeThreadLocalClusters({"test"});
+    mock_factory_ctx_.server_factory_context_.cluster_manager_.initializeClusters({"test"}, {});
+    mock_factory_ctx_.server_factory_context_.cluster_manager_.initializeThreadLocalClusters({"test"});
     TestUtility::loadFromYaml(service_account_credentials_config, config_);
     uri_.set_cluster(config_.cluster());
     uri_.set_uri(config_.uri());
@@ -119,10 +119,10 @@ public:
 // Test findByIssuer
 TEST_F(StsFetcherTest, TestGetSuccess) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200",
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, "200",
                         valid_response);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -133,10 +133,10 @@ TEST_F(StsFetcherTest, TestGetSuccess) {
 
 TEST_F(StsFetcherTest, TestChainedSts) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "200",
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, "200",
                         valid_chained_response);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -157,9 +157,9 @@ TEST_F(StsFetcherTest, TestChainedSts) {
 
 TEST_F(StsFetcherTest, TestGet503) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "503", "invalid");
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, "503", "invalid");
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -171,10 +171,10 @@ TEST_F(StsFetcherTest, TestGet503) {
 
 TEST_F(StsFetcherTest, TestCredentialsExpired) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "401",
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, "401",
                         expired_token_response);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -187,10 +187,10 @@ TEST_F(StsFetcherTest, TestCredentialsExpired) {
 
 TEST_F(StsFetcherTest, TestCredentialScopeMismatch) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, "401",
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, "401",
                         credential_scope_mismatch);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -203,10 +203,10 @@ TEST_F(StsFetcherTest, TestCredentialScopeMismatch) {
 
 TEST_F(StsFetcherTest, TestHttpFailure) {
   // Setup
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_,
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_,
                         Http::AsyncClient::FailureReason::Reset);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
 
   testing::NiceMock<MockStsFetcherCallbacks> callbacks;
@@ -219,10 +219,10 @@ TEST_F(StsFetcherTest, TestHttpFailure) {
 TEST_F(StsFetcherTest, TestCancel) {
   // Setup
   Http::MockAsyncClientRequest request(
-      &(mock_factory_ctx_.cluster_manager_.thread_local_cluster_.async_client_));
-  MockUpstream mock_sts(mock_factory_ctx_.cluster_manager_, &request);
+      &(mock_factory_ctx_.server_factory_context_.cluster_manager_.thread_local_cluster_.async_client_));
+  MockUpstream mock_sts(mock_factory_ctx_.server_factory_context_.cluster_manager_, &request);
   std::unique_ptr<StsFetcher> fetcher(StsFetcher::create(
-      mock_factory_ctx_.cluster_manager_, mock_factory_ctx_.api_));
+      mock_factory_ctx_.server_factory_context_.cluster_manager_, mock_factory_ctx_.server_factory_context_.api_));
   EXPECT_TRUE(fetcher != nullptr);
   EXPECT_CALL(request, cancel()).Times(1);
 

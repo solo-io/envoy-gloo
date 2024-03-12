@@ -24,6 +24,7 @@ envoy_gloo_cc_test(
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "@envoy//test/integration:http_integration_lib",
         "@envoy//test/integration:integration_lib",
+        "@envoy//test/test_common:test_runtime_lib",
     ],
 )
 

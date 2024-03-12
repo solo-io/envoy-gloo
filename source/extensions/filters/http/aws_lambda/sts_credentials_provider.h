@@ -62,6 +62,7 @@ public:
 
   static StsCredentialsProviderFactoryPtr create(Api::Api &api,
                                                  Upstream::ClusterManager &cm);
+
 };
 
 } // namespace AwsLambda

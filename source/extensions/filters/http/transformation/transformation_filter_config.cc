@@ -29,7 +29,7 @@ void TransformationFilterConfig::addTransformationLegacy(
           request_transformation, response_transformation,
           on_stream_completion_transformation, clear_route_cache);
   if (rule.has_route_transformations()) {
-    transformer_pair = createTransformations(rule.route_transformations(), context);
+    transformer_pair = createTransformations(rule.route_transformations(), context.serverFactoryContext());
   }
   transformer_pairs_.emplace_back(MatcherCopy::Matcher::create(rule.match()),
                                   transformer_pair);
@@ -38,10 +38,10 @@ void TransformationFilterConfig::addTransformationLegacy(
 TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::FactoryContext &context)
-    : FilterConfig(prefix, context.scope(), proto_config.stage(),
+    : FilterConfig(prefix, context.serverFactoryContext().scope(), proto_config.stage(),
                    proto_config.log_request_response_info()) {
     if (proto_config.has_matcher()) {
-      matcher_ = createTransformationMatcher(proto_config.matcher(), context.getServerFactoryContext());
+      matcher_ = createTransformationMatcher(proto_config.matcher(), context.serverFactoryContext());
       return;
     }
   for (const auto &rule : proto_config.transformations()) {

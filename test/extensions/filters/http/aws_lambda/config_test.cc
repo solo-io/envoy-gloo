@@ -49,9 +49,9 @@ protected:
 
   NiceMock<Event::MockTimer> *prepareTimer() {
     NiceMock<Event::MockTimer> *timer =
-        new NiceMock<Event::MockTimer>(&context_.dispatcher_);
+        new NiceMock<Event::MockTimer>(&context_.server_factory_context_.dispatcher_);
     protoconfig.mutable_use_default_credentials()->set_value(true);
-    EXPECT_CALL(context_.thread_local_, allocateSlot()).Times(1);
+    EXPECT_CALL(context_.server_factory_context_.thread_local_, allocateSlot()).Times(1);
     return timer;
   }
 
@@ -84,8 +84,8 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
+      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -150,8 +150,8 @@ TEST_F(ConfigTest, FailingToRotate) {
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
+      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config_1 =
       std::make_shared<const AWSLambdaProtocolExtensionConfig>(protoextconfig);
@@ -200,8 +200,8 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
+      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
 
@@ -254,10 +254,10 @@ TEST_F(ConfigTest, WithStsCreds) {
   setenv("AWS_WEB_IDENTITY_TOKEN_FILE", "test", 1);
   setenv("AWS_ROLE_ARN", "test_arn", 1);
 
-  EXPECT_CALL(context_.api_.file_system_, fileExists(_))
+  EXPECT_CALL(context_.server_factory_context_.api_.file_system_, fileExists(_))
       .Times(1)
       .WillOnce(Return(true));
-  EXPECT_CALL(context_.api_.file_system_, fileReadToEnd(_))
+  EXPECT_CALL(context_.server_factory_context_.api_.file_system_, fileReadToEnd(_))
       .Times(1)
       .WillOnce(Return("web_token"));
 
@@ -273,15 +273,15 @@ TEST_F(ConfigTest, WithStsCreds) {
           }));
 
   auto watcher = new Filesystem::MockWatcher();
-  EXPECT_CALL(context_.dispatcher_, createFilesystemWatcher_())
+  EXPECT_CALL(context_.server_factory_context_.dispatcher_, createFilesystemWatcher_())
       .WillOnce(Return(watcher));
   EXPECT_CALL(*watcher, addWatch("test", _, _)).Times(1);
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.dispatcher_,
-      context_.api_, context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
+      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks;
 

@@ -48,7 +48,7 @@ TEST(Transformation, TestGetTransformer) {
   factoryConfig->set_name("io.solo.transformer.fake");
   auto any = factoryConfig->mutable_typed_config();
   any->set_type_url("type.googleapis.com/envoy.test.extensions.transformation.FakeTransformer");
-  auto transformer = t.getTransformer(transformation, factory_context_);
+  auto transformer = t.getTransformer(transformation, factory_context_.server_factory_context_);
   auto fakeTransformer = dynamic_cast<const Envoy::Extensions::Transformer::Fake::FakeTransformer *>(transformer.get());
   // if transformer is not fake transformer type, will return nullptr
   EXPECT_NE(fakeTransformer, nullptr);

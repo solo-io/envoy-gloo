@@ -83,8 +83,8 @@ protected:
   void setupRoute(bool sessionToken = false, bool noCredentials = false,
                 bool persistOriginalHeaders = false, bool unwrapAsAlb = false,
                 bool unmanagedCredentials = false, bool unwrapAsApiGateway = false) {
-    factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
-    factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
+    factory_context_.server_factory_context_.cluster_manager_.initializeClusters({"fake_cluster"}, {});
+    factory_context_.server_factory_context_.cluster_manager_.initializeThreadLocalClusters({"fake_cluster"});
 
     routeconfig_.set_name("func");
     routeconfig_.set_qualifier("v1");
@@ -131,7 +131,7 @@ protected:
     filter_config_->propagate_original_routing_=persistOriginalHeaders;
 
     ON_CALL(
-        *factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
+        *factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_.cluster_.info_,
         extensionProtocolOptions(SoloHttpFilterNames::get().AwsLambda))
         .WillByDefault(
             Return(std::make_shared<AWSLambdaProtocolExtensionConfig>(
@@ -139,7 +139,7 @@ protected:
 
 
     filter_ = std::make_unique<AWSLambdaFilter>(
-        factory_context_.cluster_manager_, factory_context_.api_,
+        factory_context_.server_factory_context_.cluster_manager_, factory_context_.server_factory_context_.api_,
         filter_config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);
 
@@ -402,7 +402,7 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   auto hex_sha1 = auth1.getBodyHexSha();
 
   filter_ = std::make_unique<AWSLambdaFilter>(
-      factory_context_.cluster_manager_, factory_context_.api_,
+      factory_context_.server_factory_context_.cluster_manager_, factory_context_.server_factory_context_.api_,
       filter_config_);
   filter_->setDecoderFilterCallbacks(filter_callbacks_);
 
@@ -423,7 +423,7 @@ TEST_F(AWSLambdaFilterTest, SignsDataSetByPreviousFilters) {
   EXPECT_EQ(hex_sha1, hex_sha2);
 
   filter_ = std::make_unique<AWSLambdaFilter>(
-      factory_context_.cluster_manager_, factory_context_.api_,
+      factory_context_.server_factory_context_.cluster_manager_, factory_context_.server_factory_context_.api_,
       filter_config_);
   filter_->setDecoderFilterCallbacks(filter_callbacks_);
 

@@ -5,6 +5,7 @@
 #include "test/integration/http_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
+#include "test/test_common/test_runtime.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
 
@@ -13,6 +14,8 @@ namespace Envoy {
 const std::string DEFAULT_LAMBDA_FILTER =
     R"EOF(
 name: io.solo.aws_lambda
+typed_config:
+  "@type": type.googleapis.com/envoy.config.filter.http.aws_lambda.v2.AWSLambdaConfig
 )EOF";
 
 const std::string USE_CHAIN_LAMBDA_FILTER =
@@ -72,7 +75,6 @@ public:
    * Initializer for an individual integration test.
    */
   void initialize() override {
-
     if (add_transform_) {
       // not sure why but checking the "authorization" in the test succeeds.
       // what i really want to test is that the filter that follows the aws filter gets the auth header
@@ -184,89 +186,126 @@ typed_config:
         makeHttpConnection(makeClientConnection((lookupPort("http"))));
   }
 
+  void testWithConfig() {
+    initialize();
+    Http::TestRequestHeaderMapImpl request_headers{
+        {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
+
+    sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
+                                  10);
+
+    EXPECT_NE(0, upstream_request_->headers()
+                     .get(Http::LowerCaseString("authorization"))[0]
+                     ->value()
+                     .size());
+  }
+
+  void testWithChain() {
+    cred_mode_ = CredMode::CHAIN;
+    initialize();
+    Http::TestRequestHeaderMapImpl request_headers{
+        {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
+
+    sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
+                                  10);
+
+    EXPECT_NE(0, upstream_request_->headers()
+                     .get(Http::LowerCaseString("authorization"))[0]
+                     ->value()
+                     .size());
+    EXPECT_EQ(1UL,
+              test_server_->gauge("http.config_test.aws_lambda.current_state")
+                  ->value());
+    EXPECT_EQ(1UL,
+              test_server_->counter("http.config_test.aws_lambda.creds_rotated")
+                  ->value());
+    EXPECT_EQ(0UL,
+              test_server_->counter("http.config_test.aws_lambda.fetch_failed")
+                  ->value());
+  }
+
+  void testWithSTS() {
+    cred_mode_ = CredMode::STS;
+    add_transform_ = true;
+    initialize();
+    Http::TestRequestHeaderMapImpl request_headers{
+        {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/"}};
+
+    IntegrationStreamDecoderPtr response = codec_client_->makeHeaderOnlyRequest(request_headers);
+
+    auto timeout = TestUtility::DefaultTimeout;
+
+    // first request is sts request; return sts response.
+    waitForNextUpstreamRequest(0, timeout);
+    upstream_request_->encodeHeaders(default_response_headers_, false);
+    upstream_request_->encodeData(VALID_CHAINED_RESPONSE, true);
+
+    // second upstream request is the "lambda" request.
+    waitForNextUpstreamRequest(0, timeout);
+
+    // make sure we have a body (i.e. make sure transformation filter worked).
+    std::string body = upstream_request_->body().toString();
+    EXPECT_EQ(body, "abc /");
+
+    // make sure that the transformation filter after the lambda was called and observed the authorization header:
+    // ** THIS IS THE MANIFESTATION OF THE BUG **
+    const auto& auth_header = upstream_request_->headers()
+                     .get(Http::LowerCaseString("x-authorization"))[0]
+                     ->value();
+    EXPECT_NE(0, auth_header.size());
+
+    // wrap up the test nicely:
+    upstream_request_->encodeHeaders(default_response_headers_, false);
+    upstream_request_->encodeData(10, true);
+
+    // Wait for the response to be read by the codec client.
+    RELEASE_ASSERT(response->waitForEndStream(timeout), "unexpected timeout");
+  }
+
+  void setUseHttpClient(bool use) {
+    std::string useStr = use ? "true" : "false";
+    scoped_runtime_.mergeValues(
+        {{"envoy.reloadable_features.use_http_client_to_fetch_aws_credentials", useStr}});
+  }
+
   enum class CredMode{DEFAULT, CHAIN, STS};
   CredMode cred_mode_{};
   bool add_transform_{};
+  TestScopedRuntime scoped_runtime_;
 };
 
 INSTANTIATE_TEST_SUITE_P(
     IpVersions, AWSLambdaFilterIntegrationTest,
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
-TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfig) {
-  initialize();
-  Http::TestRequestHeaderMapImpl request_headers{
-      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
-
-  sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
-                                10);
-
-  EXPECT_NE(0, upstream_request_->headers()
-                   .get(Http::LowerCaseString("authorization"))[0]
-                   ->value()
-                   .size());
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfigLibcurl) {
+  setUseHttpClient(false);
+  testWithConfig();
 }
 
-TEST_P(AWSLambdaFilterIntegrationTest, TestWithChain) {
-  cred_mode_ = CredMode::CHAIN;
-  initialize();
-  Http::TestRequestHeaderMapImpl request_headers{
-      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/"}};
-
-  sendRequestAndWaitForResponse(request_headers, 10, default_response_headers_,
-                                10);
-
-  EXPECT_NE(0, upstream_request_->headers()
-                   .get(Http::LowerCaseString("authorization"))[0]
-                   ->value()
-                   .size());
-  EXPECT_EQ(1UL,
-            test_server_->gauge("http.config_test.aws_lambda.current_state")
-                ->value());
-  EXPECT_EQ(1UL,
-            test_server_->counter("http.config_test.aws_lambda.creds_rotated")
-                ->value());
-  EXPECT_EQ(0UL,
-            test_server_->counter("http.config_test.aws_lambda.fetch_failed")
-                ->value());
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithConfigHttpClient) {
+  setUseHttpClient(true);
+  testWithConfig();
 }
 
-TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTS) {
-  cred_mode_ = CredMode::STS;
-  add_transform_ = true;
-  initialize();
-  Http::TestRequestHeaderMapImpl request_headers{
-      {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/"}};
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithChainLibcurl) {
+  setUseHttpClient(false);
+  testWithChain();
+}
 
-  IntegrationStreamDecoderPtr response = codec_client_->makeHeaderOnlyRequest(request_headers);
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithChainHttpClient) {
+  setUseHttpClient(true);
+  testWithChain();
+}
 
-  auto timeout = TestUtility::DefaultTimeout;
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTSLibcurl) {
+  setUseHttpClient(false);
+  testWithSTS();
+}
 
-  // first request is sts request; return sts response.
-  waitForNextUpstreamRequest(0, timeout);
-  upstream_request_->encodeHeaders(default_response_headers_, false);
-  upstream_request_->encodeData(VALID_CHAINED_RESPONSE, true);
-
-  // second upstream request is the "lambda" request.
-  waitForNextUpstreamRequest(0, timeout);
-
-  // make sure we have a body (i.e. make sure transformation filter worked).
-  std::string body = upstream_request_->body().toString();
-  EXPECT_EQ(body, "abc /");
-
-  // make sure that the transformation filter after the lambda was called and observed the authorization header:
-  // ** THIS IS THE MANIFESTATION OF THE BUG **
-  const auto& auth_header = upstream_request_->headers()
-                   .get(Http::LowerCaseString("x-authorization"))[0]
-                   ->value();
-  EXPECT_NE(0, auth_header.size());
-
-  // wrap up the test nicely:
-  upstream_request_->encodeHeaders(default_response_headers_, false);
-  upstream_request_->encodeData(10, true);
-
-  // Wait for the response to be read by the codec client.
-  RELEASE_ASSERT(response->waitForEndStream(timeout), "unexpected timeout");
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTSHttpClient) {
+  setUseHttpClient(true);
+  testWithSTS();
 }
 
 

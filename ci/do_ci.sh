@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e
 
-if [ -n "$ENVOY_DOCKER_BUILD_DIR" ]; then
-  rm -rf "$ENVOY_DOCKER_BUILD_DIR/envoy/x64/bin/"
-else
-  rm -rf "/build/envoy/x64/bin/"
+if [ -z "$BUILD_DIR" ]; then
+  BUILD_DIR=/build
+  echo "using build dir: ${BUILD_DIR}"
+else 
+  echo "using pre-defined build dir: ${BUILD_DIR}"
 fi
+export BUILD_DIR
 
 bazel fetch //source/exe:envoy-static
 
@@ -32,6 +34,7 @@ fi
 export ENVOY_SRCDIR=$SOURCE_DIR
 
 # google cloud build times out when using full throttle.
+# additionally, we see builds killed due to OOM at high concurrency.
 export NUM_CPUS=10
 
 # google cloud build doesn't like ipv6
@@ -42,9 +45,11 @@ export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test
 export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
 export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 
+export BAZEL_BUILD_EXTRA_OPTIONS
 BAZEL_BUILD_EXTRA_OPTIONS+=" --remote_cache=${BAZEL_REMOTE_CACHE}"
 
-export  GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
+export GCP_SERVICE_ACCOUNT_KEY_PATH
+GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
 echo "${GCP_SERVICE_ACCOUNT_KEY}" | base64 --decode > "${GCP_SERVICE_ACCOUNT_KEY_PATH}"
 BAZEL_BUILD_EXTRA_OPTIONS+=" --google_credentials=${GCP_SERVICE_ACCOUNT_KEY_PATH}"
 

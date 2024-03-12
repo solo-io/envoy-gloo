@@ -83,7 +83,7 @@ TEST_F(StsConnectionPoolTest, TestSuccessfulCallback) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
+      mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
@@ -133,7 +133,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
+      mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   StsFetcher::Callbacks *lambda_callbacks;
@@ -154,7 +154,7 @@ TEST_F(StsConnectionPoolTest, TestPostInitAdd) {
   auto context_1 = sts_conn_pool->add(&ctx_callbacks);
 
   // Expect the context to be removed
-  EXPECT_CALL(mock_factory_ctx_.dispatcher_, deferredDelete_(_));
+  EXPECT_CALL(mock_factory_ctx_.server_factory_context_.dispatcher_, deferredDelete_(_));
 
   context_1->cancel();
 
@@ -193,7 +193,7 @@ TEST_F(StsConnectionPoolTest, TestFailure) {
   std::unique_ptr<testing::NiceMock<MockStsFetcher>> unique_fetcher{
       sts_fetcher_};
   auto sts_conn_pool = StsConnectionPool::create(
-      mock_factory_ctx_.api_, mock_factory_ctx_.dispatcher_, role_arn, role_arn,
+      mock_factory_ctx_.server_factory_context_.api_, mock_factory_ctx_.server_factory_context_.dispatcher_, role_arn, role_arn,
       &pool_callbacks, std::move(unique_fetcher));
 
   // Fetch credentials first call as they are not in the cache
