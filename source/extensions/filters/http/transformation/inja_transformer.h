@@ -25,6 +25,7 @@ namespace HttpFilters {
 namespace Transformation {
 
 using GetBodyFunc = std::function<const std::string &()>;
+using ExtractionApi = envoy::api::v2::filter::http::Extraction;
 
 struct ThreadLocalTransformerContext : public ThreadLocal::ThreadLocalObject {
 public:
@@ -33,6 +34,7 @@ public:
   const Http::RequestOrResponseHeaderMap *header_map_;
   const Http::RequestHeaderMap *request_headers_;
   const GetBodyFunc *body_;
+  const std::unordered_map<std::string, std::string> *destructive_extractions_;
   const std::unordered_map<std::string, absl::string_view> *extractions_;
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
@@ -82,15 +84,24 @@ public:
   absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
-
+  std::string extractDestructive(Http::StreamFilterCallbacks &callbacks,
+                      const Http::RequestOrResponseHeaderMap &header_map,
+                      GetBodyFunc &body) const;
+  const ExtractionApi::Mode& mode() const { return mode_; }
 private:
   absl::string_view extractValue(Http::StreamFilterCallbacks &callbacks,
                                  absl::string_view value) const;
+  std::string replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
+                                           absl::string_view value) const;
+  std::string replaceAllValues(Http::StreamFilterCallbacks &callbacks,
+                                     absl::string_view value) const;
 
   const Http::LowerCaseString headername_;
   const bool body_;
   const unsigned int group_;
   const std::regex extract_regex_;
+  const std::optional<const std::string> replacement_text_;
+  const ExtractionApi::Mode mode_;
 };
 
 class InjaTransformer : public Transformer {
