@@ -56,7 +56,9 @@ getHeader(const Http::RequestOrResponseHeaderMap &header_map,
 Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     : headername_(extractor.header()), body_(extractor.has_body()),
       group_(extractor.subgroup()),
-      extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())) {
+      extract_regex_(Solo::Regex::Utility::parseStdRegex(extractor.regex())),
+      replacement_text_(extractor.has_replacement_text() ? std::make_optional(extractor.replacement_text().value()) : std::nullopt),
+      mode_(extractor.mode()) {
   // mark count == number of sub groups, and we need to add one for match number
   // 0 so we test for < instead of <= see:
   // http://www.cplusplus.com/reference/regex/basic_regex/mark_count/
@@ -64,6 +66,26 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
     throw EnvoyException(
         fmt::format("group {} requested for regex with only {} sub groups",
                     group_, extract_regex_.mark_count()));
+  }
+
+  switch (mode_) {
+    case ExtractionApi::EXTRACT:
+      break;
+    case ExtractionApi::SINGLE_REPLACE:
+      if (!replacement_text_.has_value()) {
+        throw EnvoyException("SINGLE_REPLACE mode set but no replacement text provided");
+      }
+      break;
+    case ExtractionApi::REPLACE_ALL:
+      if (!replacement_text_.has_value()) {
+        throw EnvoyException("REPLACE_ALL mode set but no replacement text provided");
+      }
+      if (group_ != 0) {
+        throw EnvoyException("REPLACE_ALL mode set but subgroup is not 0");
+      }
+      break;
+    default:
+      throw EnvoyException("Unknown mode");
   }
 }
 
@@ -81,6 +103,37 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
       return "";
     }
     return extractValue(callbacks, header_entries[0]->value().getStringView());
+  }
+}
+
+std::string
+Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
+                   const Http::RequestOrResponseHeaderMap &header_map,
+                   GetBodyFunc &body) const {
+  // determines which destructive extraction function to call based on the mode
+  auto extractFunc = [&](Http::StreamFilterCallbacks& callbacks, absl::string_view sv) {
+    switch (mode_) {
+      case ExtractionApi::SINGLE_REPLACE:
+        return replaceIndividualValue(callbacks, sv);
+      case ExtractionApi::REPLACE_ALL:
+        return replaceAllValues(callbacks, sv);
+      default:
+        // Handle unknown mode
+        throw EnvoyException("Cannot use extractDestructive with unsupported mode");
+    }
+  };
+
+  if (body_) {
+    const std::string &string_body = body();
+    absl::string_view sv(string_body);
+    return extractFunc(callbacks, sv);
+  } else {
+    const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
+    if (header_entries.empty()) {
+      return "";
+    }
+    const auto &header_value = header_entries[0]->value().getStringView();
+    return extractFunc(callbacks, header_value);
   }
 }
 
@@ -103,6 +156,63 @@ Extractor::extractValue(Http::StreamFilterCallbacks &callbacks,
     ENVOY_STREAM_LOG(debug, "extractor regex did not match input", callbacks);
   }
   return "";
+}
+
+// Match a regex against the input value and replace the matched subgroup with the replacement_text_ value
+std::string
+Extractor::replaceIndividualValue(Http::StreamFilterCallbacks &callbacks,
+                                  absl::string_view value) const {
+  std::match_results<absl::string_view::const_iterator> regex_result;
+
+  // if there are no matches, return the original input value
+  if (!std::regex_search(value.begin(), value.end(), regex_result, extract_regex_)) {
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: extractor regex did not match input. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
+  }
+
+  // if the subgroup specified is greater than the number of subgroups in the regex, return the original input value
+  if (group_ >= regex_result.size()) {
+    // this should never happen as we test this in the ctor.
+    ASSERT("no such group in the regex");
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: invalid group specified for regex. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
+  }
+
+  // if the regex doesn't match the entire input value, return the original input value
+  if (regex_result[0].length() != long(value.length())) {
+    ENVOY_STREAM_LOG(debug, "replaceIndividualValue: Regex did not match entire input value. This is not allowed in SINGLE_REPLACE mode. Returning input", callbacks);
+    return std::string(value.begin(), value.end());
+  }
+
+  // Create a new string with the maximum possible length after replacement
+  auto max_possible_length = value.length() + replacement_text_.value().length();
+  std::string replaced;
+  replaced.reserve(max_possible_length);
+
+  auto subgroup_start = regex_result[group_].first;
+  auto subgroup_end = regex_result[group_].second;
+
+  // Copy the initial part of the string until the match
+  replaced.assign(value.begin(), subgroup_start);
+
+  // Append the replacement text
+  replaced += replacement_text_.value();
+
+  // Append the remaining part of the string after the match
+  replaced.append(subgroup_end, value.end());
+
+  return replaced;
+}
+
+// Match a regex against the input value and replace all instances of the regex with the replacement_text_ value
+std::string
+Extractor::replaceAllValues(Http::StreamFilterCallbacks&,
+                            absl::string_view value) const {
+  std::string input(value.begin(), value.end());
+  std::string replaced;
+
+  // replace all instances of the regex in the input value with the replacement_text_ value
+  return std::regex_replace(input, extract_regex_, replacement_text_.value(), std::regex_constants::match_not_null);
 }
 
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
@@ -180,6 +290,11 @@ json TransformerInstance::extracted_callback(const inja::Arguments &args) const 
   const auto value_it = ctx.extractions_->find(name);
   if (value_it != ctx.extractions_->end()) {
     return value_it->second;
+  }
+
+  const auto destructive_value_it = ctx.destructive_extractions_->find(name);
+  if (destructive_value_it != ctx.destructive_extractions_->end()) {
+    return destructive_value_it->second;
   }
   return "";
 }
@@ -546,26 +661,70 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   }
   // get the extractions
   std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> destructive_extractions;
+  
   if (advanced_templates_) {
-    extractions.reserve(extractors_.size());
+    auto extractions_size = 0;
+    auto destructive_extractions_size = 0;
+    for (const auto &named_extractor : extractors_) {
+      switch(named_extractor.second.mode()) {
+        case ExtractionApi::REPLACE_ALL:
+        case ExtractionApi::SINGLE_REPLACE: {
+          destructive_extractions_size++;
+          break;
+        }
+        case ExtractionApi::EXTRACT: {
+          extractions_size++;
+          break;
+        }
+        default: {
+          PANIC_DUE_TO_CORRUPT_ENUM
+        }
+      }
+    }
+
+    extractions.reserve(extractions_size);
+    destructive_extractions.reserve(destructive_extractions_size);
   }
 
   for (const auto &named_extractor : extractors_) {
     const std::string &name = named_extractor.first;
-    if (advanced_templates_) {
-      extractions[name] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
-    } else {
-      absl::string_view name_to_split = name;
-      json *current = &json_body;
+    
+    // prepare variables for non-advanced_templates_ scenario
+    absl::string_view name_to_split;
+    json* current = nullptr;
+    if (!advanced_templates_) {
+      name_to_split = name;
+      current = &json_body;
       for (size_t pos = name_to_split.find("."); pos != std::string::npos;
            pos = name_to_split.find(".")) {
         auto &&field_name = name_to_split.substr(0, pos);
         current = &(*current)[std::string(field_name)];
         name_to_split = name_to_split.substr(pos + 1);
       }
-      (*current)[std::string(name_to_split)] =
-          named_extractor.second.extract(callbacks, header_map, get_body);
+    }
+
+    switch(named_extractor.second.mode()) {
+      case ExtractionApi::REPLACE_ALL:
+      case ExtractionApi::SINGLE_REPLACE: {
+        if (advanced_templates_) {
+          destructive_extractions[name] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
+        } else {
+          (*current)[std::string(name_to_split)] = named_extractor.second.extractDestructive(callbacks, header_map, get_body);
+        }
+        break;
+      }
+      case ExtractionApi::EXTRACT: {
+        if (advanced_templates_) {
+          extractions[name] = named_extractor.second.extract(callbacks, header_map, get_body);
+        } else {
+          (*current)[std::string(name_to_split)] = named_extractor.second.extract(callbacks, header_map, get_body);
+        }
+        break;
+      }
+      default: {
+        PANIC_DUE_TO_CORRUPT_ENUM
+      }
     }
   }
 
@@ -584,6 +743,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.request_headers_ = request_headers;
   typed_tls_data.body_ = &get_body;
   typed_tls_data.extractions_ = &extractions;
+  typed_tls_data.destructive_extractions_ = &destructive_extractions;
   typed_tls_data.context_ = &json_body;
   typed_tls_data.environ_ = &environ_;
   typed_tls_data.cluster_metadata_ = cluster_metadata;
