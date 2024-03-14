@@ -64,6 +64,11 @@ artifacts:
 
 tags:
   - "repo_envoy-gloo"
+  # This tag can be used to filter for or out jobs which are spawned by the main job
+  # submitted by build-bot. It's somewhat redundant as one could filter on `tags~^pr`
+  # to achieve the same effect since that tag is added to main jobs by build-bot,
+  # but this is somewhat less esoteric
+  - "sub-job"
 
 availableSecrets:
   inline:
