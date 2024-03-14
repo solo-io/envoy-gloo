@@ -63,7 +63,7 @@ artifacts:
     paths: ['linux/amd64/build_envoy_release/envoy']
 
 tags:
-  - "envoy-gloo"
+  - "repo_envoy-gloo"
 
 availableSecrets:
   inline:
