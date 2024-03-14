@@ -53,13 +53,22 @@ steps:
   - 'TAGGED_VERSION=$TAG_NAME'
 
 options:
-  machineType: 'N1_HIGHCPU_32'
+  pool:
+    name: 'projects/solo-public/locations/us-central1/workerPools/envoy-gloo-runner'
 timeout: 20000s
 
 artifacts:
   objects:
     location: 'gs://solo-public-artifacts.solo.io/envoy/$COMMIT_SHA/'
     paths: ['linux/amd64/build_envoy_release/envoy']
+
+tags:
+  - "repo_envoy-gloo"
+  # This tag can be used to filter for or out jobs which are spawned by the main job
+  # submitted by build-bot. It's somewhat redundant as one could filter on `tags~^pr`
+  # to achieve the same effect since that tag is added to main jobs by build-bot,
+  # but this is somewhat less esoteric
+  - "sub-job"
 
 availableSecrets:
   inline:
