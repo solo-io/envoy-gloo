@@ -1,14 +1,16 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
         # envoy 1.29.2 with backported ext_proc updates
-        commit = "b5c77750dc0f9de19478c89776f580fb9336fc99",
+        # also includes libprotobuf patch for dead stores
+        commit = "4215f08044ae0bab9e74a8b248bb6480709a3a1f",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
         # Includes unmerged modifications for
         # - JSON pointer syntax support
         # - Allowing escaped strings
-        commit = "3aa95b8b58a525f86f79cb547bf937176c9cc7ff", # v3.4.0-patch1
+        # - Patching dangling reference
+        commit = "c0359f890c9e0d2715c1a429276da57f1403993f", # v3.4.0-patch2 patched
         remote = "https://github.com/solo-io/inja", # solo-io fork including the changes
     ),
     json = dict(
