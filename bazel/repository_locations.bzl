@@ -3,7 +3,7 @@ REPOSITORY_LOCATIONS = dict(
     # order to accommodate `check_extensions_build_config.sh`
     envoy = dict(
         # envoy 1.29.2 with backported ext_proc updates
-        commit = "4215f08044ae0bab9e74a8b248bb6480709a3a1f",
+        commit = "07d43f271290583b3019a1172420d4b33bd52153", # v1.29.2-fork1
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
