@@ -1,0 +1,15 @@
+changelog:
+- type: NON_USER_FACING
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/687
+  resolvesIssue: false
+  description: >-
+    Adds definition for static analysis check, bump to patched dependencies to resolve
+    issues uncovered by the check.
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: v1.29.2-fork1
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: inja
+  dependencyTag: v3.4.0-patch3
