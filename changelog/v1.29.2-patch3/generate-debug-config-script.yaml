@@ -1,0 +1,6 @@
+changelog:
+- type: NON_USER_FACING
+  description: >
+    Adds a modified version of upstream's generate_debug_config.py script to 
+    tools directory. This script can be used to generate vscode/gdb debug configuration
+    for an individual test target.
