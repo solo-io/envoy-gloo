@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Borrowed from upstream: https://github.com/envoyproxy/envoy/blob/main/tools/vscode/generate_debug_config.py
+# Borrowed from upstream: https://github.com/envoyproxy/envoy/blob/e469703479d3fd2511f718c22e633a08beefa64a/tools/vscode/generate_debug_config.py
 #
 # Example usage:
 #   `BAZEL_BUILD_OPTION_LIST="--define tcmalloc=gperftools" .tools/generate_debug_config.py //test/extensions/transformers/aws_lambda:api_gateway_transformer_test`
