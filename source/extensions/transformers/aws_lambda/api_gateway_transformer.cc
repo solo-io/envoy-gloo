@@ -85,6 +85,12 @@ void ApiGatewayTransformer::transform_response(
   const auto bodystring = absl::string_view(static_cast<char *>(body.linearize(len)), len);
   nlohmann::json json_body;
   try {
+    // look into why certain parse errors occur 
+    // [null]
+    // look into whether this is an issue w the parsing library
+    // look into whether we need to pass in a json object
+    // testing e2e, it seems like the various null multiValueHeaders
+    // cause a 302, instead of a parse error
     json_body = json::parse(bodystring);
   } catch (std::exception& exception){
     ENVOY_STREAM_LOG(debug, "Error parsing response body as JSON: " + std::string(exception.what()), stream_filter_callbacks);
@@ -96,6 +102,10 @@ void ApiGatewayTransformer::transform_response(
   if (json_body.contains("statusCode")) {
     uint64_t status_value;
     try {
+      // I was able to make this error with a null status code
+        // parse error 101
+      // I was able to make this error with a non-integer status code
+        // parse error 101
       status_value = json_body["statusCode"].get<uint64_t>();
     } catch (std::exception& exception){
       ENVOY_STREAM_LOG(debug, "Error parsing statusCode: " + std::string(exception.what()), stream_filter_callbacks);
@@ -141,7 +151,10 @@ void ApiGatewayTransformer::transform_response(
         const auto& header_key = it.key();
         const auto& header_values = it.value();
 
+        // need to validate that header_values is an array/iterable
         for (json::const_iterator inner_it = header_values.cbegin(); inner_it != header_values.cend(); inner_it++) {
+          // this is it
+          // need to validate that inner_it is a string
           const auto& header_value = inner_it.value().get<std::string>();
           add_response_header(*response_headers, header_key, header_value, stream_filter_callbacks, true);
         }
@@ -153,12 +166,16 @@ void ApiGatewayTransformer::transform_response(
   if (json_body.contains("body")) {
     std::string body_dump;
     if (json_body["body"].is_string()) {
+      // seems safe, but haven't tested too thoroughly
+      // note definitely safe
       body_dump = json_body["body"].get<std::string>();
     } else {
       body_dump = json_body["body"].dump();
     }
     if (json_body.contains("isBase64Encoded")) {
-      auto is_base64 = json_body["isBase64Encoded"];
+      // might be a dumb way to handle this -- let's use a consistent pattern for 
+      // checking this sort of thing
+      auto is_base64 = json_body["isBase64Encoded"]; // could this cause issue?
       if (is_base64.is_boolean() && is_base64.get<bool>() == true) {
         body_dump = Base64::decode(body_dump);
       }
