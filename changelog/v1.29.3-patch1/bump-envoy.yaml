@@ -1,0 +1,10 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: v1.29.3
+  issueLink: https://github.com/solo-io/solo-projects/issues/6008
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest from forked 1.29.3
+    Tackles the http2 crazy cve CVE-2024-30255
