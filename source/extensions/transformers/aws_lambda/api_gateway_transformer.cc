@@ -151,12 +151,9 @@ void ApiGatewayTransformer::transform_response(
             return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
           }
 
-          // otherwise, log that we're using a non-array value
           ENVOY_STREAM_LOG(debug, "warning: using non-array value for multi header value", stream_filter_callbacks);
         }
         for (json::const_iterator inner_it = header_values.cbegin(); inner_it != header_values.cend(); inner_it++) {
-          // this is it
-          // need to validate that inner_it is a string
           std::string header_value;
           if (inner_it.value().is_string()) {
             header_value = inner_it.value().get<std::string>();
@@ -173,8 +170,6 @@ void ApiGatewayTransformer::transform_response(
   if (json_body.contains("body")) {
     std::string body_dump;
     if (json_body["body"].is_string()) {
-      // seems safe, but haven't tested too thoroughly
-      // note definitely safe
       body_dump = json_body["body"].get<std::string>();
     } else {
       body_dump = json_body["body"].dump();
