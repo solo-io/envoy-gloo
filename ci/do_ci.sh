@@ -32,16 +32,19 @@ fi
 
 export ENVOY_SRCDIR=$SOURCE_DIR
 
-# google cloud build times out when using full throttle.
-export NUM_CPUS=10
-
 # google cloud build doesn't like ipv6
-export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors --jobs=${NUM_CPUS}"
+export BAZEL_EXTRA_TEST_OPTIONS="--test_env=ENVOY_IP_TEST_VERSIONS=v4only --test_output=errors"
 
 # We do not need/want to build the Envoy contrib filters so we replace the
 # associated targets with the ENVOY_BUILD values
 export ENVOY_CONTRIB_BUILD_TARGET="//source/exe:envoy-static"
 export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
+
+BAZEL_BUILD_EXTRA_OPTIONS+=" --remote_cache=${BAZEL_REMOTE_CACHE}"
+
+export  GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
+echo "${GCP_SERVICE_ACCOUNT_KEY}" | base64 --decode > "${GCP_SERVICE_ACCOUNT_KEY_PATH}"
+BAZEL_BUILD_EXTRA_OPTIONS+=" --google_credentials=${GCP_SERVICE_ACCOUNT_KEY_PATH}"
 
 if [ "${BUILD_TYPE:-}" != "" ] ; then
   BUILD_CONFIG="--config=$BUILD_TYPE"
