@@ -5,3 +5,9 @@ changelog:
   dependencyTag: v1.25.11ish
   description: > 
     Bump envoy to v1.25.11 and a bit
+- type: NON_USER_FACING
+  description: >
+    Apply upstream envoy commit: https://github.com/envoyproxy/envoy/commit/8a6177740b518055b0cf16719b76c4c1794b6757
+    as bazel/foreign_cc/11apr24-cves-set-continuations-25.patch
+    Apply upstream envoy commit: https://github.com/envoyproxy/envoy/commit/95d92b4a15ddbf588b949999a75fdca289a96550
+    as bazel/foreign_cc/11apr24-cves-nghttp2-25.patch
