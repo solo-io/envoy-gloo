@@ -1,7 +1,7 @@
-diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
+diff --git a/envoy/source/common/http/http2/codec_impl.cc b/envoy/source/common/http/http2/codec_impl.cc
 index fb4f1f9215fdd..ab4d5d3b91841 100644
---- a/source/common/http/http2/codec_impl.cc
-+++ b/source/common/http/http2/codec_impl.cc
+--- a/envoy/source/common/http/http2/codec_impl.cc
++++ b/envoy/source/common/http/http2/codec_impl.cc
 @@ -1812,6 +1812,11 @@ ConnectionImpl::Http2Options::Http2Options(
    // on this mitigation, set back to the old 10K number to avoid any changes in the HTTP/2 codec
    // behavior.

@@ -1,7 +1,7 @@
-diff --git a/bazel/foreign_cc/nghttp2.patch b/bazel/foreign_cc/nghttp2.patch
+diff --git a/envoy/bazel/foreign_cc/nghttp2.patch b/envoy/bazel/foreign_cc/nghttp2.patch
 index d1cbab6356e5b..511e2a2e4b29b 100644
---- a/bazel/foreign_cc/nghttp2.patch
-+++ b/bazel/foreign_cc/nghttp2.patch
+--- a/envoy/bazel/foreign_cc/nghttp2.patch
++++ b/envoy/bazel/foreign_cc/nghttp2.patch
 @@ -14,3 +14,171 @@ diff -u -r a/CMakeLists.txt b/CMakeLists.txt
   endif()
   # AC_TYPE_UINT8_T
