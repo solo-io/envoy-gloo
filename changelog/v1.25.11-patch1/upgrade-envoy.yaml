@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.25.11ish
+  description: > 
+    Bump envoy to v1.25.11 and a bit
