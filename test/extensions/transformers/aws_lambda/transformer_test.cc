@@ -302,10 +302,11 @@ TEST(ApiGatewayTransformer, error) {
   EXPECT_EQ(response_headers.get(Http::LowerCaseString("x-amzn-errortype"))[0]->value().getStringView(), "500");
 }
 
-// bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
-// expected_error_message: if present, expect that an error message will be logged that contains this string
-// expected_multi_value_header: if present, expect that the first value of the 'test-multi-header' header in the response will be equal to this string,
-void test_transform_multi_value_headers(
+// helper used in multi value headers type safety tests
+// - bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
+// - expected_error_message: if present, expect that an error message will be logged that contains this string
+// - expected_multi_value_header: if present, expect that the first value of the 'test-multi-header' header in the response will be equal to this string,
+void test_multi_value_headers_transformation(
     std::unique_ptr<Buffer::OwnedImpl> bodyPtr,
     std::string expected_error_message = "Error transforming response: [json.exception.type_error.302] type must be string, but is null",
     std::string expected_multi_value_header = "multi-value-0,multi-value-1,multi-value-2") {
@@ -339,10 +340,11 @@ void test_transform_multi_value_headers(
   }
 }
 
-// bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
-// expected_error_message: if present, expect that an error message will be logged that contains this string
-// expected_status_code: if present, expect that the status code in the response headers will be equal to this string
-void test_transform_status_code(
+// helper used in status code type safety tests
+// - bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
+// - expected_error_message: if present, expect that an error message will be logged that contains this string
+// - expected_status_code: if present, expect that the status code in the response headers will be equal to this string
+void test_status_code_transform(
     std::unique_ptr<Buffer::OwnedImpl> bodyPtr,
     std::string expected_error_message = "Error transforming response: [json.exception.type_error.302] type must be number, but is",
     std::string expected_status_code = "200") {
@@ -366,9 +368,11 @@ void test_transform_status_code(
   }
 }
 
-
+///////////////////////////////////////////
+// multi value headers type safety tests //
+///////////////////////////////////////////
 TEST(ApiGatewayTransformer, transform_null_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": null
@@ -380,7 +384,7 @@ TEST(ApiGatewayTransformer, transform_null_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_int_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": 123
@@ -392,7 +396,7 @@ TEST(ApiGatewayTransformer, transform_int_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_float_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": 123.456
@@ -404,7 +408,7 @@ TEST(ApiGatewayTransformer, transform_float_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_object_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": {"test": "test-value"}
@@ -416,7 +420,7 @@ TEST(ApiGatewayTransformer, transform_object_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value"]
@@ -428,7 +432,7 @@ TEST(ApiGatewayTransformer, transform_list_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_null_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", null]
@@ -440,7 +444,7 @@ TEST(ApiGatewayTransformer, transform_list_with_null_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_int_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", 123]
@@ -452,7 +456,7 @@ TEST(ApiGatewayTransformer, transform_list_with_int_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_float_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", 123.456]
@@ -464,7 +468,7 @@ TEST(ApiGatewayTransformer, transform_list_with_float_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_object_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", {"test": "test-value"}]
@@ -476,7 +480,7 @@ TEST(ApiGatewayTransformer, transform_list_with_object_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_list_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", ["test-value"]]
@@ -488,7 +492,7 @@ TEST(ApiGatewayTransformer, transform_list_with_list_multi_value_header) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_with_list_with_null_multi_value_header) {
-  test_transform_multi_value_headers(
+  test_multi_value_headers_transformation(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "multiValueHeaders": {
           "test-multi-header": ["test-value", [null]]
@@ -499,8 +503,11 @@ TEST(ApiGatewayTransformer, transform_list_with_list_with_null_multi_value_heade
     );
 }
 
+///////////////////////////////////
+// status code type safety tests //
+///////////////////////////////////
 TEST(ApiGatewayTransformer, transform_null_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": null
     })json"),
@@ -510,7 +517,7 @@ TEST(ApiGatewayTransformer, transform_null_status_code) {
 }
 
 TEST(ApiGatewayTransformer, transform_string_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": "200"
     })json"),
@@ -520,7 +527,7 @@ TEST(ApiGatewayTransformer, transform_string_status_code) {
 }
 
 TEST(ApiGatewayTransformer, transform_string_non_int_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": "200fasdfasdf"
     })json"),
@@ -530,7 +537,7 @@ TEST(ApiGatewayTransformer, transform_string_non_int_status_code) {
 }
 
 TEST(ApiGatewayTransformer, transform_int_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": 200
     })json"),
@@ -541,7 +548,7 @@ TEST(ApiGatewayTransformer, transform_int_status_code) {
 
 // as it stands, this is a breaking change
 TEST(ApiGatewayTransformer, transform_float_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": 201.6
     })json"),
@@ -553,7 +560,7 @@ TEST(ApiGatewayTransformer, transform_float_status_code) {
 }
 
 TEST(ApiGatewayTransformer, transform_object_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": {"test": "test-value"}
     })json"),
@@ -563,7 +570,7 @@ TEST(ApiGatewayTransformer, transform_object_status_code) {
 }
 
 TEST(ApiGatewayTransformer, transform_list_status_code) {
-  test_transform_status_code(
+  test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": ["test-value"]
     })json"),
