@@ -122,6 +122,43 @@ TEST(ApiGatewayTransformer, transform_multi_value_headers) {
   EXPECT_EQ("multi-value-1,multi-value-2", str_header_value);
 }
 
+TEST(ApiGatewayTransformer, transform_single_and_multi_value_headers) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Http::TestResponseHeaderMapImpl response_headers{};
+  Buffer::OwnedImpl body("{"
+      "\"statusCode\": 200,"
+      "\"headers\": {"
+          "\"test-multi-header\": \"multi-value-0\""
+      "},"
+      "\"multiValueHeaders\": {"
+          "\"test-multi-header\": [\"multi-value-1\", \"multi-value-2\"]"
+      "},"
+      "\"body\": {"
+          "\"test\": \"test-value\""
+      "}"
+  "}");
+
+  ApiGatewayTransformer transformer;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+  transformer.transform(response_headers, &headers, body, filter_callbacks_);
+
+  std::string res = body.toString();
+  json actual = json::parse(res);
+  auto expected = R"(
+  {"test": "test-value"}
+)"_json;
+
+  EXPECT_EQ(expected, actual);
+  EXPECT_EQ("200", response_headers.getStatusValue());
+  auto lowercase_multi_header_name = Http::LowerCaseString("test-multi-header");
+  auto header_values = response_headers.get(lowercase_multi_header_name);
+  EXPECT_EQ(header_values.empty(), false);
+  auto str_header_value = header_values[0]->value().getStringView();
+  EXPECT_EQ("multi-value-0,multi-value-1,multi-value-2", str_header_value);
+}
 // bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
 // expected_error_message: if present, expect that an error message will be logged that contains this string
 // expected_multi_value_header: if present, expect that the first value of the 'test-multi-header' header in the response will be equal to this string,
