@@ -122,31 +122,12 @@ TEST(ApiGatewayTransformer, transform_multi_value_headers) {
   EXPECT_EQ("multi-value-1,multi-value-2", str_header_value);
 }
 
-// TEST(ApiGatewayTransformer, transform_null_multi_value_headers) {
-//   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-//                                          {":authority", "www.solo.io"},
-//                                          {"x-test", "789"},
-//                                          {":path", "/users/123"}};
-//   Http::TestResponseHeaderMapImpl response_headers{};
-//   Buffer::OwnedImpl body("{"
-//       "\"multiValueHeaders\": {"
-//           "\"test-multi-header\": [\"multi-value-1\", null]"
-//       "}"
-//   "}");
-
-//   ApiGatewayTransformer transformer;
-//   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-//   EXPECT_LOG_CONTAINS(
-//     "debug",
-//     "Error transforming response: [json.exception.type_error.302] type must be string, but is null",
-//     transformer.transform(response_headers, &headers, body, filter_callbacks_)
-//   );
-// }
-
+// bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
+// expected_error_message: if present, expect that an error message will be logged that contains this string
+// expected_multi_value_header: if present, expect that the first value of the 'test-multi-header' header in the response will be equal to this string,
 void test_transform_multi_value_headers(
     std::unique_ptr<Buffer::OwnedImpl> bodyPtr,
     std::string expected_error_message = "Error transforming response: [json.exception.type_error.302] type must be string, but is null",
-    // expected response
     std::string expected_multi_value_header = "multi-value-0,multi-value-1,multi-value-2") {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
@@ -173,11 +154,38 @@ void test_transform_multi_value_headers(
     EXPECT_LOG_CONTAINS(
       "debug",
       expected_error_message,
-      // "Error transforming response: [json.exception.type_error.302] type must be string, but is null",
       transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_)
     );
   }
 }
+
+// bodyPtr: json payload in the format used by AWS API Gateway/returned from an upstream Lambda
+// expected_error_message: if present, expect that an error message will be logged that contains this string
+// expected_status_code: if present, expect that the status code in the response headers will be equal to this string
+void test_transform_status_code(
+    std::unique_ptr<Buffer::OwnedImpl> bodyPtr,
+    std::string expected_error_message = "Error transforming response: [json.exception.type_error.302] type must be number, but is",
+    std::string expected_status_code = "200") {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Http::TestResponseHeaderMapImpl response_headers{};
+  ApiGatewayTransformer transformer;
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  if (expected_error_message.empty()) {
+    transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_);
+    EXPECT_EQ(expected_status_code, response_headers.getStatusValue());
+  } else {
+    EXPECT_LOG_CONTAINS(
+      "debug",
+      expected_error_message,
+      transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_)
+    );
+  }
+}
+
 
 TEST(ApiGatewayTransformer, transform_null_multi_value_header) {
   test_transform_multi_value_headers(
@@ -191,7 +199,6 @@ TEST(ApiGatewayTransformer, transform_null_multi_value_header) {
   );
 }
 
-//// GOOD
 TEST(ApiGatewayTransformer, transform_int_multi_value_header) {
   test_transform_multi_value_headers(
     std::make_unique<Buffer::OwnedImpl>(R"json({
@@ -216,7 +223,6 @@ TEST(ApiGatewayTransformer, transform_float_multi_value_header) {
   );
 }
 
-// This now gets rejected
 TEST(ApiGatewayTransformer, transform_object_multi_value_header) {
   test_transform_multi_value_headers(
     std::make_unique<Buffer::OwnedImpl>(R"json({
@@ -229,7 +235,6 @@ TEST(ApiGatewayTransformer, transform_object_multi_value_header) {
     );
 }
 
-// This is how it's supposed to work.... i would be disappointed if it didn't
 TEST(ApiGatewayTransformer, transform_list_multi_value_header) {
   test_transform_multi_value_headers(
     std::make_unique<Buffer::OwnedImpl>(R"json({
@@ -314,30 +319,6 @@ TEST(ApiGatewayTransformer, transform_list_with_list_with_null_multi_value_heade
     );
 }
 
-void test_transform_status_code(
-    std::unique_ptr<Buffer::OwnedImpl> bodyPtr,
-    std::string expected_error_message = "Error transforming response: [json.exception.type_error.302] type must be number, but is",
-    std::string expected_status_code = "200") {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-
-  if (expected_error_message.empty()) {
-    transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_);
-    EXPECT_EQ(expected_status_code, response_headers.getStatusValue());
-  } else {
-    EXPECT_LOG_CONTAINS(
-      "debug",
-      expected_error_message,
-      transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_)
-    );
-  }
-}
-
 TEST(ApiGatewayTransformer, transform_null_status_code) {
   test_transform_status_code(
     std::make_unique<Buffer::OwnedImpl>(R"json({
@@ -396,7 +377,6 @@ TEST(ApiGatewayTransformer, transform_object_status_code) {
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": {"test": "test-value"}
     })json"),
-    // "Error parsing statusCode: [json.exception.type_error.302] type must be number, but is object",
     "cannot parse non unsigned integer status code",
     ""
   );
@@ -407,224 +387,11 @@ TEST(ApiGatewayTransformer, transform_list_status_code) {
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": ["test-value"]
     })json"),
-    // "Error parsing statusCode: [json.exception.type_error.302] type must be number, but is array",
     "cannot parse non unsigned integer status code",
     ""
   );
 }
 
-// TEST(ApiGatewayTransformer, transform_dangerous_status_code_values) {
-//     Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-//                                          {":authority", "www.solo.io"},
-//                                          {"x-test", "789"},
-//                                          {":path", "/users/123"}};
-//   Http::TestResponseHeaderMapImpl response_headers{};
-//   std::map<std::string, std::unique_ptr<Buffer::OwnedImpl>> bodies = {};
-
-//   bodies["string status code"] = std::make_unique<Buffer::OwnedImpl>(R"json({
-//       "statusCode": "200"
-//     })json");
-//   bodies["null status code"] = std::make_unique<Buffer::OwnedImpl>(R"json({
-//       "statusCode": null
-//     })json");
-//   bodies["object status code"] = std::make_unique<Buffer::OwnedImpl>(R"json({
-//       "statusCode": {"test": "test-value"}
-//     })json");
-//   bodies["list status code"] = std::make_unique<Buffer::OwnedImpl>(R"json({
-//       "statusCode": ["test-valuee"]
-//     })json");
-
-//   for (const auto& [bodyName, bodyPtr] : bodies) {
-//     ApiGatewayTransformer transformer;
-//     NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-//     std::cout << "Processing body: " + bodyName << std::endl;
-//     EXPECT_LOG_CONTAINS(
-//       "debug",
-//       "Error parsing statusCode: [json.exception.type_error.302] type must be number, but is",
-//       transformer.transform(response_headers, &headers, *bodyPtr, filter_callbacks_)
-//     );
-//   }
-// }
-
-TEST(ApiGatewayTransformer, transform_single_and_multi_value_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  Buffer::OwnedImpl body("{"
-      "\"statusCode\": 200,"
-      "\"headers\": {"
-          "\"test-multi-header\": \"multi-value-0\""
-      "},"
-      "\"multiValueHeaders\": {"
-          "\"test-multi-header\": [\"multi-value-1\", \"multi-value-2\"]"
-      "},"
-      "\"body\": {"
-          "\"test\": \"test-value\""
-      "}"
-  "}");
-
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
-
-  std::string res = body.toString();
-  json actual = json::parse(res);
-  auto expected = R"(
-  {"test": "test-value"}
-)"_json;
-
-  EXPECT_EQ(expected, actual);
-  EXPECT_EQ("200", response_headers.getStatusValue());
-  auto lowercase_multi_header_name = Http::LowerCaseString("test-multi-header");
-  auto header_values = response_headers.get(lowercase_multi_header_name);
-  EXPECT_EQ(header_values.empty(), false);
-  auto str_header_value = header_values[0]->value().getStringView();
-  EXPECT_EQ("multi-value-0,multi-value-1,multi-value-2", str_header_value);
-}
-
-TEST(ApiGatewayTransformer, transform_non_string_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  Buffer::OwnedImpl body("{"
-      "\"statusCode\": 200,"
-      "\"headers\": {"
-          "\"string-header\": \"test_value\","
-          "\"number-header\": 400,"
-          "\"object-header\": {"
-              "\"test\": \"test-value\""
-          "}"
-      "},"
-      "\"body\": {"
-          "\"test\": \"test-value\""
-      "}"
-  "}");
-
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
-
-  std::string res = body.toString();
-  json actual = json::parse(res);
-  auto expected = R"(
-  {"test": "test-value"}
-)"_json;
-
-  EXPECT_EQ(expected, actual);
-  EXPECT_EQ("200", response_headers.getStatusValue());
-
-  auto lowercase_string_header_name = Http::LowerCaseString("string-header");
-  auto header_values = response_headers.get(lowercase_string_header_name);
-  EXPECT_EQ(header_values.empty(), false);
-  auto str_header_value = header_values[0]->value().getStringView();
-  EXPECT_EQ("test_value", str_header_value);
-
-  auto lowercase_number_header_name = Http::LowerCaseString("number-header");
-  auto number_header_values = response_headers.get(lowercase_number_header_name);
-  EXPECT_EQ(number_header_values.empty(), false);
-  auto number_header_value = number_header_values[0]->value().getStringView();
-  EXPECT_EQ("400", number_header_value);
-
-  auto lowercase_object_header_name = Http::LowerCaseString("object-header");
-  auto object_header_values = response_headers.get(lowercase_object_header_name);
-  EXPECT_EQ(object_header_values.empty(), false);
-  auto object_header_value = object_header_values[0]->value().getStringView();
-  EXPECT_EQ("{\"test\":\"test-value\"}", object_header_value);
-}
-
-TEST(ApiGatewayTransformer, base64decode) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  Buffer::OwnedImpl body("{ \"isBase64Encoded\": true, \"statusCode\": 201,"
-            "\"body\": \"SGVsbG8gZnJvbSBMYW1iZGEgKG9wdGlvbmFsKQ==\"}");
-
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
-
-  std::string res = body.toString();
-
-  EXPECT_EQ("Hello from Lambda (optional)", res);
-  EXPECT_EQ("201", response_headers.getStatusValue());
-}
-
-TEST(ApiGatewayTransformer, multiple_single_headers) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  Buffer::OwnedImpl body("{"
-      "\"statusCode\": 200,"
-      "\"headers\": {"
-          "\"test-multi-header\": \"multi-value-0\","
-          "\"test-multi-header\": \"multi-value-1\""
-      "},"
-      "\"body\": {"
-          "\"test\": \"test-value\""
-      "}"
-  "}");
-
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
-
-  std::string res = body.toString();
-  json actual = json::parse(res);
-  auto expected = R"(
-  {"test": "test-value"}
-)"_json;
-
-  EXPECT_EQ(expected, actual);
-  EXPECT_EQ("200", response_headers.getStatusValue());
-  auto lowercase_multi_header_name = Http::LowerCaseString("test-multi-header");
-  auto header_values = response_headers.get(lowercase_multi_header_name);
-  EXPECT_EQ(header_values.empty(), false);
-  auto str_header_value = header_values[0]->value().getStringView();
-  EXPECT_EQ("multi-value-1", str_header_value);
-}
-
-TEST(ApiGatewayTransformer, request_path) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Buffer::OwnedImpl body("{}");
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(request_headers, &headers, body, filter_callbacks_);
-
-  // Nothing should be transformed in this case -- confirm that the headers and body are unchanged.
-  EXPECT_EQ(headers, request_headers);
-  EXPECT_EQ(body.toString(), "{}");
-}
-
-TEST(ApiGatewayTransformer, error) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
-                                         {":authority", "www.solo.io"},
-                                         {"x-test", "789"},
-                                         {":path", "/users/123"}};
-  Http::TestResponseHeaderMapImpl response_headers{};
-  Buffer::OwnedImpl body("{invalid json}");
-  ApiGatewayTransformer transformer;
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
-  transformer.transform(response_headers, &headers, body, filter_callbacks_);
-
-  EXPECT_EQ(response_headers.getStatusValue(), "500");
-  EXPECT_EQ(response_headers.get(Http::LowerCaseString("content-type"))[0]->value().getStringView(), "text/plain");
-  EXPECT_EQ(response_headers.get(Http::LowerCaseString("x-amzn-errortype"))[0]->value().getStringView(), "500");
-}
 
 } // namespace AwsLambda
 } // namespace HttpFilters

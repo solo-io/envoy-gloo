@@ -134,7 +134,7 @@ void ApiGatewayTransformer::transform_response(
     const auto& multi_value_headers = json_body["multiValueHeaders"];
     if (!multi_value_headers.is_object()) {
         ENVOY_STREAM_LOG(debug, "invalid multiValueHeaders object", stream_filter_callbacks);
-        ApiGatewayError error = {500, "500", "invalid multiValueHeaders object"}; // TODO: update error message
+        ApiGatewayError error = {500, "500", "invalid multiValueHeaders object"}; 
         return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
     for (json::const_iterator it = multi_value_headers.cbegin(); it != multi_value_headers.cend(); it++) {
