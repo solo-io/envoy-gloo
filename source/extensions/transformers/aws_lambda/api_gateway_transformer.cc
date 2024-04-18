@@ -97,7 +97,6 @@ void ApiGatewayTransformer::transform_response(
     uint64_t status_value;
     if (!json_body["statusCode"].is_number_unsigned()) {
       // add duplicate log line to not break tests for now
-      ENVOY_STREAM_LOG(debug, "cannot parse non-integer status code", stream_filter_callbacks);
       ENVOY_STREAM_LOG(debug, "cannot parse non unsigned integer status code", stream_filter_callbacks);
       ENVOY_STREAM_LOG(debug, "received status code with value: " + json_body["statusCode"].dump(), stream_filter_callbacks);
       ApiGatewayError error = {500, "500", "cannot parse non unsigned integer status code"};

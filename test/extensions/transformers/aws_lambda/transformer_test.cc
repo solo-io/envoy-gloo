@@ -343,7 +343,7 @@ TEST(ApiGatewayTransformer, transform_null_status_code) {
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": null
     })json"),
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     ""
   );
 }
@@ -353,7 +353,7 @@ TEST(ApiGatewayTransformer, transform_string_status_code) {
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": "200"
     })json"),
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     ""
   );
 }
@@ -363,7 +363,7 @@ TEST(ApiGatewayTransformer, transform_string_non_int_status_code) {
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": "200fasdfasdf"
     })json"),
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     ""
   );
 }
@@ -386,7 +386,7 @@ TEST(ApiGatewayTransformer, transform_float_status_code) {
     })json"),
     // "",
     // "200"
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     "" 
   );
 }
@@ -397,7 +397,7 @@ TEST(ApiGatewayTransformer, transform_object_status_code) {
       "statusCode": {"test": "test-value"}
     })json"),
     // "Error parsing statusCode: [json.exception.type_error.302] type must be number, but is object",
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     ""
   );
 }
@@ -408,7 +408,7 @@ TEST(ApiGatewayTransformer, transform_list_status_code) {
       "statusCode": ["test-value"]
     })json"),
     // "Error parsing statusCode: [json.exception.type_error.302] type must be number, but is array",
-    "cannot parse non-integer status code",
+    "cannot parse non unsigned integer status code",
     ""
   );
 }
