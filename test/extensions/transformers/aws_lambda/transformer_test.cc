@@ -5,8 +5,6 @@
 #include "test/mocks/http/mocks.h"
 
 #include "nlohmann/json.hpp"
-// #include "gmock/gmock.h"
-// #include "gtest/gtest.h"
 
 using testing::_;
 using testing::AtLeast;
@@ -546,14 +544,25 @@ TEST(ApiGatewayTransformer, transform_int_status_code) {
   );
 }
 
-// as it stands, this is a breaking change
+TEST(ApiGatewayTransformer, transform_negative_int_status_code) {
+  test_status_code_transform(
+    std::make_unique<Buffer::OwnedImpl>(R"json({
+      "statusCode": -200
+    })json"),
+    "cannot parse non unsigned integer status code",
+    "" 
+  );
+}
+
+
+// note to reviewers: as it stands, this is a breaking change
+// we used to support float input for status code (which would be rounded down to the nearest integer)
+// this PR propses that we reject float input for status code
 TEST(ApiGatewayTransformer, transform_float_status_code) {
   test_status_code_transform(
     std::make_unique<Buffer::OwnedImpl>(R"json({
       "statusCode": 201.6
     })json"),
-    // "",
-    // "200"
     "cannot parse non unsigned integer status code",
     "" 
   );
