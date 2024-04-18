@@ -1,0 +1,9 @@
+changelog:
+- type: FIX
+  description: >
+    Fixes an issue where the Lambda filter would choke on unexpected JSON input
+    when unwrapAsApiGateway was enabled. Specifically, the filter would fail to
+    parse non-string header values under the multiValueHeaders key in the Lambda
+    response.
+  issueLink: https://github.com/solo-io/gloo/issues/8867 
+  resolvesIssue: false
