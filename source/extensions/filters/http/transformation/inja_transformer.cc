@@ -396,9 +396,9 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
   auto b64 = Base64::decode(input);
 
   // If this failed it might be because of base64url encoding
-  if (b64 == EMPTY_STRING) {
-    b64 = Base64Url::decode(input);
-  }
+  /* if (b64 == EMPTY_STRING) { */
+  /*   b64 = Base64Url::decode(input); */
+  /* } */
 
   return b64;
 }
