@@ -392,18 +392,12 @@ json TransformerInstance::base64_encode_callback(const inja::Arguments &args) co
 json TransformerInstance::base64_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
 
-  std::cout << input << std::endl;
-
   // First try decoding standard base64
   auto b64 = Base64::decode(input);
-  std::cout << "b64 after standard decode: " << b64 << std::endl;
-
-  std::cout << (b64 == EMPTY_STRING) << std::endl;
 
   // If this failed it might be because of base64url encoding
   if (b64 == EMPTY_STRING) {
     b64 = Base64Url::decode(input);
-  std::cout << "b64 after url decode: " << b64 << std::endl;
   }
 
   return b64;
