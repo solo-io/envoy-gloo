@@ -882,6 +882,28 @@ TEST_F(InjaTransformerTest, Base64DecodeTestString) {
   EXPECT_EQ(body.toString(), test_string);
 }
 
+TEST_F(InjaTransformerTest, Base64UrlDecodeJWT) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  // Test string that produced the base64url underscore
+  auto expect_string = "aaoð";
+  // JWT with an underscore which is an invalid base64 character
+  auto encoded_string = "eyJzdWIiOiJhYW_DsCJ9";
+
+  auto formatted_string = fmt::format("{{{{base64_decode(\"{}\")}}}}", encoded_string);
+
+  transformation.mutable_body()->set_text(formatted_string);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  Buffer::OwnedImpl body("");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_NE(std::string::npos, body.toString().find(expect_string));
+}
+
 TEST_F(InjaTransformerTest, Base64Composed) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
