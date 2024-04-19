@@ -400,12 +400,6 @@ json TransformerInstance::base64url_encode_callback(const inja::Arguments &args)
   return Base64Url::encode(input.c_str(), input.length());
 }
 
-json TransformerInstance::base64url_decode_callback(const inja::Arguments &args) const {
-  const std::string &input = args.at(0)->get_ref<const std::string &>();
-
-  return Base64Url::decode(input);
-}
-
 json TransformerInstance::base64_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
 
@@ -416,6 +410,21 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
   // https://datatracker.ietf.org/doc/html/rfc4648#section-5
   if (b64 == EMPTY_STRING) {
     b64 = Base64Url::decode(input);
+  }
+
+  return b64;
+}
+
+json TransformerInstance::base64url_decode_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+
+  // First try decoding base64url
+  // https://datatracker.ietf.org/doc/html/rfc4648#section-5
+  auto b64 = Base64Url::decode(input);
+
+  // If this failed it might be because of standard base64 encoding
+  if (b64 == EMPTY_STRING) {
+    b64 = Base64::decode(input);
   }
 
   return b64;
