@@ -19,7 +19,5 @@ envoy_gloo_cc_test(
         "//api/envoy/config/transformer/aws_lambda/v2:pkg_cc_proto",
         "//source/extensions/transformers/aws_lambda:api_gateway_transformer_lib",
         "@envoy//test/mocks/http:http_mocks",
-        "@envoy//test/mocks/server:server_mocks",
-        "@envoy//test/test_common:utility_lib",
     ],
 )
