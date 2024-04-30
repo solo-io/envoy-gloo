@@ -4,7 +4,7 @@ REPOSITORY_LOCATIONS = dict(
     envoy = dict(
         # envoy v1.30.1
         commit = "816188b86a0a52095b116b107f576324082c7c02",
-        remote = "https://github.com/solo-io/envoy-fork",
+        remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
         # Includes unmerged modifications for
