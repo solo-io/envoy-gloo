@@ -55,9 +55,11 @@ common --experimental_allow_tags_propagation
 
 # Enable position independent code (this is the default on macOS and Windows)
 # (Workaround for https://github.com/bazelbuild/rules_foreign_cc/issues/421)
+build:linux --copt=-fdebug-types-section
 build:linux --copt=-fPIC
 build:linux --copt=-Wno-deprecated-declarations
-build:linux --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+build:linux --cxxopt=-std=c++20 --host_cxxopt=-std=c++20
+build:linux --cxxopt=-fsized-deallocation --host_cxxopt=-fsized-deallocation # needed to compile CEL on Envoy 1.30.x and above
 build:linux --conlyopt=-fexceptions
 build:linux --fission=dbg,opt
 build:linux --features=per_object_debug_info
@@ -117,7 +119,7 @@ build:clang-asan --linkopt --rtlib=compiler-rt
 build:clang-asan --linkopt --unwindlib=libgcc
 
 # macOS
-build:macos --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+build:macos --cxxopt=-std=c++20 --host_cxxopt=-std=c++20
 build:macos --action_env=PATH=/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:/usr/bin:/bin
 build:macos --host_action_env=PATH=/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:/usr/bin:/bin
 build:macos --define tcmalloc=disabled
