@@ -116,12 +116,12 @@ void NatsStreamingFilter::onResponse() { onCompletion(Http::Code::OK, ""); }
 
 void NatsStreamingFilter::onFailure() {
   onCompletion(Http::Code::InternalServerError, "nats streaming filter abort",
-               StreamInfo::ResponseFlag::NoHealthyUpstream);
+               StreamInfo::CoreResponseFlag::NoHealthyUpstream);
 }
 
 void NatsStreamingFilter::onTimeout() {
   onCompletion(Http::Code::RequestTimeout, "nats streaming filter timeout",
-               StreamInfo::ResponseFlag::UpstreamRequestTimeout);
+               StreamInfo::CoreResponseFlag::UpstreamRequestTimeout);
 }
 
 void NatsStreamingFilter::retrieveRouteSpecificFilterConfig() {
