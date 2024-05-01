@@ -891,7 +891,7 @@ TEST_F(InjaTransformerTest, Base64UrlDecodeJWT) {
   // JWT with an underscore which is an invalid base64 character
   auto encoded_string = "eyJzdWIiOiJhYW_DsCJ9";
 
-  auto formatted_string = fmt::format("{{{{base64_decode(\"{}\")}}}}", encoded_string);
+  auto formatted_string = fmt::format("{{{{base64url_decode(\"{}\")}}}}", encoded_string);
 
   transformation.mutable_body()->set_text(formatted_string);
 
