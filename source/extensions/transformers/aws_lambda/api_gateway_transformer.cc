@@ -95,13 +95,14 @@ void ApiGatewayTransformer::transform_response(
   // set response status code
   if (json_body.contains("statusCode")) {
     uint64_t status_value;
-    try {
-      status_value = json_body["statusCode"].get<uint64_t>();
-    } catch (std::exception& exception){
-      ENVOY_STREAM_LOG(debug, "Error parsing statusCode: " + std::string(exception.what()), stream_filter_callbacks);
-      ApiGatewayError error = {500, "500", "Non-integer status code"};
+    if (!json_body["statusCode"].is_number_unsigned()) {
+      // add duplicate log line to not break tests for now
+      ENVOY_STREAM_LOG(debug, "cannot parse non unsigned integer status code", stream_filter_callbacks);
+      ENVOY_STREAM_LOG(debug, "received status code with value: " + json_body["statusCode"].dump(), stream_filter_callbacks);
+      ApiGatewayError error = {500, "500", "cannot parse non unsigned integer status code"};
       return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
+    status_value = json_body["statusCode"].get<uint64_t>();
     response_headers->setStatus(status_value);
   } else {
     response_headers->setStatus(DEFAULT_STATUS_VALUE);
@@ -132,8 +133,8 @@ void ApiGatewayTransformer::transform_response(
   if (json_body.contains("multiValueHeaders")) {
     const auto& multi_value_headers = json_body["multiValueHeaders"];
     if (!multi_value_headers.is_object()) {
-        ENVOY_STREAM_LOG(debug, "invalid multi headers object", stream_filter_callbacks);
-        ApiGatewayError error = {500, "500", "invalid multi headers object"};
+        ENVOY_STREAM_LOG(debug, "invalid multiValueHeaders object", stream_filter_callbacks);
+        ApiGatewayError error = {500, "500", "invalid multiValueHeaders object"}; 
         return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
 
@@ -141,8 +142,24 @@ void ApiGatewayTransformer::transform_response(
         const auto& header_key = it.key();
         const auto& header_values = it.value();
 
+        // need to validate that header_values is an array/iterable
+        if (!header_values.is_array()) {
+          // if it's an object, we reject the request
+          if (header_values.is_object()) {
+            ENVOY_STREAM_LOG(debug, "invalid multi header value object", stream_filter_callbacks);
+            ApiGatewayError error = {500, "500", "invalid multi header value object"};
+            return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+          }
+
+          ENVOY_STREAM_LOG(debug, "warning: using non-array value for multi header value", stream_filter_callbacks);
+        }
         for (json::const_iterator inner_it = header_values.cbegin(); inner_it != header_values.cend(); inner_it++) {
-          const auto& header_value = inner_it.value().get<std::string>();
+          std::string header_value;
+          if (inner_it.value().is_string()) {
+            header_value = inner_it.value().get<std::string>();
+          } else {
+            header_value = inner_it.value().dump();
+          }
           add_response_header(*response_headers, header_key, header_value, stream_filter_callbacks, true);
         }
     }
