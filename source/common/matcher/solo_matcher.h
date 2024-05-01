@@ -2,6 +2,7 @@
 
 #include "envoy/config/route/v3/route.pb.h"
 #include "envoy/http/header_map.h"
+#include "envoy/server/factory_context.h"
 
 namespace Envoy {
 namespace MatcherCopy {
@@ -34,7 +35,8 @@ public:
    */
 
   static MatcherConstPtr
-  create(const ::envoy::config::route::v3::RouteMatch &match);
+  create(const ::envoy::config::route::v3::RouteMatch &match,
+         Server::Configuration::CommonFactoryContext& context);
 };
 
 } // namespace Matcher

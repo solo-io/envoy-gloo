@@ -19,8 +19,10 @@ envoy_cc_library(
     deps = [
         "@envoy//source/common/router:config_lib",
         "@envoy//source/common/http:header_utility_lib",
+        "@envoy//envoy/common:regex_interface",
         "@envoy_api//envoy/api/v2/route:pkg_cc_proto",
         "@envoy_api//envoy/config/route/v3:pkg_cc_proto",
+        "//source/common/regex:regex_lib",
     ],
 )
 
