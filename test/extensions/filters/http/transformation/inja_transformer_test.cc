@@ -1193,14 +1193,14 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
 {{{{ replace_with_random("{}", "{}") }}}}
   )ENDFMT";
 
-  auto formatted_string = fmt::format(format_string,
+  auto formatted_string = fmt::vformat(format_string, fmt::make_format_args(
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3,
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3
-    );
+    ));
 
   transformation.mutable_body()->set_text(formatted_string);
   Random::RandomGeneratorImpl rng;
