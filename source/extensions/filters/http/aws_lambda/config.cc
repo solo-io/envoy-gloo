@@ -194,11 +194,14 @@ void AWSLambdaConfigImpl::AWSLambdaStsRefresher::init(Event::Dispatcher &dispatc
     } else {
         ENVOY_LOG(debug, "{}: STS enabled without time based refresh",__func__);
     }
-    file_watcher_->addWatch(
+    // the result of this function MUST NOT be ignored (see [[nodiscard]]) - but
+    // what should we do with it?? TODO
+    absl::Status result = file_watcher_->addWatch(
         parent_->token_file_, Filesystem::Watcher::Events::Modified,
         [shared_this](uint32_t) {
           // Force timer callback to happen immediately to pick up the change.
           shared_this->timer_->enableTimer(std::chrono::milliseconds::zero());
+          return absl::OkStatus();
         });
 }
 
