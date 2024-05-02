@@ -33,7 +33,7 @@ void ApiGatewayTransformer::format_error(
   Buffer::Instance &body,
   ApiGatewayError &error,
   Http::StreamFilterCallbacks &stream_filter_callbacks) const {
-    ENVOY_STREAM_LOG(debug, "Returning error with message: " + std::string(error.message), stream_filter_callbacks);
+    ENVOY_STREAM_LOG(debug, "Returning error with message: {}", stream_filter_callbacks, std::string(error.message));
 
     // clear existing response headers
     response_headers.clear();
@@ -65,7 +65,7 @@ void ApiGatewayTransformer::transform(
       try {
         transform_response(response_headers, body, stream_filter_callbacks);
       } catch (const std::exception &e) {
-        ENVOY_STREAM_LOG(debug, "Error transforming response: " + std::string(e.what()), stream_filter_callbacks);
+        ENVOY_STREAM_LOG(debug, "Error transforming response: {}", stream_filter_callbacks, std::string(e.what()));
         ApiGatewayError error = ApiGatewayError{500, "500", "Failed to transform response"};
         format_error(*response_headers, body, error, stream_filter_callbacks);
       }
@@ -87,7 +87,7 @@ void ApiGatewayTransformer::transform_response(
   try {
     json_body = json::parse(bodystring);
   } catch (std::exception& exception){
-    ENVOY_STREAM_LOG(debug, "Error parsing response body as JSON: " + std::string(exception.what()), stream_filter_callbacks);
+    ENVOY_STREAM_LOG(debug, "Error parsing response body as JSON: ", stream_filter_callbacks, std::string(exception.what()));
     ApiGatewayError error = {500, "500", "failed to parse response body as JSON"};
     return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
   }
@@ -98,7 +98,7 @@ void ApiGatewayTransformer::transform_response(
     if (!json_body["statusCode"].is_number_unsigned()) {
       // add duplicate log line to not break tests for now
       ENVOY_STREAM_LOG(debug, "cannot parse non unsigned integer status code", stream_filter_callbacks);
-      ENVOY_STREAM_LOG(debug, "received status code with value: " + json_body["statusCode"].dump(), stream_filter_callbacks);
+      ENVOY_STREAM_LOG(debug, "received status code with value: {}", stream_filter_callbacks, json_body["statusCode"].dump());
       ApiGatewayError error = {500, "500", "cannot parse non unsigned integer status code"};
       return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
     }
@@ -197,12 +197,12 @@ void ApiGatewayTransformer::add_response_header(
   bool append) {
     Envoy::Http::LowerCaseString lower_case_header_key(header_key);
     if (!Http::validHeaderString(lower_case_header_key)) {
-      ENVOY_STREAM_LOG(debug, "failed to write response header with invalid header key: " + std::string(header_key), stream_filter_callbacks);
+      ENVOY_STREAM_LOG(debug, "failed to write response header with invalid header key: {}", stream_filter_callbacks, std::string(header_key));
       return;
     }
 
     if (!Http::validHeaderString(header_value)) {
-      ENVOY_STREAM_LOG(debug, "failed to write response header with invalid header value: " + std::string(header_value), stream_filter_callbacks);
+      ENVOY_STREAM_LOG(debug, "failed to write response header with invalid header value: {}", stream_filter_callbacks,  std::string(header_value));
       return;
     }
     if (append) {
