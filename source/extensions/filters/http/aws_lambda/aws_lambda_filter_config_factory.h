@@ -23,7 +23,7 @@ public:
   AWSLambdaFilterConfigFactory()
       : FactoryBase(SoloHttpFilterNames::get().AwsLambda) {}
 
-  Upstream::ProtocolOptionsConfigConstSharedPtr createProtocolOptionsConfig(
+  absl::StatusOr<Upstream::ProtocolOptionsConfigConstSharedPtr> createProtocolOptionsConfig(
       const Protobuf::Message &config,
       Server::Configuration::ProtocolOptionsFactoryContext &) override;
   ProtobufTypes::MessagePtr createEmptyProtocolOptionsProto() override;

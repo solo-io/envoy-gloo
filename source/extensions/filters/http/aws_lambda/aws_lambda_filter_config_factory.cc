@@ -41,7 +41,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
       };
 }
 
-Upstream::ProtocolOptionsConfigConstSharedPtr
+absl::StatusOr<Upstream::ProtocolOptionsConfigConstSharedPtr>
 AWSLambdaFilterConfigFactory::createProtocolOptionsConfig(
     const Protobuf::Message &config,
     Server::Configuration::ProtocolOptionsFactoryContext &) {
