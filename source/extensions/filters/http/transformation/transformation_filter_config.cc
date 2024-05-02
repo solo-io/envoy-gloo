@@ -31,7 +31,7 @@ void TransformationFilterConfig::addTransformationLegacy(
   if (rule.has_route_transformations()) {
     transformer_pair = createTransformations(rule.route_transformations(), context.serverFactoryContext());
   }
-  transformer_pairs_.emplace_back(MatcherCopy::Matcher::create(rule.match()),
+  transformer_pairs_.emplace_back(MatcherCopy::Matcher::create(rule.match(), context.serverFactoryContext()),
                                   transformer_pair);
 }
 
@@ -52,7 +52,13 @@ TransformationFilterConfig::TransformationFilterConfig(
 class ResponseMatcherImpl : public ResponseMatcher {
 public:
   ResponseMatcherImpl(
-      const envoy::api::v2::filter::http::ResponseMatcher &match);
+      const envoy::api::v2::filter::http::ResponseMatcher &match,
+      Server::Configuration::ServerFactoryContext& context)
+    : headers_(Http::HeaderUtility::buildHeaderDataVector(match.headers(), context)) {
+    if (match.has_response_code_details()) {
+      response_code_details_match_.emplace(match.response_code_details(), context);
+    }
+  }
   bool matches(const Http::ResponseHeaderMap &headers,
                const StreamInfo::StreamInfo &stream_info) const override;
 
@@ -60,14 +66,6 @@ private:
   std::vector<Http::HeaderUtility::HeaderDataPtr> headers_;
   absl::optional<Matchers::StringMatcherImpl<envoy::type::matcher::v3::StringMatcher>> response_code_details_match_;
 };
-
-ResponseMatcherImpl::ResponseMatcherImpl(
-    const envoy::api::v2::filter::http::ResponseMatcher &match)
-    : headers_(Http::HeaderUtility::buildHeaderDataVector(match.headers())) {
-  if (match.has_response_code_details()) {
-    response_code_details_match_.emplace(match.response_code_details());
-  }
-}
 
 bool ResponseMatcherImpl::matches(
     const Http::ResponseHeaderMap &headers,
@@ -91,8 +89,9 @@ bool ResponseMatcherImpl::matches(
 }
 
 ResponseMatcherConstPtr ResponseMatcher::create(
-    const envoy::api::v2::filter::http::ResponseMatcher &match) {
-  return std::make_unique<const ResponseMatcherImpl>(match);
+    const envoy::api::v2::filter::http::ResponseMatcher &match,
+    Server::Configuration::ServerFactoryContext& context) {
+  return std::make_unique<const ResponseMatcherImpl>(match, context);
 }
 
 RouteTransformationFilterConfig::RouteTransformationFilterConfig(
@@ -144,7 +143,7 @@ void PerStageRouteTransformationFilterConfig::setMatcher(Envoy::Matcher::MatchTr
 
 void PerStageRouteTransformationFilterConfig::addTransformation(
     const envoy::api::v2::filter::http::RouteTransformations_RouteTransformation
-        &transformation, Server::Configuration::CommonFactoryContext &context) {
+        &transformation, Server::Configuration::ServerFactoryContext &context) {
   using envoy::api::v2::filter::http::RouteTransformations_RouteTransformation;
   // create either request or response one.
   switch (transformation.match_case()) {
@@ -155,7 +154,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     MatcherCopy::MatcherConstPtr matcher;
 
     if (request_match.has_match()) {
-      matcher = MatcherCopy::Matcher::create(request_match.match());
+      matcher = MatcherCopy::Matcher::create(request_match.match(), context);
     }
 
     bool clear_route_cache = request_match.clear_route_cache();
@@ -193,7 +192,7 @@ void PerStageRouteTransformationFilterConfig::addTransformation(
     auto &&response_match = transformation.response_match();
     ResponseMatcherConstPtr matcher;
     if (response_match.has_match()) {
-      matcher = ResponseMatcher::create(response_match.match());
+      matcher = ResponseMatcher::create(response_match.match(), context);
     }
     auto &&transformation = response_match.response_transformation();
     try {
