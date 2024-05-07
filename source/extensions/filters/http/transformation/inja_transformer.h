@@ -66,7 +66,9 @@ private:
   nlohmann::json env(const inja::Arguments &args) const;
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
+  nlohmann::json base64url_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
+  nlohmann::json base64url_decode_callback(const inja::Arguments &args) const;
   nlohmann::json substring_callback(const inja::Arguments &args) const;
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
