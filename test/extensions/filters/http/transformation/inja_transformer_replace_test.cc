@@ -35,10 +35,6 @@ namespace Transformation {
 using TransformationTemplate =
     envoy::api::v2::filter::http::TransformationTemplate;
 
-namespace {
-std::function<const std::string &()> empty_body = [] { return EMPTY_STRING; };
-}
-
 class TransformerInstanceTest : public testing::Test {
 protected:
   NiceMock<Random::MockRandomGenerator> rng_;
@@ -300,8 +296,10 @@ TEST(Extraction, NilReplaceWithSubgroupUnset) {
   extractor.set_mode(ExtractionApi::SINGLE_REPLACE);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  std::string body("not json body");
-  std::string res(Extractor(extractor).extractDestructive(callbacks, headers, empty_body));
+  std::string empty_body_str{""};
+  GetBodyFunc bodyfunc = [&empty_body_str]() -> const std::string & { return empty_body_str; };
+
+  std::string res(Extractor(extractor).extractDestructive(callbacks, headers, bodyfunc));
 
   EXPECT_EQ("", res);
 }
