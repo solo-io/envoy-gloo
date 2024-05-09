@@ -3,5 +3,5 @@ changelog:
   issueLink: https://github.com/solo-io/envoy-gloo/issues/329
   resolvesIssue: false
   description: >-
-    Fall back to attempting to decode Base64Url if Base64 decoding fails in the Inja transformation
+    Expose new Base64Url aware transformations that will fall back to attempting to decode Base64Url if Base64 decoding fails in the Inja transformation. These are new options in case users are relying on current behavior and the strict spec for base64
     base64_decode callback. This can happen especially when attempting to decode JWTs.
