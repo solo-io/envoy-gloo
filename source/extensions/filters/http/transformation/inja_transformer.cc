@@ -10,6 +10,7 @@
 #include "source/common/regex/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
+#include "source/common/common/empty_string.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
@@ -238,8 +239,14 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
     return base64_encode_callback(args);
   });
+  env_.add_callback("base64url_encode", 1, [this](Arguments &args) {
+    return base64url_encode_callback(args);
+  });
   env_.add_callback("base64_decode", 1, [this](Arguments &args) {
     return base64_decode_callback(args);
+  });
+  env_.add_callback("base64url_decode", 1, [this](Arguments &args) {
+    return base64url_decode_callback(args);
   });
   // substring can be called with either two or three arguments --
   // the first argument is the string to be modified, the second is the start position
@@ -388,9 +395,19 @@ json TransformerInstance::base64_encode_callback(const inja::Arguments &args) co
   return Base64::encode(input.c_str(), input.length());
 }
 
+json TransformerInstance::base64url_encode_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  return Base64Url::encode(input.c_str(), input.length());
+}
+
 json TransformerInstance::base64_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   return Base64::decode(input);
+}
+
+json TransformerInstance::base64url_decode_callback(const inja::Arguments &args) const {
+  const std::string &input = args.at(0)->get_ref<const std::string &>();
+  return Base64Url::decode(input);
 }
 
 // return a substring of the input string, starting at the start position
