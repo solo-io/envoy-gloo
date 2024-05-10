@@ -42,9 +42,7 @@ export ENVOY_CONTRIB_BUILD_DEBUG_INFORMATION="//source/exe:envoy-static.dwp"
 
 BAZEL_BUILD_EXTRA_OPTIONS+=" --remote_cache=${BAZEL_REMOTE_CACHE}"
 
-export  GCP_SERVICE_ACCOUNT_KEY_PATH=$(mktemp -t gcp_service_account.XXXXXX.json)
-echo "${GCP_SERVICE_ACCOUNT_KEY}" | base64 --decode > "${GCP_SERVICE_ACCOUNT_KEY_PATH}"
-BAZEL_BUILD_EXTRA_OPTIONS+=" --google_credentials=${GCP_SERVICE_ACCOUNT_KEY_PATH}"
+
 
 if [ "${BUILD_TYPE:-}" != "" ] ; then
   BUILD_CONFIG="--config=$BUILD_TYPE"

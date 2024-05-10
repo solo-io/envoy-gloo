@@ -905,19 +905,37 @@ TEST_F(InjaTransformerTest, Base64UrlDecodeJWT) {
 }
 
 TEST_F(InjaTransformerTest, Base64Composed) {
-  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
-  TransformationTemplate transformation;
-
-  transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
-
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
-
+  // set up variables
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  TransformationTemplate transformation;
   auto test_string = "1";
   Buffer::OwnedImpl body(test_string);
+
+  transformation.mutable_body()->set_text("{{base64_decode(base64_encode(body()))}}");
+  body = Buffer::OwnedImpl(test_string);
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), test_string);
+
+  // validate the exact same test still works with base64url
+  transformation.mutable_body()->set_text("{{base64url_decode(base64url_encode(body()))}}");
+  body = Buffer::OwnedImpl(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), test_string);
+
+  // continued fallbacks
+  transformation.mutable_body()->set_text("{{base64_decode(base64url_encode(body()))}}");
+  body = Buffer::OwnedImpl(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), test_string);
+
+  transformation.mutable_body()->set_text("{{base64url_decode(base64_encode(body()))}}");
+  body = Buffer::OwnedImpl(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), test_string);
+
+
 }
 
 TEST_F(InjaTransformerTest, DecodeInvalidBase64) {
