@@ -1,5 +1,5 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
+- name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
   id: 'do_ci'
   args: ['ci/do_ci.sh', 'release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
   volumes:
