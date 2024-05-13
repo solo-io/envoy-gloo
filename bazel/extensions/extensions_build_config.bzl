@@ -118,7 +118,7 @@ EXTENSIONS = {
     #
     # StringMatchers
     #
-    "envoy.string_matcher.lua":                         "//source/extensions/string_matcher/lua:config",
+#    "envoy.string_matcher.lua":                         "//source/extensions/string_matcher/lua:config",
 
     #
     # HTTP filters
