@@ -59,11 +59,10 @@ echo "test $BUILD_CONFIG" >> "${SOURCE_DIR}/test.bazelrc"
 echo Building
 bash -x "$UPSTREAM_ENVOY_SRCDIR/ci/do_ci.sh" "$@"
 
-set -x
 echo Extracting release binaries
 ENVOY_GLOO_BIN_DIR='linux/amd64/build_envoy_release'
 mkdir -p "$ENVOY_GLOO_BIN_DIR"
-bazel run --verbose_failures @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
+bazel run @envoy//tools/zstd:zstd -- --stdout -d /build/envoy/x64/bin/release.tar.zst \
     | tar xfO - envoy > "$ENVOY_GLOO_BIN_DIR/envoy"
 
 chmod +x "${ENVOY_GLOO_BIN_DIR}/envoy"
