@@ -1206,7 +1206,7 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
   auto pattern3 = "yet-another-replace-me";
   auto test_string3 = "test-3-yet-another-replace-me";
 
-  const auto* format_string = R"ENDFMT(
+  constexpr static char format_string[] = R"ENDFMT(
 {{{{ replace_with_random("{}", "{}") }}}}
 {{{{ replace_with_random("{}", "{}") }}}}
 {{{{ replace_with_random("{}", "{}") }}}}
