@@ -41,7 +41,7 @@ using RouteTransformationConfigProto =
 class TransformationFilterConfig : public FilterConfig {
 public:
   TransformationFilterConfig(const TransformationConfigProto &proto_config,
-                             const std::string &prefix, Server::Configuration::FactoryContext &context);
+                             const std::string &prefix, Server::Configuration::ServerFactoryContext &context);
 
   std::string name() const override {
     return SoloHttpFilterNames::get().Transformation;
@@ -58,7 +58,7 @@ protected:
   Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher() const override {return matcher_;};
 
 private:
-  void addTransformationLegacy(const envoy::api::v2::filter::http::TransformationRule& rule, Server::Configuration::FactoryContext &context);
+  void addTransformationLegacy(const envoy::api::v2::filter::http::TransformationRule& rule, Server::Configuration::ServerFactoryContext &context);
 
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};

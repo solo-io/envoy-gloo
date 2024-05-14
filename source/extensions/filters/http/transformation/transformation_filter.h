@@ -122,6 +122,8 @@ private:
   bool destroyed_{};
 
   FilterConfigSharedPtr filter_config_;
+  // Determines whether the stream has been ended for running the filter in upstream mode.
+  absl::optional<bool> latched_end_stream_;
 };
 
 } // namespace Transformation

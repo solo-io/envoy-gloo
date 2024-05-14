@@ -15,11 +15,11 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-Http::FilterFactoryCb
+absl::StatusOr<Http::FilterFactoryCb>
 TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
     const TransformationConfigProto &proto_config,
-    const std::string &stats_prefix,
-    Server::Configuration::FactoryContext &context) {
+    const std::string &stats_prefix, DualInfo,
+    Server::Configuration::ServerFactoryContext &context) {
 
   FilterConfigSharedPtr config = std::make_shared<TransformationFilterConfig>(
       proto_config, stats_prefix, context);
@@ -38,11 +38,16 @@ TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(
   return std::make_shared<const RouteTransformationFilterConfig>(proto_config, context);
 }
 
+using UpstreamTransformationFilterConfigFactory = TransformationFilterConfigFactory;
+
 /**
  * Static registration for this filter. @see RegisterFactory.
  */
 REGISTER_FACTORY(TransformationFilterConfigFactory,
                  Server::Configuration::NamedHttpFilterConfigFactory);
+
+REGISTER_FACTORY(UpstreamTransformationFilterConfigFactory,
+                 Server::Configuration::UpstreamHttpFilterConfigFactory);
 
 } // namespace Transformation
 } // namespace HttpFilters
