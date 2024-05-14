@@ -1206,23 +1206,22 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
   std::string pattern3{"yet-another-replace-me"};
   std::string test_string3{"test-3-yet-another-replace-me"};
 
-  const std::string format_string = R"ENDFMT(
-{{{{ replace_with_random("{}", "{}") }}}}
-{{{{ replace_with_random("{}", "{}") }}}}
-{{{{ replace_with_random("{}", "{}") }}}}
-{{{{ replace_with_random("{}", "{}") }}}}
-{{{{ replace_with_random("{}", "{}") }}}}
-{{{{ replace_with_random("{}", "{}") }}}}
-  )ENDFMT";
+  constexpr static char format_string[] =
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n"
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n"
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n"
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n"
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n"
+"{{{{ replace_with_random(\"{}\", \"{}\") }}}}\n";
 
-  auto formatted_string = fmt::vformat(format_string, fmt::make_format_args(
+  auto formatted_string = fmt::format(format_string,
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3,
     test_string1, pattern1,
     test_string2, pattern2,
     test_string3, pattern3
-    ));
+    );
 
   transformation.mutable_body()->set_text(formatted_string);
   Random::RandomGeneratorImpl rng;
