@@ -1,7 +1,9 @@
 #include "source/common/matcher/solo_matcher.h"
 
+#include "envoy/common/regex.h"
 #include "source/common/common/logger.h"
 #include "source/common/common/regex.h"
+#include "source/common/regex/regex.h"
 #include "source/common/router/config_impl.h"
 
 #include "absl/strings/match.h"
@@ -19,15 +21,16 @@ namespace {
 class BaseMatcherImpl : public Matcher,
                         public Logger::Loggable<Logger::Id::filter> {
 public:
-  BaseMatcherImpl(const RouteMatch &match)
+  BaseMatcherImpl(const RouteMatch &match,
+                  Server::Configuration::CommonFactoryContext &context)
       : case_sensitive_(
             PROTOBUF_GET_WRAPPED_OR_DEFAULT(match, case_sensitive, true)),
-        config_headers_(
-            Http::HeaderUtility::buildHeaderDataVector(match.headers())) {
+        config_headers_(Http::HeaderUtility::buildHeaderDataVector(
+            match.headers(), context)) {
     for (const auto &query_parameter : match.query_parameters()) {
       config_query_parameters_.push_back(
           std::make_unique<Router::ConfigUtility::QueryParameterMatcher>(
-              query_parameter));
+              query_parameter, context));
     }
   }
 
@@ -38,9 +41,8 @@ public:
 
     matches &= Http::HeaderUtility::matchHeaders(headers, config_headers_);
     if (!config_query_parameters_.empty()) {
-      auto query_parameters =
-          Http::Utility::QueryParamsMulti::parseQueryString(
-              headers.Path()->value().getStringView());
+      auto query_parameters = Http::Utility::QueryParamsMulti::parseQueryString(
+          headers.Path()->value().getStringView());
       matches &= ConfigUtility::matchQueryParams(query_parameters,
                                                  config_query_parameters_);
     }
@@ -61,8 +63,9 @@ private:
  */
 class PrefixMatcherImpl : public BaseMatcherImpl {
 public:
-  PrefixMatcherImpl(const ::RouteMatch &match)
-      : BaseMatcherImpl(match), prefix_(match.prefix()) {}
+  PrefixMatcherImpl(const ::RouteMatch &match,
+                    Server::Configuration::CommonFactoryContext &context)
+      : BaseMatcherImpl(match, context), prefix_(match.prefix()) {}
 
   bool matches(const Http::RequestHeaderMap &headers) const override {
     if (BaseMatcherImpl::matchRoute(headers) &&
@@ -87,8 +90,9 @@ private:
  */
 class PathMatcherImpl : public BaseMatcherImpl {
 public:
-  PathMatcherImpl(const ::RouteMatch &match)
-      : BaseMatcherImpl(match), path_(match.path()) {}
+  PathMatcherImpl(const ::RouteMatch &match,
+                  Server::Configuration::CommonFactoryContext &context)
+      : BaseMatcherImpl(match, context), path_(match.path()) {}
 
   bool matches(const Http::RequestHeaderMap &headers) const override {
     if (BaseMatcherImpl::matchRoute(headers)) {
@@ -112,15 +116,54 @@ private:
   const std::string path_;
 };
 
+class CompiledStdMatcher : public Regex::CompiledMatcher {
+public:
+  CompiledStdMatcher(std::regex &&regex) : regex_(std::move(regex)) {}
+
+  // CompiledMatcher
+  bool match(absl::string_view value) const override {
+    try {
+      return std::regex_match(value.begin(), value.end(), regex_);
+    } catch (const std::regex_error &e) {
+      return false;
+    }
+  }
+
+  // CompiledMatcher
+  std::string replaceAll(absl::string_view value,
+                         absl::string_view substitution) const override {
+    try {
+      return std::regex_replace(std::string(value), regex_,
+                                std::string(substitution));
+    } catch (const std::regex_error &e) {
+      return std::string(value);
+    }
+  }
+
+private:
+  const std::regex regex_;
+};
+
+class StdRegexEngine : public Regex::Engine {
+public:
+  Regex::CompiledMatcherPtr matcher(const std::string &regex) const override {
+    return std::make_unique<CompiledStdMatcher>(
+        Solo::Regex::Utility::parseStdRegex(regex));
+  }
+};
+
 /**
  * Perform a match against any path with a regex rule.
  * TODO(mattklein123): This code needs dedup with RegexRouteEntryImpl.
  */
 class RegexMatcherImpl : public BaseMatcherImpl {
 public:
-  RegexMatcherImpl(const RouteMatch &match) : BaseMatcherImpl(match) {
+  RegexMatcherImpl(const RouteMatch &match,
+                   Server::Configuration::CommonFactoryContext &context)
+      : BaseMatcherImpl(match, context) {
     ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
-    regex_ = Regex::Utility::parseRegex(match.safe_regex());
+    auto engine = Envoy::MatcherCopy::StdRegexEngine();
+    regex_ = Regex::Utility::parseRegex(match.safe_regex(), engine);
     regex_str_ = match.safe_regex().regex();
   }
 
@@ -140,50 +183,23 @@ public:
   }
 
 private:
-
-static Regex::CompiledMatcherPtr parseStdRegexAsCompiledMatcher(const std::string& regex,
-                                 std::regex::flag_type flags = std::regex::optimize);
   Regex::CompiledMatcherPtr regex_;
   // raw regex string, for logging.
   std::string regex_str_;
 };
 
-class CompiledStdMatcher : public Regex::CompiledMatcher {
-public:
-  CompiledStdMatcher(std::regex&& regex) : regex_(std::move(regex)) {}
-
-  // CompiledMatcher
-  bool match(absl::string_view value) const override {
-    try {
-      return std::regex_match(value.begin(), value.end(), regex_);
-    } catch (const std::regex_error& e) {
-      return false;
-    }
-  }
-
-  // CompiledMatcher
-  std::string replaceAll(absl::string_view value, absl::string_view substitution) const override {
-    try {
-      return std::regex_replace(std::string(value), regex_, std::string(substitution));
-    } catch (const std::regex_error& e) {
-      return std::string(value);
-    }
-  }
-
-private:
-  const std::regex regex_;
-};
-
 } // namespace
 
-MatcherConstPtr Matcher::create(const RouteMatch &match) {
+MatcherConstPtr
+Matcher::create(const RouteMatch &match,
+                Server::Configuration::CommonFactoryContext &context) {
   switch (match.path_specifier_case()) {
   case RouteMatch::PathSpecifierCase::kPrefix:
-    return std::make_shared<PrefixMatcherImpl>(match);
+    return std::make_shared<PrefixMatcherImpl>(match, context);
   case RouteMatch::PathSpecifierCase::kPath:
-    return std::make_shared<PathMatcherImpl>(match);
+    return std::make_shared<PathMatcherImpl>(match, context);
   case RouteMatch::PathSpecifierCase::kSafeRegex:
-    return std::make_shared<RegexMatcherImpl>(match);
+    return std::make_shared<RegexMatcherImpl>(match, context);
   // path specifier is required.
   case RouteMatch::PathSpecifierCase::PATH_SPECIFIER_NOT_SET:
   default:
@@ -191,5 +207,5 @@ MatcherConstPtr Matcher::create(const RouteMatch &match) {
   }
 }
 
-} // namespace Matcher
+} // namespace MatcherCopy
 } // namespace Envoy

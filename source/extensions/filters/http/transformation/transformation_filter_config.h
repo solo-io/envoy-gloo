@@ -30,7 +30,8 @@ public:
    * defined.
    */
   static ResponseMatcherConstPtr
-  create(const envoy::api::v2::filter::http::ResponseMatcher &match);
+  create(const envoy::api::v2::filter::http::ResponseMatcher &match,
+         Server::Configuration::ServerFactoryContext& context);
 };
 
 using TransformationConfigProto =
@@ -73,7 +74,7 @@ public:
   void addTransformation(
       const envoy::api::v2::filter::http::
           RouteTransformations_RouteTransformation &transformations,
-          Server::Configuration::CommonFactoryContext &context);
+          Server::Configuration::ServerFactoryContext &context);
   void setMatcher(Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher);
 
   TransformerPairConstSharedPtr
