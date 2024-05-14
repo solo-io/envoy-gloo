@@ -1199,14 +1199,14 @@ TEST_F(InjaTransformerTest, ReplaceWithRandomTest_SameReplacementPatternUsesSame
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
-  auto pattern1 = "replace-me";
-  auto test_string1 = "test-1-replace-me";
-  auto pattern2 = "another-replace-me";
-  auto test_string2 = "test-2-another-replace-me";
-  auto pattern3 = "yet-another-replace-me";
-  auto test_string3 = "test-3-yet-another-replace-me";
+  std::string pattern1{"replace-me"};
+  std::string test_string1{"test-1-replace-me"};
+  std::string pattern2{"another-replace-me"};
+  std::string test_string2{"test-2-another-replace-me"};
+  std::string pattern3{"yet-another-replace-me"};
+  std::string test_string3{"test-3-yet-another-replace-me"};
 
-  constexpr static char format_string[] = R"ENDFMT(
+  const std::string format_string = R"ENDFMT(
 {{{{ replace_with_random("{}", "{}") }}}}
 {{{{ replace_with_random("{}", "{}") }}}}
 {{{{ replace_with_random("{}", "{}") }}}}
