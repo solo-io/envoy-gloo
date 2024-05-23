@@ -779,7 +779,7 @@ TEST_F(InjaTransformerTest, UseDefaultNS) {
       .WillOnce(
           Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
             auto field = value.fields().at("foo");
-            EXPECT_EQ(field.string_value(), "1");
+            EXPECT_EQ(field.number_value(), 1);
           }));
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);
