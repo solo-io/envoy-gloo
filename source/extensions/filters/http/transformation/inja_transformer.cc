@@ -236,6 +236,15 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
+  env_.add_callback("cluster_metadata", 1, [this](Arguments &args) {
+    return cluster_metadata_callback(args);
+  });
+  env_.add_callback("dynamic_metadata", 1, [this](Arguments &args) {
+    return dynamic_metadata_callback(args);
+  });
+  env_.add_callback("host_metadata", 1, [this](Arguments &args) {
+    return host_metadata_callback(args);
+  });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
     return base64_encode_callback(args);
   });
@@ -263,6 +272,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   });
   env_.add_callback("raw_string", 1, [this](Arguments &args) {
     return raw_string_callback(args);
+  });
+  env_.add_callback("word_count", 1, [](Arguments &args) {
+    return word_count_callback(args);
   });
 }
 
@@ -316,16 +328,38 @@ json TransformerInstance::env(const inja::Arguments &args) const {
   return "";
 }
 
+json TransformerInstance::host_metadata_callback(const inja::Arguments &args) const {
+  const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
+  if (!ctx.endpoint_metadata_) {
+    return "";
+  }
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
+  return parse_metadata(ctx.endpoint_metadata_.get(), SoloHttpFilterNames::get().Transformation, key);
+}
+json TransformerInstance::dynamic_metadata_callback(const inja::Arguments &args) const {
+  const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
+  if (!ctx.dynamic_metadata_) {
+    return "";
+  }
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
+  return parse_metadata(ctx.dynamic_metadata_, SoloHttpFilterNames::get().Transformation, key);
+}
+
 json TransformerInstance::cluster_metadata_callback(const inja::Arguments &args) const {
   const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
-  const std::string &key = args.at(0)->get_ref<const std::string &>();
-
   if (!ctx.cluster_metadata_) {
     return "";
   }
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
+  return parse_metadata(ctx.cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+}
 
+json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata* metadata,
+                                                  const std::string& filter,
+                                                  const std::string& key) {
+                                                    
   const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
-      ctx.cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+      metadata, filter, key);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
@@ -343,45 +377,15 @@ json TransformerInstance::cluster_metadata_callback(const inja::Arguments &args)
     return stringval;
     break;
   }
+  case ProtobufWkt::Value::kStructValue:
+    ABSL_FALLTHROUGH_INTENDED;
   case ProtobufWkt::Value::kListValue: {
-    const auto &listval = value.list_value().values();
-    if (listval.size() == 0) {
-      break;
-    }
-
-    // size is not zero, so this will work
-    auto it = listval.begin();
-    std::stringstream ss;
-
-    auto addValue = [&ss, &it] {
-      const ProtobufWkt::Value &value = *it;
-
-      switch (value.kind_case()) {
-      case ProtobufWkt::Value::kStringValue: {
-        ss << value.string_value();
-        break;
-      }
-      case ProtobufWkt::Value::kNumberValue: {
-        ss << value.number_value();
-        break;
-      }
-      case ProtobufWkt::Value::kBoolValue: {
-        ss << (value.bool_value() ? BoolHeader::get().trueString
-                                  : BoolHeader::get().falseString);
-        break;
-      }
-      default:
-        break;
-      }
-    };
-
-    addValue();
-
-    for (it++; it != listval.end(); it++) {
-      ss << ",";
-      addValue();
-    }
-    return ss.str();
+    std::string output;
+    auto status = value.has_struct_value()
+                      ? ProtobufUtil::MessageToJsonString(value.struct_value(), &output)
+                      : ProtobufUtil::MessageToJsonString(value.list_value(), &output);
+    return output;
+    break;
   }
   default: {
     break;
@@ -408,6 +412,44 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 json TransformerInstance::base64url_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   return Base64Url::decode(input);
+}
+
+json TransformerInstance::word_count_callback(const inja::Arguments &args) {
+  return std::to_string(word_count(args.at(0)));
+}
+
+int TransformerInstance::word_count(const nlohmann::json* input)  {
+  if (input->is_string()) {
+    const std::string &input_string = input->get_ref<const std::string &>();
+    unsigned long ctr = 0; // Initializing a counter variable to count words
+
+    // Loop through the string and count spaces to determine words
+    for (unsigned long x = 0; x < input_string.length(); x++) {
+      if (input_string[x] == ' ') // Checking for spaces to count words
+        ctr++; // Increment the counter for each space found
+    }
+    return ctr + 1; // Return the count of words by adding 1 to the total number of spaces (plus 1 for the last word without a trailing space)
+  } else if (input->is_array()) {
+    int total_word_count = 0;
+    const auto &input_array = input->get_ref<const std::vector<json> &>();
+    for (auto & element : input_array) {
+      total_word_count += word_count(&element);
+    }
+    return total_word_count;
+  } else if (input->is_object()) {
+    int total_word_count = 0;
+    const auto element_obj = input->get_ref<const json::object_t &>();
+    for (auto & [key, value] : element_obj) {
+      // Key is always a string
+      total_word_count++;
+      total_word_count += word_count(&value);
+    }
+    return total_word_count;
+  } else if (input->is_number() || input->is_boolean()) {
+    // Booleans and numbers are constant
+    return 1;
+  }
+  return 0;
 }
 
 // return a substring of the input string, starting at the start position
@@ -752,6 +794,17 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     cluster_metadata = &ci->metadata();
   }
 
+  // get cluster metadata
+  const envoy::config::core::v3::Metadata *dynamic_metadata{};
+  dynamic_metadata = &callbacks.streamInfo().dynamicMetadata();
+  // if (ci.get()) {
+  //   cluster_metadata = &ci->metadata();
+  // }
+
+  // const envoy::config::core::v3::Metadata *dynamic_metadata{};
+  // callbacks.upstreamCallbacks()
+  
+
   // now that we have gathered all of the request-specific transformation data,
   // get the reference to the worker thread's local transformer context and
   // set the fields
@@ -764,6 +817,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.context_ = &json_body;
   typed_tls_data.environ_ = &environ_;
   typed_tls_data.cluster_metadata_ = cluster_metadata;
+  typed_tls_data.dynamic_metadata_ = dynamic_metadata;
+
+  // If there is a value we're in a upstream filter
+  if (callbacks.upstreamCallbacks().has_value()) {
+    auto &upstream_callbacks = callbacks.upstreamCallbacks().value().get();
+    typed_tls_data.endpoint_metadata_ = upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()->metadata();
+  }
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
@@ -780,10 +840,21 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
     std::string output = instance_->render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
-      ProtobufWkt::Struct strct(
-          MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
-      callbacks.streamInfo().setDynamicMetadata(
-          templated_dynamic_metadata.namespace_, strct);
+      // Need to check if number
+      try {
+        const auto int_output = std::stoi(output);
+        ProtobufWkt::Struct struct_obj;
+        ProtobufWkt::Value val;
+        val.set_number_value(int_output);
+        (*struct_obj.mutable_fields())[templated_dynamic_metadata.key_] = val;
+        callbacks.streamInfo().setDynamicMetadata(
+            templated_dynamic_metadata.namespace_, struct_obj);
+      } catch (...) { // This function can return multiple exceptions
+        ProtobufWkt::Struct strct(
+            MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+        callbacks.streamInfo().setDynamicMetadata(
+            templated_dynamic_metadata.namespace_, strct);
+      }
     }
   }
 
