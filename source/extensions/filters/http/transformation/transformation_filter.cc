@@ -191,7 +191,6 @@ void TransformationFilter::transformRequest() {
                      *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
-  request_transformation_.reset();
   if (should_clear_cache_) {
     decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
   }
@@ -202,7 +201,6 @@ void TransformationFilter::transformResponse() {
                      *response_headers_, response_body_,
                      &TransformationFilter::responseError,
                      &TransformationFilter::addEncoderData);
-  response_transformation_.reset();
 }
 
 void TransformationFilter::addDecoderData(Buffer::Instance &data) {
@@ -242,7 +240,6 @@ void TransformationFilter::transformOnStreamCompletion() {
                      e.what());
     filter_config_->stats().on_stream_complete_error_.inc();
   }
-  on_stream_completion_transformation_.reset();
 }
 
 void TransformationFilter::transformSomething(
