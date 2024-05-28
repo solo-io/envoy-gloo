@@ -5,6 +5,7 @@
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "source/common/common/logger.h"
+#include "test/mocks/server/factory_context.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -31,6 +32,14 @@ std::string get_invalid_template_error(std::string request_or_response) {
   return "Failed to parse " + request_or_response + " template: "
     "Failed to parse body template "
     "[inja.exception.parser_error] (at 1:" + error_pos + ") malformed expression";
+}
+
+TEST(TransformationFilterConfig, TransformationUpstreamFactoryTest) {
+
+  auto* factory =
+      Registry::FactoryRegistry<Server::Configuration::UpstreamHttpFilterConfigFactory>::getFactory(
+          "io.solo.transformation");
+  ASSERT_NE(factory, nullptr);
 }
 
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
