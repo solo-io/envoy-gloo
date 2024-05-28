@@ -984,6 +984,32 @@ TEST_F(InjaTransformerTest, WordCount) {
   EXPECT_EQ(body.toString(), "5");
 }
 
+TEST_F(InjaTransformerTest, WordCountJSON) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->mutable_value()->set_text("{{word_count(body())}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.number_value(), 12);
+          }));
+  auto test_string = "{\"a\": \"Hal, what's the meaning of life?\", \"b\": \"I don't know John\"}";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
 TEST_F(InjaTransformerTest, SubstringOutOfBounds) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
