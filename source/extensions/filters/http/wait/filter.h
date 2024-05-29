@@ -45,7 +45,7 @@ public:
 private:
   Http::StreamDecoderFilterCallbacks *decoder_callbacks_{};
   // Determines whether the stream has been ended for running the filter in upstream mode.
-  absl::optional<bool> latched_end_stream_;
+  bool paused_iteration_{false};
 };
 
 } // namespace Wait

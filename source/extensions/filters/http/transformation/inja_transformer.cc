@@ -759,14 +759,15 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // get cluster metadata
   const envoy::config::core::v3::Metadata *dynamic_metadata{};
   dynamic_metadata = &callbacks.streamInfo().dynamicMetadata();
-  // if (ci.get()) {
-  //   cluster_metadata = &ci->metadata();
-  // }
 
-  // const envoy::config::core::v3::Metadata *dynamic_metadata{};
-  // callbacks.upstreamCallbacks()
+  Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata{};
+  // If there is a value we're in a upstream filter
+  if (callbacks.upstreamCallbacks().has_value()) {
+    auto &upstream_callbacks = callbacks.upstreamCallbacks().value().get();
+    endpoint_metadata = upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()->metadata();
+  }
+
   
-
   // now that we have gathered all of the request-specific transformation data,
   // get the reference to the worker thread's local transformer context and
   // set the fields
@@ -780,12 +781,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.environ_ = &environ_;
   typed_tls_data.cluster_metadata_ = cluster_metadata;
   typed_tls_data.dynamic_metadata_ = dynamic_metadata;
+  typed_tls_data.endpoint_metadata_ = endpoint_metadata;
 
-  // If there is a value we're in a upstream filter
-  if (callbacks.upstreamCallbacks().has_value()) {
-    auto &upstream_callbacks = callbacks.upstreamCallbacks().value().get();
-    typed_tls_data.endpoint_metadata_ = upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()->metadata();
-  }
 
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;

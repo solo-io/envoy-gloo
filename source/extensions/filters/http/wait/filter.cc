@@ -13,7 +13,7 @@ WaitingFilter::~WaitingFilter() {}
 
 
 void WaitingFilter::onUpstreamConnectionEstablished() {
-  if (latched_end_stream_.has_value()) {
+  if (paused_iteration_) {
     decoder_callbacks_->continueDecoding();
   }
 }
@@ -25,11 +25,11 @@ WaitingFilter::decodeHeaders(Http::RequestHeaderMap &,
   // If not an upstream filter the upstream callbacks will be missing
   if (decoder_callbacks_->upstreamCallbacks()) {
     if (!decoder_callbacks_->upstreamCallbacks()->upstream()) {
-      latched_end_stream_ = end_stream;
+      paused_iteration_ = end_stream;
       return Http::FilterHeadersStatus::StopAllIterationAndWatermark;
     }
   }
-  // The code should basically never get here
+
   return Http::FilterHeadersStatus::Continue;
 }
 
