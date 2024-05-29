@@ -830,21 +830,10 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
     std::string output = instance_->render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
-      // Need to check if number
-      try {
-        const auto int_output = std::stoi(output);
-        ProtobufWkt::Struct struct_obj;
-        ProtobufWkt::Value val;
-        val.set_number_value(int_output);
-        (*struct_obj.mutable_fields())[templated_dynamic_metadata.key_] = val;
-        callbacks.streamInfo().setDynamicMetadata(
-            templated_dynamic_metadata.namespace_, struct_obj);
-      } catch (...) { // This function can return multiple exceptions
-        ProtobufWkt::Struct strct(
-            MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
-        callbacks.streamInfo().setDynamicMetadata(
-            templated_dynamic_metadata.namespace_, strct);
-      }
+      ProtobufWkt::Struct strct(
+          MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+      callbacks.streamInfo().setDynamicMetadata(
+          templated_dynamic_metadata.namespace_, strct);
     }
   }
 
