@@ -779,9 +779,36 @@ TEST_F(InjaTransformerTest, UseDefaultNS) {
       .WillOnce(
           Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
             auto field = value.fields().at("foo");
-            EXPECT_EQ(field.number_value(), 1);
+            EXPECT_EQ(field.string_value(), "1");
           }));
   Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
+TEST_F(InjaTransformerTest, UseDefaultNSStructureData) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+  dynamic_meta->set_json_to_proto(true);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.has_list_value(), true);
+          }));
+  Buffer::OwnedImpl body("[1, 2]");
   transformer.transform(headers, &headers, body, callbacks);
 }
 
@@ -794,14 +821,22 @@ TEST_F(InjaTransformerTest, UseCustomNS) {
   auto dynamic_meta = transformation.add_dynamic_metadata_values();
   dynamic_meta->set_key("foo");
   dynamic_meta->set_metadata_namespace("foo.ns");
-  dynamic_meta->mutable_value()->set_text("123");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+  dynamic_meta->set_json_to_proto(true);
 
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
-  Buffer::OwnedImpl body;
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata("foo.ns", _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.number_value(), 123);
+          }));
+  Buffer::OwnedImpl body("123");
   transformer.transform(headers, &headers, body, callbacks);
 }
 

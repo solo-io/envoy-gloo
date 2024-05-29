@@ -131,6 +131,7 @@ private:
     std::string namespace_;
     std::string key_;
     inja::Template template_;
+    bool parse_json_;
   };
 
   bool advanced_templates_{};

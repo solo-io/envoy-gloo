@@ -374,13 +374,15 @@ json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata
     return stringval;
     break;
   }
-  case ProtobufWkt::Value::kStructValue:
-    ABSL_FALLTHROUGH_INTENDED;
+  case ProtobufWkt::Value::kStructValue: {
+    std::string output;
+    auto status = ProtobufUtil::MessageToJsonString(value.struct_value(), &output);
+    return output;
+    break;
+  }
   case ProtobufWkt::Value::kListValue: {
     std::string output;
-    auto status = value.has_struct_value()
-                      ? ProtobufUtil::MessageToJsonString(value.struct_value(), &output)
-                      : ProtobufUtil::MessageToJsonString(value.list_value(), &output);
+    auto status = ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
     break;
   }
@@ -600,6 +602,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       }
       dynamicMetadataValue.key_ = it->key();
       dynamicMetadataValue.template_ = instance_->parse(it->value().text());
+      dynamicMetadataValue.parse_json_ = it->json_to_proto();
       dynamic_metadata_.emplace_back(std::move(dynamicMetadataValue));
     } catch (const std::exception &e) {
       throw EnvoyException(fmt::format(
@@ -799,21 +802,28 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   for (const auto &templated_dynamic_metadata : dynamic_metadata_) {
     std::string output = instance_->render(templated_dynamic_metadata.template_);
     if (!output.empty()) {
-      // Need to check if number
-      try {
-        const auto int_output = std::stoi(output);
-        ProtobufWkt::Struct struct_obj;
-        ProtobufWkt::Value val;
-        val.set_number_value(int_output);
-        (*struct_obj.mutable_fields())[templated_dynamic_metadata.key_] = val;
-        callbacks.streamInfo().setDynamicMetadata(
-            templated_dynamic_metadata.namespace_, struct_obj);
-      } catch (...) { // This function can return multiple exceptions
+      if (templated_dynamic_metadata.parse_json_) {
+        // Need to check if number
+        ProtobufWkt::Value value_obj;
+        auto status = ProtobufUtil::JsonStringToMessage(output, &value_obj);
+        if (status.ok()) {
+          ProtobufWkt::Struct struct_obj;
+          (*struct_obj.mutable_fields())[templated_dynamic_metadata.key_] = value_obj;
+          callbacks.streamInfo().setDynamicMetadata(
+              templated_dynamic_metadata.namespace_, struct_obj);
+        } else {
+          ProtobufWkt::Struct strct(
+              MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
+          callbacks.streamInfo().setDynamicMetadata(
+              templated_dynamic_metadata.namespace_, strct);
+        }
+      } else {
         ProtobufWkt::Struct strct(
             MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
         callbacks.streamInfo().setDynamicMetadata(
             templated_dynamic_metadata.namespace_, strct);
       }
+
     }
   }
 
