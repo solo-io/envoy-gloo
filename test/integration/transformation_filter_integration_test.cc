@@ -58,6 +58,16 @@ const std::string BODY_TRANSFORMATION =
         text: "{{abc}}"
 )EOF";
 
+const std::string BODY_TRANSFORMATION_METADATA =
+    R"EOF(
+  clear_route_cache: true
+  request_transformation:
+    transformation_template:
+      advanced_templates: true
+      body:
+        text: "{{host_metadata(\"foo\")}}"
+)EOF";
+
 const std::string BODY_RESPONSE_TRANSFORMATION =
     R"EOF(
   response_transformation:
@@ -153,10 +163,22 @@ public:
 
     const std::string default_filter =
         loadListenerConfig(filter_transformation_string_, matcher_string_);
-    // set the default transformation
-    config_helper_.addFilter(default_filter);
+      
+    setUpstreamProtocol(Http::CodecType::HTTP1);
+    config_helper_.prependFilter(default_filter, downstream_filter_);
+
+
+    if (!downstream_filter_) {
+      HttpFilter filter;
+      filter.set_name(
+          Extensions::HttpFilters::SoloHttpFilterNames::get().Wait);
+      config_helper_.prependFilter(MessageUtil::getJsonStringFromMessageOrError(filter), downstream_filter_);
+      addEndpointMeta();
+    }
 
     if (transformation_string_ != "") {
+      // // set the default transformation
+      // config_helper_.addFilter(default_filter);
       config_helper_.addConfigModifier(
           [this](envoy::extensions::filters::network::http_connection_manager::
                      v3::HttpConnectionManager &hcm) {
@@ -195,6 +217,7 @@ public:
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
   std::string filter_transformation_string_{DEFAULT_FILTER_TRANSFORMATION};
   std::string matcher_string_{DEFAULT_MATCHER};
+  bool downstream_filter_{true};
 
 private:
   std::string loadListenerConfig(const std::string &transformation_config_str,
@@ -222,6 +245,29 @@ private:
 
     return MessageUtil::getJsonStringFromMessageOrError(filter);
   }
+
+  void addEndpointMeta() {
+    config_helper_.addConfigModifier(
+      [](envoy::config::bootstrap::v3::Bootstrap& bootstrap) {
+        
+        auto* static_resources = bootstrap.mutable_static_resources();
+        for (int i = 0; i < static_resources->clusters_size(); ++i) {
+          auto* cluster = static_resources->mutable_clusters(i);
+          for (int j = 0; j < cluster->load_assignment().endpoints_size(); ++j) {
+            auto* endpoint = cluster->mutable_load_assignment()->mutable_endpoints(j);
+            for (int k = 0; k < endpoint->lb_endpoints_size(); ++k) {
+              auto* lb_endpoint = endpoint->mutable_lb_endpoints(k);
+              auto* metadata = lb_endpoint->mutable_metadata();
+              ProtobufWkt::Value value_obj;
+              value_obj.set_string_value("bar");
+              ProtobufWkt::Struct struct_obj;
+              (*struct_obj.mutable_fields())["foo"] = value_obj;
+              (*metadata->mutable_filter_metadata())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation].MergeFrom(struct_obj);
+            }
+          }
+        }
+      });
+  }
 };
 
 INSTANTIATE_TEST_SUITE_P(
@@ -229,6 +275,28 @@ INSTANTIATE_TEST_SUITE_P(
     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 
 TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequest) {
+  initialize();
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/users/234"},
+                                                 {"x-solo", "original header (not preserved)"},
+                                                 {"x-solo", "original header 2 (not preserved)"}};
+
+  auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
+  processRequest(response);
+
+  std::string xsolo_header(upstream_request_->headers()
+                               .get(Http::LowerCaseString("x-solo"))[0]
+                               ->value()
+                               .getStringView());
+  EXPECT_EQ("solo.io", xsolo_header);
+  EXPECT_EQ(1, upstream_request_->headers().get(Http::LowerCaseString("x-solo")).size());
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("abc 234", body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, TransformHeaderOnlyRequestUpstream) {
+  downstream_filter_ = false;
   initialize();
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
                                                  {":authority", "www.solo.io"},
@@ -308,6 +376,47 @@ TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequest) {
   std::string body = upstream_request_->body().toString();
   EXPECT_EQ("efg", body);
 }
+
+TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequestUpstream) {
+  downstream_filter_ = false;
+  transformation_string_ = BODY_TRANSFORMATION;
+  initialize();
+  Http::TestRequestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response);
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("efg", body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, TransformHeadersAndBodyRequestHostMetaUpstream) {
+  downstream_filter_ = false;
+  transformation_string_ = BODY_TRANSFORMATION_METADATA;
+  initialize();
+  Http::TestRequestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+
+  processRequest(response);
+
+  std::string body = upstream_request_->body().toString();
+  EXPECT_EQ("bar", body);
+}
+
 TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
   transformation_string_ = BODY_REQUEST_RESPONSE_TRANSFORMATION;
   initialize();
@@ -329,6 +438,25 @@ TEST_P(TransformationFilterIntegrationTest, TransformResponseBadRequest) {
 }
 
 TEST_P(TransformationFilterIntegrationTest, TransformResponse) {
+  transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
+  initialize();
+  Http::TestRequestHeaderMapImpl request_headers{
+      {":method", "POST"}, {":authority", "www.solo.io"}, {":path", "/users"}};
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto downstream_request = &encoder_decoder.first;
+  auto response = std::move(encoder_decoder.second);
+  Buffer::OwnedImpl data("{\"abc\":\"efg\"}");
+  codec_client_->sendData(*downstream_request, data, true);
+  // TODO add another test that the upstream body was not changed
+  processRequest(response, "{\"abc\":\"soloio\"}");
+
+  std::string rbody = response->body();
+  EXPECT_EQ("soloio", rbody);
+}
+
+TEST_P(TransformationFilterIntegrationTest, TransformResponseUpstream) {
+  downstream_filter_ = false;
   transformation_string_ = BODY_RESPONSE_TRANSFORMATION;
   initialize();
   Http::TestRequestHeaderMapImpl request_headers{

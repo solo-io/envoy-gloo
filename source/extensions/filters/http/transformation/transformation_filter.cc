@@ -191,7 +191,8 @@ void TransformationFilter::transformRequest() {
                      *request_headers_, request_body_,
                      &TransformationFilter::requestError,
                      &TransformationFilter::addDecoderData);
-  if (should_clear_cache_) {
+  // If calling from an upstream filter perspective, downstreamCallbacks will be `nil`
+  if (should_clear_cache_ && decoder_callbacks_->downstreamCallbacks()) {
     decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
   }
 }

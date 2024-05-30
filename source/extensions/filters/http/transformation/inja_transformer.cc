@@ -764,7 +764,11 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // If there is a value we're in a upstream filter
   if (callbacks.upstreamCallbacks().has_value()) {
     auto &upstream_callbacks = callbacks.upstreamCallbacks().value().get();
-    endpoint_metadata = upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()->metadata();
+    // Double check that upstream_host exists as if the wait_filter isn't properly setup
+    // this can segfault
+    if (upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()) {
+      endpoint_metadata = upstream_callbacks.upstreamStreamInfo().upstreamInfo()->upstreamHost()->metadata();
+    }
   }
 
   

@@ -20,12 +20,12 @@ void WaitingFilter::onUpstreamConnectionEstablished() {
 
 Http::FilterHeadersStatus
 WaitingFilter::decodeHeaders(Http::RequestHeaderMap &,
-                                    bool end_stream) {
+                                    bool) {
 
   // If not an upstream filter the upstream callbacks will be missing
   if (decoder_callbacks_->upstreamCallbacks()) {
     if (!decoder_callbacks_->upstreamCallbacks()->upstream()) {
-      paused_iteration_ = end_stream;
+      paused_iteration_ = true;
       return Http::FilterHeadersStatus::StopAllIterationAndWatermark;
     }
   }
