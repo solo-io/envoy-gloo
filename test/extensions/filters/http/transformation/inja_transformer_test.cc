@@ -984,6 +984,23 @@ TEST_F(InjaTransformerTest, WordCount) {
   EXPECT_EQ(body.toString(), "5");
 }
 
+TEST_F(InjaTransformerTest, WordCountWeirdSpacing) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{word_count(body())}}");
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "  why  don't   you \t\t accept me   ";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "5");
+}
+
 TEST_F(InjaTransformerTest, WordCountJSON) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;

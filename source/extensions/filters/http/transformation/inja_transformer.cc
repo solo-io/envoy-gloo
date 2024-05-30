@@ -414,12 +414,36 @@ json TransformerInstance::base64url_decode_callback(const inja::Arguments &args)
 }
 
 json TransformerInstance::word_count_callback(const inja::Arguments &args) {
-  return std::to_string(word_count(args.at(0)));
+  return std::to_string(json_word_count(args.at(0)));
 }
 
-int TransformerInstance::word_count(const nlohmann::json* input)  {
+int TransformerInstance::json_word_count(const nlohmann::json* input)  {
   if (input->is_string()) {
     const std::string &input_string = input->get_ref<const std::string &>();
+    return word_count(input_string);
+  } else if (input->is_array()) {
+    int total_word_count = 0;
+    const auto &input_array = input->get_ref<const std::vector<json> &>();
+    for (auto & element : input_array) {
+      total_word_count += json_word_count(&element);
+    }
+    return total_word_count;
+  } else if (input->is_object()) {
+    int total_word_count = 0;
+    const auto element_obj = input->get_ref<const json::object_t &>();
+    for (auto & [key, value] : element_obj) {
+      total_word_count += word_count(key);
+      total_word_count += json_word_count(&value);
+    }
+    return total_word_count;
+  } else if (input->is_number() || input->is_boolean()) {
+    // Booleans and numbers are constant
+    return 1;
+  }
+  return 0;
+}
+
+int TransformerInstance::word_count(const std::string& input_string)  {
     unsigned long ctr = 0; // Initializing a counter variable to count words
 
     // Loop through the string and count spaces to determine words
@@ -432,33 +456,20 @@ int TransformerInstance::word_count(const nlohmann::json* input)  {
           ctr++; // Increment the counter for each new "word"
         }
         in_white_space = true;
-      }else{
+      } else{
         in_white_space = false;
       }
     }
-    return ctr + 1; // Return the count of words by adding 1 to the total number of spaces (plus 1 for the last word without a trailing space)
-  } else if (input->is_array()) {
-    int total_word_count = 0;
-    const auto &input_array = input->get_ref<const std::vector<json> &>();
-    for (auto & element : input_array) {
-      total_word_count += word_count(&element);
+    // Return the count of words by adding 1 to the total number of spaces
+    // (plus 1 for the last word without a trailing space
+    // unless it ends with a space 
+    if (isspace(input_string[input_string.length() - 1] )){
+      return ctr;
+    } else {
+      return ctr + 1;
     }
-    return total_word_count;
-  } else if (input->is_object()) {
-    int total_word_count = 0;
-    const auto element_obj = input->get_ref<const json::object_t &>();
-    for (auto & [key, value] : element_obj) {
-      // Key is always a string
-      total_word_count++;
-      total_word_count += word_count(&value);
-    }
-    return total_word_count;
-  } else if (input->is_number() || input->is_boolean()) {
-    // Booleans and numbers are constant
-    return 1;
-  }
-  return 0;
 }
+
 
 // return a substring of the input string, starting at the start position
 // and extending for length characters. If length is not provided, the
