@@ -446,10 +446,21 @@ int TransformerInstance::json_word_count(const nlohmann::json* input)  {
 int TransformerInstance::word_count(const std::string& input_string)  {
     unsigned long ctr = 0; // Initializing a counter variable to count words
 
+    // Advance through all spaces at the beginning
+
+
+    unsigned long first_char = 0;
+    for (unsigned long x = 0; x < input_string.length(); x++) {
+      // https://en.cppreference.com/w/cpp/string/byte/isspace
+      if (!isspace(input_string[x] )){
+        first_char = x;
+        break;
+      }
+    }
+
     // Loop through the string and count spaces to determine words
     bool in_white_space = false;
-
-    for (unsigned long x = 0; x < input_string.length(); x++) {
+    for (unsigned long x = first_char; x < input_string.length(); x++) {
       // https://en.cppreference.com/w/cpp/string/byte/isspace
       if (isspace(input_string[x] )){ // Checking for spaces to count words
         if (!in_white_space){
