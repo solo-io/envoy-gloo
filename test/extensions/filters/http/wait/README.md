@@ -1,0 +1,3 @@
+## Attention
+
+Tests for the `wait` filter are located in the `test/integration/filters/http/transformation` directory. This is because the wait filter was build specifically to be used in conjunction with the transformation filter, and testing it on it's own has little value. In addition, the `host_metadata` callback added by this PR requries the use of the `wait_filter` and therefore will need to be tested in the transformation tests regardless.
