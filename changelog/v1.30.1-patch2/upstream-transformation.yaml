@@ -1,5 +1,6 @@
 changelog:
 - type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/342
   description: >-
     This PR adds 2 major features:
     1. The ability to run the transformation_filter as an `upstream_filter`. This means that it can
@@ -10,5 +11,5 @@ changelog:
     introuced functions.
     2. In order to allow using endpoint metadata, 2 new template functions were added to the inja transformer:
     - `host_metadata(key, optional<filter>)`: This function allows you to access the metadata of the upstream host.
-    - `dynamic_metadata(key, optional<filter>)`: This function allows accessing the dynamic metadata of the stream.
+    - `dynamic_metadata(key, optional<filter>)`: This function allows accessing the dynamic metadata of the stream. 
 
