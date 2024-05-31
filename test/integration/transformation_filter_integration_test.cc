@@ -58,6 +58,9 @@ const std::string BODY_TRANSFORMATION =
         text: "{{abc}}"
 )EOF";
 
+// Note: `clear_route_cache` is set here not to actually clear it, 
+// but to test that the transformation filter does not crash when this is set
+// running in upstream mode.
 const std::string BODY_TRANSFORMATION_METADATA =
     R"EOF(
   clear_route_cache: true
@@ -177,8 +180,7 @@ public:
     }
 
     if (transformation_string_ != "") {
-      // // set the default transformation
-      // config_helper_.addFilter(default_filter);
+      // set the default transformation
       config_helper_.addConfigModifier(
           [this](envoy::extensions::filters::network::http_connection_manager::
                      v3::HttpConnectionManager &hcm) {
