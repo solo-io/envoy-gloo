@@ -414,7 +414,7 @@ json TransformerInstance::base64url_decode_callback(const inja::Arguments &args)
 }
 
 json TransformerInstance::word_count_callback(const inja::Arguments &args) {
-  return std::to_string(json_word_count(args.at(0)));
+  return json_word_count(args.at(0));
 }
 
 int TransformerInstance::json_word_count(const nlohmann::json* input)  {
