@@ -1,0 +1,14 @@
+changelog:
+- type: NEW_FEATURE
+  description: >-
+    This PR adds 2 major features:
+    1. The ability to run the transformation_filter as an `upstream_filter`. This means that it can
+    be set either in the `upstream_cluster` or the `router_filter`. This is especially useful for 
+    perofrming transformations which require running on each retry, or which use endpoint metadata.
+    A new filter was also added called the `wait_filter`, this filter allows buffering the request until
+    endpoint_metadata has become available via a callback. This is important for using one of the newly
+    introuced functions.
+    2. In order to allow using endpoint metadata, 2 new template functions were added to the inja transformer:
+    - `host_metadata(key, optional<filter>)`: This function allows you to access the metadata of the upstream host.
+    - `dynamic_metadata(key, optional<filter>)`: This function allows accessing the dynamic metadata of the stream.
+
