@@ -1097,6 +1097,60 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
+const std::string INVALID_MATCHER =
+    R"EOF(
+{
+  "key":[
+    1,
+    2
+  ]
+}
+)EOF";
+
+TEST_F(InjaTransformerTest, ParseFromClusterMetadataList) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{cluster_metadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(*callbacks.cluster_info_, metadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "[1,2]");
+}
+
+TEST_F(InjaTransformerTest, ParseFromClusterMetadataListDeprecated) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(*callbacks.cluster_info_, metadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "1,2");
+}
+
 TEST_F(InjaTransformerTest, ParseFromNilClusterInfo) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;

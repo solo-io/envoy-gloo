@@ -234,7 +234,7 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("body", 0, [this](Arguments &) { return (*tls_.getTyped<ThreadLocalTransformerContext>().body_)(); });
   env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
-    return cluster_metadata_callback(args);
+    return cluster_metadata_callback_deprecated(args);
   });
   env_.add_callback("cluster_metadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback(args);
@@ -273,6 +273,82 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("raw_string", 1, [this](Arguments &args) {
     return raw_string_callback(args);
   });
+}
+
+
+
+json TransformerInstance::cluster_metadata_callback_deprecated(const inja::Arguments &args) const {
+      const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
+      const std::string &key = args.at(0)->get_ref<const std::string &>();
+
+      if (!ctx.cluster_metadata_) {
+        return "";
+      }
+
+      const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
+          ctx.cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
+
+      switch (value.kind_case()) {
+      case ProtobufWkt::Value::kStringValue: {
+        return value.string_value();
+        break;
+      }
+      case ProtobufWkt::Value::kNumberValue: {
+        return value.number_value();
+        break;
+      }
+      case ProtobufWkt::Value::kBoolValue: {
+        const std::string &stringval = value.bool_value()
+                                          ? BoolHeader::get().trueString
+                                          : BoolHeader::get().falseString;
+        return stringval;
+        break;
+      }
+      case ProtobufWkt::Value::kListValue: {
+        const auto &listval = value.list_value().values();
+        if (listval.size() == 0) {
+          break;
+        }
+
+        // size is not zero, so this will work
+        auto it = listval.begin();
+        std::stringstream ss;
+
+        auto addValue = [&ss, &it] {
+          const ProtobufWkt::Value &value = *it;
+
+          switch (value.kind_case()) {
+          case ProtobufWkt::Value::kStringValue: {
+            ss << value.string_value();
+            break;
+          }
+          case ProtobufWkt::Value::kNumberValue: {
+            ss << value.number_value();
+            break;
+          }
+          case ProtobufWkt::Value::kBoolValue: {
+            ss << (value.bool_value() ? BoolHeader::get().trueString
+                                      : BoolHeader::get().falseString);
+            break;
+          }
+          default:
+            break;
+          }
+        };
+
+        addValue();
+
+        for (it++; it != listval.end(); it++) {
+          ss << ",";
+          addValue();
+        }
+        return ss.str();
+      }
+      default: {
+        break;
+      }
+      }
+      return "";
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {

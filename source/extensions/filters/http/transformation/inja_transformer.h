@@ -67,6 +67,7 @@ private:
   nlohmann::json dynamic_metadata(const inja::Arguments &args) const;
   nlohmann::json env(const inja::Arguments &args) const;
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
+  nlohmann::json cluster_metadata_callback_deprecated(const inja::Arguments &args) const;
   nlohmann::json dynamic_metadata_callback(const inja::Arguments &args) const;
   nlohmann::json host_metadata_callback(const inja::Arguments &args) const;
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
