@@ -1,0 +1,6 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/343
+  description: >-
+    Add a new inja template function to count the words in a json message. The new function `word_count`,
+    can handle any json type, including nested json messages and will count all the words in the message.

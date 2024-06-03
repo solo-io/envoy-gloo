@@ -80,6 +80,9 @@ private:
   nlohmann::json raw_string_callback(const inja::Arguments &args) const;
   static nlohmann::json parse_metadata(const envoy::config::core::v3::Metadata* metadata,
                                                   const inja::Arguments &args);
+  static nlohmann::json word_count_callback(const inja::Arguments &args);
+  static int json_word_count(const nlohmann::json* str);
+  static int word_count(const std::string& str);
 
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
