@@ -19,7 +19,7 @@ envoy_cc_library(
         "//source/extensions/transformers/aws_lambda:api_gateway_transformer_lib",
         "//source/extensions/filters/http/nats/streaming:nats_streaming_filter_config_lib",
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
-        "//source/extensions/filters/http/wait:config",
+        "//source/extensions/filters/http/upstream_wait:config",
     ],
 )
 

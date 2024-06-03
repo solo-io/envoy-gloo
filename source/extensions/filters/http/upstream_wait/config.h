@@ -7,30 +7,30 @@
 #include "source/extensions/filters/http/common/factory_base.h"
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
-#include "api/envoy/config/filter/http/wait/v2/wait_filter.pb.validate.h"
+#include "api/envoy/config/filter/http/upstream_wait/v2/upstream_wait_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Wait {
+namespace UpstreamWait {
 
 // using Extensions::HttpFilters::Common::FactoryBase;
-using ::envoy::config::filter::http::wait::v2::WaitFilterConfig;
+using ::envoy::config::filter::http::upstream_wait::v2::UpstreamWaitFilterConfig;
 
 class WaitFilterConfigFactory
-    : public Common::DualFactoryBase<WaitFilterConfig> {
+    : public Common::DualFactoryBase<UpstreamWaitFilterConfig> {
 public:
   WaitFilterConfigFactory()
       : DualFactoryBase(SoloHttpFilterNames::get().Wait) {}
 
 private:
   absl::StatusOr<Http::FilterFactoryCb> createFilterFactoryFromProtoTyped(
-      const WaitFilterConfig &proto_config,
+      const UpstreamWaitFilterConfig &proto_config,
       const std::string &stats_prefix, DualInfo info,
       Server::Configuration::ServerFactoryContext &context) override;
 };
 
-} // namespace Wait
+} // namespace UpstreamWait
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

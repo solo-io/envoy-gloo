@@ -22,7 +22,7 @@ envoy_cc_library(
     deps = [
         ":filter",
         "//source/extensions/filters/http:solo_well_known_names",
-        "//api/envoy/config/filter/http/wait/v2:pkg_cc_proto",
+        "//api/envoy/config/filter/http/upstream_wait/v2:pkg_cc_proto",
         "@envoy//envoy/router:router_interface",
         "@envoy//envoy/config:typed_config_interface",
         "@envoy//source/common/protobuf:message_validator_lib",
@@ -40,7 +40,7 @@ envoy_cc_library(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http:solo_well_known_names",
-        "//api/envoy/config/filter/http/wait/v2:pkg_cc_proto",
+        "//api/envoy/config/filter/http/upstream_wait/v2:pkg_cc_proto",
         "@envoy//envoy/router:router_interface",
         "@envoy//envoy/config:typed_config_interface",
         "@envoy//source/common/protobuf:message_validator_lib",

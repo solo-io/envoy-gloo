@@ -1,12 +1,12 @@
 #pragma once
 
 #include "envoy/server/filter_config.h"
-#include "api/envoy/config/filter/http/wait/v2/wait_filter.pb.validate.h"
+#include "api/envoy/config/filter/http/upstream_wait/v2/upstream_wait_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Wait {
+namespace UpstreamWait {
 
 class WaitingFilter : public Http::StreamDecoderFilter,
                       Logger::Loggable<Logger::Id::filter>,
@@ -48,7 +48,7 @@ private:
   bool paused_iteration_{false};
 };
 
-} // namespace Wait
+} // namespace UpstreamWait
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

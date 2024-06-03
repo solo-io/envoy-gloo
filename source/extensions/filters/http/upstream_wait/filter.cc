@@ -1,11 +1,11 @@
 #include "envoy/server/filter_config.h"
-#include "source/extensions/filters/http/wait/filter.h"
-#include "api/envoy/config/filter/http/wait/v2/wait_filter.pb.validate.h"
+#include "source/extensions/filters/http/upstream_wait/filter.h"
+#include "api/envoy/config/filter/http/upstream_wait/v2/upstream_wait_filter.pb.validate.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Wait {
+namespace UpstreamWait {
 
 WaitingFilter::WaitingFilter() {}
 
@@ -33,7 +33,7 @@ WaitingFilter::decodeHeaders(Http::RequestHeaderMap &,
   return Http::FilterHeadersStatus::Continue;
 }
 
-} // namespace Wait
+} // namespace UpstreamWait
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy

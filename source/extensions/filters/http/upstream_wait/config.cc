@@ -1,4 +1,4 @@
-#include "source/extensions/filters/http/wait/config.h"
+#include "source/extensions/filters/http/upstream_wait/config.h"
 
 #include <string>
 
@@ -7,16 +7,16 @@
 #include "source/common/common/macros.h"
 #include "source/common/protobuf/utility.h"
 
-#include "source/extensions/filters/http/wait/filter.h"
+#include "source/extensions/filters/http/upstream_wait/filter.h"
 
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
-namespace Wait {
+namespace UpstreamWait {
 
 absl::StatusOr<Http::FilterFactoryCb>
 WaitFilterConfigFactory::createFilterFactoryFromProtoTyped(
-    const WaitFilterConfig &,
+    const UpstreamWaitFilterConfig &,
     const std::string &, DualInfo,
     Server::Configuration::ServerFactoryContext &) {
 
@@ -33,7 +33,7 @@ WaitFilterConfigFactory::createFilterFactoryFromProtoTyped(
 REGISTER_FACTORY(WaitFilterConfigFactory,
                  Server::Configuration::UpstreamHttpFilterConfigFactory);
 
-} // namespace Wait
+} // namespace UpstreamWait
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy
