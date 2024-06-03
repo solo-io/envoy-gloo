@@ -264,6 +264,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("raw_string", 1, [this](Arguments &args) {
     return raw_string_callback(args);
   });
+  env_.add_callback("word_count", 1, [](Arguments &args) {
+    return word_count_callback(args);
+  });
 }
 
 json TransformerInstance::header_callback(const inja::Arguments &args) const {
@@ -409,6 +412,75 @@ json TransformerInstance::base64url_decode_callback(const inja::Arguments &args)
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   return Base64Url::decode(input);
 }
+
+json TransformerInstance::word_count_callback(const inja::Arguments &args) {
+  return json_word_count(args.at(0));
+}
+
+int TransformerInstance::json_word_count(const nlohmann::json* input)  {
+  if (input->is_string()) {
+    const std::string &input_string = input->get_ref<const std::string &>();
+    return word_count(input_string);
+  } else if (input->is_array()) {
+    int total_word_count = 0;
+    const auto &input_array = input->get_ref<const std::vector<json> &>();
+    for (auto & element : input_array) {
+      total_word_count += json_word_count(&element);
+    }
+    return total_word_count;
+  } else if (input->is_object()) {
+    int total_word_count = 0;
+    const auto element_obj = input->get_ref<const json::object_t &>();
+    for (auto & [key, value] : element_obj) {
+      total_word_count += word_count(key);
+      total_word_count += json_word_count(&value);
+    }
+    return total_word_count;
+  } else if (input->is_number() || input->is_boolean()) {
+    // Booleans and numbers are constant
+    return 1;
+  }
+  return 0;
+}
+
+int TransformerInstance::word_count(const std::string& input_string)  {
+    unsigned long ctr = 0; // Initializing a counter variable to count words
+
+    // Advance through all spaces at the beginning
+
+
+    unsigned long first_char = 0;
+    for (unsigned long x = 0; x < input_string.length(); x++) {
+      // https://en.cppreference.com/w/cpp/string/byte/isspace
+      if (!isspace(input_string[x] )){
+        first_char = x;
+        break;
+      }
+    }
+
+    // Loop through the string and count spaces to determine words
+    bool in_white_space = false;
+    for (unsigned long x = first_char; x < input_string.length(); x++) {
+      // https://en.cppreference.com/w/cpp/string/byte/isspace
+      if (isspace(input_string[x] )){ // Checking for spaces to count words
+        if (!in_white_space){
+          ctr++; // Increment the counter for each new "word"
+        }
+        in_white_space = true;
+      } else{
+        in_white_space = false;
+      }
+    }
+    // Return the count of words by adding 1 to the total number of spaces
+    // (plus 1 for the last word without a trailing space
+    // unless it ends with a space 
+    if (isspace(input_string[input_string.length() - 1] )){
+      return ctr;
+    } else {
+      return ctr + 1;
+    }
+}
+
 
 // return a substring of the input string, starting at the start position
 // and extending for length characters. If length is not provided, the

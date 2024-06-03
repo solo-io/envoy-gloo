@@ -73,6 +73,9 @@ private:
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
   nlohmann::json raw_string_callback(const inja::Arguments &args) const;
+  static nlohmann::json word_count_callback(const inja::Arguments &args);
+  static int json_word_count(const nlohmann::json* str);
+  static int word_count(const std::string& str);
 
   inja::Environment env_;
   absl::flat_hash_map<std::string, std::string> pattern_replacements_;
