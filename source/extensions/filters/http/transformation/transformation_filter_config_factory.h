@@ -15,20 +15,20 @@ namespace Extensions {
 namespace HttpFilters {
 namespace Transformation {
 
-using Extensions::HttpFilters::Common::FactoryBase;
+// using Extensions::HttpFilters::Common::FactoryBase;
 
 class TransformationFilterConfigFactory
-    : public Common::FactoryBase<TransformationConfigProto,
+    : public Common::DualFactoryBase<TransformationConfigProto,
                                  RouteTransformationConfigProto> {
 public:
   TransformationFilterConfigFactory()
-      : FactoryBase(SoloHttpFilterNames::get().Transformation) {}
+      : DualFactoryBase(SoloHttpFilterNames::get().Transformation) {}
 
 private:
-  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
+  absl::StatusOr<Http::FilterFactoryCb> createFilterFactoryFromProtoTyped(
       const TransformationConfigProto &proto_config,
-      const std::string &stats_prefix,
-      Server::Configuration::FactoryContext &context) override;
+      const std::string &stats_prefix, DualInfo info,
+      Server::Configuration::ServerFactoryContext &context) override;
 
   Router::RouteSpecificFilterConfigConstSharedPtr
   createRouteSpecificFilterConfigTyped(

@@ -26,6 +26,8 @@ public:
   // Transformation filter
   // TODO(talnordan): Consider "io.solo.filters.http.transformation".
   const std::string Transformation = "io.solo.transformation";
+  // Wait filter
+  const std::string Wait = "io.solo.upstream_wait";
 };
 
 typedef ConstSingleton<SoloHttpFilterNameValues> SoloHttpFilterNames;

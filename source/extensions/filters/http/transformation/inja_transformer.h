@@ -39,6 +39,8 @@ public:
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
+  Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata_;
+  const envoy::config::core::v3::Metadata *dynamic_metadata_;
 };
 
 
@@ -65,6 +67,9 @@ private:
   nlohmann::json dynamic_metadata(const inja::Arguments &args) const;
   nlohmann::json env(const inja::Arguments &args) const;
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
+  nlohmann::json cluster_metadata_callback_deprecated(const inja::Arguments &args) const;
+  nlohmann::json dynamic_metadata_callback(const inja::Arguments &args) const;
+  nlohmann::json host_metadata_callback(const inja::Arguments &args) const;
   nlohmann::json base64_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64url_encode_callback(const inja::Arguments &args) const;
   nlohmann::json base64_decode_callback(const inja::Arguments &args) const;
@@ -73,6 +78,8 @@ private:
   nlohmann::json replace_with_random_callback(const inja::Arguments &args);
   std::string& random_for_pattern(const std::string& pattern);
   nlohmann::json raw_string_callback(const inja::Arguments &args) const;
+  static nlohmann::json parse_metadata(const envoy::config::core::v3::Metadata* metadata,
+                                                  const inja::Arguments &args);
   static nlohmann::json word_count_callback(const inja::Arguments &args);
   static int json_word_count(const nlohmann::json* str);
   static int word_count(const std::string& str);
@@ -128,6 +135,7 @@ private:
     std::string namespace_;
     std::string key_;
     inja::Template template_;
+    bool parse_json_;
   };
 
   bool advanced_templates_{};

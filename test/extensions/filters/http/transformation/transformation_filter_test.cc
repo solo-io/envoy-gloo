@@ -5,6 +5,7 @@
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "source/common/common/logger.h"
+#include "test/mocks/server/factory_context.h"
 
 #include "fmt/format.h"
 #include "gmock/gmock.h"
@@ -33,8 +34,16 @@ std::string get_invalid_template_error(std::string request_or_response) {
     "[inja.exception.parser_error] (at 1:" + error_pos + ") malformed expression";
 }
 
+TEST(TransformationFilterConfig, TransformationUpstreamFactoryTest) {
+
+  auto* factory =
+      Registry::FactoryRegistry<Server::Configuration::UpstreamHttpFilterConfigFactory>::getFactory(
+          "io.solo.transformation");
+  ASSERT_NE(factory, nullptr);
+}
+
 TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
-  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
+  NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
   NiceMock<Stats::MockIsolatedStatsStore> scope;
   envoy::api::v2::filter::http::TransformationRule transformation_rule;
   auto &route_matcher = (*transformation_rule.mutable_match());
@@ -51,7 +60,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
-                                                     factory_context_),
+                                                     server_factory_context_),
         EnvoyException,
         get_invalid_template_error("request"));
   }
@@ -68,7 +77,7 @@ TEST(TransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
     EXPECT_THROW_WITH_MESSAGE(
         std::make_unique<TransformationFilterConfig>(listener_config, "foo",
-                                                     factory_context_),
+                                                     server_factory_context_),
         EnvoyException,
         get_invalid_template_error("response"));
   }
@@ -103,7 +112,6 @@ TEST(RouteTransformationFilterConfig, EnvoyExceptionOnBadRouteConfig) {
 
 class TransformationFilterTest : public testing::Test {
 public:
-  NiceMock<Server::Configuration::MockFactoryContext> factory_context_;
   NiceMock<Server::Configuration::MockServerFactoryContext> server_factory_context_;
 
   enum class ConfigType {
@@ -146,7 +154,7 @@ public:
     const std::string &stats_prefix = "test_";
     config_ = std::make_shared<TransformationFilterConfig>(
         listener_config_, stats_prefix,
-        factory_context_);
+        server_factory_context_);
 
     filter_ = std::make_unique<TransformationFilter>(config_);
     filter_->setDecoderFilterCallbacks(filter_callbacks_);

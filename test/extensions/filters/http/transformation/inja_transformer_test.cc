@@ -785,6 +785,33 @@ TEST_F(InjaTransformerTest, UseDefaultNS) {
   transformer.transform(headers, &headers, body, callbacks);
 }
 
+TEST_F(InjaTransformerTest, UseDefaultNSStructureData) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  auto dynamic_meta = transformation.add_dynamic_metadata_values();
+  dynamic_meta->set_key("foo");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+  dynamic_meta->set_json_to_proto(true);
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.has_list_value(), true);
+          }));
+  Buffer::OwnedImpl body("[1, 2]");
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
 TEST_F(InjaTransformerTest, UseCustomNS) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
@@ -794,14 +821,22 @@ TEST_F(InjaTransformerTest, UseCustomNS) {
   auto dynamic_meta = transformation.add_dynamic_metadata_values();
   dynamic_meta->set_key("foo");
   dynamic_meta->set_metadata_namespace("foo.ns");
-  dynamic_meta->mutable_value()->set_text("123");
+  dynamic_meta->mutable_value()->set_text("{{body()}}");
+  dynamic_meta->set_json_to_proto(true);
 
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
-  EXPECT_CALL(callbacks.stream_info_, setDynamicMetadata("foo.ns", _)).Times(1);
-  Buffer::OwnedImpl body;
+  EXPECT_CALL(callbacks.stream_info_,
+              setDynamicMetadata("foo.ns", _))
+      .Times(1)
+      .WillOnce(
+          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+            auto field = value.fields().at("foo");
+            EXPECT_EQ(field.number_value(), 123);
+          }));
+  Buffer::OwnedImpl body("123");
   transformer.transform(headers, &headers, body, callbacks);
 }
 
@@ -1120,6 +1155,60 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   Buffer::OwnedImpl body("1");
   transformer.transform(headers, &headers, body, callbacks);
   EXPECT_EQ(body.toString(), "val");
+}
+
+const std::string INVALID_MATCHER =
+    R"EOF(
+{
+  "key":[
+    1,
+    2
+  ]
+}
+)EOF";
+
+TEST_F(InjaTransformerTest, ParseFromClusterMetadataList) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{cluster_metadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(*callbacks.cluster_info_, metadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "[1,2]");
+}
+
+TEST_F(InjaTransformerTest, ParseFromClusterMetadataListDeprecated) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{clusterMetadata(\"key\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(*callbacks.cluster_info_, metadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "1,2");
 }
 
 TEST_F(InjaTransformerTest, ParseFromNilClusterInfo) {
