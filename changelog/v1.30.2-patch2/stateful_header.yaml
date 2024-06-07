@@ -1,0 +1,4 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Enable stateful_session header
