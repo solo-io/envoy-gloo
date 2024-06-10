@@ -1,7 +1,7 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
-        # envoy 1.27.5 from release v1.27.5-fork1
-        commit = "defe1b87c9aaa8c2881b4dcd20813c733932e768",
+        # envoy 1.27.6 from release v1.27.6-fork1
+        commit = "a7fbe6da6f653c4523a751cb8d9462e24cc28ca8",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
