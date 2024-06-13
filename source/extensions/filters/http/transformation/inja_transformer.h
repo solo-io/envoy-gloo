@@ -81,6 +81,7 @@ private:
   static nlohmann::json parse_metadata(const envoy::config::core::v3::Metadata* metadata,
                                                   const inja::Arguments &args);
   static nlohmann::json word_count_callback(const inja::Arguments &args);
+  static nlohmann::json delete_key_callback(const inja::Arguments &args);
   static int json_word_count(const nlohmann::json* str);
   static int word_count(const std::string& str);
 
