@@ -1062,6 +1062,22 @@ TEST_F(InjaTransformerTest, WordCountJSON) {
   transformer.transform(headers, &headers, body, callbacks);
 }
 
+TEST_F(InjaTransformerTest, DeleteKey) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+
+  transformation.mutable_body()->set_text("{{delete_key( context() , \"a\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  auto test_string = "{\"a\": \"Hal, what's the meaning of life?\", \"b\": \"I don't know John\"}";
+  Buffer::OwnedImpl body(test_string);
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "{\"b\":\"I don't know John\"}");
+}
+
 TEST_F(InjaTransformerTest, SubstringOutOfBounds) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;

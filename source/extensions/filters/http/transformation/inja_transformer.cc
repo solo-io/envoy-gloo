@@ -276,6 +276,9 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("word_count", 1, [](Arguments &args) {
     return word_count_callback(args);
   });
+  env_.add_callback("delete_key", 2, [](Arguments &args) {
+    return delete_key_callback(args);
+  });
 }
 
 
@@ -490,6 +493,13 @@ json TransformerInstance::base64_decode_callback(const inja::Arguments &args) co
 json TransformerInstance::base64url_decode_callback(const inja::Arguments &args) const {
   const std::string &input = args.at(0)->get_ref<const std::string &>();
   return Base64Url::decode(input);
+}
+
+json TransformerInstance::deletekey_callback(const inja::Arguments &args) {
+  auto json_input  = args.at(0)->get<json::object_t>();
+  const std::string & json_key = args.at(1)->get_ref<const std::string &>();
+  json_input.erase(json_key);
+  return json_input;
 }
 
 json TransformerInstance::word_count_callback(const inja::Arguments &args) {
