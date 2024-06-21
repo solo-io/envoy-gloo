@@ -154,6 +154,7 @@ private:
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
+  std::vector<std::tuple<std::string, bool, inja::Template>> merge_templates_;
   ThreadLocal::SlotPtr tls_;
   std::unique_ptr<TransformerInstance> instance_;
 };

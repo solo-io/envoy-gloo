@@ -772,6 +772,21 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     merged_extractors_to_body_ = true;
     break;
   }
+  case TransformationTemplate::kMergeJsonKeys: {
+    if (transformation.parse_body_behavior() == TransformationTemplate::DontParse) {
+      throw EnvoyException("MergeJsonKeys requires parsing the body");
+    }
+    try {
+      for (const auto &named_extractor : transformation.merge_json_keys().json_keys()) {
+        merge_templates_.emplace_back(std::make_tuple(named_extractor.first, named_extractor.second.override_empty(), instance_->parse(named_extractor.second.tmpl().text())));
+      }
+
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse merge_body_key template {}", e.what()));
+    }
+    break;
+  }
   case TransformationTemplate::kPassthrough:
     break;
   case TransformationTemplate::BODY_TRANSFORMATION_NOT_SET: {
@@ -943,6 +958,32 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     std::string output = instance_->render(body_template_.value());
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
+    std::string output = json_body.dump();
+    maybe_body.emplace(output);
+  } else if (merge_templates_.size() > 0) {
+
+    for (const auto &merge_template : merge_templates_) {
+      const std::string &name = std::get<0>(merge_template);
+      
+      // prepare variables for non-advanced_templates_ scenario
+      absl::string_view name_to_split;
+      json* current = nullptr;
+      // if (!advanced_templates_) {
+      name_to_split = name;
+      current = &json_body;
+      for (size_t pos = name_to_split.find("."); pos != std::string::npos;
+          pos = name_to_split.find(".")) {
+        auto &&field_name = name_to_split.substr(0, pos);
+        current = &(*current)[std::string(field_name)];
+        name_to_split = name_to_split.substr(pos + 1);
+      }
+      const auto rendered = instance_->render(std::get<2>(merge_template));
+      // Do not overwrite with empty unless specified
+      if (rendered.size() > 0 || std::get<1>(merge_template)) {
+        (*current)[std::string(name_to_split)] = rendered;
+      }
+      // }
+    }
     std::string output = json_body.dump();
     maybe_body.emplace(output);
   }
