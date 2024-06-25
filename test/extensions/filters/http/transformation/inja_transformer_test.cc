@@ -763,8 +763,12 @@ TEST_F(InjaTransformerTest, MergeJsonKeys) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
 
+
+  // TransformationTemplate transformation;
+  // transformation.mutable_body()->set_text("{\"ext2\": \"{{header(\":path\")}\" }");
+
   envoy::api::v2::filter::http::InjaTemplate inja_template;
-  inja_template.set_text("{{header(\":path\")}}");
+  inja_template.set_text("\"{{header(\":path\")}}\"");
   envoy::api::v2::filter::http::MergeJsonKeys_OverridableTemplate tmpl;
   (*tmpl.mutable_tmpl()) = inja_template;
   (*transformation.mutable_merge_json_keys()->mutable_json_keys())["ext2"] = tmpl;

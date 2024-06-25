@@ -980,7 +980,13 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       const auto rendered = instance_->render(std::get<2>(merge_template));
       // Do not overwrite with empty unless specified
       if (rendered.size() > 0 || std::get<1>(merge_template)) {
-        (*current)[std::string(name_to_split)] = rendered;
+        try {
+          auto rendered_json = json::parse(rendered);
+          (*current)[std::string(name_to_split)] = rendered_json;
+        } catch (const std::exception &e) {
+          ASSERT("failed to parse merge_json_key output");
+          (*current)[std::string(name_to_split)] = rendered;
+        }
       }
       // }
     }
