@@ -1,0 +1,10 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyRepo: envoy-fork
+    dependencyOwner: solo-io
+    dependencyTag: v1.26.8-fork2
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/807
+    resolvesIssue: false
+    description: >
+      Bump Envoy to v1.26.8 for our fork.
+      Tackles the http2 crazy cve CVE-2024-30255
