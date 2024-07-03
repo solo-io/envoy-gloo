@@ -236,13 +236,13 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback_deprecated(args);
   });
-  env_.add_callback("cluster_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("cluster_metadata", [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
-  env_.add_callback("dynamic_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("dynamic_metadata", [this](Arguments &args) {
     return dynamic_metadata_callback(args);
   });
-  env_.add_callback("host_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("host_metadata", [this](Arguments &args) {
     return host_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
