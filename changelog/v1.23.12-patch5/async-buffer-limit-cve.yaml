@@ -1,0 +1,11 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/807
+  resolvesIssue: false
+  description: >-
+    Fixes a CVE in Envoy where async buffers could overflow. See
+    https://github.com/envoyproxy/envoy/security/advisories/GHSA-xcj3-h7vf-fw26
+
+    Backport onto the 1.23 branch of [this
+    fix](https://github.com/envoyproxy/envoy/commit/56b4de5babd0400341044a8391526931ae2fb80c)
+
