@@ -960,7 +960,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   } else if (merged_extractors_to_body_) {
     std::string output = json_body.dump();
     maybe_body.emplace(output);
-  } else if (merge_templates_.size() > 0) {
+  } else if (!merge_templates_.empty()) {
 
     for (const auto &merge_template : merge_templates_) {
       const std::string &name = std::get<0>(merge_template);
