@@ -70,6 +70,7 @@ def envoy_gloo_dependencies():
         "@envoy_gloo//bazel/foreign_cc:http-connection-reset-23.patch", # https://github.com/envoyproxy/envoy/pull/30058
         "@envoy_gloo//bazel/foreign_cc:decode-23.patch", # https://github.com/envoyproxy/envoy/commit/b09e3d32d27ec28be773751c9721eaaedf5387c1
         "@envoy_gloo//bazel/foreign_cc:8feb24-cves-23.patch",
+        "@envoy_gloo//bazel/foreign_cc:async-buffer-limit-23.patch"# https://github.com/envoyproxy/envoy/commit/56b4de5babd0400341044a8391526931ae2fb80c
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
