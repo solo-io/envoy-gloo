@@ -775,7 +775,9 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
   case TransformationTemplate::kMergeJsonKeys: {
     if (transformation.parse_body_behavior() == TransformationTemplate::DontParse) {
       throw EnvoyException("MergeJsonKeys requires parsing the body");
-    }
+    } else if (transformation.advanced_templates()) {
+      throw EnvoyException("MergeJsonKeys is not supported with advanced templates");
+    } 
     try {
       for (const auto &named_extractor : transformation.merge_json_keys().json_keys()) {
         merge_templates_.emplace_back(std::make_tuple(named_extractor.first, named_extractor.second.override_empty(), instance_->parse(named_extractor.second.tmpl().text())));
@@ -984,7 +986,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
           auto rendered_json = json::parse(rendered);
           (*current)[std::string(name_to_split)] = rendered_json;
         } catch (const std::exception &e) {
-          ASSERT("failed to parse merge_json_key output");
+          ENVOY_STREAM_LOG(debug, "failed to parse merge_json_key output: {}", callbacks, e.what());
           (*current)[std::string(name_to_split)] = rendered;
         }
       }

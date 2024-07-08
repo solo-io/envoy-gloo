@@ -116,7 +116,7 @@ private:
   const ExtractionApi::Mode mode_;
 };
 
-class InjaTransformer : public Transformer {
+class InjaTransformer : public Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate &transformation,
                   Envoy::Random::RandomGenerator &rng,
