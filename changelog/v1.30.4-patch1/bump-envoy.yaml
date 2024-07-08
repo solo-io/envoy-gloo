@@ -1,0 +1,11 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/solo-projects/issues/6290
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.30.4-patch1
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.30.4 release for cves.
+    - [CVE-2024-39305] https://github.com/envoyproxy/envoy/security/advisories/GHSA-fp35-g349-h66f
+    - Datadog https://github.com/envoyproxy/envoy/pull/34899
