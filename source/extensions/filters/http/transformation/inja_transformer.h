@@ -154,6 +154,10 @@ private:
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
+  // merged_templates_ is a vector of tuples with the following fields:
+  // 1. The json path to merge the template into
+  // 2. Whether to override the value at the json path if empty
+  // 3. The template to merge
   std::vector<std::tuple<std::string, bool, inja::Template>> merge_templates_;
   ThreadLocal::SlotPtr tls_;
   std::unique_ptr<TransformerInstance> instance_;
