@@ -269,6 +269,7 @@ message TransformationTemplate {
     MergeExtractorsToBody merge_extractors_to_body = 6;
     // A set of key-value pairs to merge into the JSON body.
     // Each value will be rendered separately, and then placed into the JSON body at
+    // Cannot be used on any other section other than the body
     // the specified key.
     // This can only be used when the body is parsed as JSON.
     MergeJsonKeys merge_json_keys = 13;
