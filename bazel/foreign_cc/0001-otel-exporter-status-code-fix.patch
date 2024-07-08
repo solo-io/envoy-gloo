@@ -1,0 +1,140 @@
+diff --git source/extensions/tracers/opentelemetry/tracer.cc source/extensions/tracers/opentelemetry/tracer.cc
+index 544c37ef96..e62a23c939 100644
+--- source/extensions/tracers/opentelemetry/tracer.cc
++++ source/extensions/tracers/opentelemetry/tracer.cc
+@@ -7,6 +7,7 @@
+ 
+ #include "source/common/common/empty_string.h"
+ #include "source/common/common/hex.h"
++#include "source/common/tracing/common_values.h"
+ #include "source/common/tracing/trace_context_impl.h"
+ #include "source/extensions/tracers/opentelemetry/otlp_utils.h"
+ 
+@@ -121,7 +122,25 @@ void Span::setAttribute(absl::string_view name, const OTelAttribute& attribute_v
+   *span_.add_attributes() = key_value;
+ }
+ 
+-void Span::setTag(absl::string_view name, absl::string_view value) { setAttribute(name, value); }
++void Span::setTag(absl::string_view name, absl::string_view value) {
++  if (name == Tracing::Tags::get().HttpStatusCode) {
++    uint64_t status_code;
++    // For HTTP status codes in the 5xx range, as well as any other code the client failed to
++    // interpret, span status MUST be set to Error.
++    //
++    // For HTTP status codes in the 4xx range span status MUST be left unset in case of
++    // SpanKind.SERVER and MUST be set to Error in case of SpanKind.CLIENT.
++    if (absl::SimpleAtoi(value, &status_code)) {
++      if (status_code >= 500 ||
++          (status_code >= 400 &&
++           span_.kind() == ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_CLIENT)) {
++        span_.mutable_status()->set_code(
++            ::opentelemetry::proto::trace::v1::Status::STATUS_CODE_ERROR);
++      }
++    }
++  }
++  setAttribute(name, value);
++}
+ 
+ Tracer::Tracer(OpenTelemetryTraceExporterPtr exporter, Envoy::TimeSource& time_source,
+                Random::RandomGenerator& random, Runtime::Loader& runtime,
+diff --git test/extensions/tracers/opentelemetry/opentelemetry_tracer_impl_test.cc test/extensions/tracers/opentelemetry/opentelemetry_tracer_impl_test.cc
+index 223c743527..81ecb843dd 100644
+--- test/extensions/tracers/opentelemetry/opentelemetry_tracer_impl_test.cc
++++ test/extensions/tracers/opentelemetry/opentelemetry_tracer_impl_test.cc
+@@ -531,9 +531,14 @@ TEST_F(OpenTelemetryDriverTest, SpanType) {
+     Tracing::SpanPtr child_span =
+         span->spawnChild(mock_tracing_config_, operation_name_, time_system_.systemTime());
+ 
++    child_span->setTag("http.status_code", "400");
++
+     // The child span should also be a CLIENT span.
+     EXPECT_EQ(dynamic_cast<Span*>(child_span.get())->spanForTest().kind(),
+               ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_CLIENT);
++    // The child span should have an error status.
++    EXPECT_EQ(dynamic_cast<Span*>(child_span.get())->spanForTest().status().code(),
++              ::opentelemetry::proto::trace::v1::Status::STATUS_CODE_ERROR);
+   }
+ }
+ 
+@@ -606,6 +611,81 @@ resource_spans:
+   EXPECT_EQ(1U, stats_.counter("tracing.opentelemetry.spans_sent").value());
+ }
+ 
++// Verifies spans are exported with their attributes and status
++TEST_F(OpenTelemetryDriverTest, ExportOTLPSpanWithAttributesAndStatus) {
++  setupValidDriver();
++  Tracing::TestTraceContextImpl request_headers{
++      {":authority", "test.com"}, {":path", "/"}, {":method", "GET"}};
++  NiceMock<Random::MockRandomGenerator>& mock_random_generator_ =
++      context_.server_factory_context_.api_.random_;
++  int64_t generated_int = 1;
++  EXPECT_CALL(mock_random_generator_, random()).Times(3).WillRepeatedly(Return(generated_int));
++  SystemTime timestamp = time_system_.systemTime();
++  ON_CALL(stream_info_, startTime()).WillByDefault(Return(timestamp));
++
++  Tracing::SpanPtr span = driver_->startSpan(mock_tracing_config_, request_headers, stream_info_,
++                                             operation_name_, {Tracing::Reason::Sampling, true});
++  EXPECT_NE(span.get(), nullptr);
++
++  span->setTag("first_tag_name", "first_tag_value");
++  span->setTag("second_tag_name", "second_tag_value");
++  // Try an empty tag.
++  span->setTag("", "empty_tag_value");
++  // Overwrite a tag.
++  span->setTag("first_tag_name", "first_tag_new_value");
++  span->setTag("http.status_code", "500");
++
++  // Note the placeholders for the bytes - cleaner to manually set after.
++  constexpr absl::string_view request_yaml = R"(
++resource_spans:
++  resource:
++    attributes:
++      key: "service.name"
++      value:
++        string_value: "unknown_service:envoy"
++      key: "key1"
++      value:
++        string_value: "val1"
++  scope_spans:
++    spans:
++      trace_id: "AAA"
++      span_id: "AAA"
++      name: "test"
++      kind: SPAN_KIND_SERVER
++      start_time_unix_nano: {}
++      end_time_unix_nano: {}
++      status:
++        code: STATUS_CODE_ERROR
++      attributes:
++        - key: "first_tag_name"
++          value:
++            string_value: "first_tag_new_value"
++        - key: "second_tag_name"
++          value:
++            string_value: "second_tag_value"
++        - key: "http.status_code"
++          value:
++            string_value: "500"
++  )";
++  opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest request_proto;
++  int64_t timestamp_ns = std::chrono::nanoseconds(timestamp.time_since_epoch()).count();
++  TestUtility::loadFromYaml(fmt::format(request_yaml, timestamp_ns, timestamp_ns), request_proto);
++  std::string generated_int_hex = Hex::uint64ToHex(generated_int);
++  auto* expected_span =
++      request_proto.mutable_resource_spans(0)->mutable_scope_spans(0)->mutable_spans(0);
++  expected_span->set_trace_id(
++      absl::HexStringToBytes(absl::StrCat(generated_int_hex, generated_int_hex)));
++  expected_span->set_span_id(absl::HexStringToBytes(absl::StrCat(generated_int_hex)));
++
++  EXPECT_CALL(runtime_.snapshot_, getInteger("tracing.opentelemetry.min_flush_spans", 5U))
++      .Times(1)
++      .WillRepeatedly(Return(1));
++  EXPECT_CALL(*mock_stream_ptr_,
++              sendMessageRaw_(Grpc::ProtoBufferEqIgnoreRepeatedFieldOrdering(request_proto), _));
++  span->finishSpan();
++  EXPECT_EQ(1U, stats_.counter("tracing.opentelemetry.spans_sent").value());
++}
++
+ // Not sampled spans are ignored
+ TEST_F(OpenTelemetryDriverTest, IgnoreNotSampledSpan) {
+   setupValidDriver();
