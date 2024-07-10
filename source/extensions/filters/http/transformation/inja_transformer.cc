@@ -778,15 +778,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     } else if (transformation.advanced_templates()) {
       throw EnvoyException("MergeJsonKeys is not supported with advanced templates");
     } 
-    try {
       for (const auto &[name, tmpl] : transformation.merge_json_keys().json_keys()) {
-        merge_templates_.emplace_back(std::make_tuple(name, tmpl.override_empty(), instance_->parse(tmpl.tmpl().text())));
+        try {
+          merge_templates_.emplace_back(std::make_tuple(name, tmpl.override_empty(), instance_->parse(tmpl.tmpl().text())));
+        } catch (const std::exception) {
+          throw EnvoyException(
+              fmt::format("Failed to parse merge_body_key template for key: ({})", name));
+        }
       }
-
-    } catch (const std::exception &e) {
-      throw EnvoyException(
-          fmt::format("Failed to parse merge_body_key template {}", e.what()));
-    }
     break;
   }
   case TransformationTemplate::kPassthrough:
@@ -982,13 +981,8 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       const auto rendered = instance_->render(std::get<2>(merge_template));
       // Do not overwrite with empty unless specified
       if (rendered.size() > 0 || std::get<1>(merge_template)) {
-        try {
-          auto rendered_json = json::parse(rendered);
-          (*current)[std::string(name_to_split)] = rendered_json;
-        } catch (const std::exception &e) {
-          ENVOY_STREAM_LOG(debug, "failed to parse merge_json_key output: {}", callbacks, e.what());
-          (*current)[std::string(name_to_split)] = rendered;
-        }
+        auto rendered_json = json::parse(rendered);
+        (*current)[std::string(name_to_split)] = rendered_json;
       }
       // }
     }

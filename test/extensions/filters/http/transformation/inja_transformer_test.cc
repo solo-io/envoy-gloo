@@ -807,7 +807,7 @@ TEST_F(InjaTransformerTest, MergeJsonKeysEmptyBody ) {
 
   envoy::api::v2::filter::http::InjaTemplate inja_template;
   // Should return "" and therefore not write the key at all
-  inja_template.set_text("{{header(\":path\")}}");
+  inja_template.set_text("\"{{header(\":method\")}}\"");
   envoy::api::v2::filter::http::MergeJsonKeys_OverridableTemplate tmpl;
   (*tmpl.mutable_tmpl()) = inja_template;
   (*transformation.mutable_merge_json_keys()->mutable_json_keys())["ext2"] = tmpl;
@@ -817,7 +817,7 @@ TEST_F(InjaTransformerTest, MergeJsonKeysEmptyBody ) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("");
   transformer.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), "{\"ext2\":\"/foo\"}");
+  EXPECT_EQ(body.toString(), "{\"ext2\":\"GET\"}");
 }
 
 TEST_F(InjaTransformerTest, MergeJsonKeysEmptyJSONBody ) {
@@ -826,7 +826,7 @@ TEST_F(InjaTransformerTest, MergeJsonKeysEmptyJSONBody ) {
 
   envoy::api::v2::filter::http::InjaTemplate inja_template;
   // Should return "" and therefore not write the key at all
-  inja_template.set_text("{{header(\":path\")}}");
+  inja_template.set_text("\"{{header(\":method\")}}\"");
   envoy::api::v2::filter::http::MergeJsonKeys_OverridableTemplate tmpl;
   (*tmpl.mutable_tmpl()) = inja_template;
   (*transformation.mutable_merge_json_keys()->mutable_json_keys())["ext2"] = tmpl;
@@ -836,7 +836,7 @@ TEST_F(InjaTransformerTest, MergeJsonKeysEmptyJSONBody ) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   Buffer::OwnedImpl body("{}");
   transformer.transform(headers, &headers, body, callbacks);
-  EXPECT_EQ(body.toString(), "{\"ext2\":\"/foo\"}");
+  EXPECT_EQ(body.toString(), "{\"ext2\":\"GET\"}");
 }
 
 TEST_F(InjaTransformerTest, UseDefaultNS) {
