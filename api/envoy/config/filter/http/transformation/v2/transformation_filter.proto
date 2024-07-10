@@ -271,7 +271,9 @@ message TransformationTemplate {
     // Each value will be rendered separately, and then placed into the JSON body at
     // Cannot be used on any other section other than the body
     // the specified key.
-    // This can only be used when the body is parsed as JSON.
+    // There are a number of important caveats to using this feature:
+    // * This can only be used when the body is parsed as JSON.
+    // * This option does NOT work with advanced tempaltes currently
     MergeJsonKeys merge_json_keys = 13;
   }
 

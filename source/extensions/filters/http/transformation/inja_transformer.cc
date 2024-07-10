@@ -773,14 +773,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     break;
   }
   case TransformationTemplate::kMergeJsonKeys: {
-    if (transformation.parse_body_behavior() == TransformationTemplate::DontParse) {
+    if (transformation.parse_body_behavior() != TransformationTemplate::ParseAsJson) {
       throw EnvoyException("MergeJsonKeys requires parsing the body");
     } else if (transformation.advanced_templates()) {
       throw EnvoyException("MergeJsonKeys is not supported with advanced templates");
     } 
     try {
-      for (const auto &named_extractor : transformation.merge_json_keys().json_keys()) {
-        merge_templates_.emplace_back(std::make_tuple(named_extractor.first, named_extractor.second.override_empty(), instance_->parse(named_extractor.second.tmpl().text())));
+      for (const auto &[name, tmpl] : transformation.merge_json_keys().json_keys()) {
+        merge_templates_.emplace_back(std::make_tuple(name, tmpl.override_empty(), instance_->parse(tmpl.tmpl().text())));
       }
 
     } catch (const std::exception &e) {
