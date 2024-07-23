@@ -1,7 +1,7 @@
 diff --git a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
 index 9b5d9a7b91..73d729adc2 100644
---- api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
-+++ api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
+--- a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
++++ b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
 @@ -130,3 +130,15 @@ message LocalRateLimitDescriptor {
    // Token Bucket algorithm for local ratelimiting.
    type.v3.TokenBucket token_bucket = 2 [(validate.rules).message = {required: true}];
@@ -20,8 +20,8 @@ index 9b5d9a7b91..73d729adc2 100644
 +}
 diff --git a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
 index c253d04973..a32475f352 100644
---- api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
-+++ api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
+--- a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
++++ b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
 @@ -22,7 +22,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
  // Local Rate limit :ref:`configuration overview <config_http_filters_local_rate_limit>`.
  // [#extension: envoy.filters.http.local_ratelimit]
@@ -55,10 +55,64 @@ index c253d04973..a32475f352 100644
    // Defines the standard version to use for X-RateLimit headers emitted by the filter.
    //
    // Disabled by default.
+diff --git a/envoy/ratelimit/ratelimit.h b/envoy/ratelimit/ratelimit.h
+index 2839cfa86c..5854372136 100644
+--- a/envoy/ratelimit/ratelimit.h
++++ b/envoy/ratelimit/ratelimit.h
+@@ -49,23 +49,38 @@ struct Descriptor {
+   absl::optional<RateLimitOverride> limit_ = absl::nullopt;
+ };
+ 
+-/**
+- * A single token bucket. See token_bucket.proto.
+- */
+-struct TokenBucket {
+-  uint32_t max_tokens_;
+-  uint32_t tokens_per_fill_;
+-  absl::Duration fill_interval_;
+-};
+-
+ /**
+  * A single rate limit request descriptor. See ratelimit.proto.
+  */
+ struct LocalDescriptor {
+   std::vector<DescriptorEntry> entries_;
+-  friend bool operator==(const LocalDescriptor& lhs, const LocalDescriptor& rhs) {
+-    return lhs.entries_ == rhs.entries_;
++
++  friend bool operator==(const LocalDescriptor& a, const LocalDescriptor& b) {
++    return a.entries_ == b.entries_;
+   }
++  struct Hash {
++    using is_transparent = void; // NOLINT(readability-identifier-naming)
++    size_t operator()(const LocalDescriptor& d) const {
++      return absl::Hash<std::vector<DescriptorEntry>>()(d.entries_);
++    }
++  };
++  struct Equal {
++    using is_transparent = void; // NOLINT(readability-identifier-naming)
++    size_t operator()(const LocalDescriptor& a, const LocalDescriptor& b) const {
++      return a.entries_ == b.entries_;
++    }
++  };
++
++  std::string toString() const {
++    return absl::StrJoin(entries_, ", ", [](std::string* out, const auto& e) {
++      absl::StrAppend(out, e.key_, "=", e.value_);
++    });
++  }
++
++  /**
++   * Local descriptor map.
++   */
++  template <class V> using Map = absl::flat_hash_map<LocalDescriptor, V, Hash, Equal>;
+ };
+ 
+ /*
 diff --git a/source/common/common/token_bucket_impl.cc b/source/common/common/token_bucket_impl.cc
 index f813d426d0..b3d4f10e78 100644
---- source/common/common/token_bucket_impl.cc
-+++ source/common/common/token_bucket_impl.cc
+--- a/source/common/common/token_bucket_impl.cc
++++ b/source/common/common/token_bucket_impl.cc
 @@ -1,5 +1,6 @@
  #include "source/common/common/token_bucket_impl.h"
  
@@ -121,8 +175,8 @@ index f813d426d0..b3d4f10e78 100644
  } // namespace Envoy
 diff --git a/source/common/common/token_bucket_impl.h b/source/common/common/token_bucket_impl.h
 index 96ac238e37..673f0a74e2 100644
---- source/common/common/token_bucket_impl.h
-+++ source/common/common/token_bucket_impl.h
+--- a/source/common/common/token_bucket_impl.h
++++ b/source/common/common/token_bucket_impl.h
 @@ -35,4 +35,92 @@ private:
    TimeSource& time_source_;
  };
@@ -218,8 +272,8 @@ index 96ac238e37..673f0a74e2 100644
  } // namespace Envoy
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
 index 260a08820c..f22d9cf58b 100644
---- source/common/runtime/runtime_features.cc
-+++ source/common/runtime/runtime_features.cc
+--- a/source/common/runtime/runtime_features.cc
++++ b/source/common/runtime/runtime_features.cc
 @@ -73,6 +73,7 @@ RUNTIME_GUARD(envoy_reloadable_features_lowercase_scheme);
  RUNTIME_GUARD(envoy_reloadable_features_no_downgrade_to_canonical_name);
  RUNTIME_GUARD(envoy_reloadable_features_no_extension_lookup_by_name);
@@ -240,8 +294,8 @@ index 260a08820c..f22d9cf58b 100644
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
 diff --git a/source/extensions/filters/common/local_ratelimit/BUILD b/source/extensions/filters/common/local_ratelimit/BUILD
 index 2e6af5b6da..5cea645b04 100644
---- source/extensions/filters/common/local_ratelimit/BUILD
-+++ source/extensions/filters/common/local_ratelimit/BUILD
+--- a/source/extensions/filters/common/local_ratelimit/BUILD
++++ b/source/extensions/filters/common/local_ratelimit/BUILD
 @@ -17,6 +17,7 @@ envoy_cc_library(
          "//envoy/event:timer_interface",
          "//envoy/ratelimit:ratelimit_interface",
@@ -251,10 +305,18 @@ index 2e6af5b6da..5cea645b04 100644
          "@envoy_api//envoy/extensions/common/ratelimit/v3:pkg_cc_proto",
      ],
 diff --git a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
-index 603a61eca0..694080a007 100644
---- source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
-+++ source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
-@@ -13,29 +13,187 @@ namespace Filters {
+index 603a61eca0..2537febba9 100644
+--- a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
++++ b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
+@@ -1,6 +1,7 @@
+ #include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
+ 
+ #include <chrono>
++#include <cmath>
+ 
+ #include "envoy/runtime/runtime.h"
+ 
+@@ -13,75 +14,226 @@ namespace Filters {
  namespace Common {
  namespace LocalRateLimit {
  
@@ -452,14 +514,42 @@ index 603a61eca0..694080a007 100644
    }
  
    for (const auto& descriptor : descriptors) {
-@@ -59,10 +217,16 @@ LocalRateLimiterImpl::LocalRateLimiterImpl(
-         PROTOBUF_GET_WRAPPED_OR_DEFAULT(descriptor.token_bucket(), tokens_per_fill, 1);
-     new_descriptor.token_bucket_ = per_descriptor_token_bucket;
- 
+-    LocalDescriptorImpl new_descriptor;
++    RateLimit::LocalDescriptor new_descriptor;
++    new_descriptor.entries_.reserve(descriptor.entries_size());
+     for (const auto& entry : descriptor.entries()) {
+       new_descriptor.entries_.push_back({entry.key(), entry.value()});
+     }
+-    RateLimit::TokenBucket per_descriptor_token_bucket;
+-    per_descriptor_token_bucket.fill_interval_ =
+-        absl::Milliseconds(PROTOBUF_GET_MS_OR_DEFAULT(descriptor.token_bucket(), fill_interval, 0));
+-    if (per_descriptor_token_bucket.fill_interval_ % token_bucket_.fill_interval_ !=
+-        absl::ZeroDuration()) {
++
++    const auto per_descriptor_max_tokens = descriptor.token_bucket().max_tokens();
++    const auto per_descriptor_tokens_per_fill =
++        PROTOBUF_GET_WRAPPED_OR_DEFAULT(descriptor.token_bucket(), tokens_per_fill, 1);
++    const auto per_descriptor_fill_interval = std::chrono::milliseconds(
++        PROTOBUF_GET_MS_OR_DEFAULT(descriptor.token_bucket(), fill_interval, 0));
++
++    if (per_descriptor_fill_interval.count() % fill_interval.count() != 0) {
+       throw EnvoyException(
+           "local rate descriptor limit is not a multiple of token bucket fill timer");
+     }
+     // Save the multiplicative factor to control the descriptor refill frequency.
+-    new_descriptor.multiplier_ =
+-        per_descriptor_token_bucket.fill_interval_ / token_bucket_.fill_interval_;
+-    per_descriptor_token_bucket.max_tokens_ = descriptor.token_bucket().max_tokens();
+-    per_descriptor_token_bucket.tokens_per_fill_ =
+-        PROTOBUF_GET_WRAPPED_OR_DEFAULT(descriptor.token_bucket(), tokens_per_fill, 1);
+-    new_descriptor.token_bucket_ = per_descriptor_token_bucket;
+-
 -    auto token_state = std::make_shared<TokenState>();
 -    token_state->tokens_ = per_descriptor_token_bucket.max_tokens_;
 -    token_state->fill_time_ = time_source_.monotonicTime();
 -    new_descriptor.token_state_ = token_state;
++    const auto per_descriptor_multiplier = per_descriptor_fill_interval / fill_interval;
++
 +    RateLimitTokenBucketSharedPtr per_descriptor_token_bucket;
 +    if (no_timer_based_rate_limit_token_bucket_) {
 +      per_descriptor_token_bucket = std::make_shared<AtomicTokenBucket>(
@@ -471,31 +561,141 @@ index 603a61eca0..694080a007 100644
 +          per_descriptor_multiplier, *this);
 +    }
  
-     auto result = descriptors_.emplace(new_descriptor);
+-    auto result = descriptors_.emplace(new_descriptor);
++    auto result =
++        descriptors_.emplace(std::move(new_descriptor), std::move(per_descriptor_token_bucket));
      if (!result.second) {
-@@ -105,13 +269,20 @@ void LocalRateLimiterImpl::onFillTimer() {
+       throw EnvoyException(absl::StrCat("duplicate descriptor in the local rate descriptor: ",
+-                                        result.first->toString()));
++                                        result.first->first.toString()));
+     }
+-    sorted_descriptors_.push_back(new_descriptor);
+-  }
+-  // If a request is limited by a descriptor, it should not consume tokens from the remaining
+-  // matched descriptors, so we sort the descriptors by tokens per second, as a result, in most
+-  // cases the strictest descriptor will be consumed first. However, it can not solve the
+-  // problem perfectly.
+-  if (!sorted_descriptors_.empty()) {
+-    std::sort(sorted_descriptors_.begin(), sorted_descriptors_.end(),
+-              [this](LocalDescriptorImpl a, LocalDescriptorImpl b) -> bool {
+-                const int a_token_fill_per_second = tokensFillPerSecond(a);
+-                const int b_token_fill_per_second = tokensFillPerSecond(b);
+-                return a_token_fill_per_second < b_token_fill_per_second;
+-              });
+   }
+ }
  
- void LocalRateLimiterImpl::onFillTimerHelper(TokenState& tokens,
-                                              const RateLimit::TokenBucket& bucket) {
-+
-+  uint32_t tokens_per_fill = bucket.tokens_per_fill_;
-+  if (share_provider_ != nullptr) {
-+    ASSERT_IS_MAIN_OR_TEST_THREAD();
-+    tokens_per_fill = share_provider_->tokensPerFill(tokens_per_fill);
-+  }
-+
-   // Relaxed consistency is used for all operations because we don't care about ordering, just the
-   // final atomic correctness.
-   uint32_t expected_tokens = tokens.tokens_.load(std::memory_order_relaxed);
-   uint32_t new_tokens_value;
-   do {
-     // expected_tokens is either initialized above or reloaded during the CAS failure below.
+@@ -98,149 +250,70 @@ void LocalRateLimiterImpl::onFillTimer() {
+   // descriptors tokens from being refilled at the first time hit, regardless of its fill
+   // interval configuration.
+   refill_counter_++;
+-  onFillTimerHelper(tokens_, token_bucket_);
+-  onFillTimerDescriptorHelper();
+-  fill_timer_->enableTimer(absl::ToChronoMilliseconds(token_bucket_.fill_interval_));
+-}
++  const double share_factor =
++      share_provider_ != nullptr ? share_provider_->getTokensShareFactor() : 1.0;
+ 
+-void LocalRateLimiterImpl::onFillTimerHelper(TokenState& tokens,
+-                                             const RateLimit::TokenBucket& bucket) {
+-  // Relaxed consistency is used for all operations because we don't care about ordering, just the
+-  // final atomic correctness.
+-  uint32_t expected_tokens = tokens.tokens_.load(std::memory_order_relaxed);
+-  uint32_t new_tokens_value;
+-  do {
+-    // expected_tokens is either initialized above or reloaded during the CAS failure below.
 -    new_tokens_value = std::min(bucket.max_tokens_, expected_tokens + bucket.tokens_per_fill_);
-+    new_tokens_value = std::min(bucket.max_tokens_, expected_tokens + tokens_per_fill);
+-
+-    // Testing hook.
+-    synchronizer_.syncPoint("on_fill_timer_pre_cas");
+-
+-    // Loop while the weak CAS fails trying to update the tokens value.
+-  } while (!tokens.tokens_.compare_exchange_weak(expected_tokens, new_tokens_value,
+-                                                 std::memory_order_relaxed));
+-
+-  // Update fill time at last.
+-  tokens.fill_time_ = time_source_.monotonicTime();
+-}
+-
+-void LocalRateLimiterImpl::onFillTimerDescriptorHelper() {
++  default_token_bucket_->onFillTimer(refill_counter_, share_factor);
+   for (const auto& descriptor : descriptors_) {
+-    // Descriptors are refilled every Nth timer hit where N is the ratio of the
+-    // descriptor refill interval over the global refill interval. For example,
+-    // if the descriptor refill interval is 150ms and the global refill
+-    // interval is 50ms, this descriptor is refilled every 3rd call.
+-    if (refill_counter_ % descriptor.multiplier_ == 0) {
+-      onFillTimerHelper(*descriptor.token_state_, descriptor.token_bucket_);
+-    }
++    descriptor.second->onFillTimer(refill_counter_, share_factor);
+   }
+-}
+-
+-bool LocalRateLimiterImpl::requestAllowedHelper(const TokenState& tokens) const {
+-  // Relaxed consistency is used for all operations because we don't care about ordering, just the
+-  // final atomic correctness.
+-  uint32_t expected_tokens = tokens.tokens_.load(std::memory_order_relaxed);
+-  do {
+-    // expected_tokens is either initialized above or reloaded during the CAS failure below.
+-    if (expected_tokens == 0) {
+-      return false;
+-    }
  
-     // Testing hook.
-     synchronizer_.syncPoint("on_fill_timer_pre_cas");
-@@ -193,9 +364,13 @@ bool LocalRateLimiterImpl::requestAllowed(
+-    // Testing hook.
+-    synchronizer_.syncPoint("allowed_pre_cas");
+-
+-    // Loop while the weak CAS fails trying to subtract 1 from expected.
+-  } while (!tokens.tokens_.compare_exchange_weak(expected_tokens, expected_tokens - 1,
+-                                                 std::memory_order_relaxed));
+-
+-  // We successfully decremented the counter by 1.
+-  return true;
++  fill_timer_->enableTimer(default_token_bucket_->fillInterval());
+ }
+ 
+-OptRef<const LocalRateLimiterImpl::LocalDescriptorImpl> LocalRateLimiterImpl::descriptorHelper(
++LocalRateLimiterImpl::Result LocalRateLimiterImpl::requestAllowed(
+     absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  if (!descriptors_.empty() && !request_descriptors.empty()) {
+-    // The override rate limit descriptor is selected by the first full match from the request
+-    // descriptors.
+-    for (const auto& request_descriptor : request_descriptors) {
+-      auto it = descriptors_.find(request_descriptor);
+-      if (it != descriptors_.end()) {
+-        return *it;
+-      }
+-    }
+-  }
+-  return {};
+-}
+ 
+-bool LocalRateLimiterImpl::requestAllowed(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  // Matched descriptors will be sorted by tokens per second and tokens consumed in order.
+-  // In most cases, if one of them is limited the remaining descriptors will not consume
+-  // their tokens.
+-  bool matched_descriptor = false;
+-  if (!descriptors_.empty() && !request_descriptors.empty()) {
+-    for (const auto& descriptor : sorted_descriptors_) {
+-      for (const auto& request_descriptor : request_descriptors) {
+-        if (descriptor == request_descriptor) {
+-          matched_descriptor = true;
+-          // Descriptor token is not enough.
+-          if (!requestAllowedHelper(*descriptor.token_state_)) {
+-            return false;
+-          }
+-          break;
+-        }
+-      }
++  // In most cases the request descriptors has only few elements. We use a inlined vector to
++  // avoid heap allocation.
++  absl::InlinedVector<RateLimitTokenBucket*, 8> matched_descriptors;
++
++  // Find all matched descriptors.
++  for (const auto& request_descriptor : request_descriptors) {
++    auto iter = descriptors_.find(request_descriptor);
++    if (iter != descriptors_.end()) {
++      matched_descriptors.push_back(iter->second.get());
      }
    }
  
@@ -510,13 +710,89 @@ index 603a61eca0..694080a007 100644
 +                return lhs->fillRate() < rhs->fillRate();
 +              });
    }
-   return true;
+-  return true;
+-}
+-
+-int LocalRateLimiterImpl::tokensFillPerSecond(LocalDescriptorImpl& descriptor) {
+-  return descriptor.token_bucket_.tokens_per_fill_ /
+-         (absl::ToInt64Seconds(descriptor.token_bucket_.fill_interval_)
+-              ? absl::ToInt64Seconds(descriptor.token_bucket_.fill_interval_)
+-              : 1);
+-}
+ 
+-uint32_t LocalRateLimiterImpl::maxTokens(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  auto descriptor = descriptorHelper(request_descriptors);
++  const double share_factor =
++      share_provider_ != nullptr ? share_provider_->getTokensShareFactor() : 1.0;
+ 
+-  return descriptor.has_value() ? descriptor.value().get().token_bucket_.max_tokens_
+-                                : token_bucket_.max_tokens_;
+-}
+-
+-uint32_t LocalRateLimiterImpl::remainingTokens(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  auto descriptor = descriptorHelper(request_descriptors);
++  // See if the request is forbidden by any of the matched descriptors.
++  for (auto descriptor : matched_descriptors) {
++    if (!descriptor->consume(share_factor)) {
++      // If the request is forbidden by a descriptor, return the result and the descriptor
++      // token bucket.
++      return {false, makeOptRefFromPtr<TokenBucketContext>(descriptor)};
++    }
++  }
+ 
+-  return descriptor.has_value()
+-             ? descriptor.value().get().token_state_->tokens_.load(std::memory_order_relaxed)
+-             : tokens_.tokens_.load(std::memory_order_relaxed);
+-}
++  // See if the request is forbidden by the default token bucket.
++  if (matched_descriptors.empty() || always_consume_default_token_bucket_) {
++    if (const bool result = default_token_bucket_->consume(share_factor); !result) {
++      // If the request is forbidden by the default token bucket, return the result and the
++      // default token bucket.
++      return {false, makeOptRefFromPtr<TokenBucketContext>(default_token_bucket_.get())};
++    }
+ 
+-int64_t LocalRateLimiterImpl::remainingFillInterval(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  using namespace std::literals;
++    // If the request is allowed then return the result the token bucket. The descriptor
++    // token bucket will be selected as priority if it exists.
++    return {true, makeOptRefFromPtr<TokenBucketContext>(matched_descriptors.empty()
++                                                            ? default_token_bucket_.get()
++                                                            : matched_descriptors[0])};
++  };
+ 
+-  auto current_time = time_source_.monotonicTime();
+-  auto descriptor = descriptorHelper(request_descriptors);
+-  // Remaining time to next fill = fill interval - (current time - last fill time).
+-  if (descriptor.has_value()) {
+-    ASSERT(std::chrono::duration_cast<std::chrono::milliseconds>(
+-               current_time - descriptor.value().get().token_state_->fill_time_) <=
+-           absl::ToChronoMilliseconds(descriptor.value().get().token_bucket_.fill_interval_));
+-    return absl::ToInt64Seconds(
+-        descriptor.value().get().token_bucket_.fill_interval_ -
+-        absl::Seconds((current_time - descriptor.value().get().token_state_->fill_time_) / 1s));
+-  }
+-  return absl::ToInt64Seconds(token_bucket_.fill_interval_ -
+-                              absl::Seconds((current_time - tokens_.fill_time_) / 1s));
++  ASSERT(!matched_descriptors.empty());
++  return {true, makeOptRefFromPtr<TokenBucketContext>(matched_descriptors[0])};
  }
+ 
+ } // namespace LocalRateLimit
 diff --git a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
-index c0cc182a49..50efb00e09 100644
---- source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
-+++ source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
-@@ -6,8 +6,11 @@
+index c0cc182a49..f9305d32c5 100644
+--- a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
++++ b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
+@@ -1,13 +1,17 @@
+ #pragma once
+ 
+ #include <chrono>
++#include <ratio>
+ 
+ #include "envoy/event/dispatcher.h"
  #include "envoy/event/timer.h"
  #include "envoy/extensions/common/ratelimit/v3/ratelimit.pb.h"
  #include "envoy/ratelimit/ratelimit.h"
@@ -528,7 +804,7 @@ index c0cc182a49..50efb00e09 100644
  #include "source/common/protobuf/protobuf.h"
  
  namespace Envoy {
-@@ -16,6 +19,116 @@ namespace Filters {
+@@ -16,78 +20,153 @@ namespace Filters {
  namespace Common {
  namespace LocalRateLimit {
  
@@ -644,8 +920,13 @@ index c0cc182a49..50efb00e09 100644
 +
  class LocalRateLimiterImpl {
  public:
++  struct Result {
++    bool allowed{};
++    OptRef<const TokenBucketContext> token_bucket_context{};
++  };
++
    LocalRateLimiterImpl(
-@@ -23,7 +136,8 @@ public:
+       const std::chrono::milliseconds fill_interval, const uint32_t max_tokens,
        const uint32_t tokens_per_fill, Event::Dispatcher& dispatcher,
        const Protobuf::RepeatedPtrField<
            envoy::extensions::common::ratelimit::v3::LocalRateLimitDescriptor>& descriptors,
@@ -654,11 +935,71 @@ index c0cc182a49..50efb00e09 100644
 +      ShareProviderSharedPtr shared_provider = nullptr);
    ~LocalRateLimiterImpl();
  
-   bool requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
-@@ -84,8 +198,12 @@ private:
-   TokenState tokens_;
-   absl::flat_hash_set<LocalDescriptorImpl, LocalDescriptorHash, LocalDescriptorEqual> descriptors_;
-   std::vector<LocalDescriptorImpl> sorted_descriptors_;
+-  bool requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  uint32_t maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  uint32_t remainingTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  int64_t
+-  remainingFillInterval(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
++  Result requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+ 
+ private:
+-  struct TokenState {
+-    mutable std::atomic<uint32_t> tokens_;
+-    MonotonicTime fill_time_;
+-  };
+-  // Refill counter is incremented per each refill timer hit.
+-  uint64_t refill_counter_{0};
+-  struct LocalDescriptorImpl : public RateLimit::LocalDescriptor {
+-    std::shared_ptr<TokenState> token_state_;
+-    RateLimit::TokenBucket token_bucket_;
+-    // Descriptor refill interval is a multiple of the timer refill interval.
+-    // For example, if the descriptor refill interval is 150ms and the global
+-    // refill interval is 50ms, the value is 3. Every 3rd invocation of
+-    // the global timer, the descriptor is refilled.
+-    uint64_t multiplier_;
+-    std::string toString() const {
+-      std::vector<std::string> entries;
+-      entries.reserve(entries_.size());
+-      for (const auto& entry : entries_) {
+-        entries.push_back(absl::StrCat(entry.key_, "=", entry.value_));
+-      }
+-      return absl::StrJoin(entries, ", ");
+-    }
+-  };
+-  struct LocalDescriptorHash {
+-    using is_transparent = void; // NOLINT(readability-identifier-naming)
+-    size_t operator()(const RateLimit::LocalDescriptor& d) const {
+-      return absl::Hash<std::vector<RateLimit::DescriptorEntry>>()(d.entries_);
+-    }
+-  };
+-  struct LocalDescriptorEqual {
+-    using is_transparent = void; // NOLINT(readability-identifier-naming)
+-    size_t operator()(const RateLimit::LocalDescriptor& a,
+-                      const RateLimit::LocalDescriptor& b) const {
+-      return a.entries_ == b.entries_;
+-    }
+-  };
+-
+   void onFillTimer();
+-  void onFillTimerHelper(TokenState& state, const RateLimit::TokenBucket& bucket);
+-  void onFillTimerDescriptorHelper();
+-  OptRef<const LocalDescriptorImpl>
+-  descriptorHelper(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  bool requestAllowedHelper(const TokenState& tokens) const;
+-  int tokensFillPerSecond(LocalDescriptorImpl& descriptor);
+-
+-  RateLimit::TokenBucket token_bucket_;
++
++  RateLimitTokenBucketSharedPtr default_token_bucket_;
++
+   const Event::TimerPtr fill_timer_;
+   TimeSource& time_source_;
+-  TokenState tokens_;
+-  absl::flat_hash_set<LocalDescriptorImpl, LocalDescriptorHash, LocalDescriptorEqual> descriptors_;
+-  std::vector<LocalDescriptorImpl> sorted_descriptors_;
++  RateLimit::LocalDescriptor::Map<RateLimitTokenBucketSharedPtr> descriptors_;
++  // Refill counter is incremented per each refill timer hit.
++  uint64_t refill_counter_{0};
 +
 +  ShareProviderSharedPtr share_provider_;
 +
@@ -667,11 +1008,14 @@ index c0cc182a49..50efb00e09 100644
 +  const bool no_timer_based_rate_limit_token_bucket_{};
  
    friend class LocalRateLimiterImplTest;
++  friend class TimerTokenBucket;
  };
+ 
+ } // namespace LocalRateLimit
 diff --git a/source/extensions/filters/http/local_ratelimit/config.cc b/source/extensions/filters/http/local_ratelimit/config.cc
 index cbf719cae4..e0990cf459 100644
---- source/extensions/filters/http/local_ratelimit/config.cc
-+++ source/extensions/filters/http/local_ratelimit/config.cc
+--- a/source/extensions/filters/http/local_ratelimit/config.cc
++++ b/source/extensions/filters/http/local_ratelimit/config.cc
 @@ -19,7 +19,8 @@ Http::FilterFactoryCb LocalRateLimitFilterConfig::createFilterFactoryFromProtoTy
  
    FilterConfigSharedPtr filter_config = std::make_shared<FilterConfig>(
@@ -696,9 +1040,9 @@ index cbf719cae4..e0990cf459 100644
  
  /**
 diff --git a/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
-index 6938c8b1d6..991c3608ec 100644
---- source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
-+++ source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
+index 6938c8b1d6..d0b03b57c5 100644
+--- a/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
 @@ -23,7 +23,8 @@ const std::string& PerConnectionRateLimiter::key() {
  
  FilterConfig::FilterConfig(
@@ -719,11 +1063,16 @@ index 6938c8b1d6..991c3608ec 100644
        local_info_(local_info), runtime_(runtime),
        filter_enabled_(
            config.has_filter_enabled()
-@@ -72,6 +70,31 @@ FilterConfig::FilterConfig(
+@@ -72,26 +70,36 @@ FilterConfig::FilterConfig(
    if (per_route && !config.has_token_bucket()) {
      throw EnvoyException("local rate limit token bucket must be set for per filter configs");
    }
-+
+-}
+ 
+-bool FilterConfig::requestAllowed(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  return rate_limiter_->requestAllowed(request_descriptors);
+-}
 +  Filters::Common::LocalRateLimit::ShareProviderSharedPtr share_provider;
 +  if (config.has_local_cluster_rate_limit()) {
 +    if (rate_limit_per_connection_) {
@@ -733,7 +1082,11 @@ index 6938c8b1d6..991c3608ec 100644
 +    if (!cm.localClusterName().has_value()) {
 +      throw EnvoyException("local_cluster_rate_limit is set but no local cluster name is present");
 +    }
-+
+ 
+-uint32_t
+-FilterConfig::maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  return rate_limiter_->maxTokens(request_descriptors);
+-}
 +    // If the local cluster name is set then the relevant cluster must exist or the cluster
 +    // manager will fail to initialize.
 +    share_provider_manager_ = Filters::Common::LocalRateLimit::ShareProviderManager::singleton(
@@ -741,7 +1094,10 @@ index 6938c8b1d6..991c3608ec 100644
 +    if (!share_provider_manager_) {
 +      throw EnvoyException("local_cluster_rate_limit is set but no local cluster is present");
 +    }
-+
+ 
+-uint32_t FilterConfig::remainingTokens(
+-    absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  return rate_limiter_->remainingTokens(request_descriptors);
 +    share_provider = share_provider_manager_->getShareProvider(config.local_cluster_rate_limit());
 +  }
 +
@@ -750,11 +1106,115 @@ index 6938c8b1d6..991c3608ec 100644
 +      always_consume_default_token_bucket_, std::move(share_provider));
  }
  
- bool FilterConfig::requestAllowed(
+-int64_t FilterConfig::remainingFillInterval(
++Filters::Common::LocalRateLimit::LocalRateLimiterImpl::Result FilterConfig::requestAllowed(
+     absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const {
+-  return rate_limiter_->remainingFillInterval(request_descriptors);
++  return rate_limiter_->requestAllowed(request_descriptors);
+ }
+ 
+ LocalRateLimitStats FilterConfig::generateStats(const std::string& prefix, Stats::Scope& scope) {
+@@ -121,19 +129,19 @@ Http::FilterHeadersStatus Filter::decodeHeaders(Http::RequestHeaderMap& headers,
+     populateDescriptors(descriptors, headers);
+   }
+ 
+-  // Store descriptors which is used to generate x-ratelimit-* headers in encoding response headers.
+-  stored_descriptors_ = descriptors;
+-
+   if (ENVOY_LOG_CHECK_LEVEL(debug)) {
+     for (const auto& request_descriptor : descriptors) {
+-      for (const Envoy::RateLimit::DescriptorEntry& entry : request_descriptor.entries_) {
+-        ENVOY_LOG(debug, "populate descriptors: key={} value={}", entry.key_, entry.value_);
+-      }
++      ENVOY_LOG(debug, "populate descriptor: {}", request_descriptor.toString());
+     }
+   }
+ 
+-  if (requestAllowed(descriptors)) {
+-    config->stats().ok_.inc();
++  auto result = requestAllowed(descriptors);
++  // The global limiter, route limiter, or connection level limiter are all have longer life
++  // than the request, so we can safely store the token bucket context reference.
++  token_bucket_context_ = result.token_bucket_context;
++
++  if (result.allowed) {
++    used_config_->stats().ok_.inc();
+     return Http::FilterHeadersStatus::Continue;
+   }
+ 
+@@ -158,54 +166,31 @@ Http::FilterHeadersStatus Filter::decodeHeaders(Http::RequestHeaderMap& headers,
+ }
+ 
+ Http::FilterHeadersStatus Filter::encodeHeaders(Http::ResponseHeaderMap& headers, bool) {
+-  const auto* config = getConfig();
+-
+-  if (config->enabled() && config->enableXRateLimitHeaders()) {
+-    ASSERT(stored_descriptors_.has_value());
+-    auto limit = maxTokens(stored_descriptors_.value());
+-    auto remaining = remainingTokens(stored_descriptors_.value());
+-    auto reset = remainingFillInterval(stored_descriptors_.value());
+-
++  // We can never assume the decodeHeaders() was called before encodeHeaders().
++  if (token_bucket_context_.has_value()) {
+     headers.addReferenceKey(
+-        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitLimit, limit);
++        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitLimit,
++        token_bucket_context_->maxTokens());
+     headers.addReferenceKey(
+-        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitRemaining, remaining);
+-    headers.addReferenceKey(
+-        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitReset, reset);
++        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitRemaining,
++        token_bucket_context_->remainingTokens());
++    const auto reset = token_bucket_context_->remainingFillInterval();
++    if (reset.has_value()) {
++      headers.addReferenceKey(
++          HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitReset, reset.value());
++    }
+   }
+ 
+   return Http::FilterHeadersStatus::Continue;
+ }
+ 
+-bool Filter::requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
+-  const auto* config = getConfig();
+-  return config->rateLimitPerConnection()
++Filters::Common::LocalRateLimit::LocalRateLimiterImpl::Result
++Filter::requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
++  return used_config_->rateLimitPerConnection()
+              ? getPerConnectionRateLimiter().requestAllowed(request_descriptors)
+              : config->requestAllowed(request_descriptors);
+ }
+ 
+-uint32_t Filter::maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
+-  const auto* config = getConfig();
+-  return config->rateLimitPerConnection()
+-             ? getPerConnectionRateLimiter().maxTokens(request_descriptors)
+-             : config->maxTokens(request_descriptors);
+-}
+-
+-uint32_t Filter::remainingTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
+-  const auto* config = getConfig();
+-  return config->rateLimitPerConnection()
+-             ? getPerConnectionRateLimiter().remainingTokens(request_descriptors)
+-             : config->remainingTokens(request_descriptors);
+-}
+-
+-int64_t
+-Filter::remainingFillInterval(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
+-  const auto* config = getConfig();
+-  return config->rateLimitPerConnection()
+-             ? getPerConnectionRateLimiter().remainingFillInterval(request_descriptors)
+-             : config->remainingFillInterval(request_descriptors);
+-}
+-
+ const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& Filter::getPerConnectionRateLimiter() {
+   const auto* config = getConfig();
+   ASSERT(config->rateLimitPerConnection());
 diff --git a/source/extensions/filters/http/local_ratelimit/local_ratelimit.h b/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
-index e816da64e3..6bad1e5763 100644
---- source/extensions/filters/http/local_ratelimit/local_ratelimit.h
-+++ source/extensions/filters/http/local_ratelimit/local_ratelimit.h
+index e816da64e3..d8982a0c15 100644
+--- a/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
++++ b/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
 @@ -73,6 +73,7 @@ class FilterConfig : public Router::RouteSpecificFilterConfig {
  public:
    FilterConfig(const envoy::extensions::filters::http::local_ratelimit::v3::LocalRateLimit& config,
@@ -763,7 +1223,21 @@ index e816da64e3..6bad1e5763 100644
                 Stats::Scope& scope, Runtime::Loader& runtime, bool per_route = false);
    ~FilterConfig() override {
      // Ensure that the LocalRateLimiterImpl instance will be destroyed on the thread where its inner
-@@ -139,6 +140,7 @@ private:
+@@ -84,11 +85,8 @@ public:
+   }
+   const LocalInfo::LocalInfo& localInfo() const { return local_info_; }
+   Runtime::Loader& runtime() { return runtime_; }
+-  bool requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  uint32_t maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  uint32_t remainingTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+-  int64_t
+-  remainingFillInterval(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
++  Filters::Common::LocalRateLimit::LocalRateLimiterImpl::Result
++  requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) const;
+   bool enabled() const;
+   bool enforced() const;
+   LocalRateLimitStats& stats() const { return stats_; }
+@@ -139,6 +137,7 @@ private:
        descriptors_;
    const bool rate_limit_per_connection_;
    const bool always_consume_default_token_bucket_{};
@@ -771,10 +1245,58 @@ index e816da64e3..6bad1e5763 100644
    std::unique_ptr<Filters::Common::LocalRateLimit::LocalRateLimiterImpl> rate_limiter_;
    const LocalInfo::LocalInfo& local_info_;
    Runtime::Loader& runtime_;
+@@ -181,15 +180,16 @@ private:
+                            Http::RequestHeaderMap& headers);
+   VhRateLimitOptions getVirtualHostRateLimitOption(const Router::RouteConstSharedPtr& route);
+   const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& getPerConnectionRateLimiter();
+-  bool requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
+-  uint32_t maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
+-  uint32_t remainingTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
+-  int64_t remainingFillInterval(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
++  Filters::Common::LocalRateLimit::LocalRateLimiterImpl::Result
++  requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
+ 
+   const FilterConfig* getConfig() const;
+   FilterConfigSharedPtr config_;
++  // Actual config used for the current request. Is config_ by default, but can be overridden by
++  // per-route config.
++  const FilterConfig* used_config_{};
++  OptRef<const Filters::Common::LocalRateLimit::TokenBucketContext> token_bucket_context_;
+ 
+-  absl::optional<std::vector<RateLimit::LocalDescriptor>> stored_descriptors_;
+   VhRateLimitOptions vh_rate_limits_;
+ };
+ 
+diff --git a/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
+index 7aa4561b80..85f810ad40 100644
+--- a/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
+@@ -21,7 +21,7 @@ FilterConfig::FilterConfig(
+           Protobuf::RepeatedPtrField<
+               envoy::extensions::common::ratelimit::v3::LocalRateLimitDescriptor>()) {}
+ 
+-bool FilterConfig::canCreateConnection() { return rate_limiter_.requestAllowed({}); }
++bool FilterConfig::canCreateConnection() { return rate_limiter_.requestAllowed({}).allowed; }
+ 
+ LocalRateLimitStats FilterConfig::generateStats(const std::string& prefix, Stats::Scope& scope) {
+   const std::string final_prefix = "listener_local_ratelimit." + prefix;
+diff --git a/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
+index 8c6af4c820..09594692dd 100644
+--- a/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
+@@ -94,7 +94,7 @@ LocalRateLimitStats Config::generateStats(const std::string& prefix, Stats::Scop
+   return {ALL_LOCAL_RATE_LIMIT_STATS(POOL_COUNTER_PREFIX(scope, final_prefix))};
+ }
+ 
+-bool Config::canCreateConnection() { return rate_limiter_->requestAllowed({}); }
++bool Config::canCreateConnection() { return rate_limiter_->requestAllowed({}).allowed; }
+ 
+ Network::FilterStatus Filter::onNewConnection() {
+   if (!config_->enabled()) {
 diff --git a/test/common/common/BUILD b/test/common/common/BUILD
 index ede00f4bc1..5a2be7a86e 100644
---- test/common/common/BUILD
-+++ test/common/common/BUILD
+--- a/test/common/common/BUILD
++++ b/test/common/common/BUILD
 @@ -335,6 +335,7 @@ envoy_cc_test(
      deps = [
          "//source/common/common:token_bucket_impl_lib",
@@ -785,8 +1307,8 @@ index ede00f4bc1..5a2be7a86e 100644
  )
 diff --git a/test/common/common/token_bucket_impl_test.cc b/test/common/common/token_bucket_impl_test.cc
 index 66308cfded..ce20de2cfb 100644
---- test/common/common/token_bucket_impl_test.cc
-+++ test/common/common/token_bucket_impl_test.cc
+--- a/test/common/common/token_bucket_impl_test.cc
++++ b/test/common/common/token_bucket_impl_test.cc
 @@ -3,6 +3,7 @@
  #include "source/common/common/token_bucket_impl.h"
  
@@ -970,8 +1492,8 @@ index 66308cfded..ce20de2cfb 100644
  } // namespace Envoy
 diff --git a/test/extensions/filters/common/local_ratelimit/BUILD b/test/extensions/filters/common/local_ratelimit/BUILD
 index 96bd5d38a4..85f2f74d5c 100644
---- test/extensions/filters/common/local_ratelimit/BUILD
-+++ test/extensions/filters/common/local_ratelimit/BUILD
+--- a/test/extensions/filters/common/local_ratelimit/BUILD
++++ b/test/extensions/filters/common/local_ratelimit/BUILD
 @@ -12,7 +12,12 @@ envoy_cc_test(
      name = "local_ratelimit_test",
      srcs = ["local_ratelimit_test.cc"],
@@ -986,9 +1508,9 @@ index 96bd5d38a4..85f2f74d5c 100644
      ],
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-index 9c1ead992a..0fc63d1d38 100644
---- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
+index 9c1ead992a..92dbd41785 100644
+--- a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
 +#include "source/common/singleton/manager_impl.h"
  #include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
@@ -1001,10 +1523,21 @@ index 9c1ead992a..0fc63d1d38 100644
  #include "test/test_common/utility.h"
  
  #include "gmock/gmock.h"
-@@ -15,6 +20,86 @@ namespace Filters {
+@@ -15,6 +20,97 @@ namespace Filters {
  namespace Common {
  namespace LocalRateLimit {
  
++class WrapperedProvider {
++public:
++  WrapperedProvider(ShareProviderSharedPtr provider) : provider_(provider) {}
++
++  uint32_t tokensPerFill(uint32_t origin_tokens_per_fill) const {
++    return std::ceil(origin_tokens_per_fill * provider_->getTokensShareFactor());
++  }
++
++  ShareProviderSharedPtr provider_;
++};
++
 +TEST(ShareProviderManagerTest, ShareProviderManagerTest) {
 +  NiceMock<Upstream::MockClusterManager> cm;
 +  NiceMock<Event::MockDispatcher> dispatcher;
@@ -1026,8 +1559,8 @@ index 9c1ead992a..0fc63d1d38 100644
 +      ShareProviderManager::singleton(dispatcher, cm, manager);
 +  EXPECT_NE(share_provider_manager, nullptr);
 +
-+  auto provider = share_provider_manager->getShareProvider(ProtoLocalClusterRateLimit());
-+  EXPECT_NE(provider, nullptr);
++  auto provider = std::make_shared<WrapperedProvider>(
++      share_provider_manager->getShareProvider(ProtoLocalClusterRateLimit()));
 +
 +  EXPECT_EQ(1, provider->tokensPerFill(1)); // At least 1 token per fill.
 +  EXPECT_EQ(1, provider->tokensPerFill(2));
@@ -1082,13 +1615,13 @@ index 9c1ead992a..0fc63d1d38 100644
 +class MockShareProvider : public ShareProvider {
 +public:
 +  MockShareProvider() = default;
-+  MOCK_METHOD(uint32_t, tokensPerFill, (uint32_t origin_tokens_per_fill), (const));
++  MOCK_METHOD(double, getTokensShareFactor, (), (const));
 +};
 +
  class LocalRateLimiterImplTest : public testing::Test {
  public:
    void initializeTimer() {
-@@ -24,12 +109,21 @@ public:
+@@ -24,12 +120,21 @@ public:
    }
  
    void initialize(const std::chrono::milliseconds fill_interval, const uint32_t max_tokens,
@@ -1113,16 +1646,113 @@ index 9c1ead992a..0fc63d1d38 100644
    }
  
    Thread::ThreadSynchronizer& synchronizer() { return rate_limiter_->synchronizer_; }
-@@ -154,6 +248,40 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMultipleTokensPerFill) {
-   EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
+@@ -68,15 +173,15 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
+     synchronizer().barrierOn("on_fill_timer_pre_cas");
+ 
+     // This should succeed.
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+     // Now signal the thread to continue which should cause a CAS failure and the loop to repeat.
+     synchronizer().signal("on_fill_timer_pre_cas");
+     t1.join();
+ 
+     // 1 -> 0 tokens
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-    EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++    EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+   }
+ 
+   // This tests the case in which two allowed checks race.
+@@ -87,12 +192,13 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
+ 
+     // Start a thread and see if we are under limit. This will wait pre-CAS.
+     synchronizer().waitOn("allowed_pre_cas");
+-    std::thread t1([&] { EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_)); });
++    std::thread t1(
++        [&] { EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed); });
+     // Wait until the thread is actually waiting.
+     synchronizer().barrierOn("allowed_pre_cas");
+ 
+     // Consume a token on this thread, which should cause the CAS to fail on the other thread.
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+     synchronizer().signal("allowed_pre_cas");
+     t1.join();
+   }
+@@ -103,17 +209,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
+   initialize(std::chrono::milliseconds(200), 1, 1);
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+   // 0 -> 1 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
+   fill_timer_->invokeCallback();
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+   // 0 -> 1 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
+@@ -124,8 +230,8 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
+   fill_timer_->invokeCallback();
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
  }
  
+ // Verify token bucket functionality with max tokens and tokens per fill > 1.
+@@ -133,25 +239,59 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMultipleTokensPerFill) {
+   initialize(std::chrono::milliseconds(200), 2, 2);
+ 
+   // 2 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+   // 0 -> 2 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
+   fill_timer_->invokeCallback();
+ 
+   // 2 -> 1 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+   // 1 -> 2 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
+   fill_timer_->invokeCallback();
+ 
+   // 2 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++}
++
 +// Verify token bucket functionality with max tokens and tokens per fill > 1 and
 +// share provider is used.
 +TEST_F(LocalRateLimiterImplTest, TokenBucketMultipleTokensPerFillWithShareProvider) {
 +  auto share_provider = std::make_shared<MockShareProvider>();
-+  EXPECT_CALL(*share_provider, tokensPerFill(_))
-+      .WillRepeatedly(testing::Invoke([](uint32_t tokens) { return tokens / 2; }));
++  EXPECT_CALL(*share_provider, getTokensShareFactor())
++      .WillRepeatedly(testing::Invoke([]() -> double { return 0.5; }));
 +
 +  // Final tokens per fill is 2/2 = 1.
 +  initialize(std::chrono::milliseconds(200), 2, 2, share_provider);
@@ -1130,9 +1760,9 @@ index 9c1ead992a..0fc63d1d38 100644
 +  // The limiter will be initialized with max tokens and it will not be shared.
 +  // So, the initial tokens is 2.
 +  // 2 -> 0 tokens
-+  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
-+  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
-+  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
 +
 +  // The tokens per fill will be handled by the share provider and it will be 1.
 +  // 0 -> 1 tokens
@@ -1140,21 +1770,100 @@ index 9c1ead992a..0fc63d1d38 100644
 +  fill_timer_->invokeCallback();
 +
 +  // 1 -> 0 tokens
-+  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
 +
 +  // 0 -> 1 tokens
 +  EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
 +  fill_timer_->invokeCallback();
 +
 +  // 1 -> 0 tokens
-+  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
-+  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
-+}
-+
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ }
+ 
  // Verify token bucket functionality with max tokens > tokens per fill.
- TEST_F(LocalRateLimiterImplTest, TokenBucketMaxTokensGreaterThanTokensPerFill) {
+@@ -159,17 +299,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMaxTokensGreaterThanTokensPerFill) {
    initialize(std::chrono::milliseconds(200), 2, 1);
-@@ -213,11 +341,23 @@ public:
+ 
+   // 2 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ 
+   // 0 -> 1 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
+   fill_timer_->invokeCallback();
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
+ }
+ 
+ // Verify token bucket status of max tokens, remaining tokens and remaining fill interval.
+@@ -178,34 +318,42 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketStatus) {
+ 
+   // 2 -> 1 tokens
+   EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(3000), nullptr));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(route_descriptors_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(route_descriptors_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(route_descriptors_), 3);
++  auto rate_limit_result = rate_limiter_->requestAllowed(route_descriptors_);
++  EXPECT_TRUE(rate_limit_result.allowed);
++
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 1);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3.0);
+ 
+   // 1 -> 0 tokens
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(route_descriptors_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(route_descriptors_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(route_descriptors_), 2);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 2.0);
+ 
+   // 0 -> 0 tokens
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(route_descriptors_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(route_descriptors_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(route_descriptors_), 1);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
++
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 1.0);
+ 
+   // 0 -> 2 tokens
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+   fill_timer_->invokeCallback();
+-  EXPECT_EQ(rate_limiter_->maxTokens(route_descriptors_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(route_descriptors_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(route_descriptors_), 3);
++
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3.0);
+ }
+ 
+ class LocalRateLimiterDescriptorImplTest : public LocalRateLimiterImplTest {
+@@ -213,11 +361,23 @@ public:
    void initializeWithDescriptor(const std::chrono::milliseconds fill_interval,
                                  const uint32_t max_tokens, const uint32_t tokens_per_fill) {
  
@@ -1178,10 +1887,327 @@ index 9c1ead992a..0fc63d1d38 100644
    static constexpr absl::string_view single_descriptor_config_yaml = R"(
    entries:
    - key: foo2
-@@ -556,6 +696,294 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
-   EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 3);
+@@ -237,7 +397,7 @@ public:
+   token_bucket:
+     max_tokens: 1
+     tokens_per_fill: 1
+-    fill_interval: 0.05s
++    fill_interval: 1s
+   )";
+ 
+   // Default token bucket
+@@ -299,15 +459,15 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+     synchronizer().barrierOn("on_fill_timer_pre_cas");
+ 
+     // This should succeed.
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+     // Now signal the thread to continue which should cause a CAS failure and the loop to repeat.
+     synchronizer().signal("on_fill_timer_pre_cas");
+     t1.join();
+ 
+     // 1 -> 0 tokens
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-    EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++    EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+   }
+ 
+   // This tests the case in which two allowed checks race.
+@@ -318,12 +478,12 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+ 
+     // Start a thread and see if we are under limit. This will wait pre-CAS.
+     synchronizer().waitOn("allowed_pre_cas");
+-    std::thread t1([&] { EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_)); });
++    std::thread t1([&] { EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed); });
+     // Wait until the thread is actually waiting.
+     synchronizer().barrierOn("allowed_pre_cas");
+ 
+     // Consume a token on this thread, which should cause the CAS to fail on the other thread.
+-    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
++    EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
+     synchronizer().signal("allowed_pre_cas");
+     t1.join();
+   }
+@@ -334,9 +494,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor2) {
+                             *descriptors_.Add());
+   initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
+ 
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(100), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+ }
+@@ -348,8 +508,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+   initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 0 -> 1 tokens
+   for (int i = 0; i < 2; i++) {
+@@ -360,8 +520,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+   }
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 0 -> 1 tokens
+   for (int i = 0; i < 2; i++) {
+@@ -380,8 +540,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+   }
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
  }
  
+ // Verify token bucket functionality with request per unit > 1.
+@@ -391,9 +551,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+   initializeWithDescriptor(std::chrono::milliseconds(50), 2, 2);
+ 
+   // 2 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 0 -> 2 tokens
+   for (int i = 0; i < 2; i++) {
+@@ -404,7 +564,7 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+   }
+ 
+   // 2 -> 1 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 1 -> 2 tokens
+   for (int i = 0; i < 2; i++) {
+@@ -415,34 +575,34 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+   }
+ 
+   // 2 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ }
+ 
+ // Verify token bucket functionality with multiple descriptors.
+ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorDifferentRateLimits) {
+   TestUtility::loadFromYaml(multiple_descriptor_config_yaml, *descriptors_.Add());
+-  TestUtility::loadFromYaml(fmt::format(single_descriptor_config_yaml, 1, 1, "1000s"),
++  TestUtility::loadFromYaml(fmt::format(single_descriptor_config_yaml, 1, 1, "2s"),
+                             *descriptors_.Add());
+-  initializeWithDescriptor(std::chrono::milliseconds(50), 3, 1);
++  initializeWithDescriptor(std::chrono::milliseconds(1000), 3, 1);
+ 
+   // 1 -> 0 tokens for descriptor_ and descriptor2_
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor2_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_).allowed);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 0 -> 1 tokens for descriptor2_
+-  dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(50), dispatcher_,
++  dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+-  EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(50), nullptr));
++  EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(1000), nullptr));
+   fill_timer_->invokeCallback();
+ 
+   // 1 -> 0 tokens for descriptor2_ and 0 only for descriptor_
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor2_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ }
+ 
+ // Verify token bucket functionality with multiple descriptors sorted.
+@@ -456,10 +616,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest,
+                                                       {{{"foo2", "bar2"}}}};
+ 
+   // Descriptors are sorted as descriptor2 < descriptor < global
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptors));
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptors));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptors).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptors).allowed);
+   // Request limited by descriptor2 will not consume tokens from descriptor.
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ }
+ 
+ // Verify token bucket status of max tokens, remaining tokens and remaining fill interval.
+@@ -469,10 +629,14 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+   initializeWithDescriptor(std::chrono::milliseconds(1000), 2, 2);
+ 
+   // 2 -> 1 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 3);
++  auto rate_limit_result = rate_limiter_->requestAllowed(descriptor_);
++
++  EXPECT_TRUE(rate_limit_result.allowed);
++
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 1);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3.0);
+ 
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+@@ -480,10 +644,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+   fill_timer_->invokeCallback();
+ 
+   // 1 -> 0 tokens
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 2);
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 2.0);
+ 
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+@@ -491,10 +656,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+   fill_timer_->invokeCallback();
+ 
+   // 0 -> 0 tokens
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 1);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 1.0);
+ 
+   dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+@@ -502,9 +668,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+   fill_timer_->invokeCallback();
+ 
+   // 0 -> 2 tokens
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 3);
++  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3.0);
+ }
+ 
+ // Verify token bucket status of max tokens, remaining tokens and remaining fill interval with
+@@ -513,47 +680,343 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
+   TestUtility::loadFromYaml(multiple_descriptor_config_yaml, *descriptors_.Add());
+   TestUtility::loadFromYaml(fmt::format(single_descriptor_config_yaml, 2, 2, "3s"),
+                             *descriptors_.Add());
+-  initializeWithDescriptor(std::chrono::milliseconds(50), 2, 1);
++  initializeWithDescriptor(std::chrono::milliseconds(1000), 20, 20);
+ 
+   // 2 -> 1 tokens for descriptor_
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 3);
++  auto rate_limit_result = rate_limiter_->requestAllowed(descriptor_);
+ 
+-  // 1 -> 0 tokens for descriptor_ and descriptor2_
+-  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor2_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor2_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor2_), 0);
++  EXPECT_TRUE(rate_limit_result.allowed);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 1);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3);
++
++  // 1 -> 0 tokens for descriptor_
++  EXPECT_TRUE(rate_limiter_->requestAllowed(descriptor_).allowed);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3);
++
++  // 1 -> 0 tokens for descriptor2_
++  auto rate_limit_result2 = rate_limiter_->requestAllowed(descriptor2_);
++  EXPECT_TRUE(rate_limit_result2.allowed);
++
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->maxTokens(), 1);
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->remainingTokens(), 0);
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->remainingFillInterval().value(), 1);
+ 
+   // 0 -> 0 tokens for descriptor_ and descriptor2_
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor2_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor2_), 0);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor2_), 0);
+-  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_));
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor2_).allowed);
++  EXPECT_FALSE(rate_limiter_->requestAllowed(descriptor_).allowed);
+ 
+   // 0 -> 1 tokens for descriptor2_
+-  dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(50), dispatcher_,
++  dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                    Envoy::Event::Dispatcher::RunType::NonBlock);
+-  EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(50), nullptr));
++  EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(1000), nullptr));
+   fill_timer_->invokeCallback();
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor2_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor2_), 1);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor2_), 0);
++
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->maxTokens(), 1);
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->remainingTokens(), 1);
++  EXPECT_EQ(rate_limit_result2.token_bucket_context->remainingFillInterval().value(), 1);
+ 
+   // 0 -> 2 tokens for descriptor_
+-  for (int i = 0; i < 60; i++) {
+-    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(50), dispatcher_,
++  for (int i = 0; i < 2; i++) {
++    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
+                                                      Envoy::Event::Dispatcher::RunType::NonBlock);
+-    EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(50), nullptr));
++    EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(1000), nullptr));
+     fill_timer_->invokeCallback();
+   }
+-  EXPECT_EQ(rate_limiter_->maxTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingTokens(descriptor_), 2);
+-  EXPECT_EQ(rate_limiter_->remainingFillInterval(descriptor_), 3);
++
++  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 2);
++  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingFillInterval().value(), 3.0);
++}
++
 +// Verify token bucket functionality with a single token.
 +TEST_F(LocalRateLimiterImplTest, AtomicTokenBucket) {
 +  initializeWithAtomicTokenBucket(std::chrono::milliseconds(200), 1, 1);
@@ -1468,15 +2494,13 @@ index 9c1ead992a..0fc63d1d38 100644
 +  // Note that the route descriptors are not changed so we can reuse the same token bucket context.
 +  EXPECT_EQ(rate_limit_result.token_bucket_context->maxTokens(), 2);
 +  EXPECT_EQ(rate_limit_result.token_bucket_context->remainingTokens(), 2);
-+}
-+
+ }
+ 
  } // Namespace LocalRateLimit
- } // namespace Common
- } // namespace Filters
 diff --git a/test/extensions/filters/http/local_ratelimit/BUILD b/test/extensions/filters/http/local_ratelimit/BUILD
 index 5d997f8345..3175a577e0 100644
---- test/extensions/filters/http/local_ratelimit/BUILD
-+++ test/extensions/filters/http/local_ratelimit/BUILD
+--- a/test/extensions/filters/http/local_ratelimit/BUILD
++++ b/test/extensions/filters/http/local_ratelimit/BUILD
 @@ -16,10 +16,14 @@ envoy_extension_cc_test(
      srcs = ["filter_test.cc"],
      extension_names = ["envoy.filters.http.local_ratelimit"],
@@ -1493,9 +2517,9 @@ index 5d997f8345..3175a577e0 100644
      ],
  )
 diff --git a/test/extensions/filters/http/local_ratelimit/config_test.cc b/test/extensions/filters/http/local_ratelimit/config_test.cc
-index 37c3a991e2..885418422f 100644
---- test/extensions/filters/http/local_ratelimit/config_test.cc
-+++ test/extensions/filters/http/local_ratelimit/config_test.cc
+index 37c3a991e2..ba02999bee 100644
+--- a/test/extensions/filters/http/local_ratelimit/config_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/config_test.cc
 @@ -2,6 +2,7 @@
  #include "source/extensions/filters/http/local_ratelimit/local_ratelimit.h"
  
@@ -1504,6 +2528,24 @@ index 37c3a991e2..885418422f 100644
  
  #include "gmock/gmock.h"
  #include "gtest/gtest.h"
+@@ -63,7 +64,7 @@ response_headers_to_add:
+   const auto route_config = factory.createRouteSpecificFilterConfig(
+       *proto_config, context, ProtobufMessage::getNullValidationVisitor());
+   const auto* config = dynamic_cast<const FilterConfig*>(route_config.get());
+-  EXPECT_TRUE(config->requestAllowed({}));
++  EXPECT_TRUE(config->requestAllowed({}).allowed);
+ }
+ 
+ TEST(Factory, EnabledEnforcedDisabledByDefault) {
+@@ -221,7 +222,7 @@ descriptors:
+   const auto route_config = factory.createRouteSpecificFilterConfig(
+       *proto_config, context, ProtobufMessage::getNullValidationVisitor());
+   const auto* config = dynamic_cast<const FilterConfig*>(route_config.get());
+-  EXPECT_TRUE(config->requestAllowed({}));
++  EXPECT_TRUE(config->requestAllowed({}).allowed);
+ }
+ 
+ TEST(Factory, RouteSpecificFilterConfigWithDescriptorsTimerNotDivisible) {
 @@ -306,12 +307,148 @@ response_headers_to_add:
  
    NiceMock<Server::Configuration::MockServerFactoryContext> context;
@@ -1656,8 +2698,8 @@ index 37c3a991e2..885418422f 100644
  } // namespace Extensions
 diff --git a/test/extensions/filters/http/local_ratelimit/filter_test.cc b/test/extensions/filters/http/local_ratelimit/filter_test.cc
 index f5b7e121a1..602c43af0d 100644
---- test/extensions/filters/http/local_ratelimit/filter_test.cc
-+++ test/extensions/filters/http/local_ratelimit/filter_test.cc
+--- a/test/extensions/filters/http/local_ratelimit/filter_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/filter_test.cc
 @@ -1,9 +1,13 @@
  #include "envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.pb.h"
  
@@ -1783,9 +2825,9 @@ index f5b7e121a1..602c43af0d 100644
              filter_->decodeHeaders(request_headers, false));
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
 diff --git a/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc b/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
-index 7c9834d9d3..9afa92925b 100644
---- test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
-+++ test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
+index 7c9834d9d3..2171ea59eb 100644
+--- a/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
 @@ -1,3 +1,5 @@
 +#include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
 +
@@ -1940,7 +2982,7 @@ index 7c9834d9d3..9afa92925b 100644
    const std::string initial_route_config_ = R"EOF(
  name: basic_routes
  virtual_hosts:
-@@ -315,5 +431,40 @@ TEST_P(LocalRateLimitFilterIntegrationTest, BasicTestPerRouteAndRds) {
+@@ -315,5 +431,36 @@ TEST_P(LocalRateLimitFilterIntegrationTest, BasicTestPerRouteAndRds) {
    cleanUpXdsConnection();
  }
  
@@ -1959,9 +3001,7 @@ index 7c9834d9d3..9afa92925b 100644
 +  test_server_->waitForGaugeEq("cluster.local_cluster.membership_total", 1);
 +  simTime().advanceTimeWait(std::chrono::milliseconds(1));
 +
-+  EXPECT_EQ(1, share_provider->tokensPerFill(1));
-+  EXPECT_EQ(2, share_provider->tokensPerFill(2));
-+  EXPECT_EQ(4, share_provider->tokensPerFill(4));
++  EXPECT_EQ(1.0, share_provider->getTokensShareFactor());
 +
 +  sendSotwDiscoveryResponse<envoy::config::endpoint::v3::ClusterLoadAssignment>(
 +      Config::TypeUrl::get().ClusterLoadAssignment,
@@ -1972,9 +3012,7 @@ index 7c9834d9d3..9afa92925b 100644
 +  test_server_->waitForGaugeEq("cluster.local_cluster.membership_total", 2);
 +  simTime().advanceTimeWait(std::chrono::milliseconds(1));
 +
-+  EXPECT_EQ(1, share_provider->tokensPerFill(1));
-+  EXPECT_EQ(1, share_provider->tokensPerFill(2));
-+  EXPECT_EQ(2, share_provider->tokensPerFill(4));
++  EXPECT_EQ(0.5, share_provider->getTokensShareFactor());
 +
 +  cleanUpXdsConnection();
 +}
@@ -1983,8 +3021,8 @@ index 7c9834d9d3..9afa92925b 100644
  } // namespace Envoy
 diff --git a/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 index 2a6999077f..e4fe0a9180 100644
---- test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
+--- a/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 @@ -56,14 +56,9 @@ public:
      NiceMock<Network::MockIoHandle> io_handle_;
    };
@@ -2021,8 +3059,8 @@ index 2a6999077f..e4fe0a9180 100644
    ActiveFilter active_filter3(config_);
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
 index ffa3c6e348..56132bcdfb 100644
---- test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
-+++ test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
+--- a/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
++++ b/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
 @@ -57,7 +57,7 @@ typed_config:
    token_bucket:
      max_tokens: 1
@@ -2043,8 +3081,8 @@ index ffa3c6e348..56132bcdfb 100644
      // Clone the whole listener, which includes the `share_key`.
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 index b4e43d7065..95dda20d3b 100644
---- test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
+--- a/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 @@ -12,7 +12,6 @@
  #include "gmock/gmock.h"
  #include "gtest/gtest.h"
