@@ -1,0 +1,6 @@
+changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/envoy-gloo/issues/356
+  resolvesIssue: false
+  description: >-
+    Create body transformation mechanism to modify keys rather than overwrite the whole body
