@@ -116,7 +116,7 @@ private:
   const ExtractionApi::Mode mode_;
 };
 
-class InjaTransformer : public Transformer {
+class InjaTransformer : public Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate &transformation,
                   Envoy::Random::RandomGenerator &rng,
@@ -154,6 +154,11 @@ private:
 
   absl::optional<inja::Template> body_template_;
   bool merged_extractors_to_body_{};
+  // merged_templates_ is a vector of tuples with the following fields:
+  // 1. The json path to merge the template into
+  // 2. Whether to override the value at the json path if empty
+  // 3. The template to merge
+  std::vector<std::tuple<std::string, bool, inja::Template>> merge_templates_;
   ThreadLocal::SlotPtr tls_;
   std::unique_ptr<TransformerInstance> instance_;
 };

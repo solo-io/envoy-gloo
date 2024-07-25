@@ -236,13 +236,13 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("clusterMetadata", 1, [this](Arguments &args) {
     return cluster_metadata_callback_deprecated(args);
   });
-  env_.add_callback("cluster_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("cluster_metadata", [this](Arguments &args) {
     return cluster_metadata_callback(args);
   });
-  env_.add_callback("dynamic_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("dynamic_metadata", [this](Arguments &args) {
     return dynamic_metadata_callback(args);
   });
-  env_.add_callback("host_metadata", 1, [this](Arguments &args) {
+  env_.add_callback("host_metadata", [this](Arguments &args) {
     return host_metadata_callback(args);
   });
   env_.add_callback("base64_encode", 1, [this](Arguments &args) {
@@ -430,9 +430,18 @@ json TransformerInstance::cluster_metadata_callback(const inja::Arguments &args)
 json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata* metadata,
                                                   const inja::Arguments &args) {
 
+  // If no args are provided, return an empty string
+  if (args.size() == 0) {
+    return "";
+  }
+
+  // If the first arg is not a string it's technically an error, so return an empty string
+  if (!args.at(0)->is_string()) {
+    return "";
+  }
+  const std::string &key = args.at(0)->get_ref<const std::string &>();
   // If a 2nd args is provided, use it as the filter
   const std::string &filter = args.size() > 1 ? args.at(1)->get_ref<const std::string &>() : SoloHttpFilterNames::get().Transformation;
-  const std::string &key = args.at(0)->get_ref<const std::string &>();
 
   const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
       metadata, filter, key);
@@ -772,6 +781,29 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     merged_extractors_to_body_ = true;
     break;
   }
+  case TransformationTemplate::kMergeJsonKeys: {
+    if (transformation.parse_body_behavior() != TransformationTemplate::ParseAsJson) {
+      throw EnvoyException("MergeJsonKeys requires parsing the body");
+    } else if (transformation.advanced_templates()) {
+      throw EnvoyException("MergeJsonKeys is not supported with advanced templates");
+    } 
+      for (const auto &[name, tmpl] : transformation.merge_json_keys().json_keys()) {
+        // Don't support "." in the key name for now.
+        // This is so that we can potentially bring back nested keys in the future
+        // if we need/want to.
+        if (name.find(".") != std::string::npos) {
+          throw EnvoyException(
+              fmt::format("Invalid key name for merge_json_keys: ({})", name));
+        }
+        try {
+          merge_templates_.emplace_back(std::make_tuple(name, tmpl.override_empty(), instance_->parse(tmpl.tmpl().text())));
+        } catch (const std::exception) {
+          throw EnvoyException(
+              fmt::format("Failed to parse merge_body_key template for key: ({})", name));
+        }
+      }
+    break;
+  }
   case TransformationTemplate::kPassthrough:
     break;
   case TransformationTemplate::BODY_TRANSFORMATION_NOT_SET: {
@@ -943,6 +975,20 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     std::string output = instance_->render(body_template_.value());
     maybe_body.emplace(output);
   } else if (merged_extractors_to_body_) {
+    std::string output = json_body.dump();
+    maybe_body.emplace(output);
+  } else if (!merge_templates_.empty()) {
+
+    for (const auto &merge_template : merge_templates_) {
+      const std::string &name = std::get<0>(merge_template);
+      
+      const auto rendered = instance_->render(std::get<2>(merge_template));
+      // Do not overwrite with empty unless specified
+      if (rendered.size() > 0 || std::get<1>(merge_template)) {
+        auto rendered_json = json::parse(rendered);
+        json_body[std::string(name)] = rendered_json;
+      }
+    }
     std::string output = json_body.dump();
     maybe_body.emplace(output);
   }
