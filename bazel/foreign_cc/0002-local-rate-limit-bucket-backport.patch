@@ -172,6 +172,9 @@ index 0000000000..a9b644974a
 +   // Defines the standard version to use for X-RateLimit headers emitted by the filter.
 +   //
 +   // Disabled by default.
++diff --git a/ci/Dockerfile-envoy b/ci/Dockerfile-envoy
++index 48a36c9fb2..aaa
+\ No newline at end of file
 diff --git a/source/common/common/token_bucket_impl.cc b/source/common/common/token_bucket_impl.cc
 index f813d426d0..b3d4f10e78 100644
 --- source/common/common/token_bucket_impl.cc
