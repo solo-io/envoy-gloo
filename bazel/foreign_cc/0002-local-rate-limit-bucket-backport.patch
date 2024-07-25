@@ -1,7 +1,7 @@
 diff --git a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
 index 9b5d9a7b91..73d729adc2 100644
---- api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
-+++ api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
+--- a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
++++ b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
 @@ -130,3 +130,15 @@ message LocalRateLimitDescriptor {
    // Token Bucket algorithm for local ratelimiting.
    type.v3.TokenBucket token_bucket = 2 [(validate.rules).message = {required: true}];
@@ -20,8 +20,8 @@ index 9b5d9a7b91..73d729adc2 100644
 +}
 diff --git a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
 index c253d04973..a32475f352 100644
---- api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
-+++ api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
+--- a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
++++ b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
 @@ -22,7 +22,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
  // Local Rate limit :ref:`configuration overview <config_http_filters_local_rate_limit>`.
  // [#extension: envoy.filters.http.local_ratelimit]
@@ -55,10 +55,30 @@ index c253d04973..a32475f352 100644
    // Defines the standard version to use for X-RateLimit headers emitted by the filter.
    //
    // Disabled by default.
+diff --git a/ci/Dockerfile-envoy b/ci/Dockerfile-envoy
+index 48a36c9fb2..aaae66a4dd 100644
+--- a/ci/Dockerfile-envoy
++++ b/ci/Dockerfile-envoy
+@@ -1,5 +1,5 @@
+ ARG BUILD_OS=ubuntu
+-ARG BUILD_TAG=22.04@sha256:340d9b015b194dc6e2a13938944e0d016e57b9679963fdeb9ce021daac430221
++ARG BUILD_TAG=22.04@sha256:19478ce7fc2ffbce89df29fea5725a8d12e57de52eb9ea570890dc5852aac1ac
+ ARG ENVOY_VRP_BASE_IMAGE=envoy-base
+ 
+ 
+@@ -58,7 +58,7 @@ COPY --chown=0:0 --chmod=755 \
+ 
+ 
+ # STAGE: envoy-distroless
+-FROM gcr.io/distroless/base-nossl-debian12:nonroot@sha256:9652482d535c6e2b68823b7dbd9175eefe33edf12e86c02ab8e68fb38fd159b4 AS envoy-distroless
++FROM gcr.io/distroless/base-nossl-debian12:nonroot@sha256:8a09e5752fb3ab9c9534fcc627eb1f451cd9bcfe66a6b149df62dcb84fb841a6 AS envoy-distroless
+ EXPOSE 10000
+ ENTRYPOINT ["/usr/local/bin/envoy"]
+ CMD ["-c", "/etc/envoy/envoy.yaml"]
 diff --git a/envoy/ratelimit/ratelimit.h b/envoy/ratelimit/ratelimit.h
 index 2839cfa86c..5854372136 100644
---- envoy/ratelimit/ratelimit.h
-+++ envoy/ratelimit/ratelimit.h
+--- a/envoy/ratelimit/ratelimit.h
++++ b/envoy/ratelimit/ratelimit.h
 @@ -49,23 +49,38 @@ struct Descriptor {
    absl::optional<RateLimitOverride> limit_ = absl::nullopt;
  };
@@ -109,10 +129,94 @@ index 2839cfa86c..5854372136 100644
  };
  
  /*
+diff --git a/lbucket.iff b/lbucket.iff
+new file mode 100644
+index 0000000000..a9b644974a
+--- /dev/null
++++ b/lbucket.iff
+@@ -0,0 +1,77 @@
++diff --git a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
++index 9b5d9a7b91..73d729adc2 100644
++--- a/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
+++++ b/api/envoy/extensions/common/ratelimit/v3/ratelimit.proto
++@@ -130,3 +130,15 @@ message LocalRateLimitDescriptor {
++   // Token Bucket algorithm for local ratelimiting.
++   type.v3.TokenBucket token_bucket = 2 [(validate.rules).message = {required: true}];
++ }
+++
+++// Configuration used to enable local cluster level rate limiting where the token buckets
+++// will be shared across all the Envoy instances in the local cluster.
+++// A share will be calculated based on the membership of the local cluster dynamically
+++// and the configuration. When the limiter refilling the token bucket, the share will be
+++// applied. By default, the token bucket will be shared evenly.
+++//
+++// See :ref:`local cluster name
+++// <envoy_v3_api_field_config.bootstrap.v3.ClusterManager.local_cluster_name>` for more context
+++// about local cluster.
+++message LocalClusterRateLimit {
+++}
++diff --git a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
++index c253d04973..a32475f352 100644
++--- a/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
+++++ b/api/envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.proto
++@@ -22,7 +22,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
++ // Local Rate limit :ref:`configuration overview <config_http_filters_local_rate_limit>`.
++ // [#extension: envoy.filters.http.local_ratelimit]
++ 
++-// [#next-free-field: 16]
+++// [#next-free-field: 17]
++ message LocalRateLimit {
++   // The human readable prefix to use when emitting stats.
++   string stat_prefix = 1 [(validate.rules).string = {min_len: 1}];
++@@ -110,6 +110,23 @@ message LocalRateLimit {
++   // If unspecified, the default value is false.
++   bool local_rate_limit_per_downstream_connection = 11;
++ 
+++  // Enables the local cluster level rate limiting, iff this is set explicitly. For example,
+++  // given an Envoy gateway that contains N Envoy instances and a rate limit rule X tokens
+++  // per second. If this is set, the total rate limit of whole gateway will always be X tokens
+++  // per second regardless of how N changes. If this is not set, the total rate limit of whole
+++  // gateway will be N * X tokens per second.
+++  //
+++  // .. note::
+++  //   This should never be set if the ``local_rate_limit_per_downstream_connection`` is set to
+++  //   true. Because if per connection rate limiting is enabled, we assume that the token buckets
+++  //   should never be shared across Envoy instances.
+++  //
+++  // .. note::
+++  //   This only works when the :ref:`local cluster name
+++  //   <envoy_v3_api_field_config.bootstrap.v3.ClusterManager.local_cluster_name>` is set and
+++  //   the related cluster is defined in the bootstrap configuration.
+++  common.ratelimit.v3.LocalClusterRateLimit local_cluster_rate_limit = 16;
+++
++   // Defines the standard version to use for X-RateLimit headers emitted by the filter.
++   //
++   // Disabled by default.
++diff --git a/changelogs/current.yaml b/changelogs/current.yaml
++index 9ecf0d6e48..4ba2097db3 100644
++--- a/changelogs/current.yaml
+++++ b/changelogs/current.yaml
++@@ -3,6 +3,13 @@ date: Pending
++ behavior_changes:
++ # *Changes that are expected to cause an incompatibility if applicable; deployment changes are likely required*
++ 
+++- area: local_ratelimit
+++  change: |
+++    Updated the token bucket implementation to use non-timer based token bucket. The tokens will be refilled when
+++    the token bucket is accessed and no dependency on the timer.
+++    This behavior can be temporarily reverted by setting the runtime guard
+++    ``envoy.reloadable_features.no_timer_based_rate_limit_token_bucket`` to false.
+++
++ minor_behavior_changes:
++ # *Changes that may cause incompatibilities for some users, but should not for most*
++ 
++diff --git a/ci/Dockerfile-envoy b/ci/Dockerfile-envoy
++index 48a36c9fb2..aaa
+\ No newline at end of file
 diff --git a/source/common/common/token_bucket_impl.cc b/source/common/common/token_bucket_impl.cc
 index f813d426d0..b3d4f10e78 100644
---- source/common/common/token_bucket_impl.cc
-+++ source/common/common/token_bucket_impl.cc
+--- a/source/common/common/token_bucket_impl.cc
++++ b/source/common/common/token_bucket_impl.cc
 @@ -1,5 +1,6 @@
  #include "source/common/common/token_bucket_impl.h"
  
@@ -175,8 +279,8 @@ index f813d426d0..b3d4f10e78 100644
  } // namespace Envoy
 diff --git a/source/common/common/token_bucket_impl.h b/source/common/common/token_bucket_impl.h
 index 96ac238e37..673f0a74e2 100644
---- source/common/common/token_bucket_impl.h
-+++ source/common/common/token_bucket_impl.h
+--- a/source/common/common/token_bucket_impl.h
++++ b/source/common/common/token_bucket_impl.h
 @@ -35,4 +35,92 @@ private:
    TimeSource& time_source_;
  };
@@ -272,8 +376,8 @@ index 96ac238e37..673f0a74e2 100644
  } // namespace Envoy
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
 index 260a08820c..f22d9cf58b 100644
---- source/common/runtime/runtime_features.cc
-+++ source/common/runtime/runtime_features.cc
+--- a/source/common/runtime/runtime_features.cc
++++ b/source/common/runtime/runtime_features.cc
 @@ -73,6 +73,7 @@ RUNTIME_GUARD(envoy_reloadable_features_lowercase_scheme);
  RUNTIME_GUARD(envoy_reloadable_features_no_downgrade_to_canonical_name);
  RUNTIME_GUARD(envoy_reloadable_features_no_extension_lookup_by_name);
@@ -294,8 +398,8 @@ index 260a08820c..f22d9cf58b 100644
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
 diff --git a/source/extensions/filters/common/local_ratelimit/BUILD b/source/extensions/filters/common/local_ratelimit/BUILD
 index 2e6af5b6da..5cea645b04 100644
---- source/extensions/filters/common/local_ratelimit/BUILD
-+++ source/extensions/filters/common/local_ratelimit/BUILD
+--- a/source/extensions/filters/common/local_ratelimit/BUILD
++++ b/source/extensions/filters/common/local_ratelimit/BUILD
 @@ -17,6 +17,7 @@ envoy_cc_library(
          "//envoy/event:timer_interface",
          "//envoy/ratelimit:ratelimit_interface",
@@ -305,9 +409,9 @@ index 2e6af5b6da..5cea645b04 100644
          "@envoy_api//envoy/extensions/common/ratelimit/v3:pkg_cc_proto",
      ],
 diff --git a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
-index 603a61eca0..2537febba9 100644
---- source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
-+++ source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
+index 603a61eca0..dad17d9961 100644
+--- a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
++++ b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.cc
 @@ -1,6 +1,7 @@
  #include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
  
@@ -585,7 +689,7 @@ index 603a61eca0..2537febba9 100644
    }
  }
  
-@@ -98,149 +250,70 @@ void LocalRateLimiterImpl::onFillTimer() {
+@@ -98,153 +250,74 @@ void LocalRateLimiterImpl::onFillTimer() {
    // descriptors tokens from being refilled at the first time hit, regardless of its fill
    // interval configuration.
    refill_counter_++;
@@ -782,10 +886,16 @@ index 603a61eca0..2537febba9 100644
  }
  
  } // namespace LocalRateLimit
+ } // namespace Common
+ } // namespace Filters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
 diff --git a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
-index c0cc182a49..f9305d32c5 100644
---- source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
-+++ source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
+index c0cc182a49..ad4810b102 100644
+--- a/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
++++ b/source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h
 @@ -1,13 +1,17 @@
  #pragma once
  
@@ -804,7 +914,7 @@ index c0cc182a49..f9305d32c5 100644
  #include "source/common/protobuf/protobuf.h"
  
  namespace Envoy {
-@@ -16,78 +20,153 @@ namespace Filters {
+@@ -16,82 +20,156 @@ namespace Filters {
  namespace Common {
  namespace LocalRateLimit {
  
@@ -815,7 +925,6 @@ index c0cc182a49..f9305d32c5 100644
 +  virtual ~ShareProvider() = default;
 +  // The share of the tokens. This method should be thread-safe.
 +  virtual double getTokensShareFactor() const PURE;
-+  virtual uint32_t tokensPerFill(uint32_t origin_tokens_per_fill) const PURE;
 +};
 +using ShareProviderSharedPtr = std::shared_ptr<ShareProvider>;
 +
@@ -1012,10 +1121,27 @@ index c0cc182a49..f9305d32c5 100644
  };
  
  } // namespace LocalRateLimit
+ } // namespace Common
+ } // namespace Filters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
+diff --git a/source/extensions/filters/http/local_ratelimit/BUILD b/source/extensions/filters/http/local_ratelimit/BUILD
+index 88d4042e98..d4ed3daa7e 100644
+--- a/source/extensions/filters/http/local_ratelimit/BUILD
++++ b/source/extensions/filters/http/local_ratelimit/BUILD
+@@ -45,4 +45,4 @@ envoy_cc_extension(
+         "//source/extensions/filters/http/common:factory_base_lib",
+         "@envoy_api//envoy/extensions/filters/http/local_ratelimit/v3:pkg_cc_proto",
+     ],
+-)
++)
+\ No newline at end of file
 diff --git a/source/extensions/filters/http/local_ratelimit/config.cc b/source/extensions/filters/http/local_ratelimit/config.cc
-index cbf719cae4..e0990cf459 100644
---- source/extensions/filters/http/local_ratelimit/config.cc
-+++ source/extensions/filters/http/local_ratelimit/config.cc
+index cbf719cae4..f1e3951c4f 100644
+--- a/source/extensions/filters/http/local_ratelimit/config.cc
++++ b/source/extensions/filters/http/local_ratelimit/config.cc
 @@ -19,7 +19,8 @@ Http::FilterFactoryCb LocalRateLimitFilterConfig::createFilterFactoryFromProtoTy
  
    FilterConfigSharedPtr filter_config = std::make_shared<FilterConfig>(
@@ -1039,10 +1165,28 @@ index cbf719cae4..e0990cf459 100644
  }
  
  /**
+@@ -44,4 +45,4 @@ LEGACY_REGISTER_FACTORY(LocalRateLimitFilterConfig,
+ } // namespace LocalRateLimitFilter
+ } // namespace HttpFilters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
+diff --git a/source/extensions/filters/http/local_ratelimit/config.h b/source/extensions/filters/http/local_ratelimit/config.h
+index 96ae7caa5b..b009c9bcdb 100644
+--- a/source/extensions/filters/http/local_ratelimit/config.h
++++ b/source/extensions/filters/http/local_ratelimit/config.h
+@@ -31,4 +31,4 @@ private:
+ } // namespace LocalRateLimitFilter
+ } // namespace HttpFilters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
 diff --git a/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
-index 6938c8b1d6..d0b03b57c5 100644
---- source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
-+++ source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
+index 6938c8b1d6..7d8b7843e4 100644
+--- a/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/http/local_ratelimit/local_ratelimit.cc
 @@ -23,7 +23,8 @@ const std::string& PerConnectionRateLimiter::key() {
  
  FilterConfig::FilterConfig(
@@ -1063,7 +1207,24 @@ index 6938c8b1d6..d0b03b57c5 100644
        local_info_(local_info), runtime_(runtime),
        filter_enabled_(
            config.has_filter_enabled()
-@@ -72,26 +70,36 @@ FilterConfig::FilterConfig(
+@@ -51,10 +49,12 @@ FilterConfig::FilterConfig(
+               ? absl::optional<Envoy::Runtime::FractionalPercent>(
+                     Envoy::Runtime::FractionalPercent(config.filter_enforced(), runtime_))
+               : absl::nullopt),
+-      response_headers_parser_(
+-          Envoy::Router::HeaderParser::configure(config.response_headers_to_add())),
+-      request_headers_parser_(Envoy::Router::HeaderParser::configure(
+-          config.request_headers_to_add_when_not_enforced())),
++      response_headers_parser_(THROW_OR_RETURN_VALUE(
++          Envoy::Router::HeaderParser::configure(config.response_headers_to_add()),
++          Router::HeaderParserPtr)),
++      request_headers_parser_(THROW_OR_RETURN_VALUE(
++          Envoy::Router::HeaderParser::configure(config.request_headers_to_add_when_not_enforced()),
++          Router::HeaderParserPtr)),
+       stage_(static_cast<uint64_t>(config.stage())),
+       has_descriptors_(!config.descriptors().empty()),
+       enable_x_rate_limit_headers_(config.enable_x_ratelimit_headers() ==
+@@ -72,26 +72,36 @@ FilterConfig::FilterConfig(
    if (per_route && !config.has_token_bucket()) {
      throw EnvoyException("local rate limit token bucket must be set for per filter configs");
    }
@@ -1114,7 +1275,33 @@ index 6938c8b1d6..d0b03b57c5 100644
  }
  
  LocalRateLimitStats FilterConfig::generateStats(const std::string& prefix, Stats::Scope& scope) {
-@@ -121,19 +129,19 @@ Http::FilterHeadersStatus Filter::decodeHeaders(Http::RequestHeaderMap& headers,
+@@ -108,107 +118,93 @@ bool FilterConfig::enforced() const {
+ }
+ 
+ Http::FilterHeadersStatus Filter::decodeHeaders(Http::RequestHeaderMap& headers, bool) {
+-  const auto* config = getConfig();
++  const auto* route_config =
++      Http::Utility::resolveMostSpecificPerFilterConfig<FilterConfig>(decoder_callbacks_);
++
++  // We can never assume that the configuration/route will not change between
++  // decodeHeaders() and encodeHeaders().
++  // Store the configuration because we will use it later in encodeHeaders().
++  if (route_config != nullptr) {
++    ASSERT(used_config_ == config_.get());
++    used_config_ = route_config; // Overwrite the used configuration.
++  }
+ 
+-  if (!config->enabled()) {
++  if (!used_config_->enabled()) {
+     return Http::FilterHeadersStatus::Continue;
+   }
+ 
+-  config->stats().enabled_.inc();
++  used_config_->stats().enabled_.inc();
+ 
+   std::vector<RateLimit::LocalDescriptor> descriptors;
+-  if (config->hasDescriptors()) {
++  if (used_config_->hasDescriptors()) {
      populateDescriptors(descriptors, headers);
    }
  
@@ -1142,7 +1329,33 @@ index 6938c8b1d6..d0b03b57c5 100644
      return Http::FilterHeadersStatus::Continue;
    }
  
-@@ -158,54 +166,31 @@ Http::FilterHeadersStatus Filter::decodeHeaders(Http::RequestHeaderMap& headers,
+-  config->stats().rate_limited_.inc();
++  used_config_->stats().rate_limited_.inc();
+ 
+-  if (!config->enforced()) {
+-    config->requestHeadersParser().evaluateHeaders(headers, decoder_callbacks_->streamInfo());
++  if (!used_config_->enforced()) {
++    used_config_->requestHeadersParser().evaluateHeaders(headers, decoder_callbacks_->streamInfo());
+     return Http::FilterHeadersStatus::Continue;
+   }
+ 
+-  config->stats().enforced_.inc();
++  used_config_->stats().enforced_.inc();
+ 
+   decoder_callbacks_->sendLocalReply(
+-      config->status(), "local_rate_limited",
+-      [this, config](Http::HeaderMap& headers) {
+-        config->responseHeadersParser().evaluateHeaders(headers, decoder_callbacks_->streamInfo());
++      used_config_->status(), "local_rate_limited",
++      [this](Http::HeaderMap& headers) {
++        used_config_->responseHeadersParser().evaluateHeaders(headers,
++                                                              decoder_callbacks_->streamInfo());
+       },
+-      config->rateLimitedGrpcStatus(), "local_rate_limited");
++      used_config_->rateLimitedGrpcStatus(), "local_rate_limited");
+   decoder_callbacks_->streamInfo().setResponseFlag(StreamInfo::CoreResponseFlag::RateLimited);
+ 
+   return Http::FilterHeadersStatus::StopIteration;
  }
  
  Http::FilterHeadersStatus Filter::encodeHeaders(Http::ResponseHeaderMap& headers, bool) {
@@ -1154,15 +1367,15 @@ index 6938c8b1d6..d0b03b57c5 100644
 -    auto remaining = remainingTokens(stored_descriptors_.value());
 -    auto reset = remainingFillInterval(stored_descriptors_.value());
 -
-+  // We can never assume the decodeHeaders() was called before encodeHeaders().
-+  if (token_bucket_context_.has_value()) {
-     headers.addReferenceKey(
+-    headers.addReferenceKey(
 -        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitLimit, limit);
++  // We can never assume the decodeHeaders() was called before encodeHeaders().
++  if (used_config_->enableXRateLimitHeaders() && token_bucket_context_.has_value()) {
+     headers.addReferenceKey(
+-        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitRemaining, remaining);
 +        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitLimit,
 +        token_bucket_context_->maxTokens());
      headers.addReferenceKey(
--        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitRemaining, remaining);
--    headers.addReferenceKey(
 -        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitReset, reset);
 +        HttpFilters::Common::RateLimit::XRateLimitHeaders::get().XRateLimitRemaining,
 +        token_bucket_context_->remainingTokens());
@@ -1183,9 +1396,9 @@ index 6938c8b1d6..d0b03b57c5 100644
 +Filter::requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
 +  return used_config_->rateLimitPerConnection()
               ? getPerConnectionRateLimiter().requestAllowed(request_descriptors)
-              : config->requestAllowed(request_descriptors);
- }
- 
+-             : config->requestAllowed(request_descriptors);
+-}
+-
 -uint32_t Filter::maxTokens(absl::Span<const RateLimit::LocalDescriptor> request_descriptors) {
 -  const auto* config = getConfig();
 -  return config->rateLimitPerConnection()
@@ -1206,15 +1419,94 @@ index 6938c8b1d6..d0b03b57c5 100644
 -  return config->rateLimitPerConnection()
 -             ? getPerConnectionRateLimiter().remainingFillInterval(request_descriptors)
 -             : config->remainingFillInterval(request_descriptors);
++             : used_config_->requestAllowed(request_descriptors);
+ }
+ 
+ const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& Filter::getPerConnectionRateLimiter() {
+-  const auto* config = getConfig();
+-  ASSERT(config->rateLimitPerConnection());
++  ASSERT(used_config_->rateLimitPerConnection());
+ 
+   auto typed_state =
+       decoder_callbacks_->streamInfo().filterState()->getDataReadOnly<PerConnectionRateLimiter>(
+@@ -216,9 +212,9 @@ const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& Filter::getPerConne
+ 
+   if (typed_state == nullptr) {
+     auto limiter = std::make_shared<PerConnectionRateLimiter>(
+-        config->fillInterval(), config->maxTokens(), config->tokensPerFill(),
+-        decoder_callbacks_->dispatcher(), config->descriptors(),
+-        config->consumeDefaultTokenBucket());
++        used_config_->fillInterval(), used_config_->maxTokens(), used_config_->tokensPerFill(),
++        decoder_callbacks_->dispatcher(), used_config_->descriptors(),
++        used_config_->consumeDefaultTokenBucket());
+ 
+     decoder_callbacks_->streamInfo().filterState()->setData(
+         PerConnectionRateLimiter::key(), limiter, StreamInfo::FilterState::StateType::ReadOnly,
+@@ -245,11 +241,11 @@ void Filter::populateDescriptors(std::vector<RateLimit::LocalDescriptor>& descri
+   case VhRateLimitOptions::Ignore:
+     return;
+   case VhRateLimitOptions::Include:
+-    populateDescriptors(route_entry->virtualHost().rateLimitPolicy(), descriptors, headers);
++    populateDescriptors(route->virtualHost().rateLimitPolicy(), descriptors, headers);
+     return;
+   case VhRateLimitOptions::Override:
+     if (route_entry->rateLimitPolicy().empty()) {
+-      populateDescriptors(route_entry->virtualHost().rateLimitPolicy(), descriptors, headers);
++      populateDescriptors(route->virtualHost().rateLimitPolicy(), descriptors, headers);
+     }
+     return;
+   }
+@@ -259,35 +255,23 @@ void Filter::populateDescriptors(std::vector<RateLimit::LocalDescriptor>& descri
+ void Filter::populateDescriptors(const Router::RateLimitPolicy& rate_limit_policy,
+                                  std::vector<RateLimit::LocalDescriptor>& descriptors,
+                                  Http::RequestHeaderMap& headers) {
+-  const auto* config = getConfig();
+   for (const Router::RateLimitPolicyEntry& rate_limit :
+-       rate_limit_policy.getApplicableRateLimit(config->stage())) {
++       rate_limit_policy.getApplicableRateLimit(used_config_->stage())) {
+     const std::string& disable_key = rate_limit.disableKey();
+ 
+     if (!disable_key.empty()) {
+       continue;
+     }
+-    rate_limit.populateLocalDescriptors(descriptors, config->localInfo().clusterName(), headers,
+-                                        decoder_callbacks_->streamInfo());
+-  }
 -}
 -
- const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& Filter::getPerConnectionRateLimiter() {
-   const auto* config = getConfig();
-   ASSERT(config->rateLimitPerConnection());
+-const FilterConfig* Filter::getConfig() const {
+-  const auto* config =
+-      Http::Utility::resolveMostSpecificPerFilterConfig<FilterConfig>(decoder_callbacks_);
+-  if (config) {
+-    return config;
++    rate_limit.populateLocalDescriptors(descriptors, used_config_->localInfo().clusterName(),
++                                        headers, decoder_callbacks_->streamInfo());
+   }
+-
+-  return config_.get();
+ }
+ 
+ VhRateLimitOptions Filter::getVirtualHostRateLimitOption(const Router::RouteConstSharedPtr& route) {
+   if (route->routeEntry()->includeVirtualHostRateLimits()) {
+     vh_rate_limits_ = VhRateLimitOptions::Include;
+   } else {
+-    const auto* config = getConfig();
+-    switch (config->virtualHostRateLimits()) {
++    switch (used_config_->virtualHostRateLimits()) {
+       PANIC_ON_PROTO_ENUM_SENTINEL_VALUES;
+     case envoy::extensions::common::ratelimit::v3::INCLUDE:
+       vh_rate_limits_ = VhRateLimitOptions::Include;
+@@ -306,4 +290,4 @@ VhRateLimitOptions Filter::getVirtualHostRateLimitOption(const Router::RouteCons
+ } // namespace LocalRateLimitFilter
+ } // namespace HttpFilters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
 diff --git a/source/extensions/filters/http/local_ratelimit/local_ratelimit.h b/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
-index e816da64e3..d8982a0c15 100644
---- source/extensions/filters/http/local_ratelimit/local_ratelimit.h
-+++ source/extensions/filters/http/local_ratelimit/local_ratelimit.h
+index e816da64e3..9788eba17c 100644
+--- a/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
++++ b/source/extensions/filters/http/local_ratelimit/local_ratelimit.h
 @@ -73,6 +73,7 @@ class FilterConfig : public Router::RouteSpecificFilterConfig {
  public:
    FilterConfig(const envoy::extensions::filters::http::local_ratelimit::v3::LocalRateLimit& config,
@@ -1245,7 +1537,16 @@ index e816da64e3..d8982a0c15 100644
    std::unique_ptr<Filters::Common::LocalRateLimit::LocalRateLimiterImpl> rate_limiter_;
    const LocalInfo::LocalInfo& local_info_;
    Runtime::Loader& runtime_;
-@@ -181,15 +180,16 @@ private:
+@@ -161,7 +160,7 @@ using FilterConfigSharedPtr = std::shared_ptr<FilterConfig>;
+  */
+ class Filter : public Http::PassThroughFilter, Logger::Loggable<Logger::Id::filter> {
+ public:
+-  Filter(FilterConfigSharedPtr config) : config_(config) {}
++  Filter(FilterConfigSharedPtr config) : config_(config), used_config_(config_.get()) {}
+ 
+   // Http::StreamDecoderFilter
+   Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap& headers,
+@@ -181,19 +180,19 @@ private:
                             Http::RequestHeaderMap& headers);
    VhRateLimitOptions getVirtualHostRateLimitOption(const Router::RouteConstSharedPtr& route);
    const Filters::Common::LocalRateLimit::LocalRateLimiterImpl& getPerConnectionRateLimiter();
@@ -1256,7 +1557,7 @@ index e816da64e3..d8982a0c15 100644
 +  Filters::Common::LocalRateLimit::LocalRateLimiterImpl::Result
 +  requestAllowed(absl::Span<const RateLimit::LocalDescriptor> request_descriptors);
  
-   const FilterConfig* getConfig() const;
+-  const FilterConfig* getConfig() const;
    FilterConfigSharedPtr config_;
 +  // Actual config used for the current request. Is config_ by default, but can be overridden by
 +  // per-route config.
@@ -1267,10 +1568,16 @@ index e816da64e3..d8982a0c15 100644
    VhRateLimitOptions vh_rate_limits_;
  };
  
+ } // namespace LocalRateLimitFilter
+ } // namespace HttpFilters
+ } // namespace Extensions
+-} // namespace Envoy
++} // namespace Envoy
+\ No newline at end of file
 diff --git a/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
 index 7aa4561b80..85f810ad40 100644
---- source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
-+++ source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
+--- a/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/listener/local_ratelimit/local_ratelimit.cc
 @@ -21,7 +21,7 @@ FilterConfig::FilterConfig(
            Protobuf::RepeatedPtrField<
                envoy::extensions::common::ratelimit::v3::LocalRateLimitDescriptor>()) {}
@@ -1282,8 +1589,8 @@ index 7aa4561b80..85f810ad40 100644
    const std::string final_prefix = "listener_local_ratelimit." + prefix;
 diff --git a/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc b/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
 index 8c6af4c820..09594692dd 100644
---- source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
-+++ source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
+--- a/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
++++ b/source/extensions/filters/network/local_ratelimit/local_ratelimit.cc
 @@ -94,7 +94,7 @@ LocalRateLimitStats Config::generateStats(const std::string& prefix, Stats::Scop
    return {ALL_LOCAL_RATE_LIMIT_STATS(POOL_COUNTER_PREFIX(scope, final_prefix))};
  }
@@ -1295,8 +1602,8 @@ index 8c6af4c820..09594692dd 100644
    if (!config_->enabled()) {
 diff --git a/test/common/common/BUILD b/test/common/common/BUILD
 index ede00f4bc1..5a2be7a86e 100644
---- test/common/common/BUILD
-+++ test/common/common/BUILD
+--- a/test/common/common/BUILD
++++ b/test/common/common/BUILD
 @@ -335,6 +335,7 @@ envoy_cc_test(
      deps = [
          "//source/common/common:token_bucket_impl_lib",
@@ -1307,8 +1614,8 @@ index ede00f4bc1..5a2be7a86e 100644
  )
 diff --git a/test/common/common/token_bucket_impl_test.cc b/test/common/common/token_bucket_impl_test.cc
 index 66308cfded..ce20de2cfb 100644
---- test/common/common/token_bucket_impl_test.cc
-+++ test/common/common/token_bucket_impl_test.cc
+--- a/test/common/common/token_bucket_impl_test.cc
++++ b/test/common/common/token_bucket_impl_test.cc
 @@ -3,6 +3,7 @@
  #include "source/common/common/token_bucket_impl.h"
  
@@ -1492,8 +1799,8 @@ index 66308cfded..ce20de2cfb 100644
  } // namespace Envoy
 diff --git a/test/extensions/filters/common/local_ratelimit/BUILD b/test/extensions/filters/common/local_ratelimit/BUILD
 index 96bd5d38a4..85f2f74d5c 100644
---- test/extensions/filters/common/local_ratelimit/BUILD
-+++ test/extensions/filters/common/local_ratelimit/BUILD
+--- a/test/extensions/filters/common/local_ratelimit/BUILD
++++ b/test/extensions/filters/common/local_ratelimit/BUILD
 @@ -12,7 +12,12 @@ envoy_cc_test(
      name = "local_ratelimit_test",
      srcs = ["local_ratelimit_test.cc"],
@@ -1509,8 +1816,8 @@ index 96bd5d38a4..85f2f74d5c 100644
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 index 9c1ead992a..92dbd41785 100644
---- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
+--- a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
 +#include "source/common/singleton/manager_impl.h"
  #include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
@@ -2499,8 +2806,8 @@ index 9c1ead992a..92dbd41785 100644
  } // Namespace LocalRateLimit
 diff --git a/test/extensions/filters/http/local_ratelimit/BUILD b/test/extensions/filters/http/local_ratelimit/BUILD
 index 5d997f8345..3175a577e0 100644
---- test/extensions/filters/http/local_ratelimit/BUILD
-+++ test/extensions/filters/http/local_ratelimit/BUILD
+--- a/test/extensions/filters/http/local_ratelimit/BUILD
++++ b/test/extensions/filters/http/local_ratelimit/BUILD
 @@ -16,10 +16,14 @@ envoy_extension_cc_test(
      srcs = ["filter_test.cc"],
      extension_names = ["envoy.filters.http.local_ratelimit"],
@@ -2518,8 +2825,8 @@ index 5d997f8345..3175a577e0 100644
  )
 diff --git a/test/extensions/filters/http/local_ratelimit/config_test.cc b/test/extensions/filters/http/local_ratelimit/config_test.cc
 index 37c3a991e2..ba02999bee 100644
---- test/extensions/filters/http/local_ratelimit/config_test.cc
-+++ test/extensions/filters/http/local_ratelimit/config_test.cc
+--- a/test/extensions/filters/http/local_ratelimit/config_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/config_test.cc
 @@ -2,6 +2,7 @@
  #include "source/extensions/filters/http/local_ratelimit/local_ratelimit.h"
  
@@ -2698,8 +3005,8 @@ index 37c3a991e2..ba02999bee 100644
  } // namespace Extensions
 diff --git a/test/extensions/filters/http/local_ratelimit/filter_test.cc b/test/extensions/filters/http/local_ratelimit/filter_test.cc
 index f5b7e121a1..602c43af0d 100644
---- test/extensions/filters/http/local_ratelimit/filter_test.cc
-+++ test/extensions/filters/http/local_ratelimit/filter_test.cc
+--- a/test/extensions/filters/http/local_ratelimit/filter_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/filter_test.cc
 @@ -1,9 +1,13 @@
  #include "envoy/extensions/filters/http/local_ratelimit/v3/local_rate_limit.pb.h"
  
@@ -2826,8 +3133,8 @@ index f5b7e121a1..602c43af0d 100644
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
 diff --git a/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc b/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
 index 7c9834d9d3..2171ea59eb 100644
---- test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
-+++ test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
+--- a/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
++++ b/test/extensions/filters/http/local_ratelimit/local_ratelimit_integration_test.cc
 @@ -1,3 +1,5 @@
 +#include "source/extensions/filters/common/local_ratelimit/local_ratelimit_impl.h"
 +
@@ -3021,8 +3328,8 @@ index 7c9834d9d3..2171ea59eb 100644
  } // namespace Envoy
 diff --git a/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 index 2a6999077f..e4fe0a9180 100644
---- test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
+--- a/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 @@ -56,14 +56,9 @@ public:
      NiceMock<Network::MockIoHandle> io_handle_;
    };
@@ -3059,8 +3366,8 @@ index 2a6999077f..e4fe0a9180 100644
    ActiveFilter active_filter3(config_);
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
 index ffa3c6e348..56132bcdfb 100644
---- test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
-+++ test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
+--- a/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
++++ b/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
 @@ -57,7 +57,7 @@ typed_config:
    token_bucket:
      max_tokens: 1
@@ -3081,8 +3388,8 @@ index ffa3c6e348..56132bcdfb 100644
      // Clone the whole listener, which includes the `share_key`.
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 index b4e43d7065..95dda20d3b 100644
---- test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
-+++ test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
+--- a/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
++++ b/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 @@ -12,7 +12,6 @@
  #include "gmock/gmock.h"
  #include "gtest/gtest.h"
