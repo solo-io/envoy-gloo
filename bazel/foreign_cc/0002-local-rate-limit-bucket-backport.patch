@@ -55,29 +55,6 @@ index c253d04973..a32475f352 100644
    // Defines the standard version to use for X-RateLimit headers emitted by the filter.
    //
    // Disabled by default.
-diff --git a/changelogs/1.29.0.yaml b/changelogs/1.29.0.yaml
-index f2e94f25c1..121959bfe4 100644
---- changelogs/1.29.0.yaml
-+++ changelogs/1.29.0.yaml
-@@ -48,7 +48,6 @@ behavior_changes:
- - area: access_log
-   change: |
-     Added issuer in certificate_properties to the gRPC access log service(AlS).
--
- minor_behavior_changes:
- - area: golang
-   change: |
-diff --git a/ci/Dockerfile-envoy b/ci/Dockerfile-envoy
-index 48a36c9fb2..7fc4e0cfbc 100644
---- ci/Dockerfile-envoy
-+++ ci/Dockerfile-envoy
-@@ -1,5 +1,5 @@
- ARG BUILD_OS=ubuntu
--ARG BUILD_TAG=22.04@sha256:340d9b015b194dc6e2a13938944e0d016e57b9679963fdeb9ce021daac430221
-+ARG BUILD_TAG=22.04@sha256:19478ce7fc2ffbce89df29fea5725a8d12e57de52eb9ea570890dc5852aac1ac
- ARG ENVOY_VRP_BASE_IMAGE=envoy-base
- 
- 
 diff --git a/envoy/ratelimit/ratelimit.h b/envoy/ratelimit/ratelimit.h
 index 2839cfa86c..5854372136 100644
 --- envoy/ratelimit/ratelimit.h
