@@ -1,6 +1,0 @@
-changelog:
-- type: FIX
-  issueLink: https://github.com/solo-io/gloo/issues/9564
-  resolvesIssue: false
-  description: >-
-    Backport local rate limiting but make it disabled by default. Requires envoy_reloadable_features_no_timer_based_rate_limit_token_bucket to be set to true.
