@@ -2,12 +2,9 @@ REPOSITORY_LOCATIONS = dict(
     # can't have more than one comment between envoy line and commit line in 
     # order to accommodate `check_extensions_build_config.sh`
     envoy = dict(
-        # envoy-fork release/v1.30-4-backported-filter-state-hits-addend
-        # This fork includes the following PR which has yet to be merged upstream:
-        # https://github.com/envoyproxy/envoy/pull/34184.
-        # Once this merges upstream we can bump the envoy version and get rid of the fork.
-        commit = "ed3a8b9ac0748d9b968e978945fdf930fad46bdf",
-        remote = "https://github.com/solo-io/envoy-fork",
+        # envoy v1.30.4
+        commit = "32113313a357829ba3a5dce0795b6780bf8cbf4d",
+        remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
         # Includes unmerged modifications for

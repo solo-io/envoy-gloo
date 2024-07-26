@@ -68,6 +68,7 @@ def _repository_impl(name, **kwargs):
 def envoy_gloo_dependencies():
     _repository_impl("envoy", patches=[
         "@envoy_gloo//bazel/foreign_cc:0001-otel-exporter-status-code-fix.patch",
+        "@envoy_gloo//bazel/foreign_cc:0002-ratelimit-filter-state-hits-addend.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
