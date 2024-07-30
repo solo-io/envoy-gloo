@@ -4,6 +4,4 @@ changelog:
   dependencyRepo: envoy-fork
   dependencyTag: ed3a8b9ac0748d9b968e978945fdf930fad46bdf
   description: >-
-    Update envoy fork to ed3a8b9ac0748d9b968e978945fdf930fad46bdf.
-    We need to rely on the fork temporarily until the following PR is merged upstream:
-    https://github.com/envoyproxy/envoy/pull/34184
+    Backport unmerged hits addended pr: https://github.com/envoyproxy/envoy/pull/34184
