@@ -1,0 +1,7 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  dependencyOwner: solo-io
+  dependencyRepo: envoy-fork
+  dependencyTag: ed3a8b9ac0748d9b968e978945fdf930fad46bdf
+  description: >-
+    Backport unmerged hits addended pr: https://github.com/envoyproxy/envoy/pull/34184
