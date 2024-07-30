@@ -13,7 +13,7 @@ steps:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 - name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
   id: 'do_upstream_ci'
-  args: ['ci/do_ci.sh', 'release', '@envoy//test/...']
+  args: ['ci/do_ci.sh', 'dev', '@envoy//test/...']
   volumes:
   - name: 'vol-build'
     path: '/build'
