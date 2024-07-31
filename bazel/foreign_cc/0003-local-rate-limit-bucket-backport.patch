@@ -1981,7 +1981,7 @@ index 96bd5d38a4..85f2f74d5c 100644
      ],
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-index 9c1ead992a..92dbd41785 100644
+index 9c1ead992a..bd4c3efd60 100644
 --- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
@@ -2336,7 +2336,7 @@ index 9c1ead992a..92dbd41785 100644
  }
  
  class LocalRateLimiterDescriptorImplTest : public LocalRateLimiterImplTest {
-@@ -213,11 +361,23 @@ public:
+@@ -213,11 +361,26 @@ public:
    void initializeWithDescriptor(const std::chrono::milliseconds fill_interval,
                                  const uint32_t max_tokens, const uint32_t tokens_per_fill) {
  
@@ -2353,6 +2353,9 @@ index 9c1ead992a..92dbd41785 100644
 +  void initializeWithAtomicTokenBucketDescriptor(const std::chrono::milliseconds fill_interval,
 +                                                 const uint32_t max_tokens,
 +                                                 const uint32_t tokens_per_fill) {
++    TestScopedRuntime runtime;
++    runtime.mergeValues(
++        {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "true"}})                                              
 +    rate_limiter_ = std::make_shared<LocalRateLimiterImpl>(
 +        fill_interval, max_tokens, tokens_per_fill, dispatcher_, descriptors_);
 +  }
@@ -2360,7 +2363,7 @@ index 9c1ead992a..92dbd41785 100644
    static constexpr absl::string_view single_descriptor_config_yaml = R"(
    entries:
    - key: foo2
-@@ -237,7 +397,7 @@ public:
+@@ -237,7 +400,7 @@ public:
    token_bucket:
      max_tokens: 1
      tokens_per_fill: 1
@@ -2369,7 +2372,7 @@ index 9c1ead992a..92dbd41785 100644
    )";
  
    // Default token bucket
-@@ -299,15 +459,15 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+@@ -299,15 +462,15 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
      synchronizer().barrierOn("on_fill_timer_pre_cas");
  
      // This should succeed.
@@ -2388,7 +2391,7 @@ index 9c1ead992a..92dbd41785 100644
    }
  
    // This tests the case in which two allowed checks race.
-@@ -318,12 +478,12 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+@@ -318,12 +481,12 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
  
      // Start a thread and see if we are under limit. This will wait pre-CAS.
      synchronizer().waitOn("allowed_pre_cas");
@@ -2403,7 +2406,7 @@ index 9c1ead992a..92dbd41785 100644
      synchronizer().signal("allowed_pre_cas");
      t1.join();
    }
-@@ -334,9 +494,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor2) {
+@@ -334,9 +497,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor2) {
                              *descriptors_.Add());
    initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
  
@@ -2416,7 +2419,7 @@ index 9c1ead992a..92dbd41785 100644
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(100), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
  }
-@@ -348,8 +508,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -348,8 +511,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
  
    // 1 -> 0 tokens
@@ -2427,7 +2430,7 @@ index 9c1ead992a..92dbd41785 100644
  
    // 0 -> 1 tokens
    for (int i = 0; i < 2; i++) {
-@@ -360,8 +520,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -360,8 +523,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    }
  
    // 1 -> 0 tokens
@@ -2438,7 +2441,7 @@ index 9c1ead992a..92dbd41785 100644
  
    // 0 -> 1 tokens
    for (int i = 0; i < 2; i++) {
-@@ -380,8 +540,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -380,8 +543,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    }
  
    // 1 -> 0 tokens
@@ -2449,7 +2452,7 @@ index 9c1ead992a..92dbd41785 100644
  }
  
  // Verify token bucket functionality with request per unit > 1.
-@@ -391,9 +551,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -391,9 +554,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    initializeWithDescriptor(std::chrono::milliseconds(50), 2, 2);
  
    // 2 -> 0 tokens
@@ -2462,7 +2465,7 @@ index 9c1ead992a..92dbd41785 100644
  
    // 0 -> 2 tokens
    for (int i = 0; i < 2; i++) {
-@@ -404,7 +564,7 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -404,7 +567,7 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    }
  
    // 2 -> 1 tokens
@@ -2471,7 +2474,7 @@ index 9c1ead992a..92dbd41785 100644
  
    // 1 -> 2 tokens
    for (int i = 0; i < 2; i++) {
-@@ -415,34 +575,34 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -415,34 +578,34 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    }
  
    // 2 -> 0 tokens
@@ -2520,7 +2523,7 @@ index 9c1ead992a..92dbd41785 100644
  }
  
  // Verify token bucket functionality with multiple descriptors sorted.
-@@ -456,10 +616,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest,
+@@ -456,10 +619,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest,
                                                        {{{"foo2", "bar2"}}}};
  
    // Descriptors are sorted as descriptor2 < descriptor < global
@@ -2534,7 +2537,7 @@ index 9c1ead992a..92dbd41785 100644
  }
  
  // Verify token bucket status of max tokens, remaining tokens and remaining fill interval.
-@@ -469,10 +629,14 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -469,10 +632,14 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    initializeWithDescriptor(std::chrono::milliseconds(1000), 2, 2);
  
    // 2 -> 1 tokens
@@ -2553,7 +2556,7 @@ index 9c1ead992a..92dbd41785 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -480,10 +644,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -480,10 +647,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 1 -> 0 tokens
@@ -2569,7 +2572,7 @@ index 9c1ead992a..92dbd41785 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -491,10 +656,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -491,10 +659,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 0 -> 0 tokens
@@ -2585,7 +2588,7 @@ index 9c1ead992a..92dbd41785 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -502,9 +668,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -502,9 +671,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 0 -> 2 tokens
@@ -2599,7 +2602,7 @@ index 9c1ead992a..92dbd41785 100644
  }
  
  // Verify token bucket status of max tokens, remaining tokens and remaining fill interval with
-@@ -513,47 +680,343 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
+@@ -513,47 +683,343 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
    TestUtility::loadFromYaml(multiple_descriptor_config_yaml, *descriptors_.Add());
    TestUtility::loadFromYaml(fmt::format(single_descriptor_config_yaml, 2, 2, "3s"),
                              *descriptors_.Add());
@@ -3170,7 +3173,7 @@ index 37c3a991e2..ba02999bee 100644
  } // namespace HttpFilters
  } // namespace Extensions
 diff --git a/test/extensions/filters/http/local_ratelimit/filter_test.cc b/test/extensions/filters/http/local_ratelimit/filter_test.cc
-index f5b7e121a1..602c43af0d 100644
+index f5b7e121a1..22e51eb69e 100644
 --- test/extensions/filters/http/local_ratelimit/filter_test.cc
 +++ test/extensions/filters/http/local_ratelimit/filter_test.cc
 @@ -1,9 +1,13 @@
@@ -3241,11 +3244,14 @@ index f5b7e121a1..602c43af0d 100644
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(request_headers, false));
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
    EXPECT_EQ("1", response_headers.get_("x-ratelimit-limit"));
-@@ -310,9 +343,20 @@ TEST_F(FilterTest, RequestRateLimitedXRateLimitHeaders) {
+@@ -310,9 +343,23 @@ TEST_F(FilterTest, RequestRateLimitedXRateLimitHeaders) {
    EXPECT_EQ(1U, findCounter("test.http_local_rate_limit.rate_limited"));
  }
  
 +TEST_F(FilterTest, RequestRateLimitedXRateLimitHeadersWithoutRunningDecodeHeaders) {
++  TestScopedRuntime runtime;
++  runtime.mergeValues(
++      {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
 +  auto response_headers = Http::TestResponseHeaderMapImpl();
 +
 +  EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
@@ -3263,7 +3269,7 @@ index f5b7e121a1..602c43af0d 100644
    max_tokens: {}
    tokens_per_fill: 1
    fill_interval: 60s
-@@ -662,6 +706,33 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimitedXRateLimitHeaders)
+@@ -662,6 +709,33 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimitedXRateLimitHeaders)
    auto request_headers = Http::TestRequestHeaderMapImpl();
    auto response_headers = Http::TestResponseHeaderMapImpl();
  
