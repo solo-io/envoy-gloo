@@ -107,6 +107,8 @@ index 2839cfa86c..5854372136 100644
 +   */
 +  template <class V> using Map = absl::flat_hash_map<LocalDescriptor, V, Hash, Equal>;
  };
+ 
+ /*
 diff --git a/source/common/common/token_bucket_impl.cc b/source/common/common/token_bucket_impl.cc
 index f813d426d0..b3d4f10e78 100644
 --- source/common/common/token_bucket_impl.cc
