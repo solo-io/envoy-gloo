@@ -292,6 +292,43 @@ index 260a08820c..f22d9cf58b 100644
  // TODO(birenroy) Flip this to true after resolving issues.
  // Ignore the automated "remove this flag" issue: we should keep this for 1 year.
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
+diff --git a/source/common/singleton/manager_impl.cc b/source/common/singleton/manager_impl.cc
+index a71fd7f3a9..925b1c6050 100644
+--- source/common/singleton/manager_impl.cc
++++ source/common/singleton/manager_impl.cc
+@@ -9,7 +9,7 @@ namespace Envoy {
+ namespace Singleton {
+ 
+ InstanceSharedPtr ManagerImpl::get(const std::string& name, SingletonFactoryCb cb, bool pin) {
+-  ASSERT(run_tid_ == thread_factory_.currentThreadId());
++  ASSERT_IS_MAIN_OR_TEST_THREAD();
+ 
+   ENVOY_BUG(Registry::FactoryRegistry<Registration>::getFactory(name) != nullptr,
+             "invalid singleton name '" + name + "'. Make sure it is registered.");
+diff --git a/source/common/singleton/manager_impl.h b/source/common/singleton/manager_impl.h
+index cc715f55c1..a541f90695 100644
+--- source/common/singleton/manager_impl.h
++++ source/common/singleton/manager_impl.h
+@@ -17,8 +17,7 @@ namespace Singleton {
+  */
+ class ManagerImpl : public Manager, NonCopyable {
+ public:
+-  explicit ManagerImpl(Thread::ThreadFactory& thread_factory)
+-      : thread_factory_(thread_factory), run_tid_(thread_factory.currentThreadId()) {}
++  ManagerImpl() = default;
+ 
+   // Singleton::Manager
+   InstanceSharedPtr get(const std::string& name, SingletonFactoryCb cb, bool pin) override;
+@@ -26,9 +25,6 @@ public:
+ private:
+   absl::node_hash_map<std::string, std::weak_ptr<Instance>> singletons_;
+   std::vector<InstanceSharedPtr> pinned_singletons_;
+-
+-  Thread::ThreadFactory& thread_factory_;
+-  const Thread::ThreadId run_tid_;
+ };
+ 
+ } // namespace Singleton
 diff --git a/source/extensions/filters/common/local_ratelimit/BUILD b/source/extensions/filters/common/local_ratelimit/BUILD
 index 2e6af5b6da..5cea645b04 100644
 --- source/extensions/filters/common/local_ratelimit/BUILD
@@ -1482,6 +1519,108 @@ index 8c6af4c820..09594692dd 100644
  
  Network::FilterStatus Filter::onNewConnection() {
    if (!config_->enabled()) {
+diff --git a/source/server/config_validation/server.cc b/source/server/config_validation/server.cc
+index 03bbd16fae..569f677341 100644
+--- source/server/config_validation/server.cc
++++ source/server/config_validation/server.cc
+@@ -11,7 +11,6 @@
+ #include "source/common/listener_manager/listener_info_impl.h"
+ #include "source/common/local_info/local_info_impl.h"
+ #include "source/common/protobuf/utility.h"
+-#include "source/common/singleton/manager_impl.h"
+ #include "source/common/stats/tag_producer_impl.h"
+ #include "source/common/tls/context_manager_impl.h"
+ #include "source/common/version/version.h"
+@@ -59,7 +58,6 @@ ValidationInstance::ValidationInstance(
+       api_(new Api::ValidationImpl(thread_factory, store, time_system, file_system,
+                                    random_generator_, bootstrap_, process_context)),
+       dispatcher_(api_->allocateDispatcher("main_thread")),
+-      singleton_manager_(new Singleton::ManagerImpl(api_->threadFactory())),
+       access_log_manager_(options.fileFlushIntervalMsec(), *api_, *dispatcher_, access_log_lock,
+                           store),
+       grpc_context_(stats_store_.symbolTable()), http_context_(stats_store_.symbolTable()),
+diff --git a/source/server/config_validation/server.h b/source/server/config_validation/server.h
+index 777b5a1ff6..af367feeb6 100644
+--- source/server/config_validation/server.h
++++ source/server/config_validation/server.h
+@@ -23,6 +23,7 @@
+ #include "source/common/router/rds_impl.h"
+ #include "source/common/runtime/runtime_impl.h"
+ #include "source/common/secret/secret_manager_impl.h"
++#include "source/common/singleton/manager_impl.h"
+ #include "source/common/thread_local/thread_local_impl.h"
+ #include "source/server/config_validation/admin.h"
+ #include "source/server/config_validation/api.h"
+@@ -100,7 +101,7 @@ public:
+   void shutdown() override;
+   bool isShutdown() override { return false; }
+   void shutdownAdmin() override {}
+-  Singleton::Manager& singletonManager() override { return *singleton_manager_; }
++  Singleton::Manager& singletonManager() override { return singleton_manager_; }
+   OverloadManager& overloadManager() override { return *overload_manager_; }
+   bool healthCheckFailed() override { return false; }
+   const Options& options() override { return options_; }
+@@ -175,7 +176,7 @@ private:
+   std::unique_ptr<Ssl::ContextManager> ssl_context_manager_;
+   Event::DispatcherPtr dispatcher_;
+   std::unique_ptr<Server::ValidationAdmin> admin_;
+-  Singleton::ManagerPtr singleton_manager_;
++  Singleton::ManagerImpl singleton_manager_;
+   std::unique_ptr<Runtime::Loader> runtime_;
+   Random::RandomGeneratorImpl random_generator_;
+   Configuration::MainImpl config_;
+diff --git a/source/server/server.cc b/source/server/server.cc
+index 254cbc0860..6b14538680 100644
+--- source/server/server.cc
++++ source/server/server.cc
+@@ -45,7 +45,6 @@
+ #include "source/common/runtime/runtime_impl.h"
+ #include "source/common/runtime/runtime_keys.h"
+ #include "source/common/signal/fatal_error_handler.h"
+-#include "source/common/singleton/manager_impl.h"
+ #include "source/common/stats/stats_matcher_impl.h"
+ #include "source/common/stats/tag_producer_impl.h"
+ #include "source/common/stats/thread_local_store.h"
+@@ -99,7 +98,6 @@ InstanceBase::InstanceBase(Init::Manager& init_manager, const Options& options,
+       dispatcher_(api_->allocateDispatcher("main_thread")),
+       access_log_manager_(options.fileFlushIntervalMsec(), *api_, *dispatcher_, access_log_lock,
+                           store),
+-      singleton_manager_(new Singleton::ManagerImpl(api_->threadFactory())),
+       handler_(getHandler(*dispatcher_)), worker_factory_(thread_local_, *api_, hooks),
+       mutex_tracer_(options.mutexTracingEnabled() ? &Envoy::MutexTracerImpl::getOrCreateTracer()
+                                                   : nullptr),
+diff --git a/source/server/server.h b/source/server/server.h
+index ae9b1ea95b..3060531879 100644
+--- source/server/server.h
++++ source/server/server.h
+@@ -37,6 +37,7 @@
+ #include "source/common/router/context_impl.h"
+ #include "source/common/runtime/runtime_impl.h"
+ #include "source/common/secret/secret_manager_impl.h"
++#include "source/common/singleton/manager_impl.h"
+ #include "source/common/upstream/health_discovery_service.h"
+ 
+ #ifdef ENVOY_ADMIN_FUNCTIONALITY
+@@ -278,7 +279,7 @@ public:
+   void shutdown() override;
+   bool isShutdown() final { return shutdown_; }
+   void shutdownAdmin() override;
+-  Singleton::Manager& singletonManager() override { return *singleton_manager_; }
++  Singleton::Manager& singletonManager() override { return singleton_manager_; }
+   bool healthCheckFailed() override;
+   const Options& options() override { return options_; }
+   time_t startTimeCurrentEpoch() override { return start_time_; }
+@@ -379,8 +380,8 @@ private:
+   std::unique_ptr<Ssl::ContextManager> ssl_context_manager_;
+   Event::DispatcherPtr dispatcher_;
+   AccessLog::AccessLogManagerImpl access_log_manager_;
+-  std::unique_ptr<Admin> admin_;
+-  Singleton::ManagerPtr singleton_manager_;
++  std::shared_ptr<Admin> admin_;
++  Singleton::ManagerImpl singleton_manager_;
+   Network::ConnectionHandlerPtr handler_;
+   std::unique_ptr<Runtime::Loader> runtime_;
+   ProdWorkerFactory worker_factory_;
 diff --git a/test/common/common/BUILD b/test/common/common/BUILD
 index ede00f4bc1..5a2be7a86e 100644
 --- test/common/common/BUILD
@@ -1679,6 +1818,151 @@ index 66308cfded..ce20de2cfb 100644
 +}
 +
  } // namespace Envoy
+diff --git a/test/common/http/http_server_properties_cache_manager_test.cc b/test/common/http/http_server_properties_cache_manager_test.cc
+index f6b8fbdc31..0d2fe3d44f 100644
+--- test/common/http/http_server_properties_cache_manager_test.cc
++++ test/common/http/http_server_properties_cache_manager_test.cc
+@@ -30,7 +30,7 @@ public:
+     manager_ = factory_->get();
+   }
+ 
+-  Singleton::ManagerImpl singleton_manager_{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager_;
+   NiceMock<Server::Configuration::MockFactoryContext> context_;
+   testing::NiceMock<ThreadLocal::MockInstance> tls_;
+   std::unique_ptr<Http::HttpServerPropertiesCacheManagerFactoryImpl> factory_;
+diff --git a/test/common/singleton/manager_impl_test.cc b/test/common/singleton/manager_impl_test.cc
+index d1a8513fbd..0a943cfb6a 100644
+--- test/common/singleton/manager_impl_test.cc
++++ test/common/singleton/manager_impl_test.cc
+@@ -12,7 +12,7 @@ namespace {
+ 
+ // Must be a dedicated function so that TID is within the death test.
+ static void deathTestWorker() {
+-  ManagerImpl manager(Thread::threadFactoryForTest());
++  ManagerImpl manager;
+ 
+   manager.get(
+       "foo", [] { return nullptr; }, false);
+@@ -39,7 +39,7 @@ TEST(SingletonRegistration, category) {
+ }
+ 
+ TEST(SingletonManagerImplTest, Basic) {
+-  ManagerImpl manager(Thread::threadFactoryForTest());
++  ManagerImpl manager;
+ 
+   std::shared_ptr<TestSingleton> singleton = std::make_shared<TestSingleton>();
+   EXPECT_EQ(singleton, manager.get(
+@@ -53,7 +53,7 @@ TEST(SingletonManagerImplTest, Basic) {
+ }
+ 
+ TEST(SingletonManagerImplTest, NonConstructingGetTyped) {
+-  ManagerImpl manager(Thread::threadFactoryForTest());
++  ManagerImpl manager;
+ 
+   // Access without first constructing should be null.
+   EXPECT_EQ(nullptr, manager.getTyped<TestSingleton>("test_singleton"));
+@@ -73,7 +73,7 @@ TEST(SingletonManagerImplTest, NonConstructingGetTyped) {
+ TEST(SingletonManagerImplTest, PinnedSingleton) {
+ 
+   {
+-    ManagerImpl manager(Thread::threadFactoryForTest());
++    ManagerImpl manager;
+     TestSingleton* singleton_ptr{};
+ 
+     // Register a singleton and get it.
+@@ -94,7 +94,7 @@ TEST(SingletonManagerImplTest, PinnedSingleton) {
+   }
+ 
+   {
+-    ManagerImpl manager(Thread::threadFactoryForTest());
++    ManagerImpl manager;
+     TestSingleton* singleton_ptr{};
+ 
+     // Register a pinned singleton and get it.
+diff --git a/test/common/upstream/test_cluster_manager.h b/test/common/upstream/test_cluster_manager.h
+index e9836c75db..e3c6662135 100644
+--- test/common/upstream/test_cluster_manager.h
++++ test/common/upstream/test_cluster_manager.h
+@@ -151,7 +151,7 @@ public:
+   NiceMock<Server::MockAdmin>& admin_ = server_context_.admin_;
+   NiceMock<Secret::MockSecretManager> secret_manager_;
+   NiceMock<AccessLog::MockAccessLogManager>& log_manager_ = server_context_.access_log_manager_;
+-  Singleton::ManagerImpl singleton_manager_{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager_;
+   NiceMock<ProtobufMessage::MockValidationVisitor> validation_visitor_;
+   NiceMock<Random::MockRandomGenerator> random_;
+   Api::ApiPtr api_;
+diff --git a/test/extensions/common/async_files/async_file_handle_thread_pool_test.cc b/test/extensions/common/async_files/async_file_handle_thread_pool_test.cc
+index 538462fdfa..b4e63ed44d 100644
+--- test/extensions/common/async_files/async_file_handle_thread_pool_test.cc
++++ test/extensions/common/async_files/async_file_handle_thread_pool_test.cc
+@@ -64,7 +64,7 @@ public:
+ class AsyncFileHandleTest : public testing::Test, public AsyncFileHandleHelpers {
+ public:
+   void SetUp() override {
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     factory_ = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+     envoy::extensions::common::async_files::v3::AsyncFileManagerConfig config;
+     config.mutable_thread_pool()->set_thread_count(1);
+@@ -77,7 +77,7 @@ public:
+   void SetUp() override {
+     EXPECT_CALL(mock_posix_file_operations_, supportsAllPosixFileOperations())
+         .WillRepeatedly(Return(true));
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     factory_ = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+     envoy::extensions::common::async_files::v3::AsyncFileManagerConfig config;
+     config.mutable_thread_pool()->set_thread_count(1);
+diff --git a/test/extensions/common/async_files/async_file_manager_factory_test.cc b/test/extensions/common/async_files/async_file_manager_factory_test.cc
+index 2914d157c3..f2afd82435 100644
+--- test/extensions/common/async_files/async_file_manager_factory_test.cc
++++ test/extensions/common/async_files/async_file_manager_factory_test.cc
+@@ -30,7 +30,7 @@ using ::testing::StrictMock;
+ class AsyncFileManagerFactoryTest : public ::testing::Test {
+ public:
+   void SetUp() override {
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     factory_ = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+     EXPECT_CALL(mock_posix_file_operations_, supportsAllPosixFileOperations())
+         .WillRepeatedly(Return(true));
+diff --git a/test/extensions/common/async_files/async_file_manager_thread_pool_test.cc b/test/extensions/common/async_files/async_file_manager_thread_pool_test.cc
+index 3ece365190..d0c262ddf9 100644
+--- test/extensions/common/async_files/async_file_manager_thread_pool_test.cc
++++ test/extensions/common/async_files/async_file_manager_thread_pool_test.cc
+@@ -119,7 +119,7 @@ private:
+ class AsyncFileManagerTest : public testing::Test {
+ public:
+   void SetUp() override {
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     factory_ = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+   }
+ 
+@@ -179,7 +179,7 @@ public:
+   void SetUp() override {
+     envoy::extensions::common::async_files::v3::AsyncFileManagerConfig config;
+     config.mutable_thread_pool()->set_thread_count(1);
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     auto factory = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+     manager_ = factory->getAsyncFileManager(config);
+   }
+diff --git a/test/extensions/common/async_files/async_file_manager_thread_pool_with_mocks_test.cc b/test/extensions/common/async_files/async_file_manager_thread_pool_with_mocks_test.cc
+index feeba117a1..03a854da6b 100644
+--- test/extensions/common/async_files/async_file_manager_thread_pool_with_mocks_test.cc
++++ test/extensions/common/async_files/async_file_manager_thread_pool_with_mocks_test.cc
+@@ -41,7 +41,7 @@ public:
+         .WillRepeatedly(Return(true));
+     envoy::extensions::common::async_files::v3::AsyncFileManagerConfig config;
+     config.mutable_thread_pool()->set_thread_count(1);
+-    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>(Thread::threadFactoryForTest());
++    singleton_manager_ = std::make_unique<Singleton::ManagerImpl>();
+     factory_ = AsyncFileManagerFactory::singleton(singleton_manager_.get());
+     manager_ = factory_->getAsyncFileManager(config, &mock_posix_file_operations_);
+   }
 diff --git a/test/extensions/filters/common/local_ratelimit/BUILD b/test/extensions/filters/common/local_ratelimit/BUILD
 index 96bd5d38a4..85f2f74d5c 100644
 --- test/extensions/filters/common/local_ratelimit/BUILD
@@ -3246,6 +3530,19 @@ index 2a6999077f..e4fe0a9180 100644
  
    // Third socket is allowed after refill.
    ActiveFilter active_filter3(config_);
+diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_fuzz_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_fuzz_test.cc
+index ee00dbb61b..45bcd52280 100644
+--- test/extensions/filters/network/local_ratelimit/local_ratelimit_fuzz_test.cc
++++ test/extensions/filters/network/local_ratelimit/local_ratelimit_fuzz_test.cc
+@@ -61,7 +61,7 @@ DEFINE_PROTO_FUZZER(
+   // default time system in GlobalTimeSystem.
+   dispatcher.time_system_ = std::make_unique<Event::SimulatedTimeSystem>();
+   Stats::IsolatedStoreImpl stats_store;
+-  Singleton::ManagerImpl singleton_manager(Thread::threadFactoryForTest());
++  Singleton::ManagerImpl singleton_manager;
+   static NiceMock<Runtime::MockLoader> runtime;
+   Event::MockTimer* fill_timer = new Event::MockTimer(&dispatcher);
+   envoy::extensions::filters::network::local_ratelimit::v3::LocalRateLimit proto_config =
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
 index ffa3c6e348..56132bcdfb 100644
 --- test/extensions/filters/network/local_ratelimit/local_ratelimit_integration_test.cc
@@ -3269,7 +3566,7 @@ index ffa3c6e348..56132bcdfb 100644
  
      // Clone the whole listener, which includes the `share_key`.
 diff --git a/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
-index b4e43d7065..95dda20d3b 100644
+index b4e43d7065..94af0da7d1 100644
 --- test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/network/local_ratelimit/local_ratelimit_test.cc
 @@ -12,7 +12,6 @@
@@ -3280,9 +3577,12 @@ index b4e43d7065..95dda20d3b 100644
  using testing::InSequence;
  using testing::NiceMock;
  using testing::Return;
-@@ -26,14 +25,9 @@ class LocalRateLimitTestBase : public testing::Test, public Event::TestUsingSimu
+@@ -24,16 +23,11 @@ namespace LocalRateLimitFilter {
+ 
+ class LocalRateLimitTestBase : public testing::Test, public Event::TestUsingSimulatedTime {
  public:
-   LocalRateLimitTestBase() : singleton_manager_(Thread::threadFactoryForTest()) {}
+-  LocalRateLimitTestBase() : singleton_manager_(Thread::threadFactoryForTest()) {}
++  LocalRateLimitTestBase() = default;
  
 -  uint64_t initialize(const std::string& filter_yaml, bool expect_timer_create = true) {
 +  uint64_t initialize(const std::string& filter_yaml) {
@@ -3326,3 +3626,108 @@ index b4e43d7065..95dda20d3b 100644
      config2_ = std::make_shared<Config>(proto_config, dispatcher_, *stats_store_.rootScope(),
                                          runtime_, singleton_manager_);
  
+diff --git a/test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc b/test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
+index 0ee731596b..52aeddd352 100644
+--- test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
++++ test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
+@@ -262,7 +262,7 @@ CacheConfig varyAllowListConfig() {
+ 
+ class MockSingletonManager : public Singleton::ManagerImpl {
+ public:
+-  MockSingletonManager() : Singleton::ManagerImpl(Thread::threadFactoryForTest()) {
++  MockSingletonManager() {
+     // By default just act like a real SingletonManager, but allow overrides.
+     ON_CALL(*this, get(_, _, _))
+         .WillByDefault(std::bind(&MockSingletonManager::realGet, this, std::placeholders::_1,
+diff --git a/test/extensions/key_value/file_based/alternate_protocols_cache_impl_test.cc b/test/extensions/key_value/file_based/alternate_protocols_cache_impl_test.cc
+index 9363f64872..0787fe7c4e 100644
+--- test/extensions/key_value/file_based/alternate_protocols_cache_impl_test.cc
++++ test/extensions/key_value/file_based/alternate_protocols_cache_impl_test.cc
+@@ -26,7 +26,7 @@ public:
+         singleton_manager_, tls_, data);
+     manager_ = factory_->get();
+   }
+-  Singleton::ManagerImpl singleton_manager_{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager_;
+   NiceMock<Server::Configuration::MockFactoryContext> context_;
+   testing::NiceMock<ThreadLocal::MockInstance> tls_;
+   std::unique_ptr<Http::HttpServerPropertiesCacheManagerFactoryImpl> factory_;
+diff --git a/test/extensions/transport_sockets/alts/config_test.cc b/test/extensions/transport_sockets/alts/config_test.cc
+index a848115fac..c237f6ff27 100644
+--- test/extensions/transport_sockets/alts/config_test.cc
++++ test/extensions/transport_sockets/alts/config_test.cc
+@@ -18,7 +18,7 @@ namespace {
+ 
+ TEST(UpstreamAltsConfigTest, CreateSocketFactory) {
+   NiceMock<MockTransportSocketFactoryContext> factory_context;
+-  Singleton::ManagerImpl singleton_manager{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager;
+   EXPECT_CALL(factory_context.server_context_, singletonManager())
+       .WillRepeatedly(ReturnRef(singleton_manager));
+   UpstreamAltsTransportSocketConfigFactory factory;
+@@ -39,7 +39,7 @@ TEST(UpstreamAltsConfigTest, CreateSocketFactory) {
+ 
+ TEST(DownstreamAltsConfigTest, CreateSocketFactory) {
+   NiceMock<MockTransportSocketFactoryContext> factory_context;
+-  Singleton::ManagerImpl singleton_manager{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager;
+   EXPECT_CALL(factory_context.server_context_, singletonManager())
+       .WillRepeatedly(ReturnRef(singleton_manager));
+   DownstreamAltsTransportSocketConfigFactory factory;
+diff --git a/test/mocks/server/instance.cc b/test/mocks/server/instance.cc
+index ebee702e5d..036f31fa48 100644
+--- test/mocks/server/instance.cc
++++ test/mocks/server/instance.cc
+@@ -13,8 +13,7 @@ using ::testing::ReturnRef;
+ 
+ MockInstance::MockInstance()
+     : secret_manager_(std::make_unique<Secret::SecretManagerImpl>(admin_.getConfigTracker())),
+-      cluster_manager_(timeSource()),
+-      singleton_manager_(new Singleton::ManagerImpl(Thread::threadFactoryForTest())),
++      cluster_manager_(timeSource()), singleton_manager_(new Singleton::ManagerImpl()),
+       grpc_context_(stats_store_.symbolTable()), http_context_(stats_store_.symbolTable()),
+       router_context_(stats_store_.symbolTable()), quic_stat_names_(stats_store_.symbolTable()),
+       stats_config_(std::make_shared<NiceMock<Configuration::MockStatsConfig>>()),
+diff --git a/test/mocks/server/server_factory_context.cc b/test/mocks/server/server_factory_context.cc
+index fb12fbe4f8..e1377b5b42 100644
+--- test/mocks/server/server_factory_context.cc
++++ test/mocks/server/server_factory_context.cc
+@@ -8,9 +8,8 @@ using ::testing::Return;
+ using ::testing::ReturnRef;
+ 
+ MockServerFactoryContext::MockServerFactoryContext()
+-    : singleton_manager_(new Singleton::ManagerImpl(Thread::threadFactoryForTest())),
+-      http_context_(store_.symbolTable()), grpc_context_(store_.symbolTable()),
+-      router_context_(store_.symbolTable()) {
++    : singleton_manager_(new Singleton::ManagerImpl()), http_context_(store_.symbolTable()),
++      grpc_context_(store_.symbolTable()), router_context_(store_.symbolTable()) {
+   ON_CALL(*this, clusterManager()).WillByDefault(ReturnRef(cluster_manager_));
+   ON_CALL(*this, mainThreadDispatcher()).WillByDefault(ReturnRef(dispatcher_));
+   ON_CALL(*this, drainDecision()).WillByDefault(ReturnRef(drain_manager_));
+diff --git a/test/mocks/server/transport_socket_factory_context.cc b/test/mocks/server/transport_socket_factory_context.cc
+index d06c2711f7..09859ef971 100644
+--- test/mocks/server/transport_socket_factory_context.cc
++++ test/mocks/server/transport_socket_factory_context.cc
+@@ -12,8 +12,7 @@ namespace Configuration {
+ using ::testing::ReturnRef;
+ 
+ MockTransportSocketFactoryContext::MockTransportSocketFactoryContext()
+-    : secret_manager_(std::make_unique<Secret::SecretManagerImpl>(config_tracker_)),
+-      singleton_manager_(Thread::threadFactoryForTest()) {
++    : secret_manager_(std::make_unique<Secret::SecretManagerImpl>(config_tracker_)) {
+   ON_CALL(*this, serverFactoryContext()).WillByDefault(ReturnRef(server_context_));
+   ON_CALL(*this, clusterManager()).WillByDefault(ReturnRef(cluster_manager_));
+   ON_CALL(*this, messageValidationVisitor())
+diff --git a/test/mocks/upstream/cluster_manager_factory.h b/test/mocks/upstream/cluster_manager_factory.h
+index 9cf678b4f2..c5ce18aaec 100644
+--- test/mocks/upstream/cluster_manager_factory.h
++++ test/mocks/upstream/cluster_manager_factory.h
+@@ -51,7 +51,7 @@ public:
+ 
+ private:
+   NiceMock<Secret::MockSecretManager> secret_manager_;
+-  Singleton::ManagerImpl singleton_manager_{Thread::threadFactoryForTest()};
++  Singleton::ManagerImpl singleton_manager_;
+ };
+ } // namespace Upstream
+ } // namespace Envoy
