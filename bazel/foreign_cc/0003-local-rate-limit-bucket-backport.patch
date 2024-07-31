@@ -1981,7 +1981,7 @@ index 96bd5d38a4..85f2f74d5c 100644
      ],
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-index 9c1ead992a..bd4c3efd60 100644
+index 9c1ead992a..9fa3bcd3d2 100644
 --- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
@@ -2355,7 +2355,7 @@ index 9c1ead992a..bd4c3efd60 100644
 +                                                 const uint32_t tokens_per_fill) {
 +    TestScopedRuntime runtime;
 +    runtime.mergeValues(
-+        {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "true"}})                                              
++        {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "true"}});                                              
 +    rate_limiter_ = std::make_shared<LocalRateLimiterImpl>(
 +        fill_interval, max_tokens, tokens_per_fill, dispatcher_, descriptors_);
 +  }
