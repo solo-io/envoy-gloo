@@ -3179,7 +3179,7 @@ index 37c3a991e2..ba02999bee 100644
  } // namespace HttpFilters
  } // namespace Extensions
 diff --git a/test/extensions/filters/http/local_ratelimit/filter_test.cc b/test/extensions/filters/http/local_ratelimit/filter_test.cc
-index f5b7e121a1..22e51eb69e 100644
+index f5b7e121a1..7b673263a6 100644
 --- test/extensions/filters/http/local_ratelimit/filter_test.cc
 +++ test/extensions/filters/http/local_ratelimit/filter_test.cc
 @@ -1,9 +1,13 @@
@@ -3250,14 +3250,12 @@ index f5b7e121a1..22e51eb69e 100644
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(request_headers, false));
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
    EXPECT_EQ("1", response_headers.get_("x-ratelimit-limit"));
-@@ -310,9 +343,23 @@ TEST_F(FilterTest, RequestRateLimitedXRateLimitHeaders) {
+@@ -310,9 +343,21 @@ TEST_F(FilterTest, RequestRateLimitedXRateLimitHeaders) {
    EXPECT_EQ(1U, findCounter("test.http_local_rate_limit.rate_limited"));
  }
  
 +TEST_F(FilterTest, RequestRateLimitedXRateLimitHeadersWithoutRunningDecodeHeaders) {
-+  TestScopedRuntime runtime;
-+  runtime.mergeValues(
-+      {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
++
 +  auto response_headers = Http::TestResponseHeaderMapImpl();
 +
 +  EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
@@ -3275,7 +3273,7 @@ index f5b7e121a1..22e51eb69e 100644
    max_tokens: {}
    tokens_per_fill: 1
    fill_interval: 60s
-@@ -662,6 +709,33 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimitedXRateLimitHeaders)
+@@ -662,6 +707,33 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimitedXRateLimitHeaders)
    auto request_headers = Http::TestRequestHeaderMapImpl();
    auto response_headers = Http::TestResponseHeaderMapImpl();
  
