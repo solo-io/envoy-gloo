@@ -1,16 +1,16 @@
 steps:
-# - name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
-#   id: 'do_ci'
-#   args: ['ci/do_ci.sh', 'release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
-#   volumes:
-#   - name: 'vol-build'
-#     path: '/build'
-#   env:
-#   - 'COMMIT_SHA=$COMMIT_SHA'
-#   - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
-#   - 'BUILD_TYPE=$_BUILD_TYPE'
-#   secretEnv:
-#   - 'GCP_SERVICE_ACCOUNT_KEY'
+- name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
+  id: 'do_ci'
+  args: ['ci/do_ci.sh', 'release', '//test/extensions/...', '//test/common/...', '//test/integration/...']
+  volumes:
+  - name: 'vol-build'
+    path: '/build'
+  env:
+  - 'COMMIT_SHA=$COMMIT_SHA'
+  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
+  - 'BUILD_TYPE=$_BUILD_TYPE'
+  secretEnv:
+  - 'GCP_SERVICE_ACCOUNT_KEY'
 - name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
   id: 'do_upstream_ci'
   args: ['ci/do_ci.sh', 'dev',
