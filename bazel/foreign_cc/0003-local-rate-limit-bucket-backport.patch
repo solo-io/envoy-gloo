@@ -1981,7 +1981,7 @@ index 96bd5d38a4..85f2f74d5c 100644
      ],
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-index 9c1ead992a..9fa3bcd3d2 100644
+index 9c1ead992a..9aade04a1b 100644
 --- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
@@ -2340,9 +2340,9 @@ index 9c1ead992a..9fa3bcd3d2 100644
    void initializeWithDescriptor(const std::chrono::milliseconds fill_interval,
                                  const uint32_t max_tokens, const uint32_t tokens_per_fill) {
  
-+    TestScopedRuntime runtime;
-+    runtime.mergeValues(
-+        {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
++    // TestScopedRuntime runtime;
++    // runtime.mergeValues(
++    //     {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
 +
      initializeTimer();
  
@@ -2686,7 +2686,7 @@ index 9c1ead992a..9fa3bcd3d2 100644
 +
 +// Verify token bucket functionality with a single token.
 +TEST_F(LocalRateLimiterImplTest, AtomicTokenBucket) {
-+  initializeWithAtomicTokenBucket(std::chrono::milliseconds(200), 1, 1);
++  initializeWithAtomicTokenBucket(std::chrono::milliseconds(200), 1, 1);                                            
 +
 +  // 1 -> 0 tokens
 +  EXPECT_TRUE(rate_limiter_->requestAllowed(route_descriptors_).allowed);
