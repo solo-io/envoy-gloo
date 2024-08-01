@@ -1981,7 +1981,7 @@ index 96bd5d38a4..85f2f74d5c 100644
      ],
  )
 diff --git a/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
-index 9c1ead992a..9aade04a1b 100644
+index 9c1ead992a..7228c16516 100644
 --- test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/common/local_ratelimit/local_ratelimit_test.cc
 @@ -1,6 +1,11 @@
@@ -2094,7 +2094,7 @@ index 9c1ead992a..9aade04a1b 100644
  class LocalRateLimiterImplTest : public testing::Test {
  public:
    void initializeTimer() {
-@@ -24,12 +120,21 @@ public:
+@@ -24,12 +120,27 @@ public:
    }
  
    void initialize(const std::chrono::milliseconds fill_interval, const uint32_t max_tokens,
@@ -2113,13 +2113,19 @@ index 9c1ead992a..9aade04a1b 100644
 +  void initializeWithAtomicTokenBucket(const std::chrono::milliseconds fill_interval,
 +                                       const uint32_t max_tokens, const uint32_t tokens_per_fill,
 +                                       ShareProviderSharedPtr share_provider = nullptr) {
++
++
++    TestScopedRuntime runtime;
++    runtime.mergeValues(
++        {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "true"}});  
++                                        
 +    rate_limiter_ =
 +        std::make_shared<LocalRateLimiterImpl>(fill_interval, max_tokens, tokens_per_fill,
 +                                               dispatcher_, descriptors_, true, share_provider);
    }
  
    Thread::ThreadSynchronizer& synchronizer() { return rate_limiter_->synchronizer_; }
-@@ -68,15 +173,15 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
+@@ -68,15 +179,15 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
      synchronizer().barrierOn("on_fill_timer_pre_cas");
  
      // This should succeed.
@@ -2138,7 +2144,7 @@ index 9c1ead992a..9aade04a1b 100644
    }
  
    // This tests the case in which two allowed checks race.
-@@ -87,12 +192,13 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
+@@ -87,12 +198,13 @@ TEST_F(LocalRateLimiterImplTest, CasEdgeCases) {
  
      // Start a thread and see if we are under limit. This will wait pre-CAS.
      synchronizer().waitOn("allowed_pre_cas");
@@ -2154,7 +2160,7 @@ index 9c1ead992a..9aade04a1b 100644
      synchronizer().signal("allowed_pre_cas");
      t1.join();
    }
-@@ -103,17 +209,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
+@@ -103,17 +215,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
    initialize(std::chrono::milliseconds(200), 1, 1);
  
    // 1 -> 0 tokens
@@ -2177,7 +2183,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    // 0 -> 1 tokens
    EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(200), nullptr));
-@@ -124,8 +230,8 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
+@@ -124,8 +236,8 @@ TEST_F(LocalRateLimiterImplTest, TokenBucket) {
    fill_timer_->invokeCallback();
  
    // 1 -> 0 tokens
@@ -2188,7 +2194,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket functionality with max tokens and tokens per fill > 1.
-@@ -133,25 +239,59 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMultipleTokensPerFill) {
+@@ -133,25 +245,59 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMultipleTokensPerFill) {
    initialize(std::chrono::milliseconds(200), 2, 2);
  
    // 2 -> 0 tokens
@@ -2255,7 +2261,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket functionality with max tokens > tokens per fill.
-@@ -159,17 +299,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMaxTokensGreaterThanTokensPerFill) {
+@@ -159,17 +305,17 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketMaxTokensGreaterThanTokensPerFill) {
    initialize(std::chrono::milliseconds(200), 2, 1);
  
    // 2 -> 0 tokens
@@ -2278,7 +2284,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket status of max tokens, remaining tokens and remaining fill interval.
-@@ -178,34 +318,42 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketStatus) {
+@@ -178,34 +324,42 @@ TEST_F(LocalRateLimiterImplTest, TokenBucketStatus) {
  
    // 2 -> 1 tokens
    EXPECT_CALL(*fill_timer_, enableTimer(std::chrono::milliseconds(3000), nullptr));
@@ -2336,7 +2342,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  class LocalRateLimiterDescriptorImplTest : public LocalRateLimiterImplTest {
-@@ -213,11 +361,26 @@ public:
+@@ -213,11 +367,26 @@ public:
    void initializeWithDescriptor(const std::chrono::milliseconds fill_interval,
                                  const uint32_t max_tokens, const uint32_t tokens_per_fill) {
  
@@ -2363,7 +2369,7 @@ index 9c1ead992a..9aade04a1b 100644
    static constexpr absl::string_view single_descriptor_config_yaml = R"(
    entries:
    - key: foo2
-@@ -237,7 +400,7 @@ public:
+@@ -237,7 +406,7 @@ public:
    token_bucket:
      max_tokens: 1
      tokens_per_fill: 1
@@ -2372,7 +2378,7 @@ index 9c1ead992a..9aade04a1b 100644
    )";
  
    // Default token bucket
-@@ -299,15 +462,15 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+@@ -299,15 +468,15 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
      synchronizer().barrierOn("on_fill_timer_pre_cas");
  
      // This should succeed.
@@ -2391,7 +2397,7 @@ index 9c1ead992a..9aade04a1b 100644
    }
  
    // This tests the case in which two allowed checks race.
-@@ -318,12 +481,12 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
+@@ -318,12 +487,12 @@ TEST_F(LocalRateLimiterDescriptorImplTest, CasEdgeCasesDescriptor) {
  
      // Start a thread and see if we are under limit. This will wait pre-CAS.
      synchronizer().waitOn("allowed_pre_cas");
@@ -2406,7 +2412,7 @@ index 9c1ead992a..9aade04a1b 100644
      synchronizer().signal("allowed_pre_cas");
      t1.join();
    }
-@@ -334,9 +497,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor2) {
+@@ -334,9 +503,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor2) {
                              *descriptors_.Add());
    initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
  
@@ -2419,7 +2425,7 @@ index 9c1ead992a..9aade04a1b 100644
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(100), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
  }
-@@ -348,8 +511,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -348,8 +517,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    initializeWithDescriptor(std::chrono::milliseconds(50), 1, 1);
  
    // 1 -> 0 tokens
@@ -2430,7 +2436,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    // 0 -> 1 tokens
    for (int i = 0; i < 2; i++) {
-@@ -360,8 +523,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -360,8 +529,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    }
  
    // 1 -> 0 tokens
@@ -2441,7 +2447,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    // 0 -> 1 tokens
    for (int i = 0; i < 2; i++) {
-@@ -380,8 +543,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
+@@ -380,8 +549,8 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptor) {
    }
  
    // 1 -> 0 tokens
@@ -2452,7 +2458,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket functionality with request per unit > 1.
-@@ -391,9 +554,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -391,9 +560,9 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    initializeWithDescriptor(std::chrono::milliseconds(50), 2, 2);
  
    // 2 -> 0 tokens
@@ -2465,7 +2471,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    // 0 -> 2 tokens
    for (int i = 0; i < 2; i++) {
-@@ -404,7 +567,7 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -404,7 +573,7 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    }
  
    // 2 -> 1 tokens
@@ -2474,7 +2480,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    // 1 -> 2 tokens
    for (int i = 0; i < 2; i++) {
-@@ -415,34 +578,34 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
+@@ -415,34 +584,34 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketMultipleTokensPerFillDescr
    }
  
    // 2 -> 0 tokens
@@ -2523,7 +2529,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket functionality with multiple descriptors sorted.
-@@ -456,10 +619,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest,
+@@ -456,10 +625,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest,
                                                        {{{"foo2", "bar2"}}}};
  
    // Descriptors are sorted as descriptor2 < descriptor < global
@@ -2537,7 +2543,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket status of max tokens, remaining tokens and remaining fill interval.
-@@ -469,10 +632,14 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -469,10 +638,14 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    initializeWithDescriptor(std::chrono::milliseconds(1000), 2, 2);
  
    // 2 -> 1 tokens
@@ -2556,7 +2562,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -480,10 +647,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -480,10 +653,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 1 -> 0 tokens
@@ -2572,7 +2578,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -491,10 +659,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -491,10 +665,11 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 0 -> 0 tokens
@@ -2588,7 +2594,7 @@ index 9c1ead992a..9aade04a1b 100644
  
    dispatcher_.globalTimeSystem().advanceTimeAndRun(std::chrono::milliseconds(1000), dispatcher_,
                                                     Envoy::Event::Dispatcher::RunType::NonBlock);
-@@ -502,9 +671,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
+@@ -502,9 +677,10 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDescriptorStatus) {
    fill_timer_->invokeCallback();
  
    // 0 -> 2 tokens
@@ -2602,7 +2608,7 @@ index 9c1ead992a..9aade04a1b 100644
  }
  
  // Verify token bucket status of max tokens, remaining tokens and remaining fill interval with
-@@ -513,47 +683,343 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
+@@ -513,47 +689,343 @@ TEST_F(LocalRateLimiterDescriptorImplTest, TokenBucketDifferentDescriptorStatus)
    TestUtility::loadFromYaml(multiple_descriptor_config_yaml, *descriptors_.Add());
    TestUtility::loadFromYaml(fmt::format(single_descriptor_config_yaml, 2, 2, "3s"),
                              *descriptors_.Add());
