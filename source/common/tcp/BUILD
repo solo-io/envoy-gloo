@@ -34,6 +34,6 @@ envoy_cc_library(
         "@envoy//source/common/common:assert_lib",
         "@envoy//source/common/network:filter_lib",
         "@envoy//source/common/protobuf:utility_lib",
-        "@envoy//source/common/upstream:load_balancer_lib",
+        "@envoy//source/common/upstream:load_balancer_context_base_lib",
     ],
 )
