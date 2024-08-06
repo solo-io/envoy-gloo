@@ -14,7 +14,7 @@
 #include "source/common/common/assert.h"
 #include "source/common/network/filter_impl.h"
 #include "source/common/tcp/codec_impl.h"
-#include "source/common/upstream/load_balancer_impl.h"
+#include "source/common/upstream/load_balancer_context_base.h"
 
 namespace Envoy {
 namespace Tcp {

@@ -146,7 +146,7 @@ private:
 
 class StdRegexEngine : public Regex::Engine {
 public:
-  Regex::CompiledMatcherPtr matcher(const std::string &regex) const override {
+  absl::StatusOr<Regex::CompiledMatcherPtr> matcher(const std::string &regex) const override {
     return std::make_unique<CompiledStdMatcher>(
         Solo::Regex::Utility::parseStdRegex(regex));
   }

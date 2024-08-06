@@ -797,7 +797,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
         }
         try {
           merge_templates_.emplace_back(std::make_tuple(name, tmpl.override_empty(), instance_->parse(tmpl.tmpl().text())));
-        } catch (const std::exception) {
+        } catch ( std::exception const&) {
           throw EnvoyException(
               fmt::format("Failed to parse merge_body_key template for key: ({})", name));
         }
