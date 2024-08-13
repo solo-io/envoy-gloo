@@ -4,3 +4,13 @@ changelog:
   resolvesIssue: false
   description: >
     Backport an upstream Envoy fix that allows deallocating thread-local slots on worker threads.
+- type: FIX
+  issueLink: https://github.com/solo-io/envoy-gloo/pull/292
+  resolvesIssue: false
+  description: >
+    Fix an issue in the ci/check_extensions_build_config.sh script. One of the
+    grep commands was simply grepping for 'commit', which meant that any other
+    line in the file that contained the same word would also show up in the
+    grep, thereby messing up any string processing that followed. We fix this
+    by making the grep a bit stricter, ie. ensuring that the line _starts_ with
+    'commit' (barring any preceding whitespace for indentation purposes).
