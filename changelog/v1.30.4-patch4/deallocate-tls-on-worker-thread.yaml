@@ -1,0 +1,6 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/solo-projects/issues/6713
+  resolvesIssue: false
+  description: >
+    Backport an upstream Envoy fix that allows deallocating thread-local slots on worker threads.
