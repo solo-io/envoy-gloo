@@ -68,7 +68,7 @@ def _repository_impl(name, **kwargs):
 def envoy_gloo_dependencies():
     _repository_impl("envoy", patches=[
         "@envoy_gloo//bazel/foreign_cc:0001-otel-exporter-status-code-fix.patch",
-        "@envoy_gloo//bazel/foreign_cc:0002-ratelimit-filter-state-hits-addend.patch",
+        "@envoy_gloo//bazel/foreign_cc:0002-ratelimit-filter-state-hits-addend.patch", # https://github.com/envoyproxy/envoy/pull/33395
         "@envoy_gloo//bazel/foreign_cc:0003-deallocate-slots-on-worker-threads.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
