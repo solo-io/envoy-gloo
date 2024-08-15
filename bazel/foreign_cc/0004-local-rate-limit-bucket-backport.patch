@@ -3529,7 +3529,7 @@ index 2a6999077f..c8c446f3c9 100644
  TEST_F(LocalRateLimitTest, RateLimit) {
 +  TestScopedRuntime runtime;
 +  runtime.mergeValues(
-+      {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
++      {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "true"}});
    initialize(R"EOF(
  stat_prefix: local_rate_limit_stats
  token_bucket:
