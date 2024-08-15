@@ -3179,7 +3179,7 @@ index 37c3a991e2..ba02999bee 100644
  } // namespace HttpFilters
  } // namespace Extensions
 diff --git a/test/extensions/filters/http/local_ratelimit/filter_test.cc b/test/extensions/filters/http/local_ratelimit/filter_test.cc
-index f5b7e121a1..ab5aaf0242 100644
+index f5b7e121a1..5a40a97752 100644
 --- test/extensions/filters/http/local_ratelimit/filter_test.cc
 +++ test/extensions/filters/http/local_ratelimit/filter_test.cc
 @@ -1,9 +1,13 @@
@@ -3250,6 +3250,22 @@ index f5b7e121a1..ab5aaf0242 100644
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->decodeHeaders(request_headers, false));
    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_->encodeHeaders(response_headers, false));
    EXPECT_EQ("1", response_headers.get_("x-ratelimit-limit"));
+@@ -310,6 +343,7 @@ TEST_F(FilterTest, RequestRateLimitedXRateLimitHeaders) {
+   EXPECT_EQ(1U, findCounter("test.http_local_rate_limit.rate_limited"));
+ }
+ 
++
+ static constexpr absl::string_view descriptor_config_yaml = R"(
+ stat_prefix: test
+ token_bucket:
+@@ -539,7 +573,6 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimited) {
+ 
+ TEST_F(DescriptorFilterTest, RouteDescriptorNotFound) {
+   setUpTest(fmt::format(descriptor_config_yaml, "1", "\"OFF\"", "1", "0"));
+-
+   EXPECT_CALL(decoder_callbacks_.route_->route_entry_.rate_limit_policy_,
+               getApplicableRateLimit(0));
+ 
 @@ -662,6 +695,33 @@ TEST_F(DescriptorFilterTest, RouteDescriptorRequestRatelimitedXRateLimitHeaders)
    auto request_headers = Http::TestRequestHeaderMapImpl();
    auto response_headers = Http::TestResponseHeaderMapImpl();
@@ -3480,7 +3496,7 @@ index 7c9834d9d3..2171ea59eb 100644
  } // namespace
  } // namespace Envoy
 diff --git a/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc b/test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
-index 2a6999077f..e4fe0a9180 100644
+index 2a6999077f..c8c446f3c9 100644
 --- test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 +++ test/extensions/filters/listener/local_ratelimit/local_ratelimit_test.cc
 @@ -56,14 +56,9 @@ public:
@@ -3507,7 +3523,17 @@ index 2a6999077f..e4fe0a9180 100644
    FilterConfigSharedPtr config_;
  };
  
-@@ -116,8 +110,7 @@ token_bucket:
+@@ -96,6 +90,9 @@ token_bucket:
+ 
+ // Basic rate limit case.
+ TEST_F(LocalRateLimitTest, RateLimit) {
++  TestScopedRuntime runtime;
++  runtime.mergeValues(
++      {{"envoy.reloadable_features.no_timer_based_rate_limit_token_bucket", "false"}});
+   initialize(R"EOF(
+ stat_prefix: local_rate_limit_stats
+ token_bucket:
+@@ -116,8 +113,7 @@ token_bucket:
                     ->value());
  
    // Refill the bucket.
