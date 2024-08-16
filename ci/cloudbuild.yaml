@@ -12,10 +12,11 @@ steps:
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
-- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
-  id: 'static_analysis'
-  allowFailure: true
-  args: ['ci/static_analysis.sh']
+- name: 'envoyproxy/envoy-build-ubuntu:f94a38f62220a2b017878b790b6ea98a0f6c5f9c'
+  id: 'do_upstream_ci' # validate local rate limit tests for our backported functionality for http local rate limiter.
+  args: ['ci/do_ci.sh', 'dev','@envoy//test/extensions/filters/common/local_ratelimit/...',
+'@envoy//test/extensions/filters/http/local_ratelimit/...','@envoy//test/extensions/filters/listener/local_ratelimit/...',
+   '@envoy//test/extensions/filters/http/local_ratelimit/...']
   volumes:
   - name: 'vol-build'
     path: '/build'
