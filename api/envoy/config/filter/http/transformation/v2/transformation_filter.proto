@@ -316,7 +316,7 @@ message TransformationTemplate {
 
   // The character to use as a delimiter when accessing dynamic metadata values
   // in templates. Defaults to ':' if unset.
-  // See https://www.envoyproxy.io/docs/envoy/v1.31.1/configuration/observability/access_log/usage.html
+  // See https://www.envoyproxy.io/docs/envoy/v1.31.1/configuration/observability/access_log/usage.html#config-access-log-format-dynamic-metadata
   // for more information.
   string string_delimiter = 14;
 
