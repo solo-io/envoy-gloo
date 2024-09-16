@@ -1237,6 +1237,71 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
+const std::string NESTED_KEY =
+    R"EOF(
+{
+  "key":{
+    "value": "hello"
+  }
+}
+)EOF";
+
+TEST_F(InjaTransformerTest, ParseFromDynamicmeMetadata) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{dynamic_metadata(\"key:value\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(NESTED_KEY, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(callbacks.stream_info_, dynamicMetadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "hello");
+}
+
+const std::string NESTED_LIST =
+    R"EOF(
+{
+  "key":{
+    "value": [
+      1,
+      2
+    ]
+  }
+}
+)EOF";
+
+TEST_F(InjaTransformerTest, ParseFromDynamicmeMetadataList) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{{dynamic_metadata(\"key:value\")}}");
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  ProtobufWkt::Struct struct_obj;
+  auto status = ProtobufUtil::JsonStringToMessage(NESTED_LIST, &struct_obj);
+  envoy::config::core::v3::Metadata meta;
+  meta.mutable_filter_metadata()->insert(
+      {SoloHttpFilterNames::get().Transformation,
+       struct_obj});
+  ON_CALL(callbacks.stream_info_, dynamicMetadata())
+      .WillByDefault(testing::ReturnRefOfCopy(meta));
+
+  Buffer::OwnedImpl body("1");
+  transformer.transform(headers, &headers, body, callbacks);
+  EXPECT_EQ(body.toString(), "[1,2]");
+}
+
 const std::string INVALID_MATCHER =
     R"EOF(
 {

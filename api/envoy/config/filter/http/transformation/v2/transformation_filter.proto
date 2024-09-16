@@ -314,6 +314,12 @@ message TransformationTemplate {
   // rendered string values to be escaped in order to make valid JSON/YAML strings
   bool escape_characters = 12;
 
+  // The character to use as a delimiter when accessing dynamic metadata values
+  // in templates. Defaults to ':' if unset.
+  // See https://www.envoyproxy.io/docs/envoy/v1.31.1/configuration/observability/access_log/usage.html
+  // for more information.
+  string string_delimiter = 14;
+
 }
 
 // Defines an [Inja template](https://github.com/pantor/inja) that will be
