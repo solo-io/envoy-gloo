@@ -12,3 +12,8 @@ changelog:
     - CVE-2024-45806: Potential manipulate x-envoy headers from external sources
     - CVE-2024-45809: Jwt filter crash in the clear route cache with remote JWKs
     - CVE-2024-45810: Envoy crashes for LocalReply in http async client
+- type: FIX
+  resolvesIssue: false
+  description: >-
+    Allow usage of subpaths in Metadata funcs within inja templates.
+  issueLink: https://github.com/solo-io/solo-projects/issues/6875

@@ -41,6 +41,7 @@ public:
   const envoy::config::core::v3::Metadata *cluster_metadata_;
   Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata_;
   const envoy::config::core::v3::Metadata *dynamic_metadata_;
+  char metadata_string_delimiter_ = ':';
 };
 
 
@@ -79,6 +80,7 @@ private:
   std::string& random_for_pattern(const std::string& pattern);
   nlohmann::json raw_string_callback(const inja::Arguments &args) const;
   static nlohmann::json parse_metadata(const envoy::config::core::v3::Metadata* metadata,
+                                                  char delimiter,
                                                   const inja::Arguments &args);
   static nlohmann::json word_count_callback(const inja::Arguments &args);
   static int json_word_count(const nlohmann::json* str);
@@ -161,6 +163,7 @@ private:
   std::vector<std::tuple<std::string, bool, inja::Template>> merge_templates_;
   ThreadLocal::SlotPtr tls_;
   std::unique_ptr<TransformerInstance> instance_;
+  char metadata_string_delimiter_ = ':';
 };
 
 } // namespace Transformation
