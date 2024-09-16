@@ -1,0 +1,7 @@
+changelog:
+- type: FIX
+  resolvesIssue: false
+  description: >-
+    Allow usage of subpaths in Metadata funcs within inja templates.
+  issueLink: https://github.com/solo-io/solo-projects/issues/6875
+
