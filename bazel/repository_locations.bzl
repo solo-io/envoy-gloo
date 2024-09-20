@@ -1,7 +1,7 @@
 REPOSITORY_LOCATIONS = dict(
     envoy = dict(
         # envoy 1.27.7 from release v1.27.7-fork1 with TLS deallocation backport: https://github.com/solo-io/envoy-fork/pull/29
-        commit = "99e7d4463c24d15494cb707eb3b7748b3bdabdde",
+        commit = "feddabfd7e8dd513c334a51824986c1869ef4ebb",
         remote = "https://github.com/solo-io/envoy-fork",
     ),
     inja = dict(
