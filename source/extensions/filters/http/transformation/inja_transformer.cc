@@ -409,14 +409,14 @@ json TransformerInstance::host_metadata_callback(const inja::Arguments &args) co
   if (!ctx.endpoint_metadata_) {
     return "";
   }
-  return parse_metadata(ctx.endpoint_metadata_.get(), args);
+  return parse_metadata(ctx.endpoint_metadata_.get(), ctx.metadata_string_delimiter_, args);
 }
 json TransformerInstance::dynamic_metadata_callback(const inja::Arguments &args) const {
   const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
   if (!ctx.dynamic_metadata_) {
     return "";
   }
-  return parse_metadata(ctx.dynamic_metadata_, args);
+  return parse_metadata(ctx.dynamic_metadata_, ctx.metadata_string_delimiter_, args);
 }
 
 json TransformerInstance::cluster_metadata_callback(const inja::Arguments &args) const {
@@ -424,10 +424,11 @@ json TransformerInstance::cluster_metadata_callback(const inja::Arguments &args)
   if (!ctx.cluster_metadata_) {
     return "";
   }
-  return parse_metadata(ctx.cluster_metadata_, args);
+  return parse_metadata(ctx.cluster_metadata_, ctx.metadata_string_delimiter_, args);
 }
 
 json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata* metadata,
+                                                  char delimiter,
                                                   const inja::Arguments &args) {
 
   // If no args are provided, return an empty string
@@ -443,8 +444,9 @@ json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata
   // If a 2nd args is provided, use it as the filter
   const std::string &filter = args.size() > 1 ? args.at(1)->get_ref<const std::string &>() : SoloHttpFilterNames::get().Transformation;
 
+  std::vector<std::string> elements = absl::StrSplit(key, delimiter);
   const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
-      metadata, filter, key);
+      metadata, filter, elements);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
@@ -821,6 +823,16 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       environ_[key] = value;
     }
   }
+
+  // If this is unset it will default to ":"
+  if (transformation.string_delimiter() != "") {
+    if (transformation.string_delimiter().length() > 1) {
+      throw EnvoyException("Metadata string delimiter must be a single character");
+    } else {
+      metadata_string_delimiter_ = transformation.string_delimiter()[0];
+    }
+  }
+
 }
 
 InjaTransformer::~InjaTransformer() {}
@@ -966,6 +978,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.cluster_metadata_ = cluster_metadata;
   typed_tls_data.dynamic_metadata_ = dynamic_metadata;
   typed_tls_data.endpoint_metadata_ = endpoint_metadata;
+  typed_tls_data.metadata_string_delimiter_ = metadata_string_delimiter_;
 
 
   // Body transform:
