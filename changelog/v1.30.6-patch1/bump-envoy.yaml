@@ -1,0 +1,14 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/solo-projects/issues/6290
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.30.6-patch1
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.30.4 release for cves.
+    - CVE-2024-45807: oghttp2 crash on OnBeginHeadersForStream
+    - CVE-2024-45808: Malicious log injection via access logs
+    - CVE-2024-45806: Potential manipulate x-envoy headers from external sources
+    - CVE-2024-45809: Jwt filter crash in the clear route cache with remote JWKs
+    - CVE-2024-45810: Envoy crashes for LocalReply in http async client
