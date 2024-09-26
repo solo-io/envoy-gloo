@@ -1,0 +1,6 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/gloo/issues/9848
+  resolvesIssue: false
+  description: >-
+    Backport a patch that allows setting the span name for OpenTelemetry traces.
