@@ -155,6 +155,7 @@ private:
   bool escape_characters_{};
 
   absl::optional<inja::Template> body_template_;
+  absl::optional<inja::Template> span_name_template_;
   bool merged_extractors_to_body_{};
   // merged_templates_ is a vector of tuples with the following fields:
   // 1. The json path to merge the template into

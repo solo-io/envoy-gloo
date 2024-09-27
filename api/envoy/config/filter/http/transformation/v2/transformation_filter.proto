@@ -320,6 +320,16 @@ message TransformationTemplate {
   // for more information.
   string string_delimiter = 14;
 
+  message SpanTransformer {
+    // A template that sets the span name
+    InjaTemplate name = 1;
+
+    // TODO if we want to set attributes as well, add fields to modify them here.
+  }
+
+  // Use this field to modify the span of the trace.
+  SpanTransformer span_transformer = 15;
+
 }
 
 // Defines an [Inja template](https://github.com/pantor/inja) that will be
