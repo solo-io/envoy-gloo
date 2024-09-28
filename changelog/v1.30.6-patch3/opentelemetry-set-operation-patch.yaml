@@ -1,4 +1,9 @@
 changelog:
+- type: NEW_FEATURE
+  issueLink: https://github.com/solo-io/gloo/issues/9848
+  resolvesIssue: false
+  description: >-
+    Update the transformation filter to allow setting the tracer's span name.
 - type: FIX
   issueLink: https://github.com/solo-io/gloo/issues/9848
   resolvesIssue: false
