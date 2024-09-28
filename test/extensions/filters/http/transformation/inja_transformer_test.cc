@@ -7,6 +7,7 @@
 #include "test/mocks/http/mocks.h"
 #include "test/mocks/server/mocks.h"
 #include "test/mocks/thread_local/mocks.h"
+#include "test/mocks/tracing/mocks.h"
 #include "test/mocks/upstream/mocks.h"
 #include "test/test_common/environment.h"
 
@@ -1237,6 +1238,25 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
+TEST_F(InjaTransformerTest, SetSpanName) {
+  using ::envoy::api::v2::filter::http::TransformationTemplate_SpanTransformer;
+  std::string test_span_name = "TEST_SPAN_NAME";
+  Http::TestRequestHeaderMapImpl headers{
+    {":method", "GET"},
+      {":path", "/"},
+  };
+  TransformationTemplate transformation;
+  transformation.mutable_span_transformer()->mutable_name()->set_text(test_span_name);
+
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  Buffer::OwnedImpl body("");
+  std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
+  EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
+  EXPECT_CALL(*mock_span, setOperation(test_span_name)).Times(1);
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
 const std::string NESTED_KEY =
     R"EOF(
 {
@@ -1246,7 +1266,7 @@ const std::string NESTED_KEY =
 }
 )EOF";
 
-TEST_F(InjaTransformerTest, ParseFromDynamicmeMetadata) {
+TEST_F(InjaTransformerTest, ParseFromDynamicMetadata) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{dynamic_metadata(\"key:value\")}}");
@@ -1280,7 +1300,7 @@ const std::string NESTED_LIST =
 }
 )EOF";
 
-TEST_F(InjaTransformerTest, ParseFromDynamicmeMetadataList) {
+TEST_F(InjaTransformerTest, ParseFromDynamicMetadataList) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"}, {":path", "/foo"}};
   TransformationTemplate transformation;
   transformation.mutable_body()->set_text("{{dynamic_metadata(\"key:value\")}}");
