@@ -1238,22 +1238,65 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
-TEST_F(InjaTransformerTest, SetSpanName) {
-  using ::envoy::api::v2::filter::http::TransformationTemplate_SpanTransformer;
-  std::string test_span_name = "TEST_SPAN_NAME";
-  Http::TestRequestHeaderMapImpl headers{
-    {":method", "GET"},
-      {":path", "/"},
-  };
+TEST_F(InjaTransformerTest, SetSpanNameNullRouteDecorator) {
+  std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
   TransformationTemplate transformation;
-  transformation.mutable_span_transformer()->mutable_name()->set_text(test_span_name);
+  transformation.mutable_span_transformer()->mutable_name()->set_text(transformer_span_name);
 
-  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  Http::TestRequestHeaderMapImpl headers{};
   Buffer::OwnedImpl body("");
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
+  const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
+  ON_CALL(*callbacks.route_, decorator).WillByDefault(Return(nullptr));
   EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
-  EXPECT_CALL(*mock_span, setOperation(test_span_name)).Times(1);
+  EXPECT_CALL(*mock_span, setOperation(transformer_span_name)).Times(1);
+
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
+TEST_F(InjaTransformerTest, SetSpanNameEmptyRouteDecorator) {
+  std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
+  TransformationTemplate transformation;
+  transformation.mutable_span_transformer()->mutable_name()->set_text(transformer_span_name);
+
+  Http::TestRequestHeaderMapImpl headers{};
+  Buffer::OwnedImpl body("");
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
+  const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
+  EXPECT_CALL(*callbacks.route_, decorator).WillRepeatedly(Return(mock_decorator.get()));
+  ON_CALL(*mock_decorator, getOperation()).WillByDefault(ReturnRef(""));
+  EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
+  EXPECT_CALL(*mock_span, setOperation(transformer_span_name)).Times(1);
+
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
+TEST_F(InjaTransformerTest, SetSpanNameNonEmptyRouteDecorator) {
+  // Ensure that if route->decorator->operation is set, that it overrides the
+  // transformer value
+  std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
+  std::string decorator_span_Name = "DECORATOR_SPAN_NAME";
+  TransformationTemplate transformation;
+  transformation.mutable_span_transformer()->mutable_name()->set_text(transformer_span_name);
+
+  Http::TestRequestHeaderMapImpl headers{};
+  Buffer::OwnedImpl body("");
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
+  const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
+  EXPECT_CALL(*callbacks.route_, decorator).WillRepeatedly(Return(mock_decorator.get()));
+  ON_CALL(*mock_decorator, getOperation()).WillByDefault(ReturnRef(decorator_span_Name));
+  EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
+  EXPECT_CALL(*mock_span, setOperation(decorator_span_Name)).Times(1);
+
   transformer.transform(headers, &headers, body, callbacks);
 }
 

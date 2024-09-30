@@ -1072,8 +1072,15 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
 
   // Span transform:
   if (span_name_template_.has_value()) {
-    std::string output = instance_->render(span_name_template_.value());
-    callbacks.activeSpan().setOperation(output);
+    // If route.decorator.operation is set, do not update the span name.
+    if (callbacks.route()
+        && callbacks.route()->decorator()
+        && !callbacks.route()->decorator()->getOperation().empty()) {
+      callbacks.activeSpan().setOperation(callbacks.route()->decorator()->getOperation());
+    } else {
+      std::string output = instance_->render(span_name_template_.value());
+      callbacks.activeSpan().setOperation(output);
+    }
   }
 
   // replace body. we do it here so that headers and dynamic metadata have the
