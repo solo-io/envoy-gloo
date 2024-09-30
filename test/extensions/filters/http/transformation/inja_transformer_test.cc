@@ -1238,6 +1238,25 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadata) {
   EXPECT_EQ(body.toString(), "val");
 }
 
+TEST_F(InjaTransformerTest, SetSpanNameNullRoute) {
+  std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
+  TransformationTemplate transformation;
+  transformation.mutable_span_transformer()->mutable_name()->set_text(transformer_span_name);
+
+  Http::TestRequestHeaderMapImpl headers{};
+  Buffer::OwnedImpl body("");
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
+  const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
+  ON_CALL(callbacks, route).WillByDefault(Return(nullptr));
+  EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
+  EXPECT_CALL(*mock_span, setOperation(transformer_span_name)).Times(1);
+
+  transformer.transform(headers, &headers, body, callbacks);
+}
+
 TEST_F(InjaTransformerTest, SetSpanNameNullRouteDecorator) {
   std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
   TransformationTemplate transformation;
