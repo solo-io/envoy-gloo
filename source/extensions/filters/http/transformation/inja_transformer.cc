@@ -1073,11 +1073,10 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   // Span transform:
   if (span_name_template_.has_value()) {
     // If route.decorator.operation is set, do not update the span name.
-    if (callbacks.route()
+    bool route_has_decorator_operation = callbacks.route()
         && callbacks.route()->decorator()
-        && !callbacks.route()->decorator()->getOperation().empty()) {
-      callbacks.activeSpan().setOperation(callbacks.route()->decorator()->getOperation());
-    } else {
+        && !callbacks.route()->decorator()->getOperation().empty();
+    if (!route_has_decorator_operation) {
       std::string output = instance_->render(span_name_template_.value());
       callbacks.activeSpan().setOperation(output);
     }

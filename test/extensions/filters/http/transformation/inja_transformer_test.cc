@@ -1309,12 +1309,10 @@ TEST_F(InjaTransformerTest, SetSpanNameNonEmptyRouteDecorator) {
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
 
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
-  std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
   const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
   EXPECT_CALL(*callbacks.route_, decorator).WillRepeatedly(Return(mock_decorator.get()));
   ON_CALL(*mock_decorator, getOperation()).WillByDefault(ReturnRef(decorator_span_Name));
-  EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
-  EXPECT_CALL(*mock_span, setOperation(decorator_span_Name)).Times(1);
+  EXPECT_CALL(callbacks, activeSpan).Times(0);
 
   transformer.transform(headers, &headers, body, callbacks);
 }
