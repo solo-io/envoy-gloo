@@ -833,6 +833,14 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     }
   }
 
+  if (transformation.has_span_transformer() && transformation.span_transformer().has_name()) {
+    try {
+      span_name_template_.emplace(instance_->parse(transformation.span_transformer().name().text()));
+    } catch (const std::exception &e) {
+      throw EnvoyException(
+          fmt::format("Failed to parse span name template {}", e.what()));
+    }
+  }
 }
 
 InjaTransformer::~InjaTransformer() {}
@@ -980,7 +988,6 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.endpoint_metadata_ = endpoint_metadata;
   typed_tls_data.metadata_string_delimiter_ = metadata_string_delimiter_;
 
-
   // Body transform:
   absl::optional<Buffer::OwnedImpl> maybe_body;
 
@@ -1060,6 +1067,18 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
       // route's
       // don't remove headers that already exist
       header_map.addReferenceKey(templated_header.first, output);
+    }
+  }
+
+  // Span transform:
+  if (span_name_template_.has_value()) {
+    // If route.decorator.operation is set, do not update the span name.
+    bool route_has_decorator_operation = callbacks.route()
+        && callbacks.route()->decorator()
+        && !callbacks.route()->decorator()->getOperation().empty();
+    if (!route_has_decorator_operation) {
+      std::string output = instance_->render(span_name_template_.value());
+      callbacks.activeSpan().setOperation(output);
     }
   }
 
