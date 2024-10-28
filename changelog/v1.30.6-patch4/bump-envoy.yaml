@@ -1,0 +1,9 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/845
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: b8ac22252ecf39de8d8eb45f442a42883f97e86f
+  resolvesIssue: false
+  description: >-
+    Update Envoy to tip of 1.30 for build fixes committed upstream
