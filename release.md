@@ -22,6 +22,7 @@ envoy releases:
 ******1.13*********1.14*********1.15
 ```
 
+
 envoy-gloo that is shipped with gloo 1.2 must not use envoy newer than 1.13.*
 envoy-gloo that is shipped with gloo 1.3 must not use envoy newer than 1.14.*
 envoy-gloo that is shipped with gloo 1.4 must not use envoy newer than 1.15.*
