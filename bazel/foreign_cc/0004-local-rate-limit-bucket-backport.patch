@@ -1967,9 +1967,10 @@ diff --git a/test/extensions/filters/common/local_ratelimit/BUILD b/test/extensi
 index 96bd5d38a4..85f2f74d5c 100644
 --- test/extensions/filters/common/local_ratelimit/BUILD
 +++ test/extensions/filters/common/local_ratelimit/BUILD
-@@ -12,7 +12,12 @@ envoy_cc_test(
+@@ -12,8 +12,13 @@ envoy_cc_test(
      name = "local_ratelimit_test",
      srcs = ["local_ratelimit_test.cc"],
+     rbe_pool = "6gig",
      deps = [
 +        "//source/common/singleton:manager_impl_lib",
          "//source/extensions/filters/common/local_ratelimit:local_ratelimit_lib",
@@ -2983,9 +2984,10 @@ diff --git a/test/extensions/filters/http/local_ratelimit/BUILD b/test/extension
 index 5d997f8345..3175a577e0 100644
 --- test/extensions/filters/http/local_ratelimit/BUILD
 +++ test/extensions/filters/http/local_ratelimit/BUILD
-@@ -16,10 +16,14 @@ envoy_extension_cc_test(
+@@ -16,11 +16,15 @@ envoy_extension_cc_test(
      srcs = ["filter_test.cc"],
      extension_names = ["envoy.filters.http.local_ratelimit"],
+     rbe_pool = "6gig",
      deps = [
 +        "//source/common/singleton:manager_impl_lib",
          "//source/extensions/filters/http/local_ratelimit:local_ratelimit_lib",
