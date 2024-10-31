@@ -47,15 +47,13 @@ envoy_gloo_cc_test(
 envoy_cc_test_binary(
     name = "inja_transformer_speed_test",
     srcs = ["inja_transformer_speed_test.cc"],
-    external_deps = [
-        "benchmark",
-    ],
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:inja_transformer_lib",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
+        "@com_github_google_benchmark//:benchmark",
     ],
 )
 
