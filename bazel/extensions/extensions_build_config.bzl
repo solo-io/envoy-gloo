@@ -487,7 +487,7 @@ EXTENSIONS = {
     #
     # HTTP Early Header Mutation
     #
-    # "envoy.http.early_header_mutation.header_mutation": "//source/extensions/http/early_header_mutation/header_mutation:config",
+    "envoy.http.early_header_mutation.header_mutation": "//source/extensions/http/early_header_mutation/header_mutation:config",
 
 
     #
