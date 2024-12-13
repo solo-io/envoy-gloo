@@ -1,0 +1,4 @@
+changelog:
+- type: NON_USER_FACING
+  description: >
+    Updated the `set_filter_state` filter to support per-route overrides.
