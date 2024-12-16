@@ -1,0 +1,187 @@
+diff --git a/source/extensions/filters/common/set_filter_state/filter_config.h b/source/extensions/filters/common/set_filter_state/filter_config.h
+index 9ea6f1d20954b5167e32107381357389b982dacc..adb962237a983661c760040c91b5ec36f36be767 100644
+--- source/extensions/filters/common/set_filter_state/filter_config.h
++++ source/extensions/filters/common/set_filter_state/filter_config.h
+@@ -28,7 +28,8 @@ struct Value {
+   Formatter::FormatterConstSharedPtr value_;
+ };
+ 
+-class Config : public Logger::Loggable<Logger::Id::config> {
++class Config : public ::Envoy::Router::RouteSpecificFilterConfig,
++               public Logger::Loggable<Logger::Id::config> {
+ public:
+   Config(const Protobuf::RepeatedPtrField<FilterStateValueProto>& proto_values, LifeSpan life_span,
+          Server::Configuration::GenericFactoryContext& context)
+diff --git a/source/extensions/filters/http/set_filter_state/config.cc b/source/extensions/filters/http/set_filter_state/config.cc
+index d0edcb486fe60c288d675a983afa6734689bb1ef..ccbbc9a69ec862c7524e4a47ab4c25e3a1fcbe54 100644
+--- source/extensions/filters/http/set_filter_state/config.cc
++++ source/extensions/filters/http/set_filter_state/config.cc
+@@ -7,6 +7,7 @@
+ #include "envoy/formatter/substitution_formatter.h"
+ #include "envoy/registry/registry.h"
+ 
++#include "source/common/http/utility.h"
+ #include "source/common/protobuf/utility.h"
+ #include "source/server/generic_factory_context.h"
+ 
+@@ -19,7 +20,15 @@ SetFilterState::SetFilterState(const Filters::Common::SetFilterState::ConfigShar
+     : config_(config) {}
+ 
+ Http::FilterHeadersStatus SetFilterState::decodeHeaders(Http::RequestHeaderMap& headers, bool) {
+-  config_->updateFilterState({&headers}, decoder_callbacks_->streamInfo());
++  // Apply listener level configuration first.
++  config_.get()->updateFilterState({&headers}, decoder_callbacks_->streamInfo());
++
++  // If configured, apply virtual host and then route level configuration next.
++  auto policies = Http::Utility::getAllPerFilterConfig<Filters::Common::SetFilterState::Config>(
++      decoder_callbacks_);
++  for (auto policy : policies) {
++    policy.get().updateFilterState({&headers}, decoder_callbacks_->streamInfo());
++  }
+   return Http::FilterHeadersStatus::Continue;
+ }
+ 
+@@ -35,6 +44,18 @@ Http::FilterFactoryCb SetFilterStateConfig::createFilterFactoryFromProtoTyped(
+   };
+ }
+ 
++Router::RouteSpecificFilterConfigConstSharedPtr
++SetFilterStateConfig::createRouteSpecificFilterConfigTyped(
++    const envoy::extensions::filters::http::set_filter_state::v3::Config& proto_config,
++    Server::Configuration::ServerFactoryContext& context, ProtobufMessage::ValidationVisitor&) {
++
++  Server::GenericFactoryContextImpl generic_context(context, context.messageValidationVisitor());
++
++  return std::make_shared<const Filters::Common::SetFilterState::Config>(
++      proto_config.on_request_headers(), StreamInfo::FilterState::LifeSpan::FilterChain,
++      generic_context);
++}
++
+ Http::FilterFactoryCb SetFilterStateConfig::createFilterFactoryFromProtoWithServerContextTyped(
+     const envoy::extensions::filters::http::set_filter_state::v3::Config& proto_config,
+     const std::string&, Server::Configuration::ServerFactoryContext& context) {
+diff --git a/source/extensions/filters/http/set_filter_state/config.h b/source/extensions/filters/http/set_filter_state/config.h
+index be0d72a6098fdf25de2f3506a92821849428dd69..eedab6852282c79b794620c75bccdcb171216ec3 100644
+--- source/extensions/filters/http/set_filter_state/config.h
++++ source/extensions/filters/http/set_filter_state/config.h
+@@ -38,6 +38,11 @@ private:
+       const envoy::extensions::filters::http::set_filter_state::v3::Config& proto_config,
+       const std::string& stats_prefix, Server::Configuration::FactoryContext& context) override;
+ 
++  Router::RouteSpecificFilterConfigConstSharedPtr
++  createRouteSpecificFilterConfigTyped(
++      const envoy::extensions::filters::http::set_filter_state::v3::Config& proto_config,
++      Server::Configuration::ServerFactoryContext&, ProtobufMessage::ValidationVisitor&) override;
++
+   Http::FilterFactoryCb createFilterFactoryFromProtoWithServerContextTyped(
+       const envoy::extensions::filters::http::set_filter_state::v3::Config& proto_config,
+       const std::string& stats_prefix,
+diff --git a/test/extensions/filters/http/set_filter_state/integration_test.cc b/test/extensions/filters/http/set_filter_state/integration_test.cc
+index 73c3763d8cd62d1f01790a9c36ac9fa9a8669e0b..e130fcbf201be88dd1833da0cd3d36004c596fc8 100644
+--- test/extensions/filters/http/set_filter_state/integration_test.cc
++++ test/extensions/filters/http/set_filter_state/integration_test.cc
+@@ -14,6 +14,7 @@
+ #include "gtest/gtest.h"
+ 
+ using testing::NiceMock;
++using testing::Return;
+ using testing::ReturnRef;
+ 
+ namespace Envoy {
+@@ -66,6 +67,44 @@ public:
+     EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter->decodeHeaders(headers_, true));
+   }
+ 
++  void runPerRouteFilter(const std::string& filter_yaml_config,
++                         const std::string& per_route_yaml_config) {
++    Server::GenericFactoryContextImpl generic_context(context_);
++
++    envoy::extensions::filters::http::set_filter_state::v3::Config filter_proto_config;
++    TestUtility::loadFromYaml(filter_yaml_config, filter_proto_config);
++    auto filter_config = std::make_shared<Filters::Common::SetFilterState::Config>(
++        filter_proto_config.on_request_headers(), StreamInfo::FilterState::LifeSpan::FilterChain,
++        generic_context);
++
++    envoy::extensions::filters::http::set_filter_state::v3::Config route_proto_config;
++    TestUtility::loadFromYaml(per_route_yaml_config, route_proto_config);
++    Filters::Common::SetFilterState::Config route_config(
++        route_proto_config.on_request_headers(), StreamInfo::FilterState::LifeSpan::FilterChain,
++        generic_context);
++
++    NiceMock<Http::MockStreamDecoderFilterCallbacks> decoder_callbacks;
++
++    EXPECT_CALL(decoder_callbacks, perFilterConfigs())
++        .WillOnce(testing::Invoke(
++            [&]() -> Router::RouteSpecificFilterConfigs { return {&route_config}; }));
++    auto filter = std::make_shared<SetFilterState>(filter_config);
++    filter->setDecoderFilterCallbacks(decoder_callbacks);
++    EXPECT_CALL(decoder_callbacks, streamInfo()).WillRepeatedly(ReturnRef(info_));
++    EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter->decodeHeaders(headers_, true));
++
++    // Test the factory method.
++    {
++      NiceMock<Server::Configuration::MockServerFactoryContext> context;
++      SetFilterStateConfig factory;
++      Router::RouteSpecificFilterConfigConstSharedPtr route_config =
++          factory
++              .createRouteSpecificFilterConfig(route_proto_config, context,
++                                               ProtobufMessage::getNullValidationVisitor());
++      EXPECT_TRUE(route_config.get());
++    }
++  }
++
+   NiceMock<Server::Configuration::MockFactoryContext> context_;
+   Http::TestRequestHeaderMapImpl headers_{{"test-header", "test-value"}};
+   NiceMock<StreamInfo::MockStreamInfo> info_;
+@@ -85,6 +124,51 @@ TEST_F(SetMetadataIntegrationTest, FromHeader) {
+   EXPECT_EQ(foo->serializeAsString(), "test-value");
+ }
+ 
++TEST_F(SetMetadataIntegrationTest, RouteLevel) {
++  const std::string filter_config = R"EOF(
++  on_request_headers:
++  - object_key: both
++    factory_key: envoy.string
++    format_string:
++      text_format_source:
++        inline_string: "filter-%REQ(test-header)%"
++  - object_key: filter-only
++    factory_key: envoy.string
++    format_string:
++      text_format_source:
++        inline_string: "filter"
++  )EOF";
++  const std::string route_config = R"EOF(
++  on_request_headers:
++  - object_key: both
++    factory_key: envoy.string
++    format_string:
++      text_format_source:
++        inline_string: "route-%REQ(test-header)%"
++  - object_key: route-only
++    factory_key: envoy.string
++    format_string:
++      text_format_source:
++        inline_string: "route"
++  )EOF";
++  runPerRouteFilter(filter_config, route_config);
++
++  const auto* both = info_.filterState()->getDataReadOnly<Router::StringAccessor>("both");
++  ASSERT_NE(nullptr, both);
++  // Route takes precedence
++  EXPECT_EQ(both->serializeAsString(), "route-test-value");
++
++  const auto* filter = info_.filterState()->getDataReadOnly<Router::StringAccessor>("filter-only");
++  ASSERT_NE(nullptr, filter);
++  // Only set on filter
++  EXPECT_EQ(filter->serializeAsString(), "filter");
++
++  const auto* route = info_.filterState()->getDataReadOnly<Router::StringAccessor>("route-only");
++  ASSERT_NE(nullptr, route);
++  // Only set on route
++  EXPECT_EQ(route->serializeAsString(), "route");
++}
++
+ } // namespace SetFilterState
+ } // namespace HttpFilters
+ } // namespace Extensions
