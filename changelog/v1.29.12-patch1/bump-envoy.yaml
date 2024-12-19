@@ -1,0 +1,9 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/868
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: 5c3dc559371181d5baa4a7533c36f2370fc97581
+    resolvesIssue: false
+    description: >-
+      CVE-2024-53270: HTTP/1: sending overload crashes when the request is reset beforehand
