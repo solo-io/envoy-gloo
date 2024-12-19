@@ -2,9 +2,9 @@ REPOSITORY_LOCATIONS = dict(
     # can't have more than one comment between envoy line and commit line in 
     # order to accommodate `check_extensions_build_config.sh`
     envoy = dict(
-        # envoy 1.29.3 with backported ext_proc updates
-        commit = "e2dab93e60e93b56fa63632fb9cfa64930fc5240", # v1.29.3-fork1
-        remote = "https://github.com/solo-io/envoy-fork",
+        # envoy v1.29.12
+        commit = "5c3dc559371181d5baa4a7533c36f2370fc97581",
+        remote = "https://github.com/envoyproxy/envoy", 
     ),
     inja = dict(
         # Includes unmerged modifications for
