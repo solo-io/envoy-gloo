@@ -3,7 +3,7 @@ changelog:
     issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/868
     dependencyOwner: envoyproxy
     dependencyRepo: envoy
-    dependencyTag: 688c4bbe47f4d05bb8ed268f5172bb026cf03242
+    dependencyTag: v1.31.5
     resolvesIssue: false
     description: >-
       CVE-2024-53269: Happy Eyeballs: Validate that additional_address are IP addresses instead of crashing when sorting.
