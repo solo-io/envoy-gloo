@@ -21,5 +21,5 @@ jobs:
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
       with:
-        name: static-analysis-report
+        name: static-analysis-report-attempt-${{ github.run_attempt }}
         path: linux/amd64/analysis/scan-build-*/
