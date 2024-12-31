@@ -7,15 +7,15 @@ set -x
 # TODO: if we ever have protos using other protos from our repos, we'll need to fix this to not be envoyproxy
 GO_IMPORT_BASE="github.com/envoyproxy/go-control-plane/api/envoy"
 GO_TARGETS=(//api/envoy/...)
-read -r -a GO_PROTOS <<< "$(bazelisk query "${BAZEL_GLOBAL_OPTIONS[@]}" "kind('go_proto_library', ${GO_TARGETS[*]})" | tr '\n' ' ')"
-bazelisk build "${BAZEL_BUILD_OPTIONS[@]}" \
+read -r -a GO_PROTOS <<< "$(bazel query "${BAZEL_GLOBAL_OPTIONS[@]}" "kind('go_proto_library', ${GO_TARGETS[*]})" | tr '\n' ' ')"
+bazel build "${BAZEL_BUILD_OPTIONS[@]}" \
         --experimental_proto_descriptor_sets_include_source_info \
         --remote_download_outputs=all \
         "${GO_PROTOS[@]}"
 rm -rf build_go
 mkdir -p build_go
 echo "Copying go protos -> build_go"
-BAZEL_BIN="$(bazelisk info "${BAZEL_BUILD_OPTIONS[@]}" bazel-bin)"
+BAZEL_BIN="$(bazel info "${BAZEL_BUILD_OPTIONS[@]}" bazel-bin)"
 for GO_PROTO in "${GO_PROTOS[@]}"; do
         # strip @envoy_api//
     RULE_DIR="$(echo "${GO_PROTO:12}" | cut -d: -f1)"
