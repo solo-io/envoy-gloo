@@ -34,4 +34,4 @@ gengo:
 	cd go; go mod tidy
 
 check-gencode:
-	CHECK=1 ./ci/gen_go.sh
+	CHECK=1 SOURCE_VERSION="/dev/null" ./ci/gen_go.sh
