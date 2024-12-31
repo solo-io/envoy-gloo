@@ -34,4 +34,4 @@ gengo:
 	cd go; go mod tidy
 
 check-gencode:
-	git diff -U3 --exit-code
+	CHECK=1 ./ci/gen_go.sh

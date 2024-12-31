@@ -29,15 +29,24 @@ for GO_PROTO in "${GO_PROTOS[@]}"; do
     fi
     # echo "Copying go files ${INPUT_DIR} -> ${OUTPUT_DIR}"
     while read -r GO_FILE; do
-        cp -a "$GO_FILE" "$OUTPUT_DIR"
         if [[ "$GO_FILE" = *.validate.go ]]; then
-            sed -i '1s;^;//go:build !disable_pgv\n;' "$OUTPUT_DIR/$(basename "$GO_FILE")"
+            sed -i '1s;^;//go:build !disable_pgv\n;' "$GO_FILE"
+        fi
+
+        # if check is not empty, then we will check diff; otherwise we will just copy
+        if [ -n "$CHECK" ]; then
+            diff "$GO_FILE" "go/${RULE_DIR}/$(basename "$GO_FILE")"
+        else
+            cp -a "$GO_FILE" "$OUTPUT_DIR"
         fi
     done <<< "$(find "$INPUT_DIR" -name "*.go")"
 done
 
 # remove all folders from the `go`  folder
+if [ -z "$CHECK" ]; then
 rm -rf ./go/config
 rm -rf ./go/type
 cp -r build_go/* ./go
+fi
+
 rm -rf build_go
