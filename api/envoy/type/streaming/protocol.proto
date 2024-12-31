@@ -1,6 +1,8 @@
 syntax = "proto3";
 package pb;
 
+option go_package = "github.com/solo-io/envoy-gloo/go/type/streaming;streaming";
+
 // import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // option (gogoproto.marshaler_all) = true;

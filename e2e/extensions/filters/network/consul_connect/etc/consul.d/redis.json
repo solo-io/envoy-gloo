@@ -1,7 +1,0 @@
-{
-  "service": {
-    "name": "redis",
-    "port": 6379,
-    "connect": { "proxy": {} }
-  }
-}
