@@ -28,3 +28,13 @@ build-arm:
 .PHONY: docker-release-arm
 docker-release-arm:
 	cd ci && docker build -f Dockerfile-arm -t $(REGISTRY)/envoy-gloo-arm:$(VERSION) . && docker push $(REGISTRY)/envoy-gloo-arm:$(VERSION)
+
+gengo:
+	./ci/gen_go.sh
+	cd go; go mod tidy
+	cd go; go build ./...
+
+check-gencode:
+	touch SOURCE_VERSION
+	CHECK=1 ./ci/gen_go.sh
+	rm SOURCE_VERSION

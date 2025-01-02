@@ -4,6 +4,8 @@ package pb;
 option java_package = "io.envoyproxy.pb";
 option java_outer_classname = "PayloadProto";
 option java_multiple_files = true;
+option go_package = "github.com/solo-io/envoy-gloo/go/config/filter/http/nats/streaming/v2;v2";
+
 message Payload {
   map<string, string> headers = 1;
   bytes body = 2;
