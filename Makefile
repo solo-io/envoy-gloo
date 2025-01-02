@@ -37,3 +37,4 @@ check-gencode:
 	touch SOURCE_VERSION
 	CHECK=1 ./ci/gen_go.sh
 	rm SOURCE_VERSION
+	cd go; go build ./...
