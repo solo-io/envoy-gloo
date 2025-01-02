@@ -32,9 +32,9 @@ docker-release-arm:
 gengo:
 	./ci/gen_go.sh
 	cd go; go mod tidy
+	cd go; go build ./...
 
 check-gencode:
 	touch SOURCE_VERSION
 	CHECK=1 ./ci/gen_go.sh
 	rm SOURCE_VERSION
-	cd go; go build ./...
