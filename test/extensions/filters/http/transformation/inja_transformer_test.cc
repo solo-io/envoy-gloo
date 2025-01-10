@@ -420,8 +420,11 @@ TEST_F(InjaTransformerTest, NonDestructiveExtractorwithMultiSet) {
   extractor.set_mode(ExtractionApi::EXTRACT);
   (*transformation.mutable_extractors())["idparam"] = extractor;
 
-  transformation.mutable_headers()->insert({":path", "/accounts"});
-  transformation.mutable_headers()->insert({"id", "{{extraction(\"idparam\")}}"});
+
+  (*transformation.mutable_headers())[":path"].set_text(
+     "/accounts");
+  (*transformation.mutable_headers())["id"].set_text(
+      "{{extraction(\"idparam\")}}");
 
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
