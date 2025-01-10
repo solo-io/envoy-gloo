@@ -413,25 +413,32 @@ TEST_F(TransformerTest, NonDestructiveExtractorwithMultiSet) {
   transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
   transformation.set_advanced_templates(true);
 
-  ExtractionApi extractor;
+ ExtractionApi extractor;
   extractor.set_header(":path");
-  extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
+  extractor.set_regex("/[accounts]/([\\-._[:alnum:]]+)");
   extractor.set_subgroup(1);
   extractor.set_mode(ExtractionApi::EXTRACT);
-  (*transformation.mutable_extractors())["idparam"] = extractor;
+  (*transformation.mutable_extractors())["basepath"] = extractor;
+
+  ExtractionApi extractor2;
+  extractor2.set_header(":path");
+  extractor2.set_regex("/[accounts]/([\\-._[:alnum:]]+)");
+  extractor2.set_subgroup(2);
+  extractor2.set_mode(ExtractionApi::EXTRACT);
+  (*transformation.mutable_extractors())["newpath"] = extractor2;
 
 
   (*transformation.mutable_headers())[":path"].set_text(
-     "/accounts");
-  (*transformation.mutable_headers())["id"].set_text(
-      "{{extraction(\"idparam\")}}");
+     "{{extraction(\"newpath\")}}");
+  (*transformation.mutable_headers())["basepath"].set_text(
+      "{{extraction(\"basepath\")}}");
 
   InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
   transformer.transform(headers, &headers, body, callbacks);
 
-  EXPECT_EQ("/accounts", headers.get_(":path"));
-  EXPECT_EQ("764b.0f_0f-7319-4b29-bbd0-887a39705a70", headers.get_("id"));
+  EXPECT_EQ("/accounts", headers.get_("basepath"));
+  EXPECT_EQ("764b.0f_0f-7319-4b29-bbd0-887a39705a70", headers.get_(":path""));
 }
 
 TEST_F(TransformerTest, transformMultipleHeaderValues) {
