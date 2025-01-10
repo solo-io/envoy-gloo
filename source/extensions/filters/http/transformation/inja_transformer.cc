@@ -103,7 +103,7 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
     if (header_entries.empty()) {
       return "";
     }
-    return extractValue(callbacks, header_entries[0]->value().getString());
+    return std::string(extractValue(callbacks, header_entries[0]->value().getStringView()));
   }
 }
 
@@ -363,7 +363,7 @@ json TransformerInstance::header_callback(const inja::Arguments &args) const {
   if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entries[0]->value().getString());
+  return std::string(header_entries[0]->value().getStringView());
 }
 
 json TransformerInstance::request_header_callback(
@@ -378,7 +378,7 @@ json TransformerInstance::request_header_callback(
   if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entries[0]->value().getString());
+  return std::string(header_entries[0]->value().getStringView());
 }
 
 json TransformerInstance::extracted_callback(const inja::Arguments &args) const {
