@@ -403,7 +403,7 @@ TEST_F(TransformerTest, transformSimple) {
 }
 
 // Test will likely sometimes pass if not under ASAN
-TEST_F(InjaTransformerTest, NonDestructiveExtractorwithMultiSet) {
+TEST_F(TransformerTest, NonDestructiveExtractorwithMultiSet) {
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"},
       {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
