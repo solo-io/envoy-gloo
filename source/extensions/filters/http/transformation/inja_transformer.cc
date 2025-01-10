@@ -103,7 +103,7 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
     if (header_entries.empty()) {
       return "";
     }
-    return extractValue(callbacks, header_entries[0]->value().getStringView());
+    return extractValue(callbacks, header_entries[0]->value().getString());
   }
 }
 
@@ -112,6 +112,7 @@ Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
   // determines which destructive extraction function to call based on the mode
+  // must return a const string or an exception
   auto extractFunc = [&](Http::StreamFilterCallbacks& callbacks, absl::string_view sv) {
     switch (mode_) {
       case ExtractionApi::SINGLE_REPLACE:
@@ -133,7 +134,8 @@ Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
     if (header_entries.empty()) {
       return "";
     }
-    const auto &header_value = header_entries[0]->value().getStringView();
+    // String view is fine as all extractfunc return consts
+    const auto &header_value = header_entries[0]->value().getStringView(); 
     return extractFunc(callbacks, header_value);
   }
 }
@@ -361,7 +363,7 @@ json TransformerInstance::header_callback(const inja::Arguments &args) const {
   if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entries[0]->value().getStringView());
+  return std::string(header_entries[0]->value().getString());
 }
 
 json TransformerInstance::request_header_callback(
@@ -376,7 +378,7 @@ json TransformerInstance::request_header_callback(
   if (header_entries.empty()) {
     return "";
   }
-  return std::string(header_entries[0]->value().getStringView());
+  return std::string(header_entries[0]->value().getString());
 }
 
 json TransformerInstance::extracted_callback(const inja::Arguments &args) const {
