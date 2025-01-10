@@ -402,6 +402,35 @@ TEST_F(TransformerTest, transformSimple) {
   EXPECT_EQ("ABC", headers.get_("x-header"));
 }
 
+// Test will likely sometimes pass if not under ASAN
+TEST_F(InjaTransformerTest, NonDestructiveExtractorwithMultiSet) {
+  Http::TestRequestHeaderMapImpl headers{
+      {":method", "GET"},
+      {":path", "/accounts/764b.0f_0f-7319-4b29-bbd0-887a39705a70"}};
+  Buffer::OwnedImpl body("{}");
+
+  TransformationTemplate transformation;
+  transformation.set_parse_body_behavior(TransformationTemplate::DontParse);
+  transformation.set_advanced_templates(true);
+
+  ExtractionApi extractor;
+  extractor.set_header(":path");
+  extractor.set_regex("/accounts/([\\-._[:alnum:]]+)");
+  extractor.set_subgroup(1);
+  extractor.set_mode(ExtractionApi::EXTRACT);
+  (*transformation.mutable_extractors())["idparam"] = extractor;
+
+  transformation.mutable_headers()->insert({":path", "/accounts"});
+  transformation.mutable_headers()->insert({"id", "{{extraction(\"idparam\")}}"});
+
+  InjaTransformer transformer(transformation, rng_, google::protobuf::BoolValue(), tls_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+  transformer.transform(headers, &headers, body, callbacks);
+
+  EXPECT_EQ("/accounts", headers.get_(":path"));
+  EXPECT_EQ("764b.0f_0f-7319-4b29-bbd0-887a39705a70", headers.get_("id"));
+}
+
 TEST_F(TransformerTest, transformMultipleHeaderValues) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},
