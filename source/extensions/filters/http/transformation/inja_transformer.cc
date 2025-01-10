@@ -90,7 +90,7 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
   }
 }
 
-absl::string_view
+std::string
 Extractor::extract(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
