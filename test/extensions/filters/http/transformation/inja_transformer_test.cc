@@ -438,7 +438,7 @@ TEST_F(TransformerTest, NonDestructiveExtractorwithMultiSet) {
   transformer.transform(headers, &headers, body, callbacks);
 
   EXPECT_EQ("/accounts", headers.get_("basepath"));
-  EXPECT_EQ("764b.0f_0f-7319-4b29-bbd0-887a39705a70", headers.get_(":path""));
+  EXPECT_EQ("764b.0f_0f-7319-4b29-bbd0-887a39705a70", headers.get_(":path"));
 }
 
 TEST_F(TransformerTest, transformMultipleHeaderValues) {
