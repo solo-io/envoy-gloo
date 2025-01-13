@@ -550,16 +550,16 @@ TEST_F(TransformationFilterTest, SameStageExtractAndUse) {
               regex: "(.*)/(.*)"
               subgroup: 2
           headers:
-            ":path": {text: "{{extraction(\"ext1\")}}"}
+            ":path": {text: "{{extraction(\"ext1\")}}/somethingreallyreallylongsowecanevictmemoryorsomething"}
             "x-foo": {text: "{{extraction(\"ext2\")}}"}
   )EOF";
   TestUtility::loadFromYaml(match_string, route_config_);
 
   initFilter();
-
   auto res = filter_->decodeHeaders(request_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
-    EXPECT_EQ(request_headers.get_(":path"), "/abc");
+  EXPECT_EQ(request_headers.get_(":path"), "/abc/somethingreallyreallylongsowecanevictmemoryorsomething");
+  // enforces that we dont care that hte source has changed
   EXPECT_EQ(request_headers.get_("x-foo"), "123");
 }
 
