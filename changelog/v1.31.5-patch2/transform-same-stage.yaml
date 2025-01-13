@@ -1,0 +1,7 @@
+changelog:
+- type: FIX
+  resolvesIssue: false
+  description: >-
+    Derisks using a header in an extraction while also updating the same header 
+  issueLink: https://github.com/solo-io/solo-projects/issues/7635
+

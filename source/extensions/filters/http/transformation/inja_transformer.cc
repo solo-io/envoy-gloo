@@ -90,20 +90,20 @@ Extractor::Extractor(const envoy::api::v2::filter::http::Extraction &extractor)
   }
 }
 
-absl::string_view
+std::string
 Extractor::extract(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
   if (body_) {
     const std::string &string_body = body();
     absl::string_view sv(string_body);
-    return extractValue(callbacks, sv);
+    return std::string(extractValue(callbacks, sv));
   } else {
     const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
     if (header_entries.empty()) {
       return "";
     }
-    return extractValue(callbacks, header_entries[0]->value().getStringView());
+    return std::string(extractValue(callbacks, header_entries[0]->value().getStringView()));
   }
 }
 
@@ -112,6 +112,7 @@ Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
                    const Http::RequestOrResponseHeaderMap &header_map,
                    GetBodyFunc &body) const {
   // determines which destructive extraction function to call based on the mode
+  // must return a const string or an exception
   auto extractFunc = [&](Http::StreamFilterCallbacks& callbacks, absl::string_view sv) {
     switch (mode_) {
       case ExtractionApi::SINGLE_REPLACE:
@@ -133,7 +134,8 @@ Extractor::extractDestructive(Http::StreamFilterCallbacks &callbacks,
     if (header_entries.empty()) {
       return "";
     }
-    const auto &header_value = header_entries[0]->value().getStringView();
+    // String view is fine as all extractfunc return consts
+    const auto &header_value = header_entries[0]->value().getStringView(); 
     return extractFunc(callbacks, header_value);
   }
 }
@@ -881,7 +883,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
   // get the extractions
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   
   if (advanced_templates_) {
