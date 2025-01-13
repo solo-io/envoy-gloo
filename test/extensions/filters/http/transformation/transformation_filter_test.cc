@@ -559,7 +559,7 @@ TEST_F(TransformationFilterTest, SameStageExtractAndUse) {
   auto res = filter_->decodeHeaders(request_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   EXPECT_EQ(request_headers.get_(":path"), "/abc/somethingreallyreallylongsowecanevictmemoryorsomething");
-  // enforces that we dont care that hte source has changed
+  // enforces that we dont care that the source has changed
   EXPECT_EQ(request_headers.get_("x-foo"), "123");
 }
 
