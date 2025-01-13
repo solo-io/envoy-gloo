@@ -51,7 +51,7 @@ void fill_slot(
       const Http::RequestOrResponseHeaderMap &header_map,
       const Http::RequestHeaderMap *request_headers,
       GetBodyFunc &body,
-      const std::unordered_map<std::string, absl::string_view> &extractions,
+      const std::unordered_map<std::string, std::string> &extractions,
       const std::unordered_map<std::string, std::string> &destructive_extractions,
       const nlohmann::json &context,
       const std::unordered_map<std::string, std::string> &environ,
@@ -74,7 +74,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromContext) {
   json originalbody;
   originalbody["field1"] = "value1";
   Http::TestRequestHeaderMapImpl headers;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -96,7 +96,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromInlineHeader) {
 
   Http::TestRequestHeaderMapImpl headers{
       {":method", "GET"}, {":authority", "www.solo.io"}, {":path", path}};
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -120,7 +120,7 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
                                          {":authority", "www.solo.io"},
                                          {":path", "/getsomething"},
                                          {"x-custom-header", header}};
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -138,9 +138,9 @@ TEST_F(TransformerInstanceTest, ReplacesValueFromCustomHeader) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
-  absl::string_view field = "res";
+  std::string field = "res";
   extractions["f"] = field;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
@@ -159,9 +159,9 @@ TEST_F(TransformerInstanceTest, ReplaceFromExtracted) {
 
 TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
-  extractions["foo"] = absl::string_view("bar");
+  extractions["foo"] = std::string("bar");
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
   envoy::config::core::v3::Metadata *cluster_metadata{};
@@ -179,7 +179,7 @@ TEST_F(TransformerInstanceTest, ReplaceFromNonExistentExtraction) {
 
 TEST_F(TransformerInstanceTest, Environment) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
   std::unordered_map<std::string, std::string> env;
@@ -198,7 +198,7 @@ TEST_F(TransformerInstanceTest, Environment) {
 
 TEST_F(TransformerInstanceTest, EmptyEnvironment) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
@@ -217,7 +217,7 @@ TEST_F(TransformerInstanceTest, EmptyEnvironment) {
 
 TEST_F(TransformerInstanceTest, ClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
@@ -240,7 +240,7 @@ TEST_F(TransformerInstanceTest, ClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestRequestHeaderMapImpl headers;
 
@@ -259,7 +259,7 @@ TEST_F(TransformerInstanceTest, EmptyClusterMetadata) {
 
 TEST_F(TransformerInstanceTest, RequestHeaders) {
   json originalbody;
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string>  extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   Http::TestResponseHeaderMapImpl response_headers{{":status", "200"}};
   Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"}};
