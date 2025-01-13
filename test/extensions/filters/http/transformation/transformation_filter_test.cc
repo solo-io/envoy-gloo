@@ -410,6 +410,7 @@ TEST_F(TransformationFilterTest, TransformsResponseOnHeadersNoHost) {
   EXPECT_EQ(0U, config_->stats().response_header_transformations_.value());
 }
 
+
 TEST_F(TransformationFilterTest, TransformLocalResponse) {
   Http::TestRequestHeaderMapImpl request_headers{
       {"content-type", "test"}, {":method", "GET"}, {":path", "/"}};
@@ -523,6 +524,43 @@ TEST_F(TransformationFilterTest, StagedFilterRequestConfig) {
   auto res = filter_->decodeHeaders(request_headers, true);
   EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
   EXPECT_EQ(request_headers.get_("x-foo"), "stage1");
+}
+
+TEST_F(TransformationFilterTest, SameStageExtractAndUse) {
+  Http::TestRequestHeaderMapImpl request_headers{
+      {"content-type", "test"}, {":method", "GET"}, {":path", "/abc/123"}};
+  listener_config_.set_stage(1);
+  const std::string match_string = R"EOF(
+  transformations:
+  - stage: 1
+    request_match:
+      match:
+        prefix: /
+      request_transformation:
+        transformation_template:
+          advanced_templates: true
+          passthrough: {}
+          extractors:
+            ext1: 
+              header: ":path"
+              regex: "^/(.*)/(.*)"
+              subgroup: 1
+            ext2: 
+              header: ":path"
+              regex: "^/(.*)/(.*)"
+              subgroup: 2
+          headers:
+            ":path": {text: "/{{extraction(\"ext1\")}}/somethingreallyreallylongsowecanevictmemoryorsomething"}
+            "x-foo": {text: "{{extraction(\"ext2\")}}"}
+  )EOF";
+  TestUtility::loadFromYaml(match_string, route_config_);
+
+  initFilter();
+  auto res = filter_->decodeHeaders(request_headers, true);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, res);
+  EXPECT_EQ(request_headers.get_(":path"), "/abc/somethingreallyreallylongsowecanevictmemoryorsomething");
+  // enforces that we dont care that hte source has changed
+  EXPECT_EQ(request_headers.get_("x-foo"), "123");
 }
 
 TEST_F(TransformationFilterTest, RequestMatchInOrder) {
