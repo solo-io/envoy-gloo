@@ -35,7 +35,7 @@ public:
   const Http::RequestHeaderMap *request_headers_;
   const GetBodyFunc *body_;
   const std::unordered_map<std::string, std::string> *destructive_extractions_;
-  const std::unordered_map<std::string, absl::string_view> *extractions_;
+  const std::unordered_map<std::string, std::string> *extractions_;
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
@@ -95,7 +95,7 @@ private:
 class Extractor : Logger::Loggable<Logger::Id::filter> {
 public:
   Extractor(const envoy::api::v2::filter::http::Extraction &extractor);
-  absl::string_view extract(Http::StreamFilterCallbacks &callbacks,
+  std::string extract(Http::StreamFilterCallbacks &callbacks,
                             const Http::RequestOrResponseHeaderMap &header_map,
                             GetBodyFunc &body) const;
   std::string extractDestructive(Http::StreamFilterCallbacks &callbacks,

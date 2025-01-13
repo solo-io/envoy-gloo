@@ -97,7 +97,7 @@ Extractor::extract(Http::StreamFilterCallbacks &callbacks,
   if (body_) {
     const std::string &string_body = body();
     absl::string_view sv(string_body);
-    return extractValue(callbacks, sv);
+    return std::string(extractValue(callbacks, sv));
   } else {
     const Http::HeaderMap::GetResult header_entries = getHeader(header_map, headername_);
     if (header_entries.empty()) {
@@ -883,7 +883,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     }
   }
   // get the extractions
-  std::unordered_map<std::string, absl::string_view> extractions;
+  std::unordered_map<std::string, std::string> extractions;
   std::unordered_map<std::string, std::string> destructive_extractions;
   
   if (advanced_templates_) {

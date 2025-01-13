@@ -543,14 +543,14 @@ TEST_F(TransformationFilterTest, SameStageExtractAndUse) {
           extractors:
             ext1: 
               header: ":path"
-              regex: "(.*)/(.*)"
+              regex: "^/(.*)/(.*)"
               subgroup: 1
             ext2: 
               header: ":path"
-              regex: "(.*)/(.*)"
+              regex: "^/(.*)/(.*)"
               subgroup: 2
           headers:
-            ":path": {text: "{{extraction(\"ext1\")}}/somethingreallyreallylongsowecanevictmemoryorsomething"}
+            ":path": {text: "/{{extraction(\"ext1\")}}/somethingreallyreallylongsowecanevictmemoryorsomething"}
             "x-foo": {text: "{{extraction(\"ext2\")}}"}
   )EOF";
   TestUtility::loadFromYaml(match_string, route_config_);
