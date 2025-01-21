@@ -1,0 +1,8 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: envoyproxy
+    dependencyRepo: go-control-plane
+    dependencyTag: v0.13.2
+    resolvesIssue: false
+    description: >-
+      Downgrade control plane as the new tag that claimed it was 1.32.3 was actually based on 1.33
