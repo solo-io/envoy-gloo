@@ -3,6 +3,7 @@
 #include <iterator>
 
 #include "absl/strings/str_replace.h"
+#include "absl/strings/ascii.h"
 
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
@@ -411,15 +412,8 @@ json TransformerInstance::data_source_callback(const inja::Arguments &args) cons
 }
 
 json TransformerInstance::trim_callback(const inja::Arguments &args) const {
-  std::string s = args.at(0)->get_ref<const std::string &>();
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-      return !std::isspace(ch);
-  }));
-  s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-    return !std::isspace(ch);
-  }).base(), s.end());
-  return s;
-  
+  const std::string& s = args.at(0)->get_ref<const std::string &>();
+  return absl::StripAsciiWhitespace(s);
 }
 
 json TransformerInstance::env(const inja::Arguments &args) const {
