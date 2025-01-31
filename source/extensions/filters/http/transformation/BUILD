@@ -141,6 +141,7 @@ envoy_cc_library(
         "@envoy//source/common/common:base64_lib",
         "@envoy//source/common/common:macros",
         "@envoy//source/common/common:regex_lib",
+        "@envoy//source/common/config:datasource_lib",
         "@envoy//source/common/common:utility_lib",
         "@envoy//source/common/protobuf",
         "@inja//:inja-lib",
