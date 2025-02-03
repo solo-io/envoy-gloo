@@ -739,8 +739,8 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
     extractors_.emplace_back(std::make_pair(it->first, it->second));
   }
   uint32_t max_size = 4096;
-  if (transformation.max_size() > 0) {
-    max_size = transformation.max_size();
+  if (transformation.data_source_max_size() > 0) {
+    max_size = transformation.data_source_max_size();
   }
 
   const auto &data_sources = transformation.data_sources();

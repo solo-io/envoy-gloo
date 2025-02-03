@@ -236,7 +236,7 @@ message TransformationTemplate {
   // data_source("my_file") }}').
   map<string, envoy.config.core.v3.DataSource> data_sources = 17;
   // max size of data source. 4096 bytes by default.
-  uint32 max_size = 18;
+  uint32 data_source_max_size = 18;
 
   // Use this attribute to transform request/response headers. It consists of a
   // map of strings to templates. The string key determines the name of the
