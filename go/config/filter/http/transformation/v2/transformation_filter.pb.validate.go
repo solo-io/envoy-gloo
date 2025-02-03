@@ -1469,7 +1469,7 @@ func (m *TransformationTemplate) validate(all bool) error {
 		}
 	}
 
-	// no validation rules for MaxSize
+	// no validation rules for DataSourceMaxSize
 
 	{
 		sorted_keys := make([]string, len(m.GetHeaders()))

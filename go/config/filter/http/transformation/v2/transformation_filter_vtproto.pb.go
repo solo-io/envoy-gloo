@@ -1152,8 +1152,8 @@ func (m *TransformationTemplate) MarshalToSizedBufferVTStrict(dAtA []byte) (int,
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.MaxSize != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.MaxSize))
+	if m.DataSourceMaxSize != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.DataSourceMaxSize))
 		i--
 		dAtA[i] = 0x1
 		i--
@@ -2230,8 +2230,8 @@ func (m *TransformationTemplate) SizeVT() (n int) {
 			n += mapEntrySize + 2 + protohelpers.SizeOfVarint(uint64(mapEntrySize))
 		}
 	}
-	if m.MaxSize != 0 {
-		n += 2 + protohelpers.SizeOfVarint(uint64(m.MaxSize))
+	if m.DataSourceMaxSize != 0 {
+		n += 2 + protohelpers.SizeOfVarint(uint64(m.DataSourceMaxSize))
 	}
 	n += len(m.unknownFields)
 	return n
