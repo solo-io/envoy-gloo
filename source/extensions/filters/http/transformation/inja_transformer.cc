@@ -3,6 +3,7 @@
 #include <iterator>
 
 #include "absl/strings/str_replace.h"
+#include "absl/strings/ascii.h"
 
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/macros.h"
@@ -230,6 +231,12 @@ TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::
   env_.add_callback("extraction", 1, [this](Arguments &args) {
     return extracted_callback(args);
   });
+  env_.add_callback("data_source", 1, [this](Arguments &args) {
+    return data_source_callback(args);
+  });
+  env_.add_callback("trim", 1, [this](Arguments &args) {
+    return trim_callback(args);
+  });
   env_.add_callback("context", 0, [this](Arguments &) { return *tls_.getTyped<ThreadLocalTransformerContext>().context_; });
   env_.add_callback("body", 0, [this](Arguments &) { return (*tls_.getTyped<ThreadLocalTransformerContext>().body_)(); });
   env_.add_callback("env", 1, [this](Arguments &args) { return env(args); });
@@ -392,6 +399,21 @@ json TransformerInstance::extracted_callback(const inja::Arguments &args) const 
     return destructive_value_it->second;
   }
   return "";
+}
+
+json TransformerInstance::data_source_callback(const inja::Arguments &args) const {
+  const auto& ctx = tls_.getTyped<ThreadLocalTransformerContext>();
+  const std::string &name = args.at(0)->get_ref<const std::string &>();
+  const auto value_it = ctx.data_sources_->find(name);
+  if (value_it != ctx.data_sources_->end()) {
+    return value_it->second->data();
+  }
+  return "";
+}
+
+json TransformerInstance::trim_callback(const inja::Arguments &args) const {
+  const std::string& s = args.at(0)->get_ref<const std::string &>();
+  return absl::StripAsciiWhitespace(s);
 }
 
 json TransformerInstance::env(const inja::Arguments &args) const {
@@ -690,8 +712,9 @@ std::string TransformerInstance::render(const inja::Template &input) {
 
 // An InjaTransformer is constructed on initialization on the main thread
 InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
-                                 Envoy::Random::RandomGenerator &rng,
                                  google::protobuf::BoolValue log_request_response_info,
+                                 Event::Dispatcher& main_thread_dispatcher,
+                                 Envoy::Api::Api& api,
                                  ThreadLocal::SlotAllocator &tls)
     : Transformer(log_request_response_info),
       advanced_templates_(transformation.advanced_templates()),
@@ -700,7 +723,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
       escape_characters_(transformation.escape_characters()),
       tls_(tls.allocateSlot()),
-      instance_(std::make_unique<TransformerInstance>(*tls_, rng)) {
+      instance_(std::make_unique<TransformerInstance>(*tls_, api.randomGenerator())) {
   if (advanced_templates_) {
     instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
@@ -715,6 +738,23 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
   for (auto it = extractors.begin(); it != extractors.end(); it++) {
     extractors_.emplace_back(std::make_pair(it->first, it->second));
   }
+  uint32_t max_size = 4096;
+  if (transformation.data_source_max_size() > 0) {
+    max_size = transformation.data_source_max_size();
+  }
+
+  const auto &data_sources = transformation.data_sources();
+  for (auto it = data_sources.begin(); it != data_sources.end(); it++) {
+        auto provider_or_error = Envoy::Config::DataSource::DataSourceProvider::create(
+        it->second, main_thread_dispatcher, tls, api, true, max_size);
+        if (provider_or_error.ok()) {
+          data_sources_.emplace(std::make_pair(it->first, std::move(provider_or_error.value())));
+        } else {
+          throw EnvoyException(fmt::format(
+              "Failed to create data source provider '{}': {}", it->first, provider_or_error.status().message()));
+        }
+  }
+
   const auto &headers = transformation.headers();
   for (auto it = headers.begin(); it != headers.end(); it++) {
     Http::LowerCaseString header_name(it->first);
@@ -980,6 +1020,7 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
   typed_tls_data.request_headers_ = request_headers;
   typed_tls_data.body_ = &get_body;
   typed_tls_data.extractions_ = &extractions;
+  typed_tls_data.data_sources_ = &data_sources_;
   typed_tls_data.destructive_extractions_ = &destructive_extractions;
   typed_tls_data.context_ = &json_body;
   typed_tls_data.environ_ = &environ_;

@@ -11,6 +11,7 @@
 #include "envoy/thread_local/thread_local_object.h"
 #include "envoy/thread_local/thread_local.h"
 #include "source/extensions/filters/http/transformation/transformer.h"
+#include "source/common/config/datasource.h"
 
 // clang-format off
 #include "nlohmann/json.hpp"
@@ -36,6 +37,8 @@ public:
   const GetBodyFunc *body_;
   const std::unordered_map<std::string, std::string> *destructive_extractions_;
   const std::unordered_map<std::string, absl::string_view> *extractions_;
+  const std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr>* data_sources_;
+
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
   const envoy::config::core::v3::Metadata *cluster_metadata_;
@@ -65,6 +68,8 @@ private:
   nlohmann::json request_header_callback(const inja::Arguments &args) const;
   // extracted_value(name, index)
   nlohmann::json extracted_callback(const inja::Arguments &args) const;
+  nlohmann::json data_source_callback(const inja::Arguments &args) const;
+  nlohmann::json trim_callback(const inja::Arguments &args) const;
   nlohmann::json dynamic_metadata(const inja::Arguments &args) const;
   nlohmann::json env(const inja::Arguments &args) const;
   nlohmann::json cluster_metadata_callback(const inja::Arguments &args) const;
@@ -121,9 +126,10 @@ private:
 class InjaTransformer : public Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
   InjaTransformer(const envoy::api::v2::filter::http::TransformationTemplate &transformation,
-                  Envoy::Random::RandomGenerator &rng,
                   google::protobuf::BoolValue log_request_response_info,
-                  ThreadLocal::SlotAllocator &tls_);
+                  Event::Dispatcher& main_thread_dispatcher,
+                  Envoy::Api::Api& api,
+                  ThreadLocal::SlotAllocator &tls);
   ~InjaTransformer();
 
   void transform(Http::RequestOrResponseHeaderMap &map,
@@ -143,6 +149,7 @@ private:
   bool advanced_templates_{};
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
+  std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr> data_sources_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_;
   std::vector<Http::LowerCaseString> headers_to_remove_;

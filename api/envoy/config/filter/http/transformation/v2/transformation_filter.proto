@@ -15,6 +15,7 @@ import "xds/type/matcher/v3/matcher.proto";
 import "envoy/config/route/v3/route_components.proto";
 import "envoy/type/matcher/v3/string.proto";
 import "envoy/config/core/v3/extension.proto";
+import "envoy/config/core/v3/base.proto";
 
 message FilterTransformations {
   // Specifies transformations based on the route matches. The first matched
@@ -229,6 +230,13 @@ message TransformationTemplate {
   // templates, e.g. "{{ my-extractor }}" will render to the value of the
   // "my-extractor" extractor.
   map<string, Extraction> extractors = 2;
+
+  // Data sources. use the `data_source`
+  // function to access data_sources in the template (e.g. '{{
+  // data_source("my_file") }}').
+  map<string, envoy.config.core.v3.DataSource> data_sources = 17;
+  // max size of data source. 4096 bytes by default.
+  uint32 data_source_max_size = 18;
 
   // Use this attribute to transform request/response headers. It consists of a
   // map of strings to templates. The string key determines the name of the
