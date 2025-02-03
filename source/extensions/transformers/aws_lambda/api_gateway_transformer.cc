@@ -75,6 +75,19 @@ void ApiGatewayTransformer::transform_response(
     Http::ResponseHeaderMap *response_headers,
     Buffer::Instance &body,
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
+
+  // Starting with 2.0 support API Gateway can infer the response format for you. 
+  // iff your response is valid json with a statuscode set then it treats it as v1
+  // iff your response is valid json without a statuscode then it sets the following:
+  //    isBase64Encoded is false.
+  //    statusCode is 200.
+  //    content-type is application/json.
+  //    body is the function's response.
+  // else be angry //TODO(nfuden): what should angry look like? 
+  //    For now we will punt and just use what we currently do. 
+  //    which is to be very angry and to puke 500s
+
+
   // clear existing response headers before any can be set
   // please note: Envoy will crash if the ":status" header is not set
   response_headers->clear();
@@ -93,43 +106,33 @@ void ApiGatewayTransformer::transform_response(
   }
 
   // set response status code
-  if (json_body.contains("statusCode")) {
-    uint64_t status_value;
-    if (!json_body["statusCode"].is_number_unsigned()) {
-      // add duplicate log line to not break tests for now
-      ENVOY_STREAM_LOG(debug, "cannot parse non unsigned integer status code", stream_filter_callbacks);
-      ENVOY_STREAM_LOG(debug, "received status code with value: {}", stream_filter_callbacks, json_body["statusCode"].dump());
-      ApiGatewayError error = {500, "500", "cannot parse non unsigned integer status code"};
-      return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
-    }
-    status_value = json_body["statusCode"].get<uint64_t>();
-    response_headers->setStatus(status_value);
-  } else {
+  if (!json_body.contains("statusCode")) {
+    // set the default headers
+    // we have cleared all other headers
     response_headers->setStatus(DEFAULT_STATUS_VALUE);
+    response_headers->setContentType("application/json");
+
+
+    // dont manipulate the body as its already set and we havent drained
+    return
   }
 
-  // set response headers
-  if (json_body.contains("headers")) {
-    const auto& headers = json_body["headers"];
-    if (!headers.is_object()) {
-        ENVOY_STREAM_LOG(debug, "invalid headers object", stream_filter_callbacks);
-        ApiGatewayError error = {500, "500", "invalid headers object"};
-        return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
-    }
-    for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
-        const auto& header_key = it.key();
-        const auto& header_value = it.value();
-        std::string header_value_string;
-        if (header_value.is_string()) {
-          header_value_string = header_value.get<std::string>();
-        } else {
-          header_value_string = it.value().dump();
-        }
-        add_response_header(*response_headers, header_key, header_value_string, stream_filter_callbacks, false);
-    }
+
+  uint64_t status_value;
+  if (!json_body["statusCode"].is_number_unsigned()) {
+    // add duplicate log line to not break tests for now
+    ENVOY_STREAM_LOG(debug, "cannot parse non unsigned integer status code", stream_filter_callbacks);
+    ENVOY_STREAM_LOG(debug, "received status code with value: {}", stream_filter_callbacks, json_body["statusCode"].dump());
+    ApiGatewayError error = {500, "500", "cannot parse non unsigned integer status code"};
+    return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
   }
+  status_value = json_body["statusCode"].get<uint64_t>();
+  response_headers->setStatus(status_value);
+  
 
   // set multi-value response headers
+  // Warning this may allow the user to set values that envoy will reject later.
+  // For example if the multivalueheaders has multiple values for :authority then envoy http2 code will reject this
   if (json_body.contains("multiValueHeaders")) {
     const auto& multi_value_headers = json_body["multiValueHeaders"];
     if (!multi_value_headers.is_object()) {
@@ -162,6 +165,31 @@ void ApiGatewayTransformer::transform_response(
           }
           add_response_header(*response_headers, header_key, header_value, stream_filter_callbacks, true);
         }
+    }
+  }
+
+  // set response headers if they have not already been set in multivalue.
+  if (json_body.contains("headers")) {
+    const auto& headers = json_body["headers"];
+    if (!headers.is_object()) {
+        ENVOY_STREAM_LOG(debug, "invalid headers object", stream_filter_callbacks);
+        ApiGatewayError error = {500, "500", "invalid headers object"};
+        return ApiGatewayTransformer::format_error(*response_headers, body, error, stream_filter_callbacks);
+    }
+    for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
+        const auto& header_key = it.key();
+        if (response_headers.get(header_key)){
+          // Dont double set headers that are specified in multivalue
+          continue;
+        }
+        const auto& header_value = it.value();
+        std::string header_value_string;
+        if (header_value.is_string()) {
+          header_value_string = header_value.get<std::string>();
+        } else {
+          header_value_string = it.value().dump();
+        }
+        add_response_header(*response_headers, header_key, header_value_string, stream_filter_callbacks, false);
     }
   }
 
