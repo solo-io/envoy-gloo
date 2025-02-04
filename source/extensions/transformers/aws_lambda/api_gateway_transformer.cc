@@ -178,7 +178,7 @@ void ApiGatewayTransformer::transform_response(
     }
     for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
         const auto& header_key = it.key();
-        if (response_headers.get(header_key)){
+        if (!response_headers->get(header_key).empty()) {
           // Dont double set headers that are specified in multivalue
           continue;
         }
