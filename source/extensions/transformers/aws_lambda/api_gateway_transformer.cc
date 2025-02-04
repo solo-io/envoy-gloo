@@ -178,10 +178,17 @@ void ApiGatewayTransformer::transform_response(
     }
     for (json::const_iterator it = headers.cbegin(); it != headers.cend(); it++) {
         const auto& header_key = it.key();
-        if (!response_headers->get(header_key.get<std::string>()).empty()) {
+       
+        Envoy::Http::LowerCaseString lower_case_header_key(header_key);
+        if (!Http::validHeaderString(lower_case_header_key)) {
+          ENVOY_STREAM_LOG(debug, "failed to write response header with invalid header key: {}", stream_filter_callbacks, std::string(header_key));
+          return;
+        }
+        if (!response_headers->get(lower_case_header_key).empty()) {
           // Dont double set headers that are specified in multivalue
           continue;
         }
+
         const auto& header_value = it.value();
         std::string header_value_string;
         if (header_value.is_string()) {
