@@ -242,9 +242,9 @@ index 02c4a0b264..c31de828da 100644
 +  // Filter namespace for storing custom upstream PP TLVs in metadata.
 +  const std::string ENVOY_TRANSPORT_SOCKETS_PROXY_PROTOCOL =
 +      "envoy.transport_sockets.proxy_protocol";
-};
-
-using MetadataFilters = ConstSingleton<MetadataFilterValues>;
+ };
+ 
+ using MetadataFilters = ConstSingleton<MetadataFilterValues>;
 diff --git a/source/extensions/common/proxy_protocol/proxy_protocol_header.cc b/source/extensions/common/proxy_protocol/proxy_protocol_header.cc
 index 1c8537964f..a2f7b88d70 100644
 --- source/extensions/common/proxy_protocol/proxy_protocol_header.cc
