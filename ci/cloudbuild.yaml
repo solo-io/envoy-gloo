@@ -20,9 +20,9 @@ steps:
   - '//test/extensions/...'
   - '//test/common/...'
   - '//test/integration/...'
-  # for testing bazel/foreign_cc/tlv-support.patch
+  # proxy_protocol tests are for validating bazel/foreign_cc/tlv-support.patch
   - '@envoy//test/extensions/common/proxy_protocol/...'
-  - '@envoy//test/extensions/transport/proxy_protocol/...
+  - '@envoy//test/extensions/transport/proxy_protocol/...'
   volumes:
   - name: 'vol-build'
     path: '/build'
