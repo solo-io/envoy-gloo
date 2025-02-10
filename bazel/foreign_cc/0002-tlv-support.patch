@@ -242,9 +242,9 @@ index 02c4a0b264..c31de828da 100644
 +  // Filter namespace for storing custom upstream PP TLVs in metadata.
 +  const std::string ENVOY_TRANSPORT_SOCKETS_PROXY_PROTOCOL =
 +      "envoy.transport_sockets.proxy_protocol";
-   // Proxy address configuration namespace for HTTP/1.1 proxy transport sockets.
-   const std::string ENVOY_HTTP11_PROXY_TRANSPORT_SOCKET_ADDR =
-       "envoy.http11_proxy_transport_socket.proxy_address";
+};
+
+using MetadataFilters = ConstSingleton<MetadataFilterValues>;
 diff --git a/source/extensions/common/proxy_protocol/proxy_protocol_header.cc b/source/extensions/common/proxy_protocol/proxy_protocol_header.cc
 index 1c8537964f..a2f7b88d70 100644
 --- source/extensions/common/proxy_protocol/proxy_protocol_header.cc
