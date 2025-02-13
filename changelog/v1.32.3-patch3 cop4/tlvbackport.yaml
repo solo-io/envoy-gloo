@@ -1,0 +1,4 @@
+changelog:
+- type: NON_USER_FACING
+  description: >-
+    Changelogs needed for releases so adding one to release https://github.com/solo-io/envoy-gloo/commit/61ae8d1dd292fa42a5b8b5c69b6726e6db4dad68
