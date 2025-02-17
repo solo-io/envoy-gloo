@@ -1,0 +1,37 @@
+From 06ea5be1a0919908948dfb04a9262e1ba7bf922c Mon Sep 17 00:00:00 2001
+From: phlax <phlax@users.noreply.github.com>
+Date: Thu, 10 Oct 2024 18:42:30 +0100
+Subject: [PATCH] deps: Fix (renamed) ipp-crypto repo hash (#36540)
+
+Signed-off-by: Ryan Northey <ryan@synca.io>
+---
+ bazel/repository_locations.bzl | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/bazel/repository_locations.bzl b/bazel/repository_locations.bzl
+index e42a6e7e2fd3..29af2efdedbc 100644
+--- a/bazel/repository_locations.bzl
++++ b/bazel/repository_locations.bzl
+@@ -443,17 +443,17 @@ REPOSITORY_LOCATIONS_SPEC = dict(
+     com_github_intel_ipp_crypto_crypto_mb = dict(
+         project_name = "libipp-crypto",
+         project_desc = "Intel® Integrated Performance Primitives Cryptography",
+-        project_url = "https://github.com/intel/ipp-crypto",
++        project_url = "https://github.com/intel/cryptography-primitives",
+         version = "2021.11.1",
+-        sha256 = "d785fd8d5245ada79068588e5cc4d721d35c50e7d26fc268306f4aaae28ec6d6",
+-        strip_prefix = "ipp-crypto-ippcp_{version}",
+-        urls = ["https://github.com/intel/ipp-crypto/archive/ippcp_{version}.tar.gz"],
++        sha256 = "76779724378fb3ec8b59047be02f6ca609c1ee70372b0205d937d451987bdb6c",
++        strip_prefix = "cryptography-primitives-ippcp_{version}",
++        urls = ["https://github.com/intel/cryptography-primitives/archive/ippcp_{version}.tar.gz"],
+         release_date = "2024-02-28",
+         use_category = ["dataplane_ext"],
+         extensions = ["envoy.tls.key_providers.cryptomb"],
+         cpe = "cpe:2.3:a:intel:cryptography_for_intel_integrated_performance_primitives:*",
+         license = "Apache-2.0",
+-        license_url = "https://github.com/intel/ipp-crypto/blob/ippcp_{version}/LICENSE",
++        license_url = "https://github.com/intel/cryptography-primitives/blob/ippcp_{version}/LICENSE",
+     ),
+     com_github_intel_qatlib = dict(
+         project_name = "qatlib",

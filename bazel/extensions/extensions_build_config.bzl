@@ -19,6 +19,7 @@ EXTENSIONS = {
     #
 
     "envoy.clusters.aggregate":                         "//source/extensions/clusters/aggregate:cluster",
+    "envoy.clusters.dns":                               "//source/extensions/clusters/dns:dns_cluster_lib",
     "envoy.clusters.dynamic_forward_proxy":             "//source/extensions/clusters/dynamic_forward_proxy:cluster",
     "envoy.clusters.eds":                               "//source/extensions/clusters/eds:eds_lib",
     "envoy.clusters.redis":                             "//source/extensions/clusters/redis:redis_cluster",
@@ -62,7 +63,7 @@ EXTENSIONS = {
     #
 
     "envoy.health_checkers.redis":                      "//source/extensions/health_checkers/redis:config",
-    # "envoy.health_checkers.thrift":                     "//source/extensions/health_checkers/thrift:config",
+    # "envoy.health_checkers.thrift":                "//source/extensions/health_checkers/thrift:config",
     "envoy.health_checkers.tcp":                        "//source/extensions/health_checkers/tcp:health_checker_lib",
     "envoy.health_checkers.http":                       "//source/extensions/health_checkers/http:health_checker_lib",
     "envoy.health_checkers.grpc":                       "//source/extensions/health_checkers/grpc:health_checker_lib",
@@ -71,7 +72,7 @@ EXTENSIONS = {
     # Health check event sinks
     #
 
-    # "envoy.health_check.event_sinks.file":              "//source/extensions/health_check/event_sinks/file:file_sink_lib",
+    # "envoy.health_check.event_sinks.file":               "//source/extensions/health_check/event_sinks/file:file_sink_lib",
 
     #
     # Input Matchers
@@ -133,6 +134,7 @@ EXTENSIONS = {
     "envoy.filters.http.adaptive_concurrency":          "//source/extensions/filters/http/adaptive_concurrency:config",
     "envoy.filters.http.admission_control":             "//source/extensions/filters/http/admission_control:config",
     "envoy.filters.http.alternate_protocols_cache":     "//source/extensions/filters/http/alternate_protocols_cache:config",
+    "envoy.filters.http.api_key_auth":                  "//source/extensions/filters/http/api_key_auth:config",
     "envoy.filters.http.aws_lambda":                    "//source/extensions/filters/http/aws_lambda:config",
     "envoy.filters.http.aws_request_signing":           "//source/extensions/filters/http/aws_request_signing:config",
     "envoy.filters.http.bandwidth_limit":               "//source/extensions/filters/http/bandwidth_limit:config",
@@ -166,7 +168,7 @@ EXTENSIONS = {
     "envoy.filters.http.ip_tagging":                    "//source/extensions/filters/http/ip_tagging:config",
     "envoy.filters.http.json_to_metadata":              "//source/extensions/filters/http/json_to_metadata:config",
     "envoy.filters.http.jwt_authn":                     "//source/extensions/filters/http/jwt_authn:config",
-    # "envoy.filters.http.rate_limit_quota":              "//source/extensions/filters/http/rate_limit_quota:config",
+    "envoy.filters.http.rate_limit_quota":              "//source/extensions/filters/http/rate_limit_quota:config",
     # Disabled by default. kill_request is not built into most prebuilt images.
     # For instructions for building with disabled-by-default filters enabled, see
     # https://github.com/envoyproxy/envoy/blob/main/bazel/README.md#enabling-and-disabling-extensions
@@ -277,7 +279,6 @@ EXTENSIONS = {
 
     "envoy.tracers.datadog":                            "//source/extensions/tracers/datadog:config",
     "envoy.tracers.zipkin":                             "//source/extensions/tracers/zipkin:config",
-    "envoy.tracers.opencensus":                         "//source/extensions/tracers/opencensus:config",
     "envoy.tracers.xray":                               "//source/extensions/tracers/xray:config",
     "envoy.tracers.skywalking":                         "//source/extensions/tracers/skywalking:config",
     "envoy.tracers.opentelemetry":                      "//source/extensions/tracers/opentelemetry:config",
@@ -328,7 +329,7 @@ EXTENSIONS = {
     #
     # CacheFilter plugins
     #
-    # "envoy.extensions.http.cache.file_system_http_cache": "//source/extensions/http/cache/file_system_http_cache:config",
+    "envoy.extensions.http.cache.file_system_http_cache": "//source/extensions/http/cache/file_system_http_cache:config",
     "envoy.extensions.http.cache.simple":               "//source/extensions/http/cache/simple_http_cache:config",
 
     #
@@ -345,7 +346,7 @@ EXTENSIONS = {
 
     "envoy.upstreams.http.http":                        "//source/extensions/upstreams/http/http:config",
     "envoy.upstreams.http.tcp":                         "//source/extensions/upstreams/http/tcp:config",
-    # "envoy.upstreams.http.udp":                         "//source/extensions/upstreams/http/udp:config",
+    "envoy.upstreams.http.udp":                         "//source/extensions/upstreams/http/udp:config",
 
     #
     # Watchdog actions
@@ -526,7 +527,6 @@ EXTENSIONS = {
     #
     # cluster specifier plugin
     #
-
     "envoy.router.cluster_specifier_plugin.lua": "//source/extensions/router/cluster_specifiers/lua:config",
 
     #
