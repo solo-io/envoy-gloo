@@ -63,7 +63,7 @@ EXTENSIONS = {
     #
 
     "envoy.health_checkers.redis":                      "//source/extensions/health_checkers/redis:config",
-    # "envoy.health_checkers.thrift":                "//source/extensions/health_checkers/thrift:config",
+    # "envoy.health_checkers.thrift":                     "//source/extensions/health_checkers/thrift:config",
     "envoy.health_checkers.tcp":                        "//source/extensions/health_checkers/tcp:health_checker_lib",
     "envoy.health_checkers.http":                       "//source/extensions/health_checkers/http:health_checker_lib",
     "envoy.health_checkers.grpc":                       "//source/extensions/health_checkers/grpc:health_checker_lib",
@@ -72,7 +72,7 @@ EXTENSIONS = {
     # Health check event sinks
     #
 
-    # "envoy.health_check.event_sinks.file":               "//source/extensions/health_check/event_sinks/file:file_sink_lib",
+    "envoy.health_check.event_sinks.file":              "//source/extensions/health_check/event_sinks/file:file_sink_lib",
 
     #
     # Input Matchers
@@ -160,6 +160,7 @@ EXTENSIONS = {
     # "envoy.filters.http.grpc_field_extraction":         "//source/extensions/filters/http/grpc_field_extraction:config",
     "envoy.filters.http.grpc_http1_bridge":             "//source/extensions/filters/http/grpc_http1_bridge:config",
     "envoy.filters.http.grpc_http1_reverse_bridge":     "//source/extensions/filters/http/grpc_http1_reverse_bridge:config",
+    "envoy.filters.http.grpc_json_reverse_transcoder":  "//source/extensions/filters/http/grpc_json_reverse_transcoder:config",
     "envoy.filters.http.grpc_json_transcoder":          "//source/extensions/filters/http/grpc_json_transcoder:config",
     "envoy.filters.http.grpc_stats":                    "//source/extensions/filters/http/grpc_stats:config",
     "envoy.filters.http.grpc_web":                      "//source/extensions/filters/http/grpc_web:config",
