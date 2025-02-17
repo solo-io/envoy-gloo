@@ -26,7 +26,7 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
           server_context.api(), absl::nullopt /* ServerFactoryContextOptRef context */,
           // We pass an empty string if we don't have a region
           proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "",
-          Extensions::Common::Aws::Utility::fetchMetadata);
+          nullptr);
   auto sts_factory = StsCredentialsProviderFactory::create(server_context.api(),
                                             server_context.clusterManager());
   auto config = std::make_shared<AWSLambdaConfigImpl>(std::move(chain),
