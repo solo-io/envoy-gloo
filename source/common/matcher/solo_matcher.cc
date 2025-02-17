@@ -163,7 +163,9 @@ public:
       : BaseMatcherImpl(match, context) {
     ASSERT(match.path_specifier_case() == RouteMatch::kSafeRegex);
     auto engine = Envoy::MatcherCopy::StdRegexEngine();
-    regex_ = Regex::Utility::parseRegex(match.safe_regex(), engine);
+    regex_ = THROW_OR_RETURN_VALUE(
+      Regex::Utility::parseRegex(match.safe_regex(), engine),
+      Regex::CompiledMatcherPtr);
     regex_str_ = match.safe_regex().regex();
   }
 
