@@ -35,7 +35,7 @@ private:
       const std::string &stats_prefix,
       Server::Configuration::FactoryContext &context) override;
 
-      absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
+  absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
   createRouteSpecificFilterConfigTyped(
       const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute &,
       Server::Configuration::ServerFactoryContext &,
