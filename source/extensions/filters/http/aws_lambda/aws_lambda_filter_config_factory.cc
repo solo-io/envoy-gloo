@@ -57,7 +57,7 @@ AWSLambdaFilterConfigFactory::createEmptyProtocolOptionsProto() {
                               AWSLambdaProtocolExtension>();
 }
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
         &proto_config,

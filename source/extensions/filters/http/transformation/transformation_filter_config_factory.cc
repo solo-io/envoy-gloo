@@ -30,7 +30,7 @@ TransformationFilterConfigFactory::createFilterFactoryFromProtoTyped(
   };
 }
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
 TransformationFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const RouteTransformationConfigProto &proto_config,
     Server::Configuration::ServerFactoryContext &context,
