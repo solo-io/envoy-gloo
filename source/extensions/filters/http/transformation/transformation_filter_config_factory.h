@@ -30,7 +30,7 @@ private:
       const std::string &stats_prefix, DualInfo info,
       Server::Configuration::ServerFactoryContext &context) override;
 
-  Router::RouteSpecificFilterConfigConstSharedPtr
+  absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
   createRouteSpecificFilterConfigTyped(
       const RouteTransformationConfigProto &,
       Server::Configuration::ServerFactoryContext &,

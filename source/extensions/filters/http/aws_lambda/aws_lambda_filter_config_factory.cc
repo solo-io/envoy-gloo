@@ -24,9 +24,10 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
   // the upstream code from attempting to access the method. https://github.com/envoyproxy/envoy/issues/26653
   auto chain = std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
           server_context.api(), absl::nullopt /* ServerFactoryContextOptRef context */,
+          server_context.singletonManager(),
           // We pass an empty string if we don't have a region
           proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "",
-          Extensions::Common::Aws::Utility::fetchMetadata);
+          nullptr);
   auto sts_factory = StsCredentialsProviderFactory::create(server_context.api(),
                                             server_context.clusterManager());
   auto config = std::make_shared<AWSLambdaConfigImpl>(std::move(chain),
@@ -57,7 +58,7 @@ AWSLambdaFilterConfigFactory::createEmptyProtocolOptionsProto() {
                               AWSLambdaProtocolExtension>();
 }
 
-Router::RouteSpecificFilterConfigConstSharedPtr
+absl::StatusOr<Router::RouteSpecificFilterConfigConstSharedPtr>
 AWSLambdaFilterConfigFactory::createRouteSpecificFilterConfigTyped(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaPerRoute
         &proto_config,
