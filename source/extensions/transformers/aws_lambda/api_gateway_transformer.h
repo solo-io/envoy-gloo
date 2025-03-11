@@ -41,7 +41,8 @@ public:
   std::string name() const override { return "io.solo.api_gateway.api_gateway_transformer"; }
 };
 
-const Http::LowerCaseString LAMBDA_STATUS_CODE_HEADER("x-envoy-lambda-statuscode");
+const Http::LowerCaseString LAMBDA_STATUS_CODE_HEADER("x-envoygloo-lambda-statuscode");
+const Http::LowerCaseString LAMBDA_STATUS_REASON_HEADER("x-envoygloo-lambda-statusreason");
 
 class ApiGatewayTransformer : public Transformation::Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
@@ -59,6 +60,10 @@ public:
                  Http::StreamFilterCallbacks &) const;
   bool passthrough_body() const override { return false; };
 private:
+  void handle429(
+      Http::ResponseHeaderMap *response_headers,
+      nlohmann::json &json_body,
+      Http::StreamFilterCallbacks &stream_filter_callbacks) const;
   static const Envoy::Http::LowerCaseString AMAZON_ERRORTYPE_HEADER;
   static constexpr uint64_t DEFAULT_STATUS_VALUE = 200;
   static void add_response_header(Http::ResponseHeaderMap &response_headers,

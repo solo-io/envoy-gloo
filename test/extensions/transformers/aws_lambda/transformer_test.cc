@@ -52,7 +52,11 @@ TEST(ApiGatewayTransformer, transform) {
 
 TEST(ApiGatewayTransformer, transform_response_ratelimited_lambda) {
   Http::TestResponseHeaderMapImpl response_headers{{":status", "429"}};
-  Buffer::OwnedImpl body("{}");
+  Buffer::OwnedImpl body(R"json({
+    "Reason": "TestReason",
+    "Type": "User",
+    "message": "Some message"
+  })json");
   NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
 
   ApiGatewayTransformer transformer;
@@ -60,6 +64,7 @@ TEST(ApiGatewayTransformer, transform_response_ratelimited_lambda) {
 
   EXPECT_EQ("500", response_headers.getStatusValue());
   EXPECT_EQ("429", response_headers.get_(LAMBDA_STATUS_CODE_HEADER));
+  EXPECT_EQ("TestReason", response_headers.get_(LAMBDA_STATUS_REASON_HEADER));
 }
 
 TEST(ApiGatewayTransformer, transform_body) {
