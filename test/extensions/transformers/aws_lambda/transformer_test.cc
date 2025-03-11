@@ -50,6 +50,18 @@ TEST(ApiGatewayTransformer, transform) {
   EXPECT_EQ("application/json", response_headers.getContentTypeValue());
 }
 
+TEST(ApiGatewayTransformer, transform_response_ratelimited_lambda) {
+  Http::TestResponseHeaderMapImpl response_headers{{":status", "429"}};
+  Buffer::OwnedImpl body("{}");
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> filter_callbacks_{};
+
+  ApiGatewayTransformer transformer;
+  transformer.transform_response(&response_headers, body, filter_callbacks_);
+
+  EXPECT_EQ("500", response_headers.getStatusValue());
+  EXPECT_EQ("429", response_headers.get_(LAMBDA_STATUS_CODE_HEADER));
+}
+
 TEST(ApiGatewayTransformer, transform_body) {
   Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
                                          {":authority", "www.solo.io"},

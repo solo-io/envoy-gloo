@@ -77,6 +77,7 @@ void ApiGatewayTransformer::transform_response(
     Http::StreamFilterCallbacks &stream_filter_callbacks) const {
   // clear existing response headers before any can be set
   // please note: Envoy will crash if the ":status" header is not set
+  bool received429 = response_headers->getStatusValue() == "429";
   response_headers->clear();
 
   // all information about the request format is to be contained in the response body
@@ -93,7 +94,28 @@ void ApiGatewayTransformer::transform_response(
   }
 
   // set response status code
-  if (json_body.contains("statusCode")) {
+  if (received429) {
+    // if the lambda function is rate-limited, set the status to 500 and add a
+    // header that says aws rate-limited the request. note that this means the
+    // lambda function itself was rate-limited, not that it was accepted and
+    // `statusCode` was 429.
+    // https://github.com/kgateway-dev/kgateway/issues/10192
+    ENVOY_STREAM_LOG(debug, "lambda function was rate-limited; setting response code to 500", stream_filter_callbacks);
+    response_headers->setStatus(500);
+    response_headers->addCopy(LAMBDA_STATUS_CODE_HEADER, "429");
+    // the remainder of this function parses the body of the lambda function's
+    // response to populate the client response. in the case of a 429, aws
+    // responds with the following message body:
+    // {
+    //     "Reason": "ReservedFunctionConcurrentInvocationLimitExceeded",
+    //     "Type": "User",
+    //     "message": "Rate Exceeded."
+    // }
+    // parsing this message is a waste of CPU and since we have no use for it,
+    // so let's just return
+    return;
+  }
+  else if (json_body.contains("statusCode")) {
     uint64_t status_value;
     if (!json_body["statusCode"].is_number_unsigned()) {
       // add duplicate log line to not break tests for now

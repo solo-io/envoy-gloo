@@ -41,6 +41,7 @@ public:
   std::string name() const override { return "io.solo.api_gateway.api_gateway_transformer"; }
 };
 
+const Http::LowerCaseString LAMBDA_STATUS_CODE_HEADER("x-envoy-lambda-statuscode");
 
 class ApiGatewayTransformer : public Transformation::Transformer, Logger::Loggable<Logger::Id::filter> {
 public:
