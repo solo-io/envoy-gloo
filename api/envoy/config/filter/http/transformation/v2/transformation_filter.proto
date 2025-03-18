@@ -295,6 +295,9 @@ message TransformationTemplate {
 
     // A template that determines the metadata value.
     InjaTemplate value = 3;
+
+    // Unused to be implemented in 1.30
+    bool json_to_proto = 4;
   }
   // Use this field to set Dynamic Metadata.
   repeated DynamicMetadataValue dynamic_metadata_values = 9;
