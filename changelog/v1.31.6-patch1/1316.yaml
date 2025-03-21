@@ -1,0 +1,11 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    issueLink: https://github.com/solo-io/solo-projects/issues/8041
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: v1.31.6
+    resolvesIssue: false
+    description: >-
+      ext_proc: Fixes a bug where local replies were incorrectly sent to the ext_proc server for external processing. This change can be temporarily reverted by setting runtime guard envoy_reloadable_features_skip_ext_proc_on_local_reply to false.
+      router: Fixes an Envoy crash issue when a local reply is sent. This change can be temporarily reverted by setting runtime guard envoy_reloadable_features_router_filter_resetall_on_local_reply to false.
+      CVE-2025-30157: Fix a bug where local replies were incorrectly sent to the ext_proc server
