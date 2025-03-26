@@ -1,0 +1,7 @@
+changelog:
+ - type: FIX
+   issueLink: https://github.com/solo-io/solo-projects/issues/8041
+   resolvesIssue: false
+   description: >-
+     Backported the fix of CVE-2025-30157 where Envoy crashes when HTTP ext_proc processes local replies.
+     Only needed here due to us using a fork with different ext proc here
