@@ -2,6 +2,7 @@
 #include "source/extensions/filters/http/transformation/transformation_factory.h"
 #include "source/extensions/filters/http/transformation/body_header_transformer.h"
 #include "source/extensions/filters/http/transformation/inja_transformer.h"
+#include "source/extensions/filters/http/transformation/ai_transformer.h"
 #include "source/common/config/utility.h"
 
 namespace Envoy {
@@ -29,6 +30,9 @@ TransformerConstSharedPtr Transformation::getTransformer(
     auto config = Config::Utility::translateAnyToFactoryConfig(transformation.transformer_config().typed_config(), context.messageValidationContext().staticValidationVisitor(), factory);
     return factory.createTransformer(*config, transformation.log_request_response_info(), context);
   }
+  case envoy::api::v2::filter::http::Transformation::kAiTransformation:
+    return std::make_unique<AiTransformer>(transformation.ai_transformation(),
+                                           transformation.log_request_response_info());
   case envoy::api::v2::filter::http::Transformation::
       TRANSFORMATION_TYPE_NOT_SET:
     ENVOY_LOG(trace, "Request transformation type not set");
