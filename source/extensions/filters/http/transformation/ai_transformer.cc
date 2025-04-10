@@ -89,6 +89,9 @@ std::string replaceModelInPath(std::string_view original_path, std::string_view 
 
 /**
  * @brief lazily constructed singleton regex to match OpenAI Platform API endpoints
+ *        This same regex is also used in the AI extproc in solo-projects to bypass OpenAI Platform API from going to 
+ *        through the extproc, so if this regex is change, it should be changed in 
+ *        solo-projects/projects/ai-extension/ai_extension/ext_proc/server.py (search for open_ai_platform_api_regex)
  *
  * @return const Regex::CompiledGoogleReMatcher&
  */
