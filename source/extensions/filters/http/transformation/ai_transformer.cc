@@ -1,6 +1,7 @@
 #include "ai_transformer.h"
 
 #include <algorithm>
+#include <functional>
 #include <regex>
 
 #include "absl/strings/str_cat.h"
@@ -12,6 +13,7 @@
 #include "source/common/http/header_utility.h"
 #include "source/common/http/headers.h"
 #include "source/common/protobuf/utility.h"
+#include "source/extensions/filters/http/solo_well_known_names.h"
 
 using json = nlohmann::json;
 
@@ -31,7 +33,6 @@ namespace {
  */
 std::string lookupEndpointMetadata(Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata, const std::string &key) {
   static const char delimiter = ':';
-  static const std::string filter_name {"io.solo.transformation"};
   static const std::string trueString {"true"};
   static const std::string falseString {"false"};
 
@@ -41,33 +42,28 @@ std::string lookupEndpointMetadata(Envoy::Upstream::MetadataConstSharedPtr endpo
 
   std::vector<std::string> elements = absl::StrSplit(key, delimiter);
   const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
-      endpoint_metadata.get(), filter_name, elements);
+      endpoint_metadata.get(), Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation, elements);
 
   switch (value.kind_case()) {
   case ProtobufWkt::Value::kStringValue: {
     return value.string_value();
-    break;
   }
   case ProtobufWkt::Value::kNumberValue: {
     return std::to_string(value.number_value());
-    break;
   }
   case ProtobufWkt::Value::kBoolValue: {
     const std::string &stringval = value.bool_value() ? trueString : falseString;
     return stringval;
-    break;
   }
   case ProtobufWkt::Value::kStructValue: {
     std::string output;
     auto status = ProtobufUtil::MessageToJsonString(value.struct_value(), &output);
     return output;
-    break;
   }
   case ProtobufWkt::Value::kListValue: {
     std::string output;
     auto status = ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
-    break;
   }
   default: {
     break;
@@ -262,6 +258,24 @@ json protobufValueToJson(const ProtobufWkt::Value& pb_value) {
 
 enum class PromptAction { PREPEND, APPEND };
 
+void addGeminiPrompts(
+  const PromptEnrichment::Message &prompt,
+  json::array_t& contents,
+  PromptAction action) {
+  auto new_prompt = json::object();
+  new_prompt["role"] = prompt.role();
+  // notice that if I don't explicitly create json::array like this:
+  // json::array({{"text", prompt.content()}});
+  // because sometimes, it will create an array inside the array instead of object inside the array 
+  new_prompt["parts"] = json::array({ json::object({{"text", prompt.content()}}) });
+
+  if (action == PromptAction::PREPEND) {
+    contents.insert(contents.begin(), std::move(new_prompt));
+  } else {
+    contents.push_back(std::move(new_prompt));
+  }
+}
+
 /**
  * @brief prepend or append prompts into the existing prompts in `json_body`
  *
@@ -269,7 +283,6 @@ enum class PromptAction { PREPEND, APPEND };
  * @param json_body the json_body that contains the original prompts, this will be modified in place
  * @param prompts contains system or user prompt
  * @param action enum to determine if it is prepend or append
- * @param prependOffset is used as the offset position from the beginning of the existing array to insert the new prompt
  * 
  * @return true if successful
  * @return false if the json_body does not contain the correct object containing the existing prompt
@@ -277,29 +290,28 @@ enum class PromptAction { PREPEND, APPEND };
 bool addPrompts(const std::string &schema,
                 json &json_body,
                 const PromptEnrichment::Message &prompt,
-                PromptAction action,
-                int prependOffset = 0) {
+                PromptAction action) {
   if (schema == AiTransformerConstants::get().SCHEMA_GEMINI) {
-    if (!json_body.contains("contents")) {
-      return false;
-    }
-    auto &value = json_body["contents"];
-    if (!value.is_array()) {
-      return false;
-    }
-    auto &contents = value.get_ref<json::array_t&>();
-    auto new_prompt = json::object();
-    new_prompt["role"] = prompt.role();
-    // notice that if I don't explicitly create json::object like this:
-    // json::array({{"text", prompt.content()}});
-    // sometimes, it will create an array instead of object
-    new_prompt["parts"] = json::array({ json::object({{"text", prompt.content()}}) });
-
-    if (action == PromptAction::PREPEND) {
-      // adding pos to the begin() iterator so we are maintaining the order of prompts being prepended
-      contents.insert(contents.begin() + prependOffset, std::move(new_prompt));
+    if (prompt.role() == "system" || prompt.role() == "developer") {
+      if (!json_body.contains("system_instruction")) {
+        json_body["system_instruction"] = json::array({});
+      } 
+      auto &value = json_body["system_instruction"];
+      if (!value.is_array()) {
+        return false;
+      }
+      auto &contents = value.get_ref<json::array_t&>();
+      addGeminiPrompts(prompt, contents, action);
     } else {
-      contents.push_back(std::move(new_prompt));
+      if (!json_body.contains("contents")) {
+        return false;
+      }
+      auto &value = json_body["contents"];
+      if (!value.is_array()) {
+        return false;
+      }
+      auto &contents = value.get_ref<json::array_t&>();
+      addGeminiPrompts(prompt, contents, action);
     }
   } else {
     if (!json_body.contains("messages")) {
@@ -314,8 +326,7 @@ bool addPrompts(const std::string &schema,
     new_prompt["content"] = prompt.content();
 
     if (action == PromptAction::PREPEND) {
-      // adding pos to the begin() iterator so we are maintaining the order of prompts being prepended
-      messages.insert(messages.begin() + prependOffset, std::move(new_prompt));
+      messages.insert(messages.begin(), std::move(new_prompt));
     } else {
       messages.push_back(std::move(new_prompt));
     }
@@ -330,7 +341,8 @@ bool addPrompts(const std::string &schema,
                 const std::vector<PromptEnrichment::Message> &append_prompts) {
   std::string anthropic_system_prompt;
   std::string anthropic_developer_prompt;
-  int offset = 0; // This is used to preserve the order of the prompts in the prepend array
+  std::vector<std::reference_wrapper<const PromptEnrichment::Message>> reversed_prepend_prompts;
+  reversed_prepend_prompts.reserve(prepend_prompts.size());
   for (auto &prompt : prepend_prompts) {
     if (schema == AiTransformerConstants::get().SCHEMA_ANTHROPIC) {
       // Anthropic system/developer prompts go to a seperate `system` filed as a single string.
@@ -346,7 +358,11 @@ bool addPrompts(const std::string &schema,
       }
     }
 
-    if (!addPrompts(schema, json_body, prompt, PromptAction::PREPEND, offset++)) {
+    reversed_prepend_prompts.insert(reversed_prepend_prompts.begin(), prompt);
+  }
+
+  for (auto &prompt : reversed_prepend_prompts) {
+    if (!addPrompts(schema, json_body, prompt, PromptAction::PREPEND)) {
       return false;
     }
   }
@@ -578,6 +594,21 @@ void AiTransformer::transformBody(Http::RequestHeaderMap *request_map,
     if (!addPrompts(json_schema, json_body, prepend_prompts, append_prompts)) {
       ENVOY_STREAM_LOG(error, "failed to add prompts!", callbacks);
     } else {
+      body_modified = true;
+    }
+  }
+
+  if (enable_chat_streaming_) {
+    if (json_schema == AiTransformerConstants::get().SCHEMA_OPENAI ||
+        json_schema == AiTransformerConstants::get().SCHEMA_ANTHROPIC) {
+      json_body["stream"] = bool(true);
+      body_modified = true;
+    }
+    if (json_schema == AiTransformerConstants::get().SCHEMA_OPENAI) { 
+      if (!json_body.contains("stream_options")) {
+        json_body["stream_options"] = json::object();
+      }
+      json_body["stream_options"]["include_usage"] = true;
       body_modified = true;
     }
   }

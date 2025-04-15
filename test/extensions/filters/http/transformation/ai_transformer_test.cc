@@ -20,7 +20,6 @@ using testing::ReturnRef;
 using testing::SaveArg;
 using testing::WithArg;
 
-using json = nlohmann::json;
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -472,6 +471,30 @@ TEST_F(AiTransformerTest, AnthropicPathAndAuthTransformation) {
   EXPECT_EQ(getHeaderValue("x-api-key"), "67890");
 }
 
+TEST_F(AiTransformerTest, AnthropicEnableChatStreaming) {
+  auto aiTransformer = createAiTransformer(
+    AI_STREAMING_ENABLED,
+    ANTHROPIC_UPSTREAM_METADATA
+  );
+
+  setPath("/whatever");
+  setBody(R"(
+  {
+    "model": "claude-3-7-sonnet-20250219",
+    "temperature": "0.1",
+    "max_tokens": 1024,
+    "messages": [
+        {"role": "user", "content": "Hello!"}
+    ]
+  }
+  )");
+
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  auto parsed_body = json::parse(body_.toString());
+  EXPECT_EQ(true, parsed_body["stream"]) << parsed_body.dump();
+  EXPECT_EQ(false, parsed_body.contains("stream_options"));
+}
+
 TEST_F(AiTransformerTest, AnthropicFieldDefaultsTransformation) {
   auto aiTransformer = createAiTransformer(
     AI_FIELD_DEFAULTS,
@@ -612,6 +635,66 @@ TEST_F(AiTransformerTest, OpenAIPathAndAuthTransformation) {
   aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
   EXPECT_EQ(std::string{"/v1beta/moderations"}, getPath());
 
+}
+
+TEST_F(AiTransformerTest, OpenAIEnableChatStreaming) {
+  auto aiTransformer = createAiTransformer(
+    AI_STREAMING_ENABLED,
+    OPENAI_UPSTREAM_METADATA
+  );
+
+  setPath("/whatever");
+  setBody(R"(
+  {
+    "model": "gpt-4o",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello!"
+      }
+    ],
+    "temperature": "0.1",
+    "max_tokens": 5
+  }
+  )");
+
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  auto parsed_body = json::parse(body_.toString());
+  EXPECT_EQ(true, parsed_body["stream"]);
+  auto expected_stream_options_json = json::parse(R"(
+    {
+      "include_usage": true
+    }
+  )");
+  EXPECT_EQ(expected_stream_options_json, parsed_body["stream_options"]);
+
+  // With Existing stream options
+  setBody(R"(
+  {
+    "model": "gpt-4o",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello!"
+      }
+    ],
+    "temperature": "0.1",
+    "max_tokens": 5,
+    "stream": false,
+    "stream_options": { "foo": "bar" }
+  }
+  )");
+  headers_.clear();
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  parsed_body = json::parse(body_.toString());
+  EXPECT_EQ(true, parsed_body["stream"]);
+  expected_stream_options_json = json::parse(R"(
+    {
+      "foo": "bar",
+      "include_usage": true
+    }
+  )");
+  EXPECT_EQ(expected_stream_options_json, parsed_body["stream_options"]);
 }
 
 TEST_F(AiTransformerTest, OpenAIFieldDefaultsTransformation) {
@@ -815,16 +898,49 @@ TEST_F(AiTransformerTest, GeminiPromptEnrichmentTransformation) {
 
   aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
   auto parsed_body = json::parse(body_.toString());
-  auto expected_json = json::parse(R"([
+  auto expected_system_instruction_json = json::parse(R"(
+  [
     {"role": "system", "parts": [{"text": "you are a helpful assistant."}] },
     {"role": "developer", "parts": [{"text": "reply everything with programming analogy."}] },
+    {"role": "developer", "parts": [{"text": "you are expert in assembly language."}] },
+    {"role": "system", "parts": [{"text": "reply in British accent."}] }
+  ]
+  )");
+  auto expected_contents_json = json::parse(R"(
+  [
     {"role": "user", "parts": [{"text": "my name is Bond."}] },
     {"role": "user", "parts": [{"text": "Hello!"}] },
+    {"role": "user", "parts": [{"text": "I live in the US."}] }
+  ]
+  )");
+  EXPECT_EQ(expected_contents_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
+  EXPECT_EQ(expected_system_instruction_json, parsed_body["system_instruction"]) << "\nbody: " << body_.toString();
+
+  // Test with existing system_instruction
+  setBody(R"(
+  {
+    "system_instruction": [
+      {"parts":[{ "text": "You name is Bob."}]}
+    ],
+    "contents": [
+      {"role":"user", "parts":[{ "text": "Hello!"}]}
+    ]
+  }
+  )");
+  headers_.clear();
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  parsed_body = json::parse(body_.toString());
+  expected_system_instruction_json = json::parse(R"(
+  [
+    {"role": "system", "parts": [{"text": "you are a helpful assistant."}] },
+    {"role": "developer", "parts": [{"text": "reply everything with programming analogy."}] },
+    {"parts":[{ "text": "You name is Bob."}]},
     {"role": "developer", "parts": [{"text": "you are expert in assembly language."}] },
-    {"role": "user", "parts": [{"text": "I live in the US."}] },
     {"role": "system", "parts": [{"text": "reply in British accent."}] }
-  ])");
-  EXPECT_EQ(expected_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
+  ]
+  )");
+  EXPECT_EQ(expected_contents_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
+  EXPECT_EQ(expected_system_instruction_json, parsed_body["system_instruction"]) << "\nbody: " << body_.toString();
 }
 
 TEST_F(AiTransformerTest, VertexAIPathAndAuthTransformation) {
@@ -928,16 +1044,23 @@ TEST_F(AiTransformerTest, VertexAIPromptEnrichmentTransformation) {
 
   aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
   auto parsed_body = json::parse(body_.toString());
-  auto expected_json = json::parse(R"([
+  auto expected_system_instruction_json = json::parse(R"(
+  [
     {"role": "system", "parts": [{"text": "you are a helpful assistant."}] },
     {"role": "developer", "parts": [{"text": "reply everything with programming analogy."}] },
+    {"role": "developer", "parts": [{"text": "you are expert in assembly language."}] },
+    {"role": "system", "parts": [{"text": "reply in British accent."}] }
+  ]
+  )");
+  auto expected_contents_json = json::parse(R"(
+  [
     {"role": "user", "parts": [{"text": "my name is Bond."}] },
     {"role": "user", "parts": [{"text": "Hello!"}] },
-    {"role": "developer", "parts": [{"text": "you are expert in assembly language."}] },
-    {"role": "user", "parts": [{"text": "I live in the US."}] },
-    {"role": "system", "parts": [{"text": "reply in British accent."}] }
-  ])");
-  EXPECT_EQ(expected_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
+    {"role": "user", "parts": [{"text": "I live in the US."}] }
+  ]
+  )");
+  EXPECT_EQ(expected_contents_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
+  EXPECT_EQ(expected_system_instruction_json, parsed_body["system_instruction"]) << "\nbody: " << body_.toString();
 }
 
 } // namespace

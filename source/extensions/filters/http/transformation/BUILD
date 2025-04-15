@@ -119,6 +119,7 @@ envoy_cc_library(
         "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
         "//source/common/matcher:matchers_lib",
         "//source/common/regex:regex_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
         "@com_google_absl//absl/strings",
         "@envoy//envoy/buffer:buffer_interface",
         "@envoy//envoy/http:filter_interface",
