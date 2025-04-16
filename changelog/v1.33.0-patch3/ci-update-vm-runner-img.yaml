@@ -1,0 +1,4 @@
+changelog:
+  - type: NON_USER_FACING
+    description: >-
+      Update vm runner image for CI wfs as ubuntu-20.04 will be EOL soon.
