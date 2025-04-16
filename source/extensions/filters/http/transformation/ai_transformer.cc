@@ -512,20 +512,14 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
 
   std::string_view original_path = getRequestPath(request_headers);
   if (provider == AiTransformerConstants::get().PROVIDER_AZURE) {
-    if (model.empty()) {
-      ENVOY_STREAM_LOG(warn, "Azure OpenAI: required model setting is missing!",
-                       callbacks);
-    }
+    ASSERT(!model.empty(), "Azure OpenAI: required model setting is missing!");
     path = replaceModelInPath(lookupEndpointMetadata(endpoint_metadata, "path"),
                               model);
     setProviderKeyHeader(request_headers,
                          AiTransformerConstants::get().AzureApiKeyHeader,
                          auth_token, in_auth_token_passthru_mode);
   } else if (provider == AiTransformerConstants::get().PROVIDER_GEMINI) {
-    if (model.empty()) {
-      ENVOY_STREAM_LOG(warn, "Gemini: required model setting is missing!",
-                       callbacks);
-    }
+    ASSERT(!model.empty(), "Gemini: required model setting is missing!");
     path = replaceModelInPath(
         lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
     if (enable_chat_streaming_) {
@@ -550,10 +544,7 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
                          AiTransformerConstants::get().GeminiApiKeyHeader,
                          auth_token, in_auth_token_passthru_mode);
   } else if (provider == AiTransformerConstants::get().PROVIDER_VERTEXAI) {
-    if (model.empty()) {
-      ENVOY_STREAM_LOG(warn, "VertexAI: required model setting is missing!",
-                       callbacks);
-    }
+    ASSERT(!model.empty(), "VertexAI: required model setting is missing!");
     path = replaceModelInPath(
         lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
     auto model_path = lookupEndpointMetadata(endpoint_metadata, "model_path");
