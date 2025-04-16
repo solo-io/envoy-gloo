@@ -2,11 +2,11 @@
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
 
+#include "nlohmann/json.hpp"
 #include "test/integration/http_integration.h"
 #include "test/integration/http_protocol_integration.h"
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
-#include "nlohmann/json.hpp"
 
 #include "api/envoy/config/filter/http/transformation/v2/transformation_filter.pb.validate.h"
 #include "fmt/printf.h"
@@ -18,13 +18,13 @@ using json = nlohmann::json;
 namespace Envoy {
 
 const std::string DEFAULT_TRANSFORMATION =
-R"EOF(
+    R"EOF(
   request_transformation:
     ai_transformation: {}
 )EOF";
 
 const std::string FEATURES_TRANSFORMATION =
-R"EOF(
+    R"EOF(
   request_transformation:
     ai_transformation:
       enable_chat_streaming: true
@@ -41,17 +41,17 @@ R"EOF(
 )EOF";
 
 const std::string DEFAULT_FILTER_TRANSFORMATION =
-R"EOF(
+    R"EOF(
   {}
 )EOF";
 
 const std::string DEFAULT_MATCHER =
-R"EOF(
+    R"EOF(
   prefix: /
 )EOF";
 
 const std::string OPENAI_REQUEST_BODY =
-R"EOF(
+    R"EOF(
 {
   "model": "gpt-4.1",
   "messages": [
@@ -68,7 +68,7 @@ R"EOF(
 )EOF";
 
 const std::string OPENAI_RESPONSE_BODY =
-R"EOF(
+    R"EOF(
 {
   "id": "chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT",
   "object": "chat.completion",
@@ -107,7 +107,7 @@ R"EOF(
 )EOF";
 
 const std::string ANTHROPIC_REQUEST_BODY =
-R"EOF(
+    R"EOF(
 {
     "model": "claude-3-7-sonnet-20250219",
     "max_tokens": 1024,
@@ -118,7 +118,7 @@ R"EOF(
 )EOF";
 
 const std::string ANTHROPIC_RESPONSE_BODY =
-R"EOF(
+    R"EOF(
 {
   "content": [
     {
@@ -140,7 +140,7 @@ R"EOF(
 )EOF";
 
 const std::string GEMINI_REQUEST_BODY =
-R"EOF(
+    R"EOF(
 {
   "contents": [
     {
@@ -155,7 +155,7 @@ R"EOF(
 )EOF";
 
 const std::string GEMINI_RESPONSE_BODY =
-R"EOF(
+    R"EOF(
 {
   "candidates": [
     {
@@ -198,13 +198,13 @@ R"EOF(
 }
 )EOF";
 
-// These tests are for testing various protocol combination at integration level and
-// they are not covering all the features combinations. Features are test in the unit test
-// extensively in test/extensions/filters/http/transformation/ai_transformer_test.cc
-class AiTransformationIntegrationTest
-  : public HttpProtocolIntegrationTest {
-    public:
-      AiTransformationIntegrationTest() : HttpProtocolIntegrationTest() {}
+// These tests are for testing various protocol combination at integration level
+// and they are not covering all the features combinations. Features are test in
+// the unit test extensively in
+// test/extensions/filters/http/transformation/ai_transformer_test.cc
+class AiTransformationIntegrationTest : public HttpProtocolIntegrationTest {
+public:
+  AiTransformationIntegrationTest() : HttpProtocolIntegrationTest() {}
   /**
    * Initializer for an individual integration test.
    */
@@ -214,12 +214,12 @@ class AiTransformationIntegrationTest
 
     config_helper_.prependFilter(default_filter, downstream_filter_);
 
-
     if (!downstream_filter_) {
       HttpFilter filter;
-      filter.set_name(
-          Extensions::HttpFilters::SoloHttpFilterNames::get().Wait);
-      config_helper_.prependFilter(MessageUtil::getJsonStringFromMessageOrError(filter), downstream_filter_);
+      filter.set_name(Extensions::HttpFilters::SoloHttpFilterNames::get().Wait);
+      config_helper_.prependFilter(
+          MessageUtil::getJsonStringFromMessageOrError(filter),
+          downstream_filter_);
       addEndpointMeta();
     }
 
@@ -228,11 +228,13 @@ class AiTransformationIntegrationTest
       config_helper_.addConfigModifier(
           [this](envoy::extensions::filters::network::http_connection_manager::
                      v3::HttpConnectionManager &hcm) {
-            auto &mostSpecificPerFilterConfig = (*hcm.mutable_route_config()
-                                          ->mutable_virtual_hosts(0)
-                                          ->mutable_routes(0)
-                                          ->mutable_typed_per_filter_config())
-                [Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation];
+            auto &mostSpecificPerFilterConfig =
+                (*hcm.mutable_route_config()
+                      ->mutable_virtual_hosts(0)
+                      ->mutable_routes(0)
+                      ->mutable_typed_per_filter_config())
+                    [Extensions::HttpFilters::SoloHttpFilterNames::get()
+                         .Transformation];
             envoy::api::v2::filter::http::RouteTransformations transformations;
             TestUtility::loadFromYaml(transformation_string_, transformations);
             mostSpecificPerFilterConfig.PackFrom(transformations);
@@ -261,55 +263,52 @@ class AiTransformationIntegrationTest
 
   ProtobufWkt::Struct azureEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
-      {"auth_token", "foobar"},
-      {"json_schema", "openai"},
-      {"provider", "azure"},
-      {"model", "gpt-4o-mini"},
-      {"path", "/openai/deployments/{{model}}/chat/completions?api-version=2024-02-15-preview"}
-    };
+        {"auth_token", "foobar"},
+        {"json_schema", "openai"},
+        {"provider", "azure"},
+        {"model", "gpt-4o-mini"},
+        {"path", "/openai/deployments/{{model}}/chat/"
+                 "completions?api-version=2024-02-15-preview"}};
     return MessageUtil::keyValueStruct(metadata);
   }
 
   ProtobufWkt::Struct openAiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
-      {"auth_token", "foobar"},
-      {"json_schema", "openai"},
-      {"provider", "openai"},
-      {"model", "o1-pro"},
-      {"path", "/v1/chat/completions"}
-    };
+        {"auth_token", "foobar"},
+        {"json_schema", "openai"},
+        {"provider", "openai"},
+        {"model", "o1-pro"},
+        {"path", "/v1/chat/completions"}};
     return MessageUtil::keyValueStruct(metadata);
   }
 
   ProtobufWkt::Struct anthropicEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
-      {"auth_token", "foobar"},
-      {"json_schema", "anthropic"},
-      {"provider", "anthropic"},
-      {"path", "/v1/chat/completions"}
-    };
+        {"auth_token", "foobar"},
+        {"json_schema", "anthropic"},
+        {"provider", "anthropic"},
+        {"path", "/v1/chat/completions"}};
     return MessageUtil::keyValueStruct(metadata);
   }
 
   ProtobufWkt::Struct geminiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
-      {"auth_token", "foobar"},
-      {"json_schema", "gemini"},
-      {"provider", "gemini"},
-      {"model", "gemini-1.5-flash-001"},
-      {"base_path", "/v1beta/models/{{model}}:"}
-    };
+        {"auth_token", "foobar"},
+        {"json_schema", "gemini"},
+        {"provider", "gemini"},
+        {"model", "gemini-1.5-flash-001"},
+        {"base_path", "/v1beta/models/{{model}}:"}};
     return MessageUtil::keyValueStruct(metadata);
   }
 
   ProtobufWkt::Struct vertexAiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
-      {"auth_token", "foobar"},
-      {"json_schema", "gemini"},
-      {"provider", "vertexai"},
-      {"model", "gemini-2"},
-      {"base_path", "/vi/projects/my-project/locations/us-central/publishers/google/models/{{model}}:"}
-    };
+        {"auth_token", "foobar"},
+        {"json_schema", "gemini"},
+        {"provider", "vertexai"},
+        {"model", "gemini-2"},
+        {"base_path", "/vi/projects/my-project/locations/us-central/publishers/"
+                      "google/models/{{model}}:"}};
     return MessageUtil::keyValueStruct(metadata);
   }
 
@@ -358,24 +357,29 @@ private:
 
   void addEndpointMeta() {
     config_helper_.addConfigModifier(
-      [this](envoy::config::bootstrap::v3::Bootstrap& bootstrap) {
-        if (!this->endpoint_metadata_) {
-          return;
-        }
-        auto* static_resources = bootstrap.mutable_static_resources();
-        for (int i = 0; i < static_resources->clusters_size(); ++i) {
-          auto* cluster = static_resources->mutable_clusters(i);
-          for (int j = 0; j < cluster->load_assignment().endpoints_size(); ++j) {
-            auto* endpoint = cluster->mutable_load_assignment()->mutable_endpoints(j);
-            for (int k = 0; k < endpoint->lb_endpoints_size(); ++k) {
+        [this](envoy::config::bootstrap::v3::Bootstrap &bootstrap) {
+          if (!this->endpoint_metadata_) {
+            return;
+          }
+          auto *static_resources = bootstrap.mutable_static_resources();
+          for (int i = 0; i < static_resources->clusters_size(); ++i) {
+            auto *cluster = static_resources->mutable_clusters(i);
+            for (int j = 0; j < cluster->load_assignment().endpoints_size();
+                 ++j) {
+              auto *endpoint =
+                  cluster->mutable_load_assignment()->mutable_endpoints(j);
+              for (int k = 0; k < endpoint->lb_endpoints_size(); ++k) {
 
-              auto* lb_endpoint = endpoint->mutable_lb_endpoints(k);
-              auto* metadata = lb_endpoint->mutable_metadata();
-              (*metadata->mutable_filter_metadata())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation].MergeFrom(*(this->endpoint_metadata_));
+                auto *lb_endpoint = endpoint->mutable_lb_endpoints(k);
+                auto *metadata = lb_endpoint->mutable_metadata();
+                (*metadata->mutable_filter_metadata())
+                    [Extensions::HttpFilters::SoloHttpFilterNames::get()
+                         .Transformation]
+                        .MergeFrom(*(this->endpoint_metadata_));
+              }
             }
           }
-        }
-      });
+        });
   }
 };
 
@@ -383,9 +387,10 @@ private:
 //     IpVersions, AiTransformationIntegrationTest,
 //     testing::ValuesIn(TestEnvironment::getIpVersionsForTest()));
 INSTANTIATE_TEST_SUITE_P(
-  Protocols, AiTransformationIntegrationTest,
-  testing::ValuesIn(HttpProtocolIntegrationTest::getProtocolTestParamsWithoutHTTP3()),
-  HttpProtocolIntegrationTest::protocolTestParamsToString);
+    Protocols, AiTransformationIntegrationTest,
+    testing::ValuesIn(
+        HttpProtocolIntegrationTest::getProtocolTestParamsWithoutHTTP3()),
+    HttpProtocolIntegrationTest::protocolTestParamsToString);
 
 TEST_P(AiTransformationIntegrationTest, NoEndPointMetadata) {
   // No endpoint metadata (this should not happen but make sure we don't crash)
@@ -394,14 +399,16 @@ TEST_P(AiTransformationIntegrationTest, NoEndPointMetadata) {
   initialize();
   std::string body = "hello world";
   std::string content_length = std::to_string(body.length());
-  Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
-                                                 {":scheme", "http"},
-                                                 {":authority", "solo.ai"},
-                                                 {":path", "/whatever"},
-                                                 {"content-length", content_length},
-                                                };
+  Http::TestRequestHeaderMapImpl request_headers{
+      {":method", "POST"},
+      {":scheme", "http"},
+      {":authority", "solo.ai"},
+      {":path", "/whatever"},
+      {"content-length", content_length},
+  };
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, body, true);
+  auto response =
+      codec_client_->makeRequestWithBody(request_headers, body, true);
   processRequest(response, "");
 
   EXPECT_EQ("/whatever", getUpstreamHeaderValue(":path"));
@@ -411,7 +418,6 @@ TEST_P(AiTransformationIntegrationTest, NoEndPointMetadata) {
   EXPECT_EQ(body, upstream_request_->body().toString());
   // Make sure content-length header is not removed and not changed
   EXPECT_EQ(content_length, getUpstreamHeaderValue("content-length"));
-
 }
 
 TEST_P(AiTransformationIntegrationTest, EmptyEndPointMetadata) {
@@ -425,13 +431,13 @@ TEST_P(AiTransformationIntegrationTest, EmptyEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, OPENAI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     OPENAI_REQUEST_BODY, true);
   processRequest(response, OPENAI_RESPONSE_BODY);
 
   EXPECT_EQ("/v1/chat/completions", getUpstreamHeaderValue(":path"));
   EXPECT_EQ(true, getUpstreamHeaderValue("authorization").empty());
   EXPECT_TRUE(response->complete());
-
 }
 
 TEST_P(AiTransformationIntegrationTest, WithAzureEndPointMetadata) {
@@ -443,13 +449,15 @@ TEST_P(AiTransformationIntegrationTest, WithAzureEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, OPENAI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     OPENAI_REQUEST_BODY, true);
   processRequest(response, OPENAI_RESPONSE_BODY);
 
-  EXPECT_EQ("/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-15-preview", getUpstreamHeaderValue(":path"));
+  EXPECT_EQ("/openai/deployments/gpt-4o-mini/chat/"
+            "completions?api-version=2024-02-15-preview",
+            getUpstreamHeaderValue(":path"));
   EXPECT_EQ("foobar", getUpstreamHeaderValue("api-key"));
   EXPECT_TRUE(response->complete());
-
 }
 
 TEST_P(AiTransformationIntegrationTest, WithOpenAiEndPointMetadata) {
@@ -461,7 +469,8 @@ TEST_P(AiTransformationIntegrationTest, WithOpenAiEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, OPENAI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     OPENAI_REQUEST_BODY, true);
   processRequest(response, OPENAI_RESPONSE_BODY);
 
   EXPECT_EQ("/v1/chat/completions", getUpstreamHeaderValue(":path"));
@@ -487,7 +496,8 @@ TEST_P(AiTransformationIntegrationTest, WithAnthropicEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, ANTHROPIC_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(
+      request_headers, ANTHROPIC_REQUEST_BODY, true);
   processRequest(response, ANTHROPIC_RESPONSE_BODY);
 
   EXPECT_EQ("/v1/chat/completions", getUpstreamHeaderValue(":path"));
@@ -504,10 +514,12 @@ TEST_P(AiTransformationIntegrationTest, WithGeminiEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, GEMINI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     GEMINI_REQUEST_BODY, true);
   processRequest(response, GEMINI_RESPONSE_BODY);
 
-  EXPECT_EQ("/v1beta/models/gemini-1.5-flash-001:generateContent", getUpstreamHeaderValue(":path"));
+  EXPECT_EQ("/v1beta/models/gemini-1.5-flash-001:generateContent",
+            getUpstreamHeaderValue(":path"));
   EXPECT_EQ("foobar", getUpstreamHeaderValue("x-goog-api-key"));
   EXPECT_TRUE(response->complete());
 }
@@ -521,11 +533,13 @@ TEST_P(AiTransformationIntegrationTest, WithVertexAiEndPointMetadata) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, GEMINI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     GEMINI_REQUEST_BODY, true);
   processRequest(response, GEMINI_RESPONSE_BODY);
 
-  EXPECT_EQ("/vi/projects/my-project/locations/us-central/publishers/google/models/gemini-2:generateContent",
-    getUpstreamHeaderValue(":path"));
+  EXPECT_EQ("/vi/projects/my-project/locations/us-central/publishers/google/"
+            "models/gemini-2:generateContent",
+            getUpstreamHeaderValue(":path"));
   EXPECT_EQ("Bearer foobar", getUpstreamHeaderValue("authorization"));
   EXPECT_TRUE(response->complete());
 }
@@ -540,7 +554,8 @@ TEST_P(AiTransformationIntegrationTest, AnthropicWithAllFeaturesSet) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, ANTHROPIC_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(
+      request_headers, ANTHROPIC_REQUEST_BODY, true);
   processRequest(response, ANTHROPIC_RESPONSE_BODY);
   EXPECT_TRUE(response->complete());
 
@@ -554,11 +569,12 @@ TEST_P(AiTransformationIntegrationTest, AnthropicWithAllFeaturesSet) {
     ]
   )");
   EXPECT_EQ(expected_messages_json, parsed_modified_body["messages"]);
-  // The field_defaults setting does not have override on, so should have the existing value
+  // The field_defaults setting does not have override on, so should have the
+  // existing value
   EXPECT_EQ(1024, parsed_modified_body["max_tokens"]);
   EXPECT_EQ(false, parsed_modified_body.contains("stream_options"));
   EXPECT_EQ(true, parsed_modified_body["stream"]);
-  EXPECT_EQ("you are a helpful assistant.\n\n",parsed_modified_body["system"]);
+  EXPECT_EQ("you are a helpful assistant.\n\n", parsed_modified_body["system"]);
 }
 
 TEST_P(AiTransformationIntegrationTest, OpenAiWithAllFeaturesSet) {
@@ -571,7 +587,8 @@ TEST_P(AiTransformationIntegrationTest, OpenAiWithAllFeaturesSet) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, OPENAI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     OPENAI_REQUEST_BODY, true);
   processRequest(response, OPENAI_RESPONSE_BODY);
   EXPECT_TRUE(response->complete());
 
@@ -593,7 +610,8 @@ TEST_P(AiTransformationIntegrationTest, OpenAiWithAllFeaturesSet) {
       "include_usage": true
     }
   )");
-  EXPECT_EQ(expected_stream_options_json, parsed_modified_body["stream_options"]);
+  EXPECT_EQ(expected_stream_options_json,
+            parsed_modified_body["stream_options"]);
   EXPECT_EQ(true, parsed_modified_body["stream"]);
 }
 
@@ -607,11 +625,13 @@ TEST_P(AiTransformationIntegrationTest, GeminiWithAllFeaturesSet) {
                                                  {":authority", "solo.ai"},
                                                  {":path", "/whatever"}};
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, GEMINI_REQUEST_BODY, true);
+  auto response = codec_client_->makeRequestWithBody(request_headers,
+                                                     GEMINI_REQUEST_BODY, true);
   processRequest(response, GEMINI_RESPONSE_BODY);
 
   EXPECT_TRUE(response->complete());
-  EXPECT_EQ("/v1beta/models/gemini-1.5-flash-001:streamGenerateContent?alt=sse", getUpstreamHeaderValue(":path"));
+  EXPECT_EQ("/v1beta/models/gemini-1.5-flash-001:streamGenerateContent?alt=sse",
+            getUpstreamHeaderValue(":path"));
   auto body = upstream_request_->body().toString();
   auto parsed_modified_body = json::parse(body);
   auto expected_contents_json = json::parse(R"(
@@ -626,7 +646,8 @@ TEST_P(AiTransformationIntegrationTest, GeminiWithAllFeaturesSet) {
   ]
   )");
   EXPECT_EQ(expected_contents_json, parsed_modified_body["contents"]);
-  EXPECT_EQ(expected_system_instruction_json, parsed_modified_body["system_instruction"]);
+  EXPECT_EQ(expected_system_instruction_json,
+            parsed_modified_body["system_instruction"]);
   EXPECT_EQ(100, parsed_modified_body["max_tokens"]);
 }
 } // namespace Envoy
