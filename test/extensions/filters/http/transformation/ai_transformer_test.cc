@@ -71,7 +71,7 @@ TEST(FieldDefault, ValidJsonWithJsonObject) {
 
 TEST(PromptEnrichment, ValidJson) {
   const std::string yaml = R"(
-    append: 
+    append:
       - role: developer
         content: response with coding analogy
     prepend:
@@ -230,7 +230,7 @@ class AiTransformerTest : public ::testing::Test {
   class MockUpstreamStreamFilterCallbacks : public Http::UpstreamStreamFilterCallbacks {
   public:
     ~MockUpstreamStreamFilterCallbacks() override = default;
-    
+
     MOCK_METHOD(StreamInfo::StreamInfo&, upstreamStreamInfo, ());
     MOCK_METHOD(OptRef<Router::GenericUpstream>, upstream, ());
     MOCK_METHOD(void, dumpState, (std::ostream& os, int indent_level), (const));
@@ -534,7 +534,7 @@ TEST_F(AiTransformerTest, AnthropicFieldDefaultsTransformation) {
   EXPECT_EQ("0.7", parsed_body["temperature"]) << "\njson: " << parsed_body.dump() << "\nstr: " << body_.toString();
   // max_tokens doesn't have override set to true
   EXPECT_EQ(1024, parsed_body["max_tokens"]) << "\njson: " << parsed_body.dump() << "\nstr: " << body_.toString();
-  // model is NOT changed because it's not set in the upstream 
+  // model is NOT changed because it's not set in the upstream
   EXPECT_EQ(std::string{"claude-3-7-sonnet-20250219"}, parsed_body["model"]);
   // message is not changed
   expected_json = json::parse(R"([ {"role": "user", "content": "Hello!"} ])");
@@ -603,7 +603,7 @@ TEST_F(AiTransformerTest, OpenAIPathAndAuthTransformation) {
   EXPECT_EQ(getHeaderValue("authorization"), "Bearer 12345");
 
   // For OpenAI, we will detect if it's one of the platform API endpoint and only strip off any prefixes
-  setPath("/v1/models?foo=bar"); // We do preserve the qs param when in these cases 
+  setPath("/v1/models?foo=bar"); // We do preserve the qs param when in these cases
   aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
   EXPECT_EQ(std::string{"/v1/models?foo=bar"}, getPath());
 

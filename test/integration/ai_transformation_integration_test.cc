@@ -26,7 +26,7 @@ R"EOF(
 const std::string FEATURES_TRANSFORMATION =
 R"EOF(
   request_transformation:
-    ai_transformation: 
+    ai_transformation:
       enable_chat_streaming: true
       field_defaults:
         - field: max_tokens
@@ -64,7 +64,7 @@ R"EOF(
       "content": "Hello!"
     }
   ]
-}  
+}
 )EOF";
 
 const std::string OPENAI_RESPONSE_BODY =
@@ -198,8 +198,8 @@ R"EOF(
 }
 )EOF";
 
-// These tests are for testing various protocol combination at integration level and 
-// they are not covering all the features combinations. Features are test in the unit test 
+// These tests are for testing various protocol combination at integration level and
+// they are not covering all the features combinations. Features are test in the unit test
 // extensively in test/extensions/filters/http/transformation/ai_transformer_test.cc
 class AiTransformationIntegrationTest
   : public HttpProtocolIntegrationTest {
@@ -211,7 +211,7 @@ class AiTransformationIntegrationTest
   void initialize() override {
     const std::string default_filter =
         loadListenerConfig(filter_transformation_string_, matcher_string_);
-      
+
     config_helper_.prependFilter(default_filter, downstream_filter_);
 
 
@@ -361,7 +361,7 @@ private:
       [this](envoy::config::bootstrap::v3::Bootstrap& bootstrap) {
         if (!this->endpoint_metadata_) {
           return;
-        } 
+        }
         auto* static_resources = bootstrap.mutable_static_resources();
         for (int i = 0; i < static_resources->clusters_size(); ++i) {
           auto* cluster = static_resources->mutable_clusters(i);
@@ -392,17 +392,25 @@ TEST_P(AiTransformationIntegrationTest, NoEndPointMetadata) {
   // AI Transformer will bail early when there is no endpoint metadata at all
   // So, the request will be unchanged and just pass through
   initialize();
+  std::string body = "hello world";
+  std::string content_length = std::to_string(body.length());
   Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
                                                  {":scheme", "http"},
                                                  {":authority", "solo.ai"},
-                                                 {":path", "/whatever"}};
+                                                 {":path", "/whatever"},
+                                                 {"content-length", content_length},
+                                                };
 
-  auto response = codec_client_->makeRequestWithBody(request_headers, OPENAI_REQUEST_BODY, true);
-  processRequest(response, OPENAI_RESPONSE_BODY);
+  auto response = codec_client_->makeRequestWithBody(request_headers, body, true);
+  processRequest(response, "");
 
   EXPECT_EQ("/whatever", getUpstreamHeaderValue(":path"));
   EXPECT_EQ(true, getUpstreamHeaderValue("authorization").empty());
   EXPECT_TRUE(response->complete());
+  // Make sure body is not changed and passed through
+  EXPECT_EQ(body, upstream_request_->body().toString());
+  // Make sure content-length header is not removed and not changed
+  EXPECT_EQ(content_length, getUpstreamHeaderValue("content-length"));
 
 }
 
@@ -464,7 +472,7 @@ TEST_P(AiTransformationIntegrationTest, WithOpenAiEndPointMetadata) {
   auto body = upstream_request_->body().toString();
   auto parsed_modified_body = json::parse(body);
 
-  // The OpenAI Endpoint Metadata has model field set which will override the 
+  // The OpenAI Endpoint Metadata has model field set which will override the
   // model field in the body
   EXPECT_NE(parsed_original_body["model"], parsed_modified_body["model"]);
   EXPECT_EQ("o1-pro", parsed_modified_body["model"]);

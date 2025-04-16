@@ -65,10 +65,11 @@ std::string lookupEndpointMetadata(Envoy::Upstream::MetadataConstSharedPtr endpo
     auto status = ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
   }
-  default: {
-    break;
+  case ProtobufWkt::Value::KIND_NOT_SET:
+  case ProtobufWkt::Value::kNullValue:
+    return "";
   }
-  }
+
   return "";
 }
 
@@ -117,11 +118,11 @@ std::tuple<bool, std::string> checkOpenAiPlatformApiRequest(std::string_view pat
 /**
  * @brief Get the Request Path from the request header map
  *
- * @param request_map
+ * @param request_headers
  * @return std::string_view empty if path does not exists
  */
-std::string_view getRequestPath(Http::RequestHeaderMap *request_map) {
-  auto path = request_map->Path();
+std::string_view getRequestPath(Http::RequestHeaderMap *request_headers) {
+  auto path = request_headers->Path();
 
   if (!path) {
     return "";
@@ -133,25 +134,25 @@ std::string_view getRequestPath(Http::RequestHeaderMap *request_map) {
 /**
  * @brief Set the standard Bearer Auth Token Header in request map. If the header already exists, it will be replaced
  *
- * @param request_map
+ * @param request_headers
  * @param token
  */
-void setBearerAuthTokenHeader(Http::RequestHeaderMap *request_map, absl::string_view token, bool in_auth_token_passthru_mode) {
+void setBearerAuthTokenHeader(Http::RequestHeaderMap *request_headers, absl::string_view token, bool in_auth_token_passthru_mode) {
   if (token.empty() || in_auth_token_passthru_mode) {
     return;
   }
 
-  request_map->setReferenceKey(Http::CustomHeaders::get().Authorization, absl::StrCat("Bearer ", token));
+  request_headers->setReferenceKey(Http::CustomHeaders::get().Authorization, absl::StrCat("Bearer ", token));
 }
 
 /**
  * @brief Get the Token From standard Authorization Header object
- * 
- * @param request_map 
+ *
+ * @param request_headers
  * @return std::string_view the token from the header with "Bearer " prefix stripped off
  */
-std::string_view getTokenFromAuthorizationHeader(Http::RequestHeaderMap *request_map) {
-  auto result = request_map->get(Http::CustomHeaders::get().Authorization);
+std::string_view getTokenFromAuthorizationHeader(Http::RequestHeaderMap *request_headers) {
+  auto result = request_headers->get(Http::CustomHeaders::get().Authorization);
   if (result.empty()) {
     return "";
   }
@@ -166,14 +167,14 @@ std::string_view getTokenFromAuthorizationHeader(Http::RequestHeaderMap *request
 
 /**
  * @brief Helper function to check if a header already exists
- * 
- * @param request_map 
- * @param key 
- * @return true 
- * @return false 
+ *
+ * @param request_headers
+ * @param key
+ * @return true
+ * @return false
  */
-bool headerExists(Http::RequestHeaderMap *request_map, const Http::LowerCaseString& key) {
-  if (request_map->get(key).empty()) {
+bool headerExists(Http::RequestHeaderMap *request_headers, const Http::LowerCaseString& key) {
+  if (request_headers->get(key).empty()) {
     return false;
   }
 
@@ -182,15 +183,15 @@ bool headerExists(Http::RequestHeaderMap *request_map, const Http::LowerCaseStri
 
 /**
  * @brief Helper function to set the provider specific Key header. In auth token pass thru mode, if the provider
- *        specific key header does not already exists, we will extract the token from the Authorization header and 
+ *        specific key header does not already exists, we will extract the token from the Authorization header and
  *        put that into the provider specific key header
- * 
- * @param request_map 
- * @param key 
- * @param auth_token 
- * @param in_auth_token_passthru_mode 
+ *
+ * @param request_headers
+ * @param key
+ * @param auth_token
+ * @param in_auth_token_passthru_mode
  */
-void setProviderKeyHeader(Http::RequestHeaderMap *request_map,
+void setProviderKeyHeader(Http::RequestHeaderMap *request_headers,
                           const Http::LowerCaseString& key,
                           std::string_view auth_token,
                           bool in_auth_token_passthru_mode) {
@@ -202,12 +203,12 @@ void setProviderKeyHeader(Http::RequestHeaderMap *request_map,
     // auth_token is extracted from the standard Authorization header and this function is only
     // used when the Provider is not using standard Authorization header, so, if the Provider specific
     // key header already exists, let it pass through instead of using the token from Authorization header.
-    if (headerExists(request_map, key)) {
+    if (headerExists(request_headers, key)) {
       return;
     }
   }
 
-  request_map->setReferenceKey(key, auth_token);
+  request_headers->setReferenceKey(key, auth_token);
 }
 
 /**
@@ -257,16 +258,24 @@ json protobufValueToJson(const ProtobufWkt::Value& pb_value) {
 }
 
 enum class PromptAction { PREPEND, APPEND };
-
+/**
+ * @brief Helper function to add prompt for Gemini. The prompt can exist in either the `contents` field for user prompt
+ *        or the `system_instruction` field for system prompt and the format is the same
+ *
+ * @param prompt
+ * @param contents is the reference to the existing field, it could be the `contents` field or the `system_instruction` field
+ * @param action
+ */
 void addGeminiPrompts(
   const PromptEnrichment::Message &prompt,
   json::array_t& contents,
   PromptAction action) {
   auto new_prompt = json::object();
   new_prompt["role"] = prompt.role();
-  // notice that if I don't explicitly create json::array like this:
+  // note that creatng the json::array like this:
   // json::array({{"text", prompt.content()}});
-  // because sometimes, it will create an array inside the array instead of object inside the array 
+  // will sometimes create an array inside the array instead of object inside the array
+  // So, need to be explicit that its an object inside the array
   new_prompt["parts"] = json::array({ json::object({{"text", prompt.content()}}) });
 
   if (action == PromptAction::PREPEND) {
@@ -283,7 +292,7 @@ void addGeminiPrompts(
  * @param json_body the json_body that contains the original prompts, this will be modified in place
  * @param prompts contains system or user prompt
  * @param action enum to determine if it is prepend or append
- * 
+ *
  * @return true if successful
  * @return false if the json_body does not contain the correct object containing the existing prompt
  */
@@ -295,7 +304,7 @@ bool addPrompts(const std::string &schema,
     if (prompt.role() == "system" || prompt.role() == "developer") {
       if (!json_body.contains("system_instruction")) {
         json_body["system_instruction"] = json::array({});
-      } 
+      }
       auto &value = json_body["system_instruction"];
       if (!value.is_array()) {
         return false;
@@ -335,6 +344,16 @@ bool addPrompts(const std::string &schema,
   return true;
 }
 
+/**
+ * @brief Helper function to add prompts in the correct field for various api schema
+ *
+ * @param schema the api schema used in `json_body`
+ * @param json_body the json_body that contains the original prompts, this will be modified in place
+ * @param prepend_prompts list of prompts to prepend to existing prompts
+ * @param append_prompts list of prompts to append to existing prompts
+ * @return true if prompts are successfully added
+ * @return false if there is no existing prompt field
+ */
 bool addPrompts(const std::string &schema,
                 json &json_body,
                 const std::vector<PromptEnrichment::Message> &prepend_prompts,
@@ -361,6 +380,8 @@ bool addPrompts(const std::string &schema,
     reversed_prepend_prompts.insert(reversed_prepend_prompts.begin(), prompt);
   }
 
+  // Have to create a vector to store the prompt in reverse order because some provider
+  // uses separate field for system prompt, so cannot just track the order with a single offset index.
   for (auto &prompt : reversed_prepend_prompts) {
     if (!addPrompts(schema, json_body, prompt, PromptAction::PREPEND)) {
       return false;
@@ -396,7 +417,7 @@ bool addPrompts(const std::string &schema,
       json_body["system"] = absl::StrCat(anthropic_system_prompt, "\n", anthropic_developer_prompt);
     } else {
       // For Anthropic, we group system and developer prompt separately and always append to existing system prompt regardless
-      // if they are in the prepend or append prompts as I don't think the prepend/append concept applies to Anthropic's single 
+      // if they are in the prepend or append prompts as I don't think the prepend/append concept applies to Anthropic's single
       // system prompt field.
       json_body["system"] = absl::StrCat(*existing_system_prompt, "\n", anthropic_system_prompt, "\n", anthropic_developer_prompt);
     }
@@ -435,7 +456,7 @@ AiTransformer::AiTransformer(
   }
 };
 
-std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *request_map,
+std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *request_headers,
                                   Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata,
                                   Http::StreamFilterCallbacks &callbacks,
                                   const std::string &model) const {
@@ -447,16 +468,16 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *r
   auto auth_token = lookupEndpointMetadata(endpoint_metadata, "auth_token");
   if (auth_token.empty()) {
     in_auth_token_passthru_mode = true;
-    auth_token = getTokenFromAuthorizationHeader(request_map);
+    auth_token = getTokenFromAuthorizationHeader(request_headers);
   }
 
-  std::string_view original_path = getRequestPath(request_map);
+  std::string_view original_path = getRequestPath(request_headers);
   if (provider == AiTransformerConstants::get().PROVIDER_AZURE) {
     if (model.empty()) {
       ENVOY_STREAM_LOG(warn, "Azure OpenAI: required model setting is missing!", callbacks);
     }
     path = replaceModelInPath(lookupEndpointMetadata(endpoint_metadata, "path"), model);
-    setProviderKeyHeader(request_map, AiTransformerConstants::get().AzureApiKeyHeader, auth_token, in_auth_token_passthru_mode);
+    setProviderKeyHeader(request_headers, AiTransformerConstants::get().AzureApiKeyHeader, auth_token, in_auth_token_passthru_mode);
   } else if (provider == AiTransformerConstants::get().PROVIDER_GEMINI) {
     if (model.empty()) {
       ENVOY_STREAM_LOG(warn, "Gemini: required model setting is missing!", callbacks);
@@ -476,7 +497,7 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *r
     //       1) currently the auth passthrough only work because the gemini sdk is using this header.
     //          If someone is using the `key` qs param, passthrough never works. (Should we support that use case?)
     //       2) putting the key in the qs param will probably get logged in access log which is a security concern
-    setProviderKeyHeader(request_map, AiTransformerConstants::get().GeminiApiKeyHeader, auth_token, in_auth_token_passthru_mode);
+    setProviderKeyHeader(request_headers, AiTransformerConstants::get().GeminiApiKeyHeader, auth_token, in_auth_token_passthru_mode);
   } else if (provider == AiTransformerConstants::get().PROVIDER_VERTEXAI) {
     if (model.empty()) {
       ENVOY_STREAM_LOG(warn, "VertexAI: required model setting is missing!", callbacks);
@@ -497,7 +518,7 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *r
       absl::StrAppend(&path, model_path);
     }
 
-    setBearerAuthTokenHeader(request_map, auth_token, in_auth_token_passthru_mode);
+    setBearerAuthTokenHeader(request_headers, auth_token, in_auth_token_passthru_mode);
   } else {
     // Other providers that uses OpenAI API
     auto [is_platform_api_request, new_path] = checkOpenAiPlatformApiRequest(original_path);
@@ -519,23 +540,23 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(Http::RequestHeaderMap *r
     if (provider == AiTransformerConstants::get().PROVIDER_ANTHROPIC) {
       auto version = lookupEndpointMetadata(endpoint_metadata, "version");
       if (!version.empty()) {
-        request_map->setReferenceKey(AiTransformerConstants::get().AnthropicVersionHeader, version);
+        request_headers->setReferenceKey(AiTransformerConstants::get().AnthropicVersionHeader, version);
       }
-      setProviderKeyHeader(request_map, AiTransformerConstants::get().AnthropicApiKeyHeader, auth_token, in_auth_token_passthru_mode);
+      setProviderKeyHeader(request_headers, AiTransformerConstants::get().AnthropicApiKeyHeader, auth_token, in_auth_token_passthru_mode);
     } else {
-      setBearerAuthTokenHeader(request_map, auth_token, in_auth_token_passthru_mode);
+      setBearerAuthTokenHeader(request_headers, auth_token, in_auth_token_passthru_mode);
     }
   }
 
   if (!path.empty()) {
     ENVOY_STREAM_LOG(debug, "changing path from {} to {}", callbacks, original_path, path);
-    request_map->setPath(path);
+    request_headers->setPath(path);
   }
 
   return {in_bypass_mode, update_model_in_body};
 }
 
-void AiTransformer::transformBody(Http::RequestHeaderMap *request_map,
+void AiTransformer::transformBody(Http::RequestHeaderMap *request_headers,
                                   Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata,
                                   Buffer::Instance &body,
                                   Http::StreamFilterCallbacks &callbacks,
@@ -604,7 +625,7 @@ void AiTransformer::transformBody(Http::RequestHeaderMap *request_map,
       json_body["stream"] = bool(true);
       body_modified = true;
     }
-    if (json_schema == AiTransformerConstants::get().SCHEMA_OPENAI) { 
+    if (json_schema == AiTransformerConstants::get().SCHEMA_OPENAI) {
       if (!json_body.contains("stream_options")) {
         json_body["stream_options"] = json::object();
       }
@@ -614,20 +635,20 @@ void AiTransformer::transformBody(Http::RequestHeaderMap *request_map,
   }
 
   if (body_modified) {
-    request_map->removeContentLength();
+    request_headers->removeContentLength();
     body.drain(body.length());
     body.add(json_body.dump());
-    request_map->setContentLength(body.length());
+    request_headers->setContentLength(body.length());
   }
 }
 
 void AiTransformer::transform(Http::RequestOrResponseHeaderMap &/*header_map*/,
-                              Http::RequestHeaderMap *request_map,
+                              Http::RequestHeaderMap *request_headers,
                               Buffer::Instance &body,
                               Http::StreamFilterCallbacks &callbacks) const {
 
-  if (!request_map) {
-    ENVOY_STREAM_LOG(warn, "request_map is null!", callbacks);
+  if (!request_headers) {
+    ENVOY_STREAM_LOG(warn, "request_headers is null!", callbacks);
     return;
   }
 
@@ -651,12 +672,12 @@ void AiTransformer::transform(Http::RequestOrResponseHeaderMap &/*header_map*/,
   }
 
   auto model = lookupEndpointMetadata(endpoint_metadata, "model");
-  auto [in_bypass_mode, update_model_in_body] = transformHeaders(request_map, endpoint_metadata, callbacks, model);
+  auto [in_bypass_mode, update_model_in_body] = transformHeaders(request_headers, endpoint_metadata, callbacks, model);
   if (in_bypass_mode || body.length() == 0) {
     return;
   }
 
-  transformBody(request_map, endpoint_metadata, body, callbacks, update_model_in_body ? model : std::string{""});
+  transformBody(request_headers, endpoint_metadata, body, callbacks, update_model_in_body ? model : std::string{""});
 }
 
 

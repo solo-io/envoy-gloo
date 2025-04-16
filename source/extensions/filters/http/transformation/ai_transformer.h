@@ -111,16 +111,16 @@ public:
   virtual ~AiTransformer() = default;
 
   void transform(Http::RequestOrResponseHeaderMap &map,
-                 Http::RequestHeaderMap *request_map, Buffer::Instance &body,
+                 Http::RequestHeaderMap *request_headers, Buffer::Instance &body,
                  Http::StreamFilterCallbacks &callbacks) const override;
   bool passthrough_body() const override { return false; };
 
 private:
-  std::tuple<bool, bool> transformHeaders(Http::RequestHeaderMap *request_map,
+  std::tuple<bool, bool> transformHeaders(Http::RequestHeaderMap *request_headers,
                                           Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata,
                                           Http::StreamFilterCallbacks &callbacks,
                                           const std::string &model) const;
-  void transformBody(Http::RequestHeaderMap *request_map,
+  void transformBody(Http::RequestHeaderMap *request_headers,
                      Envoy::Upstream::MetadataConstSharedPtr endpoint_metadata,
                      Buffer::Instance &body,
                      Http::StreamFilterCallbacks &callbacks,
