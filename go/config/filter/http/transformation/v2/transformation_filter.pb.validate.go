@@ -1079,6 +1079,47 @@ func (m *Transformation) validate(all bool) error {
 			}
 		}
 
+	case *Transformation_AiTransformation:
+		if v == nil {
+			err := TransformationValidationError{
+				field:  "TransformationType",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+		if all {
+			switch v := interface{}(m.GetAiTransformation()).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, TransformationValidationError{
+						field:  "AiTransformation",
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, TransformationValidationError{
+						field:  "AiTransformation",
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(m.GetAiTransformation()).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return TransformationValidationError{
+					field:  "AiTransformation",
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
 	default:
 		_ = v // ensures v is used
 	}
@@ -2422,6 +2463,471 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = HeaderBodyTransformValidationError{}
+
+// Validate checks the field values on FieldDefault with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *FieldDefault) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on FieldDefault with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in FieldDefaultMultiError, or
+// nil if none found.
+func (m *FieldDefault) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *FieldDefault) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Field
+
+	if all {
+		switch v := interface{}(m.GetValue()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, FieldDefaultValidationError{
+					field:  "Value",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, FieldDefaultValidationError{
+					field:  "Value",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetValue()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return FieldDefaultValidationError{
+				field:  "Value",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for Override
+
+	if len(errors) > 0 {
+		return FieldDefaultMultiError(errors)
+	}
+
+	return nil
+}
+
+// FieldDefaultMultiError is an error wrapping multiple validation errors
+// returned by FieldDefault.ValidateAll() if the designated constraints aren't met.
+type FieldDefaultMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m FieldDefaultMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m FieldDefaultMultiError) AllErrors() []error { return m }
+
+// FieldDefaultValidationError is the validation error returned by
+// FieldDefault.Validate if the designated constraints aren't met.
+type FieldDefaultValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e FieldDefaultValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e FieldDefaultValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e FieldDefaultValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e FieldDefaultValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e FieldDefaultValidationError) ErrorName() string { return "FieldDefaultValidationError" }
+
+// Error satisfies the builtin error interface
+func (e FieldDefaultValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sFieldDefault.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = FieldDefaultValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = FieldDefaultValidationError{}
+
+// Validate checks the field values on PromptEnrichment with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *PromptEnrichment) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on PromptEnrichment with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// PromptEnrichmentMultiError, or nil if none found.
+func (m *PromptEnrichment) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *PromptEnrichment) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	for idx, item := range m.GetPrepend() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, PromptEnrichmentValidationError{
+						field:  fmt.Sprintf("Prepend[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, PromptEnrichmentValidationError{
+						field:  fmt.Sprintf("Prepend[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return PromptEnrichmentValidationError{
+					field:  fmt.Sprintf("Prepend[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	for idx, item := range m.GetAppend() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, PromptEnrichmentValidationError{
+						field:  fmt.Sprintf("Append[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, PromptEnrichmentValidationError{
+						field:  fmt.Sprintf("Append[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return PromptEnrichmentValidationError{
+					field:  fmt.Sprintf("Append[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return PromptEnrichmentMultiError(errors)
+	}
+
+	return nil
+}
+
+// PromptEnrichmentMultiError is an error wrapping multiple validation errors
+// returned by PromptEnrichment.ValidateAll() if the designated constraints
+// aren't met.
+type PromptEnrichmentMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PromptEnrichmentMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PromptEnrichmentMultiError) AllErrors() []error { return m }
+
+// PromptEnrichmentValidationError is the validation error returned by
+// PromptEnrichment.Validate if the designated constraints aren't met.
+type PromptEnrichmentValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e PromptEnrichmentValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e PromptEnrichmentValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e PromptEnrichmentValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e PromptEnrichmentValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e PromptEnrichmentValidationError) ErrorName() string { return "PromptEnrichmentValidationError" }
+
+// Error satisfies the builtin error interface
+func (e PromptEnrichmentValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sPromptEnrichment.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = PromptEnrichmentValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = PromptEnrichmentValidationError{}
+
+// Validate checks the field values on AiTransformation with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *AiTransformation) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on AiTransformation with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// AiTransformationMultiError, or nil if none found.
+func (m *AiTransformation) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *AiTransformation) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for EnableChatStreaming
+
+	for idx, item := range m.GetFieldDefaults() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, AiTransformationValidationError{
+						field:  fmt.Sprintf("FieldDefaults[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, AiTransformationValidationError{
+						field:  fmt.Sprintf("FieldDefaults[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return AiTransformationValidationError{
+					field:  fmt.Sprintf("FieldDefaults[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if all {
+		switch v := interface{}(m.GetPromptEnrichment()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, AiTransformationValidationError{
+					field:  "PromptEnrichment",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, AiTransformationValidationError{
+					field:  "PromptEnrichment",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetPromptEnrichment()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return AiTransformationValidationError{
+				field:  "PromptEnrichment",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return AiTransformationMultiError(errors)
+	}
+
+	return nil
+}
+
+// AiTransformationMultiError is an error wrapping multiple validation errors
+// returned by AiTransformation.ValidateAll() if the designated constraints
+// aren't met.
+type AiTransformationMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m AiTransformationMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m AiTransformationMultiError) AllErrors() []error { return m }
+
+// AiTransformationValidationError is the validation error returned by
+// AiTransformation.Validate if the designated constraints aren't met.
+type AiTransformationValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e AiTransformationValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e AiTransformationValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e AiTransformationValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e AiTransformationValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e AiTransformationValidationError) ErrorName() string { return "AiTransformationValidationError" }
+
+// Error satisfies the builtin error interface
+func (e AiTransformationValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sAiTransformation.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = AiTransformationValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = AiTransformationValidationError{}
 
 // Validate checks the field values on TransformationRule_Transformations with
 // the rules defined in the proto definition for this message. If any rules
@@ -3802,3 +4308,109 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = MergeJsonKeys_OverridableTemplateValidationError{}
+
+// Validate checks the field values on PromptEnrichment_Message with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *PromptEnrichment_Message) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on PromptEnrichment_Message with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// PromptEnrichment_MessageMultiError, or nil if none found.
+func (m *PromptEnrichment_Message) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *PromptEnrichment_Message) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Role
+
+	// no validation rules for Content
+
+	if len(errors) > 0 {
+		return PromptEnrichment_MessageMultiError(errors)
+	}
+
+	return nil
+}
+
+// PromptEnrichment_MessageMultiError is an error wrapping multiple validation
+// errors returned by PromptEnrichment_Message.ValidateAll() if the designated
+// constraints aren't met.
+type PromptEnrichment_MessageMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m PromptEnrichment_MessageMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m PromptEnrichment_MessageMultiError) AllErrors() []error { return m }
+
+// PromptEnrichment_MessageValidationError is the validation error returned by
+// PromptEnrichment_Message.Validate if the designated constraints aren't met.
+type PromptEnrichment_MessageValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e PromptEnrichment_MessageValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e PromptEnrichment_MessageValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e PromptEnrichment_MessageValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e PromptEnrichment_MessageValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e PromptEnrichment_MessageValidationError) ErrorName() string {
+	return "PromptEnrichment_MessageValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e PromptEnrichment_MessageValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sPromptEnrichment_Message.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = PromptEnrichment_MessageValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = PromptEnrichment_MessageValidationError{}
