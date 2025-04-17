@@ -120,6 +120,9 @@ class CompiledStdMatcher : public Regex::CompiledMatcher {
 public:
   CompiledStdMatcher(std::regex &&regex) : regex_(std::move(regex)) {}
 
+  // TODO(nfuden) refactor matchers or find a way to get back onto upstream matchers
+  const std::string& pattern() const override { return EMPTY_STRING; }
+
   // CompiledMatcher
   bool match(absl::string_view value) const override {
     try {

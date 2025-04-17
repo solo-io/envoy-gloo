@@ -283,7 +283,7 @@ private:
         }
         LbContextImpl lb_context(hash_key);
         Upstream::HostConstSharedPtr host =
-            cluster->loadBalancer().chooseHost(&lb_context);
+        Upstream::LoadBalancer::onlyAllowSynchronousHostSelection(cluster->loadBalancer().chooseHost(&lb_context));
         if (!host) {
           // TODO(talnordan):
           // parent_.callbacks_->onFailure("no host");
