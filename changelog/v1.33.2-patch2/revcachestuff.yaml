@@ -1,0 +1,6 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/solo-projects/issues/7787
+    resolvesIssue: false
+    description: >
+      Revert some upstream caching changes that break things
