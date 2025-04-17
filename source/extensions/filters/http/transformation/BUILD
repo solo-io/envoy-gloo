@@ -51,6 +51,7 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
+        ":ai_transformer_lib",
         ":body_header_transformer_lib",
         ":inja_transformer_lib",
         ":transformation_logger_lib",
@@ -101,6 +102,39 @@ envoy_cc_library(
         "@envoy//envoy/stats:stats_interface",
         "@envoy//envoy/stats:stats_macros",
         "@envoy//source/common/protobuf:utility_lib",
+    ],
+)
+
+envoy_cc_library(
+    name = "ai_transformer_lib",
+    srcs = [
+        "ai_transformer.cc",
+    ],
+    hdrs = [
+        "ai_transformer.h",
+    ],
+    repository = "@envoy",
+    deps = [
+        ":transformer_lib",
+        "//api/envoy/config/filter/http/transformation/v2:pkg_cc_proto",
+        "//source/common/matcher:matchers_lib",
+        "//source/common/regex:regex_lib",
+        "//source/extensions/filters/http:solo_well_known_names",
+        "@com_google_absl//absl/strings",
+        "@envoy//envoy/buffer:buffer_interface",
+        "@envoy//envoy/http:filter_interface",
+        "@envoy//envoy/http:header_map_interface",
+        "@envoy//source/common/common:logger_lib",
+        "@envoy//source/common/common:macros",
+        "@envoy//source/common/common:matchers_lib",
+        "@envoy//source/common/config:metadata_lib",
+        "@envoy//source/common/common:utility_lib",
+        "@envoy//source/common/http:header_utility_lib",
+        "@envoy//source/common/http:headers_lib",
+        "@envoy//source/common/protobuf",
+        "@envoy//source/common/protobuf:utility_lib",
+        "@envoy//source/common/singleton:const_singleton",
+        "@json//:json-lib",
     ],
 )
 

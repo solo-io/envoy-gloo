@@ -41,3 +41,17 @@ envoy_gloo_cc_test(
         "@envoy//test/integration:http_protocol_integration_lib",
     ],
 )
+
+envoy_gloo_cc_test(
+    name = "ai_transformation_integration_test",
+    srcs = ["ai_transformation_integration_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
+        "//source/extensions/filters/http/upstream_wait:config",
+        "//source/extensions/filters/http:solo_well_known_names",
+        "@envoy//test/integration:http_integration_lib",
+        "@envoy//test/integration:integration_lib",
+        "@envoy//test/integration:http_protocol_integration_lib",
+    ],
+)
