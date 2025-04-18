@@ -156,7 +156,7 @@ EXTENSIONS = {
     "envoy.filters.http.fault":                         "//source/extensions/filters/http/fault:config",
     "envoy.filters.http.file_system_buffer":            "//source/extensions/filters/http/file_system_buffer:config",
     "envoy.filters.http.gcp_authn":                     "//source/extensions/filters/http/gcp_authn:config",
-    # "envoy.filters.http.geoip":                         "//source/extensions/filters/http/geoip:config",
+    "envoy.filters.http.geoip":                         "//source/extensions/filters/http/geoip:config",
     # "envoy.filters.http.grpc_field_extraction":         "//source/extensions/filters/http/grpc_field_extraction:config",
     "envoy.filters.http.grpc_http1_bridge":             "//source/extensions/filters/http/grpc_http1_bridge:config",
     "envoy.filters.http.grpc_http1_reverse_bridge":     "//source/extensions/filters/http/grpc_http1_reverse_bridge:config",
@@ -215,6 +215,7 @@ EXTENSIONS = {
     "envoy.filters.network.dubbo_proxy":                          "//source/extensions/filters/network/dubbo_proxy:config",
     "envoy.filters.network.echo":                                 "//source/extensions/filters/network/echo:config",
     "envoy.filters.network.ext_authz":                            "//source/extensions/filters/network/ext_authz:config",
+    "envoy.filters.network.ext_proc":                             "//source/extensions/filters/network/ext_proc:config",
     "envoy.filters.network.http_connection_manager":              "//source/extensions/filters/network/http_connection_manager:config",
     "envoy.filters.network.local_ratelimit":                      "//source/extensions/filters/network/local_ratelimit:config",
     "envoy.filters.network.mongo_proxy":                          "//source/extensions/filters/network/mongo_proxy:config",
@@ -283,6 +284,7 @@ EXTENSIONS = {
     "envoy.tracers.xray":                               "//source/extensions/tracers/xray:config",
     "envoy.tracers.skywalking":                         "//source/extensions/tracers/skywalking:config",
     "envoy.tracers.opentelemetry":                      "//source/extensions/tracers/opentelemetry:config",
+    "envoy.tracers.fluentd":                            "//source/extensions/tracers/fluentd:config",
 
     #
     # OpenTelemetry Resource Detectors
@@ -298,6 +300,7 @@ EXTENSIONS = {
 
     "envoy.tracers.opentelemetry.samplers.always_on":         "//source/extensions/tracers/opentelemetry/samplers/always_on:config",
     "envoy.tracers.opentelemetry.samplers.dynatrace":         "//source/extensions/tracers/opentelemetry/samplers/dynatrace:config",
+    "envoy.tracers.opentelemetry.samplers.cel":               "//source/extensions/tracers/opentelemetry/samplers/cel:config",
 
     #
     # Transport sockets
@@ -411,6 +414,11 @@ EXTENSIONS = {
     # "envoy.http.custom_response.local_response_policy":       "//source/extensions/http/custom_response/local_response_policy:local_response_policy_lib",
 
     #
+    # External Processing Response Processors
+    #
+    "envoy.http.ext_proc.response_processors.save_processing_response":         "//source/extensions/http/ext_proc/response_processors/save_processing_response:save_processing_response_lib",
+
+    #
     # Injected credentials
     #
 
@@ -421,12 +429,13 @@ EXTENSIONS = {
     # QUIC extensions
     #
 
-    # "envoy.quic.deterministic_connection_id_generator": "//source/extensions/quic/connection_id_generator:envoy_deterministic_connection_id_generator_config",
+    # "envoy.quic.deterministic_connection_id_generator": "//source/extensions/quic/connection_id_generator/deterministic:envoy_deterministic_connection_id_generator_config",
+    # "envoy.quic.connection_id_generator.quic_lb":       "//source/extensions/quic/connection_id_generator/quic_lb:quic_lb_config",
     # "envoy.quic.crypto_stream.server.quiche":           "//source/extensions/quic/crypto_stream:envoy_quic_default_crypto_server_stream",
     # "envoy.quic.proof_source.filter_chain":             "//source/extensions/quic/proof_source:envoy_quic_default_proof_source",
     # "envoy.quic.server_preferred_address.fixed":        "//source/extensions/quic/server_preferred_address:fixed_server_preferred_address_config_factory_config",
     # "envoy.quic.server_preferred_address.datasource":   "//source/extensions/quic/server_preferred_address:datasource_server_preferred_address_config_factory_config",
-    # "envoy.quic.connection_debug_visitor.basic":        "//source/extensions/quic/connection_debug_visitor:envoy_quic_connection_debug_visitor_basic",
+    # "envoy.quic.connection_debug_visitor.basic":        "//source/extensions/quic/connection_debug_visitor/basic:envoy_quic_connection_debug_visitor_basic",
     # "envoy.quic.connection_debug_visitor.quic_stats":   "//source/extensions/quic/connection_debug_visitor/quic_stats:config",
 
     #
@@ -454,6 +463,12 @@ EXTENSIONS = {
     #
 
     "envoy.rbac.matchers.upstream_ip_port":     "//source/extensions/filters/common/rbac/matchers:upstream_ip_port_lib",
+
+    #
+    # RBAC principals
+    #
+
+    "envoy.rbac.principals.mtls_authenticated":        "//source/extensions/filters/common/rbac/principals/mtls_authenticated:config",
 
     #
     # DNS Resolver
@@ -524,7 +539,7 @@ EXTENSIONS = {
     #
     # Geolocation Provider
     #
-    # "envoy.geoip_providers.maxmind":                         "//source/extensions/geoip_providers/maxmind:config",
+    "envoy.geoip_providers.maxmind":                         "//source/extensions/geoip_providers/maxmind:config",
 
     #
     # cluster specifier plugin

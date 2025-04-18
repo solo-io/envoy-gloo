@@ -37,7 +37,7 @@ constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
-    std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
+    std::unique_ptr<Extensions::Common::Aws::CredentialsProviderChain> &&provider,
     std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
     Event::Dispatcher &dispatcher, Api::Api &api,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
@@ -255,7 +255,7 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
 
 void AWSLambdaConfigImpl::timerCallback() {
   // get new credentials.
-  auto new_creds = provider_->getCredentials();
+  auto new_creds = provider_->chainGetCredentials();
   if (new_creds == CommonAws::Credentials()) {
     stats_.fetch_failed_.inc();
     stats_.current_state_.set(0);
