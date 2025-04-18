@@ -19,41 +19,17 @@ AWSLambdaFilterConfigFactory::createFilterFactoryFromProtoTyped(
     Server::Configuration::FactoryContext &context) {
   auto& server_context = context.serverFactoryContext();
 
-  // Get the region from the service account credentials if available
-  std::string region = "";
-  if (proto_config.has_service_account_credentials()) {
-    region = proto_config.service_account_credentials().region();
-  }
-
-  // Create the appropriate credentials provider based on configuration
-  Extensions::Common::Aws::CredentialsProviderSharedPtr credentials_provider;
-  
-  // If credentials are set in the config, use them directly
-  if (proto_config.has_credentials()) {
-    ENVOY_LOG(debug, "Using credentials from filter configuration");
-    const auto& config_credentials = proto_config.credentials();
-    credentials_provider = std::make_shared<Extensions::Common::Aws::ConfigCredentialsProvider>(
-        config_credentials.access_key_id(), config_credentials.secret_access_key(),
-        config_credentials.session_token());
-  }
-  // If credentials profile is specified, use the credentials file provider
-  else if (!proto_config.credentials_profile().empty()) {
-    ENVOY_LOG(debug, "Using credentials profile: {}", proto_config.credentials_profile());
-    envoy::extensions::common::aws::v3::CredentialsFileCredentialProvider credential_file_config;
-    credential_file_config.set_profile(proto_config.credentials_profile());
-    credentials_provider = std::make_shared<Extensions::Common::Aws::CredentialsFileCredentialsProvider>(
-        server_context, credential_file_config);
-  }
-  // Otherwise use the default credentials provider chain
-  else {
-    ENVOY_LOG(debug, "Using default credentials provider chain");
-    credentials_provider = std::make_shared<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
-        server_context.api(), server_context, region, nullptr);
-  }
-
+  // ServerFactoryContext::clusterManager() is not available during server initialization
+  // therefore we need to pass absl::nullopt in lieu of the server_context to prevent
+  // the upstream code from attempting to access the method. https://github.com/envoyproxy/envoy/issues/26653
+  auto chain = std::make_unique<Extensions::Common::Aws::DefaultCredentialsProviderChain>(
+          server_context.api(), absl::nullopt /* ServerFactoryContextOptRef context */,
+          // We pass an empty string if we don't have a region
+          proto_config.has_service_account_credentials() ? proto_config.service_account_credentials().region() : "",
+          nullptr);
   auto sts_factory = StsCredentialsProviderFactory::create(server_context.api(),
                                             server_context.clusterManager());
-  auto config = std::make_shared<AWSLambdaConfigImpl>(std::move(credentials_provider),
+  auto config = std::make_shared<AWSLambdaConfigImpl>(std::move(chain),
       std::move(sts_factory),
       server_context.mainThreadDispatcher(), server_context.api(), server_context.threadLocal(), stats_prefix,
       server_context.scope(), proto_config);

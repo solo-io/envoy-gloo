@@ -37,7 +37,7 @@ constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
-    Extensions::Common::Aws::CredentialsProviderSharedPtr provider,
+    std::unique_ptr<Extensions::Common::Aws::CredentialsProvider> &&provider,
     std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
     Event::Dispatcher &dispatcher, Api::Api &api,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
@@ -45,12 +45,12 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
     const envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig
         &protoconfig)
     : stats_(generateStats(stats_prefix, scope)), api_(api),
-      provider_(std::move(provider)),
       tls_(tls),
       credential_refresh_delay_(std::chrono::milliseconds(
         DurationUtil::durationToMilliseconds(
           protoconfig.credential_refresh_delay()))),
           propagate_original_routing_(protoconfig.propagate_original_routing()){
+
 
   // Initialize Credential fetcher, if none exists do nothing. Filter will
   // implicitly use protocol options data
@@ -58,6 +58,8 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
   case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
       CredentialsFetcherCase::kUseDefaultCredentials: {
     ENVOY_LOG(debug, "{}: Using default credentials source", __func__);
+    provider_ = std::move(provider);
+
     auto empty_creds = std::make_shared<const CommonAws::Credentials>();
     tls_.set([empty_creds](Event::Dispatcher &) {
       return std::make_shared<ThreadLocalCredentials>(empty_creds);
@@ -93,20 +95,6 @@ AWSLambdaConfigImpl::AWSLambdaConfigImpl(
   }
   case envoy::config::filter::http::aws_lambda::v2::AWSLambdaConfig::
       CredentialsFetcherCase::CREDENTIALS_FETCHER_NOT_SET: {
-    // If we have a provider but no specific credentials fetcher is set,
-    // initialize the provider
-    if (provider_) {
-      ENVOY_LOG(debug, "{}: Using provided credentials source", __func__);
-      auto empty_creds = std::make_shared<const CommonAws::Credentials>();
-      tls_.set([empty_creds](Event::Dispatcher &) {
-        return std::make_shared<ThreadLocalCredentials>(empty_creds);
-      });
-
-      timer_ = dispatcher.createTimer([this] { timerCallback(); });
-      // call the time callback to fetch credentials now.
-      // this will also re-trigger the timer.
-      timerCallback();
-    }
     break;
   }
   }
@@ -247,15 +235,10 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
   }
 
   if (provider_) {
-    ENVOY_LOG(trace, "{}: Credentials found from provider", __func__);
-    // Get credentials from the provider
-    const auto credentials = provider_->getCredentials();
-    if (credentials.accessKeyId().has_value() && credentials.secretAccessKey().has_value()) {
-      callbacks->onSuccess(std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(
-          credentials.accessKeyId().value(), credentials.secretAccessKey().value(),
-          credentials.sessionToken().has_value() ? credentials.sessionToken().value() : ""));
-      return nullptr;
-    }
+    ENVOY_LOG(trace, "{}: Credentials found from default source", __func__);
+    callbacks->onSuccess(tls_->credentials_);
+    // no context necessary as these credentials are available immediately
+    return nullptr;
   }
 
   if (sts_refresher_ != nullptr) {
@@ -272,29 +255,32 @@ StsConnectionPool::Context *AWSLambdaConfigImpl::getCredentials(
 
 void AWSLambdaConfigImpl::timerCallback() {
   // get new credentials.
-  if (provider_) {
-    const auto credentials = provider_->getCredentials();
-    if (credentials.accessKeyId().has_value() && credentials.secretAccessKey().has_value()) {
-      auto new_creds = std::make_shared<const Envoy::Extensions::Common::Aws::Credentials>(
-          credentials.accessKeyId().value(), credentials.secretAccessKey().value(),
-          credentials.sessionToken().has_value() ? credentials.sessionToken().value() : "");
-      
-      tls_.set([new_creds](Event::Dispatcher &) {
-        return std::make_shared<ThreadLocalCredentials>(new_creds);
+  auto new_creds = provider_->getCredentials();
+  if (new_creds == CommonAws::Credentials()) {
+    stats_.fetch_failed_.inc();
+    stats_.current_state_.set(0);
+    ENVOY_LOG(warn, "can't get AWS credentials - credentials will not be "
+                    "refreshed and request to AWS may fail");
+  } else {
+    stats_.fetch_success_.inc();
+    stats_.current_state_.set(1);
+    auto currentCreds =
+        tls_->credentials_;
+    if (currentCreds == nullptr || !((*currentCreds) == new_creds)) {
+      stats_.creds_rotated_.inc();
+      ENVOY_LOG(debug, "refreshing AWS credentials");
+      auto shared_new_creds =
+          std::make_shared<const CommonAws::Credentials>(new_creds);
+      tls_.set([shared_new_creds](Event::Dispatcher &) {
+        return std::make_shared<ThreadLocalCredentials>(shared_new_creds);
       });
-      stats_.fetch_succeeded_.inc();
-      stats_.current_state_.set(1);
-    } else {
-      stats_.fetch_failed_.inc();
-      stats_.current_state_.set(0);
-      ENVOY_LOG(warn, "can't get AWS credentials - credentials will not be "
-                      "refreshed and request to AWS may fail");
     }
   }
-  
-  // Schedule the next refresh
-  timer_ = api_.timeSource().createTimer([this]() -> void { timerCallback(); });
-  timer_->enableTimer(credential_refresh_delay_);
+
+  if (timer_ != nullptr) {
+    // re-enable refersh timer
+    timer_->enableTimer(REFRESH_AWS_CREDS);
+  }
 }
 
 AwsLambdaFilterStats
