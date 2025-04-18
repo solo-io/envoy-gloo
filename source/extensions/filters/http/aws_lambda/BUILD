@@ -69,8 +69,8 @@ envoy_cc_library(
         "//source/extensions/filters/http/transformation:transformation_filter_config_lib",
         "@envoy//source/common/protobuf:utility_lib",
         "@envoy//source/common/http:utility_lib",
-        "@envoy//source/extensions/common/aws:credentials_provider_impl_lib",
-        "@envoy//source/extensions/common/aws:credentials_provider_interface",
+        "@envoy//source/extensions/common/aws:credential_provider_chains_lib",
+        "@envoy//source/extensions/common/aws/credential_providers:config_credentials_provider_lib",
         "@envoy//source/extensions/common/aws:utility_lib",
     ],
 )
