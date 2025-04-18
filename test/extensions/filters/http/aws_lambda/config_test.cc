@@ -77,7 +77,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
 
   auto cred_provider = std::make_unique<
       NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
-  EXPECT_CALL(*cred_provider, getCredentials())
+  EXPECT_CALL(*cred_provider, getChainCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
 
@@ -143,7 +143,7 @@ TEST_F(ConfigTest, FailingToRotate) {
 
   auto cred_provider = std::make_unique<
       NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
-  EXPECT_CALL(*cred_provider, getCredentials())
+  EXPECT_CALL(*cred_provider, getChainCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(Envoy::Extensions::Common::Aws::Credentials()));
 
