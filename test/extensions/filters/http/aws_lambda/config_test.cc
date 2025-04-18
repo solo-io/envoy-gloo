@@ -76,7 +76,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
       "access_key", "secret_key", "session_token");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
@@ -142,7 +142,7 @@ TEST_F(ConfigTest, FailingToRotate) {
                                                           "secret_key");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(Envoy::Extensions::Common::Aws::Credentials()));
@@ -195,7 +195,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
   protoextconfig.set_secret_key("secret_key");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
@@ -245,7 +245,7 @@ TEST_F(ConfigTest, WithStsCreds) {
   protoextconfig.set_role_arn("role_arn");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
 
   auto sts_cred_provider_ = new NiceMock<MockStsCredentialsProvider>();
   std::unique_ptr<NiceMock<MockStsCredentialsProvider>> sts_cred_provider{
