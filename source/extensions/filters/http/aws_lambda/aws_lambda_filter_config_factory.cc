@@ -2,7 +2,7 @@
 
 #include "envoy/registry/registry.h"
 
-#include "source/extensions/common/aws/credentials_provider_impl.h"
+#include "source/extensions/common/aws/credential_provider_chains.cc"
 #include "source/extensions/common/aws/utility.h"
 #include "source/extensions/filters/http/aws_lambda/aws_lambda_filter.h"
 

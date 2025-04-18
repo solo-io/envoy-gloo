@@ -47,6 +47,7 @@ envoy_cc_library(
         "//source/extensions/filters/http:solo_well_known_names",
         "@envoy//source/common/http:utility_lib",
         "@envoy//envoy/buffer:buffer_interface",
+         "@envoy//source/extensions/common/aws:credential_provider_chains_lib",
     ],
 )
 
@@ -81,10 +82,12 @@ envoy_cc_library(
     hdrs = ["aws_lambda_filter_config_factory.h"],
     repository = "@envoy",
     deps = [
+        "@envoy//source/extensions/common/aws:credential_provider_chains_lib",
         ":aws_lambda_filter_lib",
         "@envoy//envoy/server:filter_config_interface",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
         "@envoy//source/common/common:base64_lib",
+         
     ],
 )
 
