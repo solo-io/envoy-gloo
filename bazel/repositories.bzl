@@ -67,7 +67,7 @@ def _repository_impl(name, **kwargs):
 
 def envoy_gloo_dependencies():
     _repository_impl("envoy", patches=[
-        "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
+        # "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
