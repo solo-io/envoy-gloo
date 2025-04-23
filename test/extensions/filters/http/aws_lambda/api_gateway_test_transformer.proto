@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-package envoy.test.extensions.transformation;
-option go_package = "transformation";
-
-message ApiGatewayTestTransformer{}
