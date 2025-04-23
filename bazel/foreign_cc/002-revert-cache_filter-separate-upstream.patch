@@ -1476,7 +1476,7 @@ index d154e862e7..a70fbbae1d 100644
 -    dispatcher_.post([cb = std::move(insert_complete)]() mutable { cb(false); });
 +    insert_complete(false);
    }
-   void onDestroy() override{};
+   void onDestroy() override {};
 -
 -private:
 -  Event::Dispatcher& dispatcher_;
