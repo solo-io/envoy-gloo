@@ -25,14 +25,19 @@ struct AiTransformerValues {
   const std::string PROVIDER_GEMINI{"gemini"};
   const std::string PROVIDER_OPENAI{"openai"};
   const std::string PROVIDER_VERTEXAI{"vertexai"};
+  const std::string PROVIDER_BEDROCK{"bedrock"};
 
   const std::string SCHEMA_ANTHROPIC{"anthropic"};
   const std::string SCHEMA_GEMINI{"gemini"};
   const std::string SCHEMA_OPENAI{"openai"};
+  const std::string SCHEMA_BEDROCK{"bedrock"};
 
   const std::string GEMINI_GENERATE_CONTENT{"generateContent"};
   const std::string GEMINI_STREAM_GENERATE_CONTENT{"streamGenerateContent"};
   const std::string GEMINI_STREAM_QS_PARAM{"alt=sse"};
+
+  const std::string BEDROCK_CONVERSE{"converse"};
+  const std::string BEDROCK_CONVERSE_STREAM{"converse-stream"};
 
   const Http::LowerCaseString AnthropicApiKeyHeader{"x-api-key"};
   const Http::LowerCaseString AnthropicVersionHeader{"anthropic-version"};
