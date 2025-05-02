@@ -73,3 +73,6 @@ def envoy_gloo_dependencies():
     _repository_impl("envoy")
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
+    _repository_impl("com_googlesource_googleurl", patches = [
+        "@envoy_gloo//bazel/patches:001-fix-googleurl-checksum.patch",
+    ])

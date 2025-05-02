@@ -1,0 +1,26 @@
+From a0da603209681f425f1e1fb2c7abddd24f3e2b1f Mon Sep 17 00:00:00 2001
+From: Alyssa Wilk <alyssar@chromium.org>
+Date: Wed, 9 Oct 2024 19:30:30 +0000
+Subject: [PATCH] ci: change googleurl dep
+
+Signed-off-by: Alyssa Wilk <alyssar@chromium.org>
+---
+ bazel/repository_locations.bzl | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bazel/repository_locations.bzl b/bazel/repository_locations.bzl
+index b6e02d489b31..e42a6e7e2fd3 100644
+--- a/bazel/repository_locations.bzl
++++ b/bazel/repository_locations.bzl
+@@ -1222,9 +1222,9 @@ REPOSITORY_LOCATIONS_SPEC = dict(
+         project_name = "Chrome URL parsing library",
+         project_desc = "Chrome URL parsing library",
+         project_url = "https://quiche.googlesource.com/googleurl",
+-        # Static snapshot of https://quiche.googlesource.com/googleurl/+archive/dd4080fec0b443296c0ed0036e1e776df8813aa7.tar.gz
+         version = "dd4080fec0b443296c0ed0036e1e776df8813aa7",
+-        sha256 = "59f14d4fb373083b9dc8d389f16bbb817b5f936d1d436aa67e16eb6936028a51",
++        sha256 = "fc694942e8a7491dcc1dde1bddf48a31370a1f46fef862bc17acf07c34dc6325",
++        # Static snapshot of https://quiche.googlesource.com/googleurl/+archive/dd4080fec0b443296c0ed0036e1e776df8813aa7.tar.gz
+         urls = ["https://storage.googleapis.com/quiche-envoy-integration/{version}.tar.gz"],
+         use_category = ["controlplane", "dataplane_core"],
+         extensions = [],
