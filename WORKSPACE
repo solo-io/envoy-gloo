@@ -8,15 +8,6 @@ local_repository(
 
 load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "com_googlesource_googleurl",
-    urls = ["https://storage.googleapis.com/quiche-envoy-integration/dd4080fec0b443296c0ed0036e1e776df8813aa7.tar.gz"],
-    sha256 = "fc694942e8a7491dcc1dde1bddf48a31370a1f46fef862bc17acf07c34dc6325",
-    build_file_content = "# empty BUILD file override for checksum fix",
-)
-
 envoy_gloo_dependencies()
 
 load("@envoy//bazel:api_binding.bzl", "envoy_api_binding")
