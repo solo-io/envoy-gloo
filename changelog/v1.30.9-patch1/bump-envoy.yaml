@@ -1,11 +1,10 @@
 changelog:
 - type: DEPENDENCY_BUMP
-  issueLink:  https://github.com/solo-io/envoy-gloo-ee/issues/843
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/934
   dependencyOwner: envoyproxy
   dependencyRepo: envoy
-  dependencyTag: v1.30.9
+  dependencyTag: v1.30.11
   resolvesIssue: false
   description: >-
-    Update Envoy to latest 1.30.9 release for cves.
-    CVE-2024-53269: Happy Eyeballs: Validate that additional_address are IP addresses instead of crashing when sorting.
-    CVE-2024-53270: HTTP/1: sending overload crashes when the request is reset beforehand
+    Update Envoy to latest 1.30.11 release
+    Manually patch CVE for asterisk in url template match bug
