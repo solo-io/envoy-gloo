@@ -1,3 +1,4 @@
+
 name: static-analysis
 
 on:
@@ -9,7 +10,7 @@ on:
 jobs:
   static-analysis:
     name: static-analysis
-    runs-on: ubuntu-20.04-8core
+    runs-on: ubuntu-24.04-8core-amd64
     container: gcr.io/solo-public/envoy-build-ubuntu:0.4.25
     steps:
     - uses: actions/checkout@v3
@@ -19,7 +20,7 @@ jobs:
       run: ci/static_analysis.sh
     - name: Archive static analysis results
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: static-analysis-report
         path: linux/amd64/analysis/scan-build-*/
