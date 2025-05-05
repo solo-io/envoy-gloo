@@ -72,6 +72,7 @@ def envoy_gloo_dependencies():
         "@envoy_gloo//bazel/foreign_cc:0003-deallocate-slots-on-worker-threads.patch", # https://github.com/envoyproxy/envoy/pull/33395
         "@envoy_gloo//bazel/foreign_cc:0004-local-rate-limit-bucket-backport.patch",
         "@envoy_gloo//bazel/foreign_cc:0005-otel-set-operation.patch",
+        "@envoy_gloo//bazel/foreign_cc:0006-asterisk-url-template-match.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
