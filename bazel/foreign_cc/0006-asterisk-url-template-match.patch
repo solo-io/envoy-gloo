@@ -1,4 +1,4 @@
-From c11bc45f6eef414d725ead0f927434b852ff75da Mon Sep 17 00:00:00 2001
+From 8d07b7fe6edd1c9305784db34d3db52cb0c6c5ca Mon Sep 17 00:00:00 2001
 From: Andy Fong <andy.fong@solo.io>
 Date: Mon, 5 May 2025 14:04:42 -0400
 Subject: [PATCH] asterisk-url-template-match.patch
@@ -6,12 +6,12 @@ Subject: [PATCH] asterisk-url-template-match.patch
 ---
  source/common/runtime/runtime_features.cc     |  1 +
  source/extensions/path/uri_template_lib/BUILD |  1 +
- .../uri_template_lib/uri_template_internal.cc | 52 +++++++++++--
+ .../uri_template_lib/uri_template_internal.cc | 54 +++++++++++--
  .../path/match/uri_template/library_test.cc   | 60 +++++++++++++++
  .../path/rewrite/uri_template/library_test.cc | 56 ++++++++++++++
  .../uri_template_internal_test.cc             | 77 +++++++++++++------
  tools/spelling/spelling_dictionary.txt        |  3 +
- 7 files changed, 219 insertions(+), 31 deletions(-)
+ 7 files changed, 221 insertions(+), 31 deletions(-)
 
 diff --git source/common/runtime/runtime_features.cc source/common/runtime/runtime_features.cc
 index c055ff949f..83b56634b8 100644
@@ -38,10 +38,19 @@ index dfea1c17ec..3b52f380d5 100644
          "@com_google_absl//absl/status:statusor",
          "@com_google_absl//absl/strings",
 diff --git source/extensions/path/uri_template_lib/uri_template_internal.cc source/extensions/path/uri_template_lib/uri_template_internal.cc
-index 7cec7fed99..305ea2f417 100644
+index 7cec7fed99..0057ea68c0 100644
 --- source/extensions/path/uri_template_lib/uri_template_internal.cc
 +++ source/extensions/path/uri_template_lib/uri_template_internal.cc
-@@ -44,6 +44,16 @@ constexpr absl::string_view kLiteral = "a-zA-Z0-9-._~" // Unreserved
+@@ -6,6 +6,8 @@
+ #include <variant>
+ #include <vector>
+ 
++#include "source/common/runtime/runtime_features.h"
++
+ #include "absl/container/flat_hash_set.h"
+ #include "absl/flags/flag.h"
+ #include "absl/functional/function_ref.h"
+@@ -44,6 +46,16 @@ constexpr absl::string_view kLiteral = "a-zA-Z0-9-._~" // Unreserved
                                         ":@"
                                         "="; // user included "=" allowed
  
@@ -58,7 +67,7 @@ index 7cec7fed99..305ea2f417 100644
  // Default operator used for the variable when none specified.
  constexpr Operator kDefaultVariableOperator = Operator::PathGlob;
  
-@@ -120,17 +130,30 @@ std::string ParsedPathPattern::debugString() const {
+@@ -120,17 +132,30 @@ std::string ParsedPathPattern::debugString() const {
  }
  
  bool isValidLiteral(absl::string_view literal) {
@@ -91,7 +100,7 @@ index 7cec7fed99..305ea2f417 100644
  }
  
  bool isValidVariableName(absl::string_view variable) {
-@@ -352,11 +375,26 @@ std::string toRegexPattern(absl::string_view pattern) {
+@@ -352,11 +377,26 @@ std::string toRegexPattern(absl::string_view pattern) {
  std::string toRegexPattern(Operator pattern) {
    static const std::string* kPathGlobRegex = new std::string(absl::StrCat("[", kLiteral, "]+"));
    static const std::string* kTextGlobRegex = new std::string(absl::StrCat("[", kLiteral, "/]*"));
