@@ -1,0 +1,10 @@
+changelog:
+- type: DEPENDENCY_BUMP
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/934
+  dependencyOwner: envoyproxy
+  dependencyRepo: envoy
+  dependencyTag: v1.30.11
+  resolvesIssue: false
+  description: >-
+    Update Envoy to latest 1.30.11 release
+    Manually patch CVE for asterisk in url template match bug
