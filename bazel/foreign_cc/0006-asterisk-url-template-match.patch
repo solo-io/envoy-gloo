@@ -13,10 +13,10 @@ Subject: [PATCH] asterisk-url-template-match.patch
  tools/spelling/spelling_dictionary.txt        |  3 +
  7 files changed, 219 insertions(+), 31 deletions(-)
 
-diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
+diff --git source/common/runtime/runtime_features.cc source/common/runtime/runtime_features.cc
 index c055ff949f..83b56634b8 100644
---- a/source/common/runtime/runtime_features.cc
-+++ b/source/common/runtime/runtime_features.cc
+--- source/common/runtime/runtime_features.cc
++++ source/common/runtime/runtime_features.cc
 @@ -103,6 +103,7 @@ RUNTIME_GUARD(envoy_reloadable_features_token_passed_entirely);
  RUNTIME_GUARD(envoy_reloadable_features_uhv_allow_malformed_url_encoding);
  RUNTIME_GUARD(envoy_reloadable_features_upstream_allow_connect_with_2xx);
@@ -25,10 +25,10 @@ index c055ff949f..83b56634b8 100644
  RUNTIME_GUARD(envoy_reloadable_features_use_cluster_cache_for_alt_protocols_filter);
  RUNTIME_GUARD(envoy_reloadable_features_use_http3_header_normalisation);
  RUNTIME_GUARD(envoy_reloadable_features_validate_connect);
-diff --git a/source/extensions/path/uri_template_lib/BUILD b/source/extensions/path/uri_template_lib/BUILD
+diff --git source/extensions/path/uri_template_lib/BUILD source/extensions/path/uri_template_lib/BUILD
 index dfea1c17ec..3b52f380d5 100644
---- a/source/extensions/path/uri_template_lib/BUILD
-+++ b/source/extensions/path/uri_template_lib/BUILD
+--- source/extensions/path/uri_template_lib/BUILD
++++ source/extensions/path/uri_template_lib/BUILD
 @@ -22,6 +22,7 @@ envoy_cc_library(
      deps = [
          ":uri_template_internal_cc",
@@ -37,10 +37,10 @@ index dfea1c17ec..3b52f380d5 100644
          "@com_google_absl//absl/status",
          "@com_google_absl//absl/status:statusor",
          "@com_google_absl//absl/strings",
-diff --git a/source/extensions/path/uri_template_lib/uri_template_internal.cc b/source/extensions/path/uri_template_lib/uri_template_internal.cc
+diff --git source/extensions/path/uri_template_lib/uri_template_internal.cc source/extensions/path/uri_template_lib/uri_template_internal.cc
 index 7cec7fed99..305ea2f417 100644
---- a/source/extensions/path/uri_template_lib/uri_template_internal.cc
-+++ b/source/extensions/path/uri_template_lib/uri_template_internal.cc
+--- source/extensions/path/uri_template_lib/uri_template_internal.cc
++++ source/extensions/path/uri_template_lib/uri_template_internal.cc
 @@ -44,6 +44,16 @@ constexpr absl::string_view kLiteral = "a-zA-Z0-9-._~" // Unreserved
                                         ":@"
                                         "="; // user included "=" allowed
@@ -123,10 +123,10 @@ index 7cec7fed99..305ea2f417 100644
    }
    return "";
  }
-diff --git a/test/extensions/path/match/uri_template/library_test.cc b/test/extensions/path/match/uri_template/library_test.cc
+diff --git test/extensions/path/match/uri_template/library_test.cc test/extensions/path/match/uri_template/library_test.cc
 index e154986aa0..002fea5a8c 100644
---- a/test/extensions/path/match/uri_template/library_test.cc
-+++ b/test/extensions/path/match/uri_template/library_test.cc
+--- test/extensions/path/match/uri_template/library_test.cc
++++ test/extensions/path/match/uri_template/library_test.cc
 @@ -43,6 +43,66 @@ TEST(MatchTest, BasicUsage) {
    EXPECT_TRUE(matcher->match("/bar/en/us"));
  }
@@ -194,10 +194,10 @@ index e154986aa0..002fea5a8c 100644
  TEST(MatchTest, MatchDoubleEqualsInWildcard) {
    const std::string yaml_string = R"EOF(
        name: envoy.path.match.uri_template.uri_template_matcher
-diff --git a/test/extensions/path/rewrite/uri_template/library_test.cc b/test/extensions/path/rewrite/uri_template/library_test.cc
+diff --git test/extensions/path/rewrite/uri_template/library_test.cc test/extensions/path/rewrite/uri_template/library_test.cc
 index 6d34771872..4783b8725f 100644
---- a/test/extensions/path/rewrite/uri_template/library_test.cc
-+++ b/test/extensions/path/rewrite/uri_template/library_test.cc
+--- test/extensions/path/rewrite/uri_template/library_test.cc
++++ test/extensions/path/rewrite/uri_template/library_test.cc
 @@ -71,6 +71,62 @@ TEST(RewriteTest, BasicUsage) {
    EXPECT_EQ(rewriter->name(), "envoy.path.rewrite.uri_template.uri_template_rewriter");
  }
@@ -261,10 +261,10 @@ index 6d34771872..4783b8725f 100644
  TEST(RewriteTest, DoubleEqualAtEndOfPath) {
    const std::string yaml_string = R"EOF(
        name: envoy.path.rewrite.uri_template.uri_template_rewriter
-diff --git a/test/extensions/path/uri_template_lib/uri_template_internal_test.cc b/test/extensions/path/uri_template_lib/uri_template_internal_test.cc
+diff --git test/extensions/path/uri_template_lib/uri_template_internal_test.cc test/extensions/path/uri_template_lib/uri_template_internal_test.cc
 index 254eef55ee..6ac17fe517 100644
---- a/test/extensions/path/uri_template_lib/uri_template_internal_test.cc
-+++ b/test/extensions/path/uri_template_lib/uri_template_internal_test.cc
+--- test/extensions/path/uri_template_lib/uri_template_internal_test.cc
++++ test/extensions/path/uri_template_lib/uri_template_internal_test.cc
 @@ -11,6 +11,7 @@
  
  #include "test/test_common/logging.h"
@@ -429,10 +429,10 @@ index 254eef55ee..6ac17fe517 100644
  
  TEST_P(GenPatternRegexWithoutMatch, WithCapture) {
    absl::StatusOr<ParsedPathPattern> pattern = parsePathPatternSyntax(pathPattern());
-diff --git a/tools/spelling/spelling_dictionary.txt b/tools/spelling/spelling_dictionary.txt
+diff --git tools/spelling/spelling_dictionary.txt tools/spelling/spelling_dictionary.txt
 index 7380ea5a82..5c7c8e01c2 100644
---- a/tools/spelling/spelling_dictionary.txt
-+++ b/tools/spelling/spelling_dictionary.txt
+--- tools/spelling/spelling_dictionary.txt
++++ tools/spelling/spelling_dictionary.txt
 @@ -740,6 +740,8 @@ enqueues
  enum
  enums
