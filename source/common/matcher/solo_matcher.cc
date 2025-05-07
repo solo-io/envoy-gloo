@@ -118,8 +118,8 @@ private:
 
 class CompiledStdMatcher : public Regex::CompiledMatcher {
 public:
-  CompiledStdMatcher(const std::string &pattern) :
-    pattern_(pattern),
+  CompiledStdMatcher(const std::string pattern) :
+    pattern_(std::move(pattern)),
     regex_(Solo::Regex::Utility::parseStdRegex(pattern)){
   }
 
@@ -146,7 +146,7 @@ public:
   }
 
 private:
-  const std::string &pattern_;
+  const std::string pattern_;
   const std::regex regex_;
 };
 
