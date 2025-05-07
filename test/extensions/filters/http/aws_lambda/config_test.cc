@@ -75,8 +75,12 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   const Envoy::Extensions::Common::Aws::Credentials creds2(
       "access_key", "secret_key", "session_token");
 
-  auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  using Envoy::Extensions::Common::Aws::MockCredentialsProvider;
+  using Envoy::Extensions::Common::Aws::CredentialsProviderChain;
+  auto cred_provider = std::make_shared<MockCredentialsProvider>();
+  auto cred_provider_chain = std::make_unique<CredentialsProviderChain>();
+  cred_provider_chain->add(cred_provider);
+
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(creds2));
@@ -84,7 +88,7 @@ TEST_F(ConfigTest, WithUseDefaultCreds) {
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      std::move(cred_provider_chain), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
       context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   NiceMock<MockStsContextCallbacks> callbacks_1;
@@ -141,8 +145,11 @@ TEST_F(ConfigTest, FailingToRotate) {
   const Envoy::Extensions::Common::Aws::Credentials creds("access_key",
                                                           "secret_key");
 
-  auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+  using Envoy::Extensions::Common::Aws::MockCredentialsProvider;
+  using Envoy::Extensions::Common::Aws::CredentialsProviderChain;
+  auto cred_provider = std::make_shared<MockCredentialsProvider>();
+  auto cred_provider_chain = std::make_unique<CredentialsProviderChain>();
+  cred_provider_chain->add(cred_provider);
   EXPECT_CALL(*cred_provider, getCredentials())
       .WillOnce(Return(creds))
       .WillOnce(Return(Envoy::Extensions::Common::Aws::Credentials()));
@@ -150,7 +157,7 @@ TEST_F(ConfigTest, FailingToRotate) {
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
   auto config = std::make_shared<AWSLambdaConfigImpl>(
-      std::move(cred_provider), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
+      std::move(cred_provider_chain), std::move(unique_factory), context_.server_factory_context_.dispatcher_,
       context_.server_factory_context_.api_, context_.server_factory_context_.thread_local_, "prefix.", *stats_.rootScope(), protoconfig);
 
   std::shared_ptr<const AWSLambdaProtocolExtensionConfig> ext_config_1 =
@@ -195,7 +202,7 @@ TEST_F(ConfigTest, WithProtocolExtensionCreds) {
   protoextconfig.set_secret_key("secret_key");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
 
   std::unique_ptr<NiceMock<MockStsCredentialsProviderFactory>> unique_factory{
       sts_factory_};
@@ -245,7 +252,7 @@ TEST_F(ConfigTest, WithStsCreds) {
   protoextconfig.set_role_arn("role_arn");
 
   auto cred_provider = std::make_unique<
-      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProvider>>();
+      NiceMock<Envoy::Extensions::Common::Aws::MockCredentialsProviderChain>>();
 
   auto sts_cred_provider_ = new NiceMock<MockStsCredentialsProvider>();
   std::unique_ptr<NiceMock<MockStsCredentialsProvider>> sts_cred_provider{

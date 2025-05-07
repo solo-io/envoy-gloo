@@ -67,12 +67,9 @@ def _repository_impl(name, **kwargs):
 
 def envoy_gloo_dependencies():
     _repository_impl("envoy", patches=[
-        "@envoy_gloo//bazel/foreign_cc:001-tlv-support.patch", #remove in  1.34
         # revert upstream's cache filter from using a separate HttpAsyncClient
-        # connection for upstream cache requests which was introduced in 1.33.
-        # see
-        # https://github.com/solo-io/solo-projects/issues/8160#issuecomment-2805380240
         "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
+        "@envoy_gloo//bazel/foreign_cc:003-arm-fips-build-fix.patch", # remove when upgrading to v1.35 envoy
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")

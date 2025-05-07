@@ -410,7 +410,9 @@ TEST_F(TcpConnPoolImplTest, NoHost) {
 
   T value;
   EXPECT_CALL(cm_.thread_local_cluster_.lb_, chooseHost(_))
-      .WillOnce(Return(nullptr));
+      .WillOnce(Invoke([] {
+        return Upstream::HostSelectionResponse{nullptr};
+      }));
   conn_pool_->makeRequest("foo", value);
 
   conn_pool_ = {};

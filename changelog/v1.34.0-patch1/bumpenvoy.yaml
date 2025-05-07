@@ -1,0 +1,9 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/887
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: 1.34.0
+    resolvesIssue: false
+    description: >-
+      Bump to envoy 1.34.0. Allow for usage of dynamic modules.
