@@ -118,10 +118,12 @@ private:
 
 class CompiledStdMatcher : public Regex::CompiledMatcher {
 public:
-  CompiledStdMatcher(std::regex &&regex) : regex_(std::move(regex)) {}
+  CompiledStdMatcher(const std::string &pattern) :
+    pattern_(pattern),
+    regex_(Solo::Regex::Utility::parseStdRegex(pattern)){
+  }
 
-  // TODO(nfuden) refactor matchers or find a way to get back onto upstream matchers
-  const std::string& pattern() const override { return EMPTY_STRING; }
+  const std::string& pattern() const override { return pattern_; }
 
   // CompiledMatcher
   bool match(absl::string_view value) const override {
@@ -144,14 +146,14 @@ public:
   }
 
 private:
+  const std::string &pattern_;
   const std::regex regex_;
 };
 
 class StdRegexEngine : public Regex::Engine {
 public:
-  absl::StatusOr<Regex::CompiledMatcherPtr> matcher(const std::string &regex) const override {
-    return std::make_unique<CompiledStdMatcher>(
-        Solo::Regex::Utility::parseStdRegex(regex));
+  absl::StatusOr<Regex::CompiledMatcherPtr> matcher(const std::string &regex_pattern) const override {
+    return std::make_unique<CompiledStdMatcher>(regex_pattern);
   }
 };
 
