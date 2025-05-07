@@ -181,7 +181,7 @@ public:
       absl::string_view path_view = path.getStringView();
       path_view.remove_suffix(query_string.length());
       if (regex_->match(path_view)) {
-        ENVOY_LOG(debug, "Regex requirement '{}' matched.", regex_.pattern());
+        ENVOY_LOG(debug, "Regex requirement '{}' matched.", regex_->pattern());
         return true;
       }
     }
