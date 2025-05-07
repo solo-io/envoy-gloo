@@ -529,7 +529,19 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
     } else {
       absl::StrAppend(&path,
                       AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
-    }
+  }
+    } else if (provider == AiTransformerConstants::get().PROVIDER_BEDROCK) {
+          ASSERT(!model.empty(), "Bedrock: required model setting is missing!");
+          path = replaceModelInPath(
+                  lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
+          if (enable_chat_streaming_) {
+          absl::StrAppend(
+                    &path, AiTransformerConstants::get().BEDROCK_CONVERSE_STREAM
+          } else {
+            absl::StrAppend(&path,
+                                AiTransformerConstants::get().BEDROCK_CONVERSE);
+          }
+      }
 
     // Gemini doc is still using the `key` qs param but the Google GenAI sdk has
     // switched to use the `x-goog-api-key` header. Here is the reason we also
