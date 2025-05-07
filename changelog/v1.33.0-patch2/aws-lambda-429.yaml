@@ -1,8 +1,0 @@
-changelog:
-  - type: FIX
-    issueLink: https://github.com/solo-io/envoy-gloo/pull/407
-    resolvesIssue: true
-    description: >-
-      Provide better diagnostics in the AWS Lambda filter when the lambda
-      function is rate-limited. Status code will be set to 500 and the
-      `x-envoy-lambda-statuscode` header will be set to 429.
