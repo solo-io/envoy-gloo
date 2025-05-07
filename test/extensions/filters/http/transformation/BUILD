@@ -109,6 +109,20 @@ envoy_gloo_cc_test(
     ]
 )
 
+envoy_gloo_cc_test(
+    name = "ai_transformer_test",
+    srcs = ["ai_transformer_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "//source/extensions/filters/http/transformation:ai_transformer_lib",
+        "@com_google_absl//absl/strings",
+        "@envoy//test/mocks/http:http_mocks",
+        "@envoy//test/mocks/server:server_mocks",
+        "@envoy//test/mocks/upstream:upstream_mocks",
+        "@json//:json-lib",
+    ],
+)
+
 api_proto_package(
     visibility = ["//visibility:public"],
 )
