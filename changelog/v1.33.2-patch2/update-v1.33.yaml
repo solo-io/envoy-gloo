@@ -1,0 +1,29 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/envoy-gloo/pull/407
+    resolvesIssue: true
+    description: >-
+      Provide better diagnostics in the AWS Lambda filter when the lambda
+      function is rate-limited. Status code will be set to 500 and the
+      `x-envoy-lambda-statuscode` header will be set to 429.
+  - type: NON_USER_FACING
+    description: >-
+      Update vm runner image for CI wfs as ubuntu-20.04 will be EOL soon.
+  - type: NON_USER_FACING
+    issueLink: https://github.com/solo-io/solo-projects/issues/8008
+    description: >-
+      Moved the AI Transformation from inja template to C++. No user facing functional changes.
+  - type: DEPENDENCY_BUMP
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/887
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: 1.33.2
+    resolvesIssue: false
+    description: >-
+      Bumps Envoy to 1.33.2.
+      https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.33/v1.33.2
+  - type: FIX
+    issueLink: https://github.com/solo-io/solo-projects/issues/7787
+    resolvesIssue: false
+    description: >
+      Revert some upstream caching changes that break things
