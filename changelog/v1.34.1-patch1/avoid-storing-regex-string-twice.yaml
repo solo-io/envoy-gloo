@@ -1,0 +1,5 @@
+changelog:
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Avoid storing the regex string twice after upstrem CompiledMatcher interface changes

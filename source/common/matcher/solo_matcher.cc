@@ -171,7 +171,6 @@ public:
     regex_ = THROW_OR_RETURN_VALUE(
       Regex::Utility::parseRegex(match.safe_regex(), engine),
       Regex::CompiledMatcherPtr);
-    regex_str_ = match.safe_regex().regex();
   }
 
   bool matches(const Http::RequestHeaderMap &headers) const override {
@@ -182,7 +181,7 @@ public:
       absl::string_view path_view = path.getStringView();
       path_view.remove_suffix(query_string.length());
       if (regex_->match(path_view)) {
-        ENVOY_LOG(debug, "Regex requirement '{}' matched.", regex_str_);
+        ENVOY_LOG(debug, "Regex requirement '{}' matched.", regex_->pattern());
         return true;
       }
     }
@@ -191,8 +190,6 @@ public:
 
 private:
   Regex::CompiledMatcherPtr regex_;
-  // raw regex string, for logging.
-  std::string regex_str_;
 };
 
 } // namespace
