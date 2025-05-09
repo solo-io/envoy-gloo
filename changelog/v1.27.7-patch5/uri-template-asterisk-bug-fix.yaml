@@ -1,0 +1,6 @@
+changelog:
+- type: FIX
+  issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/934
+  resolvesIssue: false
+  description: >-
+    Manually patch CVE for asterisk in uri template match bug
