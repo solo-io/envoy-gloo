@@ -70,6 +70,8 @@ def envoy_gloo_dependencies():
     # passthrough and only need to be backported onto envoy v1.25.x
     # these should be removed when moving to v1.26.x since this code exists in
     # upstream at that point.
-    _repository_impl("envoy")
+    _repository_impl("envoy", patches=[
+        "@envoy_gloo//bazel/foreign_cc:0001-asterisk-url-template-match.patch",
+    ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
