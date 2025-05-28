@@ -227,6 +227,20 @@ class AiTransformerTest : public ::testing::Test {
       }
     )"
   };
+  const std::string BEDROCK_UPSTREAM_METADATA {
+    R"(
+      {
+        "filter_metadata": {
+        "io.solo.transformation": {
+          "json_schema": "bedrock",
+          "provider": "bedrock",
+          "model": "anthropic.claude-3-5-haiku-20241022-v1:0",
+          "base_path": "/model/{{model}}/"
+        }
+        }
+      }
+    )"
+  };
   class MockUpstreamStreamFilterCallbacks : public Http::UpstreamStreamFilterCallbacks {
   public:
     ~MockUpstreamStreamFilterCallbacks() override = default;
@@ -1061,6 +1075,67 @@ TEST_F(AiTransformerTest, VertexAIPromptEnrichmentTransformation) {
   )");
   EXPECT_EQ(expected_contents_json, parsed_body["contents"]) << "\nbody: " << body_.toString();
   EXPECT_EQ(expected_system_instruction_json, parsed_body["system_instruction"]) << "\nbody: " << body_.toString();
+}
+
+TEST_F(AiTransformerTest, BedrockPromptEnrichmentTransformation) {
+  auto aiTransformer = createAiTransformer(
+    AI_PROMPT_ENRICHMENT,
+    BEDROCK_UPSTREAM_METADATA
+  );
+
+  setBody(R"(
+  {
+    "messages": [
+      {"role":"user", "content":[{ "text": "Hello!"}]}
+    ]
+  }
+  )");
+
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  auto parsed_body = json::parse(body_.toString());
+  auto expected_system_json = json::parse(R"(
+  [
+    {"text": "you are a helpful assistant."},
+    {"text": "reply everything with programming analogy."},
+    {"text": "you are expert in assembly language."},
+    {"text": "reply in British accent."}
+  ]
+  )");
+  auto expected_contents_json = json::parse(R"(
+  [
+    {"role": "user", "content": [{"text": "my name is Bond."}] },
+    {"role": "user", "content": [{"text": "Hello!"}] },
+    {"role": "user", "content": [{"text": "I live in the US."}] }
+  ]
+  )");
+  EXPECT_EQ(expected_contents_json, parsed_body["messages"]) << "\nbody: " << body_.toString();
+  EXPECT_EQ(expected_system_json, parsed_body["system"]) << "\nbody: " << body_.toString();
+
+  // Test with existing system_instruction
+  setBody(R"(
+  {
+    "system": [
+      {"text": "You name is Bob."}
+    ],
+    "messages": [
+      {"role":"user", "content":[{ "text": "Hello!"}]}
+    ]
+  }
+  )");
+  headers_.clear();
+  aiTransformer->transform(headers_, &headers_, body_, filter_callbacks_);
+  parsed_body = json::parse(body_.toString());
+  expected_system_json = json::parse(R"(
+  [
+    {"text": "you are a helpful assistant."},
+    {"text": "reply everything with programming analogy."},
+    {"text": "You name is Bob."},
+    {"text": "you are expert in assembly language."},
+    {"text": "reply in British accent."}
+  ]
+  )");
+  EXPECT_EQ(expected_contents_json, parsed_body["messages"]) << "\nbody: " << body_.toString();
+  EXPECT_EQ(expected_system_json, parsed_body["system"]) << "\nbody: " << body_.toString();
 }
 
 } // namespace
