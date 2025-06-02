@@ -300,7 +300,7 @@ void addGeminiPrompts(const PromptEnrichment::Message &prompt,
                       json::array_t &contents, PromptAction action) {
   auto new_prompt = json::object();
   new_prompt["role"] = prompt.role();
-  // note that creatng the json::array like this:
+  // note that creating the json::array like this:
   // json::array({{"text", prompt.content()}});
   // will sometimes create an array inside the array instead of object inside
   // the array So, need to be explicit that its an object inside the array
@@ -312,6 +312,63 @@ void addGeminiPrompts(const PromptEnrichment::Message &prompt,
   } else {
     contents.push_back(std::move(new_prompt));
   }
+}
+
+/**
+ * @brief Helper function to add prompts for Bedrock. The prompt can exist in
+ * either the `messages` field for user prompt or the `system` field
+ * for system prompt but the format are different. The `system` field is an array
+ * but has no role for the object inside the array. The object can be a union of
+ * other object type but we are only use "text" string here:
+ * https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_SystemContentBlock.html
+ *
+ * If the `messages` field or the `system` field are missing, we will create it
+ *
+ * @param prompt
+ * @param json_body
+ * @param action
+ * @return true if prompts are added successfully or false otherwise
+ */
+bool addBedrockPrompts(const PromptEnrichment::Message &prompt,
+                      json &json_body, PromptAction action) {
+  if (prompt.role() == "system" || prompt.role() == "developer") {
+    if (!json_body.contains("system")) {
+      json_body["system"] = json::array({});
+    }
+    auto &system_prompts = json_body["system"];
+    if (!system_prompts.is_array()) {
+      return false;
+    }
+
+    auto new_prompt = json::object({{"text", prompt.content()}});
+    if (action == PromptAction::PREPEND) {
+      system_prompts.insert(system_prompts.begin(), std::move(new_prompt));
+    } else {
+      system_prompts.push_back(std::move(new_prompt));
+    }
+
+    return true;
+  }
+
+  // Assume all other roles as user prompts
+  if (!json_body.contains("messages")) {
+    json_body["messages"] = json::array({});
+  }
+  auto &messages = json_body["messages"];
+  if (!messages.is_array()) {
+    return false;
+  }
+  auto new_prompt = json::object();
+  new_prompt["role"] = prompt.role();
+  new_prompt["content"] =
+      json::array({json::object({{"text", prompt.content()}})});
+
+  if (action == PromptAction::PREPEND) {
+    messages.insert(messages.begin(), std::move(new_prompt));
+  } else {
+    messages.push_back(std::move(new_prompt));
+  }
+  return true;
 }
 
 /**
@@ -351,6 +408,8 @@ bool addPrompts(const std::string &schema, json &json_body,
       auto &contents = value.get_ref<json::array_t &>();
       addGeminiPrompts(prompt, contents, action);
     }
+  } else if (schema == AiTransformerConstants::get().SCHEMA_BEDROCK) {
+    return addBedrockPrompts(prompt, json_body, action);
   } else {
     if (!json_body.contains("messages")) {
       return false;
@@ -359,6 +418,8 @@ bool addPrompts(const std::string &schema, json &json_body,
     if (!messages.is_array()) {
       return false;
     }
+
+    // OpenAI
     auto new_prompt = json::object();
     new_prompt["role"] = prompt.role();
     new_prompt["content"] = prompt.content();
@@ -518,6 +579,7 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
     setProviderKeyHeader(request_headers,
                          AiTransformerConstants::get().AzureApiKeyHeader,
                          auth_token, in_auth_token_passthru_mode);
+
   } else if (provider == AiTransformerConstants::get().PROVIDER_GEMINI) {
     ASSERT(!model.empty(), "Gemini: required model setting is missing!");
     path = replaceModelInPath(
@@ -530,7 +592,6 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
       absl::StrAppend(&path,
                       AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
     }
-
     // Gemini doc is still using the `key` qs param but the Google GenAI sdk has
     // switched to use the `x-goog-api-key` header. Here is the reason we also
     // switch to the header:
@@ -543,6 +604,17 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
     setProviderKeyHeader(request_headers,
                          AiTransformerConstants::get().GeminiApiKeyHeader,
                          auth_token, in_auth_token_passthru_mode);
+
+  } else if (provider == AiTransformerConstants::get().PROVIDER_BEDROCK) {
+    ASSERT(!model.empty(), "Bedrock: required model setting is missing!");
+    path = replaceModelInPath(
+        lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
+    if (enable_chat_streaming_) {
+      absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE_STREAM);
+    } else {
+      absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE);
+    }
+
   } else if (provider == AiTransformerConstants::get().PROVIDER_VERTEXAI) {
     ASSERT(!model.empty(), "VertexAI: required model setting is missing!");
     path = replaceModelInPath(
