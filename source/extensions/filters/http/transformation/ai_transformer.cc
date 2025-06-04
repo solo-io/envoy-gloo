@@ -643,7 +643,12 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
     ENVOY_STREAM_LOG(debug, "path from regex: {}", callbacks, new_path);
 
     if (is_platform_api_request) {
-      path = std::move(new_path);
+      auto base_path = lookupEndpointMetadata(endpoint_metadata, "platform_api_base_path");
+      if (base_path.empty()) {
+        path = std::move(new_path);
+      } else {
+        path = absl::StrCat(base_path, new_path);
+      }
       in_bypass_mode = true;
     } else {
       if (!model.empty()) {
