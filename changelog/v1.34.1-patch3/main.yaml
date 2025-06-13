@@ -1,0 +1,6 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/solo-projects/issues/7291
+    resolvesIssue: false
+    description: >-
+      This patch fixed upstream issue: https://github.com/envoyproxy/envoy/issues/39587 which is needed by AI bedrock support
