@@ -4,7 +4,7 @@
 # Consuemd by edge to buld gateway-proxy and gloo pods
 # May be used as is or as a builder intermediate (e.g. for distroless)
 # ON_MINOR_UPDATE: Pull from https://github.com/envoyproxy/envoy/blob/4d46da0bba54dfb849d8bf68b600e53d87310a1a/ci/Dockerfile-envoy#L1-L2
-FROM ubuntu:focal
+FROM ubuntu:noble
 
 ENV loglevel=info
 
