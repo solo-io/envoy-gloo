@@ -607,14 +607,16 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
 
   } else if (provider == AiTransformerConstants::get().PROVIDER_BEDROCK) {
     ASSERT(!model.empty(), "Bedrock: required model setting is missing!");
-    path = replaceModelInPath(
-        lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
-    if (enable_chat_streaming_) {
-      absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE_STREAM);
-    } else {
-      absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE);
+    path = lookupEndpointMetadata(endpoint_metadata, "path");
+    if (path.empty()) {
+      path = replaceModelInPath(
+          lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
+      if (enable_chat_streaming_) {
+        absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE_STREAM);
+      } else {
+        absl::StrAppend(&path, AiTransformerConstants::get().BEDROCK_CONVERSE);
+      }
     }
-
   } else if (provider == AiTransformerConstants::get().PROVIDER_VERTEXAI) {
     ASSERT(!model.empty(), "VertexAI: required model setting is missing!");
     path = replaceModelInPath(
