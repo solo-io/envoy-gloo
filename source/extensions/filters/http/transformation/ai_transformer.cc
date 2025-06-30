@@ -581,16 +581,19 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
                          auth_token, in_auth_token_passthru_mode);
 
   } else if (provider == AiTransformerConstants::get().PROVIDER_GEMINI) {
-    ASSERT(!model.empty(), "Gemini: required model setting is missing!");
-    path = replaceModelInPath(
-        lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
-    if (enable_chat_streaming_) {
-      absl::StrAppend(
-          &path, AiTransformerConstants::get().GEMINI_STREAM_GENERATE_CONTENT,
-          "?", AiTransformerConstants::get().GEMINI_STREAM_QS_PARAM);
-    } else {
-      absl::StrAppend(&path,
-                      AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
+    path = lookupEndpointMetadata(endpoint_metadata, "path");
+    if (path.empty()) {
+      ASSERT(!model.empty(), "Gemini: required model setting is missing!");
+      path = replaceModelInPath(
+          lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
+      if (enable_chat_streaming_) {
+        absl::StrAppend(
+            &path, AiTransformerConstants::get().GEMINI_STREAM_GENERATE_CONTENT,
+            "?", AiTransformerConstants::get().GEMINI_STREAM_QS_PARAM);
+      } else {
+        absl::StrAppend(&path,
+                        AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
+      }
     }
     // Gemini doc is still using the `key` qs param but the Google GenAI sdk has
     // switched to use the `x-goog-api-key` header. Here is the reason we also
@@ -606,9 +609,9 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
                          auth_token, in_auth_token_passthru_mode);
 
   } else if (provider == AiTransformerConstants::get().PROVIDER_BEDROCK) {
-    ASSERT(!model.empty(), "Bedrock: required model setting is missing!");
     path = lookupEndpointMetadata(endpoint_metadata, "path");
     if (path.empty()) {
+      ASSERT(!model.empty(), "Bedrock: required model setting is missing!");
       path = replaceModelInPath(
           lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
       if (enable_chat_streaming_) {
@@ -618,22 +621,25 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
       }
     }
   } else if (provider == AiTransformerConstants::get().PROVIDER_VERTEXAI) {
-    ASSERT(!model.empty(), "VertexAI: required model setting is missing!");
-    path = replaceModelInPath(
-        lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
-    auto model_path = lookupEndpointMetadata(endpoint_metadata, "model_path");
-    if (model_path.empty()) {
-      if (enable_chat_streaming_) {
-        absl::StrAppend(
-            &path, AiTransformerConstants::get().GEMINI_STREAM_GENERATE_CONTENT,
-            "?", AiTransformerConstants::get().GEMINI_STREAM_QS_PARAM);
+    path = lookupEndpointMetadata(endpoint_metadata, "path");
+    if (path.empty()) {
+      ASSERT(!model.empty(), "VertexAI: required model setting is missing!");
+      path = replaceModelInPath(
+          lookupEndpointMetadata(endpoint_metadata, "base_path"), model);
+      auto model_path = lookupEndpointMetadata(endpoint_metadata, "model_path");
+      if (model_path.empty()) {
+        if (enable_chat_streaming_) {
+          absl::StrAppend(
+              &path, AiTransformerConstants::get().GEMINI_STREAM_GENERATE_CONTENT,
+              "?", AiTransformerConstants::get().GEMINI_STREAM_QS_PARAM);
+        } else {
+          absl::StrAppend(&path,
+                          AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
+        }
       } else {
-        absl::StrAppend(&path,
-                        AiTransformerConstants::get().GEMINI_GENERATE_CONTENT);
+        // Assuming model_path contains the correct qs params as well
+        absl::StrAppend(&path, model_path);
       }
-    } else {
-      // Assuming model_path contains the correct qs params as well
-      absl::StrAppend(&path, model_path);
     }
 
     setBearerAuthTokenHeader(request_headers, auth_token,
@@ -645,6 +651,8 @@ std::tuple<bool, bool> AiTransformer::transformHeaders(
     ENVOY_STREAM_LOG(debug, "path from regex: {}", callbacks, new_path);
 
     if (is_platform_api_request) {
+      // platform_api_base_path is set by the control plane when there is a
+      // Custom PathOverride with BasePath
       auto base_path = lookupEndpointMetadata(endpoint_metadata, "platform_api_base_path");
       if (base_path.empty()) {
         path = std::move(new_path);
