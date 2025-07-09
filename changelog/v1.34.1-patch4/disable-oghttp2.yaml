@@ -1,5 +1,5 @@
 changelog:
-  - type: NEW_FEATURE
+  - type: FIX
     issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/969
     resolvesIssue: false
     description: >-
