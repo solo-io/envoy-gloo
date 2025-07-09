@@ -1,0 +1,6 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/969
+    resolvesIssue: false
+    description: >-
+      Disable oghttp2 as the default http/2 implementation (in favour of nghttp2 instead).

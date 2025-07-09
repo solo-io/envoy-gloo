@@ -70,6 +70,10 @@ def envoy_gloo_dependencies():
         # revert upstream's cache filter from using a separate HttpAsyncClient
         "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
         "@envoy_gloo//bazel/foreign_cc:004-fixed-upstream-filter-disabled-by-default.patch",
+        # use nghttp2 as the default http/2 implementation over oghttp2. see
+        # the slack context in
+        # https://github.com/solo-io/envoy-gloo-ee/issues/969
+        "@envoy_gloo//bazel/foreign_cc:005-disable-oghttp2.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
