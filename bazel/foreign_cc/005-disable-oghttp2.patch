@@ -1,3 +1,15 @@
+diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
+index dc1b84b61a..6d2d9cace5 100644
+--- source/common/http/http2/codec_impl.cc
++++ source/common/http/http2/codec_impl.cc
+@@ -2205,6 +2205,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+   Http2Options h2_options(http2_options, max_request_headers_kb);
+ 
+   auto direct_visitor = std::make_unique<Http2Visitor>(this);
++  ENVOY_LOG(trace, "Are we using oghttp2? {}", use_oghttp2_library_);
+ 
+ #ifdef ENVOY_NGHTTP2
+   if (use_oghttp2_library_) {
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
 index 6f15486b80..a79fe415d6 100644
 --- source/common/runtime/runtime_features.cc
