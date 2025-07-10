@@ -95,8 +95,7 @@ public:
   AWSLambdaConfigImpl(AWSLambdaConfigImpl&&) = delete;
   AWSLambdaConfigImpl& operator=(AWSLambdaConfigImpl&&) = delete;
 
-  AWSLambdaConfigImpl(std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProviderChain>
-             &&provider,
+  AWSLambdaConfigImpl(Extensions::Common::Aws::CredentialsProviderChainSharedPtr &&provider,
          std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
          Event::Dispatcher &dispatcher, Api::Api &api,
          Envoy::ThreadLocal::SlotAllocator &tls,
@@ -154,7 +153,7 @@ private:
 
   Api::Api &api_;
 
-  std::unique_ptr<Envoy::Extensions::Common::Aws::CredentialsProviderChain>
+  Envoy::Extensions::Common::Aws::CredentialsProviderChainSharedPtr
       provider_;
 
   ThreadLocal::TypedSlot<ThreadLocalCredentials> tls_;

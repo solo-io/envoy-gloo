@@ -21,9 +21,9 @@ private:
 };
 
 TransformerPairConstSharedPtr matchTransform(Http::Matching::HttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher) {
-    auto match = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
-    if (match.result_) {
-      auto action = match.result_();
+    const Matcher::MatchResult match_result = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
+    if (match_result.isMatch()) {
+      const Matcher::ActionPtr action = match_result.action();
 
       // The only possible action that can be used within the route matching context
       // is the TransformationAction, so this must be true.
