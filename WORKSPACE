@@ -6,6 +6,11 @@ local_repository(
     path = "bazel/extensions",
 )
 
+local_repository(
+    name = "envoy",
+    path = "/workspaces/envoy"
+)
+
 load("//bazel:repositories.bzl", "envoy_gloo_dependencies")
 
 envoy_gloo_dependencies()
