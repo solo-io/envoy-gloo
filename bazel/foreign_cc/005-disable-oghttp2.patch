@@ -1,7 +1,7 @@
 diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
 index c03b77f372..4fb67e82ee 100644
---- a/source/common/http/http2/codec_impl.cc
-+++ b/source/common/http/http2/codec_impl.cc
+--- source/common/http/http2/codec_impl.cc
++++ source/common/http/http2/codec_impl.cc
 @@ -2221,6 +2221,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
 
@@ -12,8 +12,8 @@ index c03b77f372..4fb67e82ee 100644
    if (use_oghttp2_library_) {
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
 index c1af2c754a..9273bb9e06 100644
---- a/source/common/runtime/runtime_features.cc
-+++ b/source/common/runtime/runtime_features.cc
+--- source/common/runtime/runtime_features.cc
++++ source/common/runtime/runtime_features.cc
 @@ -53,7 +53,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
  RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_extension);
  RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
