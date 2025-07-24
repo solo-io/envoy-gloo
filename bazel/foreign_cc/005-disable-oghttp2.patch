@@ -1,32 +1,32 @@
 diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
-index dc1b84b61a..6d2d9cace5 100644
+index c03b77f372..4fb67e82ee 100644
 --- source/common/http/http2/codec_impl.cc
 +++ source/common/http/http2/codec_impl.cc
-@@ -2205,6 +2205,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+@@ -2221,6 +2221,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
- 
+
    auto direct_visitor = std::make_unique<Http2Visitor>(this);
 +  ENVOY_LOG(trace, "Are we using oghttp2? {}", use_oghttp2_library_);
- 
+
  #ifdef ENVOY_NGHTTP2
    if (use_oghttp2_library_) {
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
-index 6f15486b80..a79fe415d6 100644
+index c1af2c754a..9273bb9e06 100644
 --- source/common/runtime/runtime_features.cc
 +++ source/common/runtime/runtime_features.cc
-@@ -57,7 +57,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_use_balsa_parser);
+@@ -53,7 +53,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
+ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_extension);
  RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
- RUNTIME_GUARD(envoy_reloadable_features_http2_no_protocol_error_upon_clean_close);
  RUNTIME_GUARD(envoy_reloadable_features_http2_propagate_reset_events);
 -RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
  RUNTIME_GUARD(envoy_reloadable_features_http3_happy_eyeballs);
  RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_cookie);
  RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_trailers);
-@@ -122,6 +121,7 @@ RUNTIME_GUARD(envoy_restart_features_use_eds_cache_for_ads);
- FALSE_RUNTIME_GUARD(envoy_reloadable_features_test_feature_false);
- // TODO(adisuissa) reset to true to enable unified mux by default
- FALSE_RUNTIME_GUARD(envoy_reloadable_features_unified_mux);
+@@ -125,6 +124,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
+ #else
+ FALSE_RUNTIME_GUARD(envoy_reloadable_features_always_use_v6);
+ #endif
 +FALSE_RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
- // Used to track if runtime is initialized.
- FALSE_RUNTIME_GUARD(envoy_reloadable_features_runtime_initialized);
- // TODO(alyssawilk, renjietang) figure out what to do with this for optimal defaults
+ // TODO(vikaschoudhary16) flip this to true only after all the
+ // TcpProxy::Filter::HttpStreamDecoderFilterCallbacks are implemented or commented as unnecessary
+ FALSE_RUNTIME_GUARD(envoy_restart_features_upstream_http_filters_with_tcp_proxy);

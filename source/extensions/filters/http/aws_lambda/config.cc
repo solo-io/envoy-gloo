@@ -37,7 +37,7 @@ constexpr std::chrono::milliseconds REFRESH_AWS_CREDS =
 } // namespace
 
 AWSLambdaConfigImpl::AWSLambdaConfigImpl(
-    std::unique_ptr<Extensions::Common::Aws::CredentialsProviderChain> &&provider,
+    Extensions::Common::Aws::CredentialsProviderChainSharedPtr &&provider,
     std::unique_ptr<StsCredentialsProviderFactory> &&sts_factory,
     Event::Dispatcher &dispatcher, Api::Api &api,
     Envoy::ThreadLocal::SlotAllocator &tls, const std::string &stats_prefix,
