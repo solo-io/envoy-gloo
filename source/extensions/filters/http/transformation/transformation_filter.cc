@@ -39,6 +39,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
                                     bool end_stream) {
 
   request_headers_ = &header_map;
+  is_websocket_upgrade_request_ = Http::Utility::isWebSocketUpgradeRequest(header_map);
   setupTransformationPair();
   if (is_error()) {
     return Http::FilterHeadersStatus::StopIteration;
@@ -48,7 +49,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
     return Http::FilterHeadersStatus::Continue;
   }
 
-  if (end_stream || request_transformation_->passthrough_body()) {
+  if (end_stream || request_transformation_->passthrough_body() || is_websocket_upgrade_request_) {
     filter_config_->stats().request_header_transformations_.inc();
     transformRequest();
 
@@ -61,7 +62,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!requestActive()) {
+  if (!requestActive() || is_websocket_upgrade_request_) {
     return Http::FilterDataStatus::Continue;
   }
 
@@ -115,7 +116,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
     // responseActive() == false
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
-  if (end_stream || response_transformation_->passthrough_body()) {
+  if (end_stream || response_transformation_->passthrough_body() || is_websocket_upgrade_request_) {
     filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
@@ -126,7 +127,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!responseActive()) {
+  if (!responseActive() || is_websocket_upgrade_request_) {
     return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
