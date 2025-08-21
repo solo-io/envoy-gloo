@@ -104,10 +104,17 @@ std::string replaceModelInPath(std::string_view original_path,
  * @return const Regex::CompiledGoogleReMatcher&
  */
 const Regex::CompiledGoogleReMatcher &openAiPlatformApiRegex() {
+  // This list of OpenAI Platform API endpoints can be found here:
+  // https://platform.openai.com/docs/api-reference/ under the "Platform APIs" section
+  // These are endpoints that we don't apply any AI specific features to, so we go into
+  // "bypass mode" and we don't modify the URL or inject anything to the request/response
+  // body.
+  // Technically, the "realtime" API is not part of the Platform API but we are adding it
+  // here for convenience as the behavior is the same
   CONSTRUCT_ON_FIRST_USE(Regex::CompiledGoogleReMatcherNoSafetyChecks,
                          ".*(/v[0-9]+[a-z]*)(/"
                          "(audio|embeddings|fine_tuning|batches|files|uploads|"
-                         "images|models|moderations).*)");
+                         "images|models|moderations|realtime).*)");
 }
 
 /**

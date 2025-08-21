@@ -1,0 +1,6 @@
+changelog:
+  - type: NEW_FEATURE
+    issueLink: https://github.com/solo-io/solo-projects/issues/8530
+    resolvesIssue: false
+    description: >-
+      Support OpenAI realtime API and websocket passthrough in Transformation filter
