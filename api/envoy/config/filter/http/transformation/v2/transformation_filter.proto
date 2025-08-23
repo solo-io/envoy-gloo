@@ -36,6 +36,10 @@ message FilterTransformations {
   // If set to true, the filter will log the request/response body and headers before and
   // after any transformation is applied.
   bool log_request_response_info = 3;
+
+  // Automatically detect websocket upgrade request and pass through the request and response
+  // body without applying body transformations. Header transformations will still apply.
+  bool auto_websocket_passthrough = 5;
 }
 
 message TransformationRule {

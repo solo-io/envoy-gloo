@@ -48,9 +48,6 @@ public:
     return SoloHttpFilterNames::get().Transformation;
   }
 
-  bool logRequestResponseInfo() const {
-    return log_request_response_info_;
-  }
 protected:
 
   const std::vector<MatcherTransformerPair> &transformerPairs() const override {
@@ -64,8 +61,6 @@ private:
   // The list of transformer matchers.
   std::vector<MatcherTransformerPair> transformer_pairs_{};
   Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData> matcher_;
-
-  bool log_request_response_info_{};
 };
 
 class PerStageRouteTransformationFilterConfig : public TransformConfig {

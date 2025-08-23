@@ -120,7 +120,7 @@ private:
   std::string error_messgae_;
   bool should_clear_cache_{};
   bool destroyed_{};
-  bool is_websocket_upgrade_request_{false};
+  bool websocket_passthrough_{false};
 
   FilterConfigSharedPtr filter_config_;
 };
