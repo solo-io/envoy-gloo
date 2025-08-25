@@ -40,7 +40,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
 
   request_headers_ = &header_map;
   if (filter_config_->autoWebsocketPassthrough()) {
-    websocket_passthrough_ = Http::Utility::isWebSocketUpgradeRequest(header_map);
+    need_websocket_passthrough_ = Http::Utility::isWebSocketUpgradeRequest(header_map);
   }
   setupTransformationPair();
   if (is_error()) {
@@ -51,7 +51,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
     return Http::FilterHeadersStatus::Continue;
   }
 
-  if (end_stream || request_transformation_->passthrough_body() || websocket_passthrough_) {
+  if (end_stream || request_transformation_->passthrough_body() || need_websocket_passthrough_) {
     filter_config_->stats().request_header_transformations_.inc();
     transformRequest();
 
@@ -64,7 +64,7 @@ TransformationFilter::decodeHeaders(Http::RequestHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::decodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!requestActive() || websocket_passthrough_) {
+  if (!requestActive() || need_websocket_passthrough_) {
     return Http::FilterDataStatus::Continue;
   }
 
@@ -118,7 +118,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
     // responseActive() == false
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
   }
-  if (end_stream || response_transformation_->passthrough_body() || websocket_passthrough_) {
+  if (end_stream || response_transformation_->passthrough_body() || need_websocket_passthrough_) {
     filter_config_->stats().response_header_transformations_.inc();
     transformResponse();
     return destroyed_ ? Http::FilterHeadersStatus::StopIteration : Http::FilterHeadersStatus::Continue;
@@ -129,7 +129,7 @@ TransformationFilter::encodeHeaders(Http::ResponseHeaderMap &header_map,
 
 Http::FilterDataStatus TransformationFilter::encodeData(Buffer::Instance &data,
                                                         bool end_stream) {
-  if (!responseActive() || websocket_passthrough_) {
+  if (!responseActive() || need_websocket_passthrough_) {
     return destroyed_ ? Http::FilterDataStatus::StopIterationNoBuffer : Http::FilterDataStatus::Continue;
   }
 
