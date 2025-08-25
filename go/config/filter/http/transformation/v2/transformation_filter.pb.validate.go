@@ -134,6 +134,8 @@ func (m *FilterTransformations) validate(all bool) error {
 
 	// no validation rules for LogRequestResponseInfo
 
+	// no validation rules for AutoWebsocketPassthrough
+
 	if len(errors) > 0 {
 		return FilterTransformationsMultiError(errors)
 	}

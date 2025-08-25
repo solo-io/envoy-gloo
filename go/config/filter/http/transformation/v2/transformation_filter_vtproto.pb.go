@@ -52,6 +52,16 @@ func (m *FilterTransformations) MarshalToSizedBufferVTStrict(dAtA []byte) (int, 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.AutoWebsocketPassthrough {
+		i--
+		if m.AutoWebsocketPassthrough {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
 	if m.Matcher != nil {
 		if vtmsg, ok := interface{}(m.Matcher).(interface {
 			MarshalToSizedBufferVTStrict([]byte) (int, error)
@@ -1991,6 +2001,9 @@ func (m *FilterTransformations) SizeVT() (n int) {
 			l = proto.Size(m.Matcher)
 		}
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.AutoWebsocketPassthrough {
+		n += 2
 	}
 	n += len(m.unknownFields)
 	return n
