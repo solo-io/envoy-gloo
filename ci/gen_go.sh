@@ -11,6 +11,7 @@ read -r -a GO_PROTOS <<< "$(bazel query "${BAZEL_GLOBAL_OPTIONS[@]}" "kind('go_p
 bazel build "${BAZEL_BUILD_OPTIONS[@]}" \
         --experimental_proto_descriptor_sets_include_source_info \
         --remote_download_outputs=all \
+        --verbose_failures \
         "${GO_PROTOS[@]}"
 rm -rf build_go
 mkdir -p build_go
