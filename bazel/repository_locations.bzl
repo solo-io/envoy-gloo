@@ -3,7 +3,7 @@ REPOSITORY_LOCATIONS = dict(
     # order to accommodate `check_extensions_build_config.sh`
     envoy = dict(
         # envoy v1.33.4.5
-        commit = "8c9f3ce48ae40d437d7f24f61e911cf0b6ebae4c",
+        commit = "c0c45100792170050adef383d8697ab4efc2d34f",
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
