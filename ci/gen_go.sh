@@ -9,7 +9,6 @@ GO_IMPORT_BASE="github.com/envoyproxy/go-control-plane/api/envoy"
 GO_TARGETS=(//api/envoy/...)
 read -r -a GO_PROTOS <<< "$(bazel query "${BAZEL_GLOBAL_OPTIONS[@]}" "kind('go_proto_library', ${GO_TARGETS[*]})" | tr '\n' ' ')"
 bazel build "${BAZEL_BUILD_OPTIONS[@]}" \
-        --experimental_proto_descriptor_sets_include_source_info \
         --remote_download_outputs=all \
         "${GO_PROTOS[@]}"
 rm -rf build_go
