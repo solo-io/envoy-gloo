@@ -1,0 +1,26 @@
+From 8f6777969f5ecfeede0098b576837cdcf71caaa6 Mon Sep 17 00:00:00 2001
+From: Andy Fong <andy.fong@solo.io>
+Date: Thu, 28 Aug 2025 10:24:01 -0400
+Subject: [PATCH] deps-upgrading-go-to-v1-24-6-in-dependency-imports-bzl-40860-
+
+Signed-off-by: Andy Fong <andy.fong@solo.io>
+---
+ bazel/dependency_imports.bzl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git bazel/dependency_imports.bzl bazel/dependency_imports.bzl
+index c68eb4bf3e..2f564158b3 100644
+--- bazel/dependency_imports.bzl
++++ bazel/dependency_imports.bzl
+@@ -20,7 +20,7 @@ load("@rules_rust//rust:defs.bzl", "rust_common")
+ load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains", "rust_repository_set")
+ 
+ # go version for rules_go
+-GO_VERSION = "1.23.1"
++GO_VERSION = "1.24.6"
+ 
+ JQ_VERSION = "1.7"
+ YQ_VERSION = "4.24.4"
+-- 
+2.50.1
+
