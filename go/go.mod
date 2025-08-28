@@ -1,6 +1,6 @@
 module github.com/solo-io/envoy-gloo/go
 
-go 1.23.1
+go 1.24.6
 
 require (
 	github.com/cncf/xds/go v0.0.0-20241223141626-cff3c89139a3
