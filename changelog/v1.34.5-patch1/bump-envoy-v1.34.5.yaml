@@ -1,0 +1,15 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: v1.34.5
+    resolvesIssue: false
+    description: >-
+      Bumps Envoy to v1.34.5
+      https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.34/v1.34.5
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: golang
+    dependencyRepo: go
+    dependencyTag: v1.24.6
+    description: >-
+      Bumps Go version to 1.24.6
