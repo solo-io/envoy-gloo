@@ -39,7 +39,8 @@ TransformationFilterConfig::TransformationFilterConfig(
     const TransformationConfigProto &proto_config, const std::string &prefix,
     Server::Configuration::ServerFactoryContext &context)
     : FilterConfig(prefix, context.scope(), proto_config.stage(),
-                   proto_config.log_request_response_info()) {
+                   proto_config.log_request_response_info(),
+                   proto_config.auto_websocket_passthrough()) {
     if (proto_config.has_matcher()) {
       matcher_ = createTransformationMatcher(proto_config.matcher(), context);
       return;
