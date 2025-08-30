@@ -784,6 +784,63 @@ TEST_F(TransformationFilterTest, EncodeStopIterationOnFilterDestroy) {
 
 }
 
+TEST_F(TransformationFilterTest, AutoWebsocketPassthrough) {
+  listener_config_.set_auto_websocket_passthrough(true);
+  envoy::api::v2::filter::http::InjaTemplate header_value;
+  header_value.set_text("bar");
+  (*route_config_.mutable_response_transformation()
+        ->mutable_transformation_template()
+        ->mutable_headers())["foo"] = header_value;
+  initFilterWithHeadersBody(TransformationFilterTest::ConfigType::Both);
+
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/ws-endpoint"},
+                                                 {"upgrade", "websocket"},
+                                                 {"connection", "Upgrade"},
+                                                 {"sec-webSocket-key", "dGhlIHNhbXBsZSBub25jZQ=="},
+                                                 {"sec-webSocket-version", "13"},
+                                                 {"sec-webSocket-protocol", "chat, superchat"},
+                                                 {"origin", "https://www.solo.io"}};
+
+  Http::TestResponseHeaderMapImpl response_headers{{":status", "101"},
+                                                   {"upgrade", "websocket"},
+                                                   {"connection", "Upgrade"},
+                                                   {"sec-webSocket-accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="},
+                                                   {"sec-webSocket-protocol", "chat"}};
+  // On websocket request, we don't buffer, so we should get Continue in all
+  // the encode/decodeHeader and encode/decodeData even end_stream is false
+  auto headerResult = filter_->decodeHeaders(request_headers, false);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, headerResult);
+
+  Buffer::OwnedImpl dummy{};
+  auto dataResult = filter_->decodeData(dummy, false);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, dataResult);
+
+  headerResult = filter_->encodeHeaders(response_headers, false);
+  EXPECT_EQ(Http::FilterHeadersStatus::Continue, headerResult);
+
+  dataResult = filter_->encodeData(dummy, false);
+  EXPECT_EQ(Http::FilterDataStatus::Continue, dataResult);
+
+  // for non-websocket request, even to the same end point, we should buffer by default
+  request_headers.remove("upgrade");
+
+  headerResult = filter_->decodeHeaders(request_headers, false);
+  EXPECT_NE(Http::FilterHeadersStatus::Continue, headerResult);
+
+  dataResult = filter_->decodeData(dummy, false);
+  EXPECT_NE(Http::FilterDataStatus::Continue, dataResult);
+
+  // even the response_headers here is 101 but it doesn't matter, the websocket 
+  // detection is base on the request header only. 
+  headerResult = filter_->encodeHeaders(response_headers, false);
+  EXPECT_NE(Http::FilterHeadersStatus::Continue, headerResult);
+
+  dataResult = filter_->encodeData(dummy, false);
+  EXPECT_NE(Http::FilterDataStatus::Continue, dataResult);
+}
+
 struct MockLogSink : Envoy::Logger::SinkDelegate {
   MockLogSink(Logger::DelegatingLogSinkSharedPtr log_sink) : SinkDelegate(log_sink) { setDelegate(); }
   ~MockLogSink() override { restoreDelegate(); }
