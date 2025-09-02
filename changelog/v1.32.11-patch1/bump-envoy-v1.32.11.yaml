@@ -1,6 +1,6 @@
 changelog:
   - type: DEPENDENCY_BUMP
-    issueLink: https://github.com/solo-io/envoy-gloo/issues/<CHANGEME>
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/982
     dependencyOwner: envoyproxy
     dependencyRepo: envoy
     dependencyTag: v1.32.11
