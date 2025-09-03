@@ -73,7 +73,6 @@ def envoy_gloo_dependencies():
         # see
         # https://github.com/solo-io/solo-projects/issues/8160#issuecomment-2805380240
         "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
-        "@envoy_gloo//bazel/foreign_cc:003-upgrading-go-version.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
