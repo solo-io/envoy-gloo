@@ -1,0 +1,6 @@
+changelog:
+  - type: NON_USER_FACING
+    issueLink: https://github.com/solo-io/solo-projects/issues/8530
+    resolvesIssue: false
+    description: >-
+      Added unit and integration tests for the transformation auto websocket passthrough feature

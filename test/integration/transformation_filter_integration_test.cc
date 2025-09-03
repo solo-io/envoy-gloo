@@ -165,8 +165,7 @@ public:
   void initialize() override {
 
     const std::string default_filter =
-        loadListenerConfig(filter_transformation_string_, matcher_string_);
-      
+        loadListenerConfig(filter_transformation_string_, matcher_string_, auto_websocket_passthrough_);
     setUpstreamProtocol(Http::CodecType::HTTP1);
     config_helper_.prependFilter(default_filter, downstream_filter_);
 
@@ -196,6 +195,12 @@ public:
           });
     }
 
+    config_helper_.addConfigModifier(
+      [](envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager& hcm) {
+        hcm.add_upgrade_configs()->set_upgrade_type("websocket");
+      }
+    );
+
     HttpIntegrationTest::initialize();
 
     codec_client_ =
@@ -216,14 +221,31 @@ public:
     ASSERT_TRUE(response->waitForEndStream());
   }
 
+  void processWebsocketRequest(IntegrationStreamDecoderPtr &response) {
+    ASSERT_TRUE(fake_upstreams_[0]->waitForHttpConnection(*dispatcher_, fake_upstream_connection_));
+    ASSERT_TRUE(fake_upstream_connection_->waitForNewStream(*dispatcher_, upstream_request_));
+    ASSERT_TRUE(upstream_request_->waitForHeadersComplete());
+    upstream_request_->encodeHeaders(
+        Http::TestRequestHeaderMapImpl{{":status", "101"},
+                                       {"upgrade", "websocket"},
+                                       {"connection", "Upgrade"},
+                                       {"sec-webSocket-accept", "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="},
+                                       {"sec-webSocket-protocol", "chat"}},
+        false);
+
+    response->waitForHeaders();
+  }
+
   std::string transformation_string_{DEFAULT_TRANSFORMATION};
   std::string filter_transformation_string_{DEFAULT_FILTER_TRANSFORMATION};
   std::string matcher_string_{DEFAULT_MATCHER};
   bool downstream_filter_{true};
+  bool auto_websocket_passthrough_{false};
 
 private:
   std::string loadListenerConfig(const std::string &transformation_config_str,
-                                 const std::string &matcher_str) {
+                                 const std::string &matcher_str,
+                                 bool auto_websocket_passthrough) {
 
     envoy::api::v2::filter::http::TransformationRule transformation_rule;
     envoy::api::v2::filter::http::TransformationRule_Transformations
@@ -239,6 +261,10 @@ private:
 
     envoy::api::v2::filter::http::FilterTransformations filter_config;
     *filter_config.mutable_transformations()->Add() = transformation_rule;
+
+    if (auto_websocket_passthrough) {
+      filter_config.set_auto_websocket_passthrough(auto_websocket_passthrough);
+    }
 
     HttpFilter filter;
     filter.set_name(
@@ -832,5 +858,31 @@ TEST_P(TransformationFilterIntegrationTest, EscapeCharactersTransformRawStringCa
   auto actual_response_body = json::parse(response->body());
   auto expected_response_body = R"({"Bar":"\\\"baz\\\""})"_json;
   EXPECT_EQ(expected_response_body, actual_response_body);
+}
+
+TEST_P(TransformationFilterIntegrationTest, AutoWebsocketPassthrough) {
+  auto_websocket_passthrough_ = true;
+  initialize();
+  Http::TestRequestHeaderMapImpl request_headers{{":method", "GET"},
+                                                 {":authority", "www.solo.io"},
+                                                 {":path", "/ws-endpoint"},
+                                                 {":scheme", "http"},
+                                                 {"upgrade", "websocket"},
+                                                 {"connection", "Upgrade"},
+                                                 {"sec-webSocket-key", "dGhlIHNhbXBsZSBub25jZQ=="},
+                                                 {"sec-webSocket-version", "13"},
+                                                 {"sec-webSocket-protocol", "chat, superchat"},
+                                                 {"origin", "https://www.solo.io"}};
+
+  // auto response = codec_client_->makeHeaderOnlyRequest(request_headers);
+  auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+  auto response = std::move(encoder_decoder.second);
+
+  processWebsocketRequest(response);
+  
+  // This test mainly test if the request just hang if auto_websocket_passthrough_ is not enabled
+  EXPECT_EQ("101", response->headers().getStatusValue());
+  codec_client_->close();
 }
 } // namespace Envoy
