@@ -7,4 +7,4 @@ changelog:
     resolvesIssue: false
     description: >-
       Bumps Envoy to v1.33.8
-      https://www.envoyproxy.io/docs/envoy/latest/version_history/v1.33/v1.33.8
+      https://www.envoyproxy.io/docs/envoy/v1.33.8/version_history/v1.33/v1.33.8
