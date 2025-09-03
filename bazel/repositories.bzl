@@ -73,7 +73,6 @@ def envoy_gloo_dependencies():
         # the slack context in
         # https://github.com/solo-io/envoy-gloo-ee/issues/969
         "@envoy_gloo//bazel/foreign_cc:005-disable-oghttp2.patch",
-        "@envoy_gloo//bazel/foreign_cc:006-upgrading-go-version.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
