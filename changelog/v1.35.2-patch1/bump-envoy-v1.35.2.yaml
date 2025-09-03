@@ -1,0 +1,10 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    issueLink: https://github.com/solo-io/envoy-gloo/issues/<CHANGEME>
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: v1.35.2
+    resolvesIssue: false
+    description: >-
+      Bumps Envoy to v1.35.2
+      https://www.envoyproxy.io/docs/envoy/v1.35.2/version_history/v1.35/v1.35.2
