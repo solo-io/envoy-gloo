@@ -195,11 +195,11 @@ public:
           });
     }
 
-//    if (auto_websocket_passthrough_) {
-      config_helper_.addConfigModifier(
-        [](envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager&
-                hcm) { hcm.add_upgrade_configs()->set_upgrade_type("websocket"); });
-//    }
+    config_helper_.addConfigModifier(
+      [](envoy::extensions::filters::network::http_connection_manager::v3::HttpConnectionManager& hcm) {
+        hcm.add_upgrade_configs()->set_upgrade_type("websocket");
+      }
+    );
 
     HttpIntegrationTest::initialize();
 
