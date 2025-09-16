@@ -295,26 +295,26 @@ json TransformerInstance::cluster_metadata_callback_deprecated(const inja::Argum
         return "";
       }
 
-      const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
+      const Protobuf::Value &value = Envoy::Config::Metadata::metadataValue(
           ctx.cluster_metadata_, SoloHttpFilterNames::get().Transformation, key);
 
       switch (value.kind_case()) {
-      case ProtobufWkt::Value::kStringValue: {
+      case Protobuf::Value::kStringValue: {
         return value.string_value();
         break;
       }
-      case ProtobufWkt::Value::kNumberValue: {
+      case Protobuf::Value::kNumberValue: {
         return value.number_value();
         break;
       }
-      case ProtobufWkt::Value::kBoolValue: {
+      case Protobuf::Value::kBoolValue: {
         const std::string &stringval = value.bool_value()
                                           ? BoolHeader::get().trueString
                                           : BoolHeader::get().falseString;
         return stringval;
         break;
       }
-      case ProtobufWkt::Value::kListValue: {
+      case Protobuf::Value::kListValue: {
         const auto &listval = value.list_value().values();
         if (listval.size() == 0) {
           break;
@@ -325,18 +325,18 @@ json TransformerInstance::cluster_metadata_callback_deprecated(const inja::Argum
         std::stringstream ss;
 
         auto addValue = [&ss, &it] {
-          const ProtobufWkt::Value &value = *it;
+          const Protobuf::Value &value = *it;
 
           switch (value.kind_case()) {
-          case ProtobufWkt::Value::kStringValue: {
+          case Protobuf::Value::kStringValue: {
             ss << value.string_value();
             break;
           }
-          case ProtobufWkt::Value::kNumberValue: {
+          case Protobuf::Value::kNumberValue: {
             ss << value.number_value();
             break;
           }
-          case ProtobufWkt::Value::kBoolValue: {
+          case Protobuf::Value::kBoolValue: {
             ss << (value.bool_value() ? BoolHeader::get().trueString
                                       : BoolHeader::get().falseString);
             break;
@@ -467,32 +467,32 @@ json TransformerInstance::parse_metadata(const envoy::config::core::v3::Metadata
   const std::string &filter = args.size() > 1 ? args.at(1)->get_ref<const std::string &>() : SoloHttpFilterNames::get().Transformation;
 
   std::vector<std::string> elements = absl::StrSplit(key, delimiter);
-  const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
+  const Protobuf::Value &value = Envoy::Config::Metadata::metadataValue(
       metadata, filter, elements);
 
   switch (value.kind_case()) {
-  case ProtobufWkt::Value::kStringValue: {
+  case Protobuf::Value::kStringValue: {
     return value.string_value();
     break;
   }
-  case ProtobufWkt::Value::kNumberValue: {
+  case Protobuf::Value::kNumberValue: {
     return value.number_value();
     break;
   }
-  case ProtobufWkt::Value::kBoolValue: {
+  case Protobuf::Value::kBoolValue: {
     const std::string &stringval = value.bool_value()
                                        ? BoolHeader::get().trueString
                                        : BoolHeader::get().falseString;
     return stringval;
     break;
   }
-  case ProtobufWkt::Value::kStructValue: {
+  case Protobuf::Value::kStructValue: {
     std::string output;
     auto status = ProtobufUtil::MessageToJsonString(value.struct_value(), &output);
     return output;
     break;
   }
-  case ProtobufWkt::Value::kListValue: {
+  case Protobuf::Value::kListValue: {
     std::string output;
     auto status = ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
@@ -1060,21 +1060,21 @@ void InjaTransformer::transform(Http::RequestOrResponseHeaderMap &header_map,
     if (!output.empty()) {
       if (templated_dynamic_metadata.parse_json_) {
         // Need to check if number
-        ProtobufWkt::Value value_obj;
+        Protobuf::Value value_obj;
         auto status = ProtobufUtil::JsonStringToMessage(output, &value_obj);
         if (status.ok()) {
-          ProtobufWkt::Struct struct_obj;
+          Protobuf::Struct struct_obj;
           (*struct_obj.mutable_fields())[templated_dynamic_metadata.key_] = value_obj;
           callbacks.streamInfo().setDynamicMetadata(
               templated_dynamic_metadata.namespace_, struct_obj);
         } else {
-          ProtobufWkt::Struct strct(
+          Protobuf::Struct strct(
               MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
           callbacks.streamInfo().setDynamicMetadata(
               templated_dynamic_metadata.namespace_, strct);
         }
       } else {
-        ProtobufWkt::Struct strct(
+        Protobuf::Struct strct(
             MessageUtil::keyValueStruct(templated_dynamic_metadata.key_, output));
         callbacks.streamInfo().setDynamicMetadata(
             templated_dynamic_metadata.namespace_, strct);

@@ -859,7 +859,7 @@ TEST_F(InjaTransformerTest, UseDefaultNS) {
               setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
       .Times(1)
       .WillOnce(
-          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+          Invoke([](const std::string &, const Protobuf::Struct &value) {
             auto field = value.fields().at("foo");
             EXPECT_EQ(field.string_value(), "1");
           }));
@@ -886,7 +886,7 @@ TEST_F(InjaTransformerTest, UseDefaultNSStructureData) {
               setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
       .Times(1)
       .WillOnce(
-          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+          Invoke([](const std::string &, const Protobuf::Struct &value) {
             auto field = value.fields().at("foo");
             EXPECT_EQ(field.has_list_value(), true);
           }));
@@ -914,7 +914,7 @@ TEST_F(InjaTransformerTest, UseCustomNS) {
               setDynamicMetadata("foo.ns", _))
       .Times(1)
       .WillOnce(
-          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+          Invoke([](const std::string &, const Protobuf::Struct &value) {
             auto field = value.fields().at("foo");
             EXPECT_EQ(field.number_value(), 123);
           }));
@@ -1135,7 +1135,7 @@ TEST_F(InjaTransformerTest, WordCountJSON) {
               setDynamicMetadata(SoloHttpFilterNames::get().Transformation, _))
       .Times(1)
       .WillOnce(
-          Invoke([](const std::string &, const ProtobufWkt::Struct &value) {
+          Invoke([](const std::string &, const Protobuf::Struct &value) {
             auto field = value.fields().at("foo");
             EXPECT_EQ(field.string_value(), "12");
           }));
@@ -1335,7 +1335,7 @@ TEST_F(InjaTransformerTest, ParseFromDynamicMetadata) {
   InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  ProtobufWkt::Struct struct_obj;
+  Protobuf::Struct struct_obj;
   auto status = ProtobufUtil::JsonStringToMessage(NESTED_KEY, &struct_obj);
   envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert(
@@ -1369,7 +1369,7 @@ TEST_F(InjaTransformerTest, ParseFromDynamicMetadataList) {
   InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  ProtobufWkt::Struct struct_obj;
+  Protobuf::Struct struct_obj;
   auto status = ProtobufUtil::JsonStringToMessage(NESTED_LIST, &struct_obj);
   envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert(
@@ -1401,7 +1401,7 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadataList) {
   InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  ProtobufWkt::Struct struct_obj;
+  Protobuf::Struct struct_obj;
   auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
   envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert(
@@ -1423,7 +1423,7 @@ TEST_F(InjaTransformerTest, ParseFromClusterMetadataListDeprecated) {
   InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
 
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  ProtobufWkt::Struct struct_obj;
+  Protobuf::Struct struct_obj;
   auto status = ProtobufUtil::JsonStringToMessage(INVALID_MATCHER, &struct_obj);
   envoy::config::core::v3::Metadata meta;
   meta.mutable_filter_metadata()->insert(

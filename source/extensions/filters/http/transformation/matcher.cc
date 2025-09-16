@@ -23,12 +23,12 @@ private:
 TransformerPairConstSharedPtr matchTransform(Http::Matching::HttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher) {
     const Matcher::MatchResult match_result = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
     if (match_result.isMatch()) {
-      const Matcher::ActionPtr action = match_result.action();
+      const auto action = match_result.action();
 
       // The only possible action that can be used within the route matching context
       // is the TransformationAction, so this must be true.
       ASSERT(action->typeUrl() == TransformationAction::staticTypeUrl());
-      ASSERT(dynamic_cast<TransformationAction*>(action.get()));
+      ASSERT(dynamic_cast<const TransformationAction*>(action.get()));
       const TransformationAction& transformation_action = static_cast<const TransformationAction&>(*action);
 
       return transformation_action.transformations();
@@ -42,8 +42,8 @@ struct TransformationContext {
 
 class ActionFactory : public Envoy::Matcher::ActionFactory<TransformationContext> {
 public:
-  Envoy::Matcher::ActionFactoryCb
-  createActionFactoryCb(const Protobuf::Message& config, TransformationContext& context,
+  Envoy::Matcher::ActionConstSharedPtr
+  createAction(const Protobuf::Message& config, TransformationContext& context,
                         ProtobufMessage::ValidationVisitor& validation_visitor) override;
   std::string name() const override { return "envoy.filters.transformation.action"; }
   ProtobufTypes::MessagePtr createEmptyConfigProto() override {
@@ -51,15 +51,15 @@ public:
   }
 };
 
-Envoy::Matcher::ActionFactoryCb
-ActionFactory::createActionFactoryCb(const Protobuf::Message& config, TransformationContext& context,
-                                     ProtobufMessage::ValidationVisitor& validation_visitor) {
+Envoy::Matcher::ActionConstSharedPtr
+ActionFactory::createAction(const Protobuf::Message& config, TransformationContext& context,
+                            ProtobufMessage::ValidationVisitor& validation_visitor) {
   const auto& action_config =
       MessageUtil::downcastAndValidate<const envoy::api::v2::filter::http::TransformationRule_Transformations&>(config,
                                                                                validation_visitor);
-TransformerPairConstSharedPtr transformations = createTransformations(action_config, context.factory_context);
+  TransformerPairConstSharedPtr transformations = createTransformations(action_config, context.factory_context);
 
-  return [transformations]() { return std::make_unique<TransformationAction>(transformations); };
+  return std::make_shared<TransformationAction>(std::move(transformations));
 }
 
 REGISTER_FACTORY(ActionFactory, Envoy::Matcher::ActionFactory<TransformationContext>);

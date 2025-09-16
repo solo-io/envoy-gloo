@@ -208,7 +208,7 @@ void AWSLambdaFilter::finalizeResponse(){
 bool AWSLambdaFilter::parseResponseAsALB(Http::ResponseHeaderMap& headers,
                 const Buffer::Instance& json_buf, Buffer::Instance& body) {
 
-  ProtobufWkt::Struct alb_response;
+  Protobuf::Struct alb_response;
   try {
     MessageUtil::loadFromJson(json_buf.toString(), alb_response);
   } catch (EnvoyException& ex) {

@@ -153,7 +153,7 @@ typed_config:
         protoextconfig.set_secret_key("secret key");
         protoextconfig.set_session_token("session token");
       }
-      ProtobufWkt::Struct functionstruct;
+      Protobuf::Struct functionstruct;
 
       auto &lambda_cluster =
           (*bootstrap.mutable_static_resources()->mutable_clusters(0));
