@@ -44,37 +44,37 @@ std::string lookupEndpointMetadata(
   }
 
   std::vector<std::string> elements = absl::StrSplit(key, delimiter);
-  const Protobuf::Value &value = Envoy::Config::Metadata::metadataValue(
+  const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
       endpoint_metadata.get(),
       Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation,
       elements);
 
   switch (value.kind_case()) {
-  case Protobuf::Value::kStringValue: {
+  case ProtobufWkt::Value::kStringValue: {
     return value.string_value();
   }
-  case Protobuf::Value::kNumberValue: {
+  case ProtobufWkt::Value::kNumberValue: {
     return std::to_string(value.number_value());
   }
-  case Protobuf::Value::kBoolValue: {
+  case ProtobufWkt::Value::kBoolValue: {
     const std::string &stringval =
         value.bool_value() ? trueString : falseString;
     return stringval;
   }
-  case Protobuf::Value::kStructValue: {
+  case ProtobufWkt::Value::kStructValue: {
     std::string output;
     auto status =
         ProtobufUtil::MessageToJsonString(value.struct_value(), &output);
     return output;
   }
-  case Protobuf::Value::kListValue: {
+  case ProtobufWkt::Value::kListValue: {
     std::string output;
     auto status =
         ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
   }
-  case Protobuf::Value::KIND_NOT_SET:
-  case Protobuf::Value::kNullValue:
+  case ProtobufWkt::Value::KIND_NOT_SET:
+  case ProtobufWkt::Value::kNullValue:
     return "";
   }
 
@@ -111,8 +111,8 @@ const Regex::CompiledGoogleReMatcher &openAiPlatformApiRegex() {
   // body.
   // Technically, the "realtime" API is not part of the Platform API but we are adding it
   // here for convenience as the behavior is the same
-  // "responses" and "conversations" API are not part of the Platform API neither but
-  // we will support that in passthrough mode as well.
+  // "responses" and "conversations" API are not part of the Platform API neither but from
+  // a T-mobile ask, we will support that in passthrough mode as well.
   CONSTRUCT_ON_FIRST_USE(Regex::CompiledGoogleReMatcherNoSafetyChecks,
                          ".*(/v[0-9]+[a-z]*)(/"
                          "(audio|embeddings|fine_tuning|batches|files|uploads|"
@@ -256,39 +256,39 @@ void setProviderKeyHeader(Http::RequestHeaderMap *request_headers,
  * @param pb_value
  * @return json
  */
-json protobufValueToJson(const Protobuf::Value &pb_value) {
+json protobufValueToJson(const ProtobufWkt::Value &pb_value) {
   switch (pb_value.kind_case()) {
-  case Protobuf::Value::kNullValue:
+  case ProtobufWkt::Value::kNullValue:
     return json(nullptr); // JSON null
 
-  case Protobuf::Value::kBoolValue:
+  case ProtobufWkt::Value::kBoolValue:
     return json(pb_value.bool_value()); // JSON boolean
 
-  case Protobuf::Value::kNumberValue:
+  case ProtobufWkt::Value::kNumberValue:
     return json(pb_value.number_value()); // JSON number (double)
 
-  case Protobuf::Value::kStringValue:
+  case ProtobufWkt::Value::kStringValue:
     return json(pb_value.string_value()); // JSON string
 
-  case Protobuf::Value::kStructValue: {
+  case ProtobufWkt::Value::kStructValue: {
     json obj = json::object(); // JSON object
-    const Protobuf::Struct &pb_struct = pb_value.struct_value();
+    const ProtobufWkt::Struct &pb_struct = pb_value.struct_value();
     for (const auto &field : pb_struct.fields()) {
       obj[field.first] = protobufValueToJson(field.second);
     }
     return obj;
   }
 
-  case Protobuf::Value::kListValue: {
+  case ProtobufWkt::Value::kListValue: {
     json arr = json::array(); // JSON array
-    const Protobuf::ListValue &pb_list = pb_value.list_value();
+    const ProtobufWkt::ListValue &pb_list = pb_value.list_value();
     for (const auto &item : pb_list.values()) {
       arr.push_back(protobufValueToJson(item));
     }
     return arr;
   }
 
-  case Protobuf::Value::KIND_NOT_SET:
+  case ProtobufWkt::Value::KIND_NOT_SET:
   default:
     return json(nullptr); // Default to null if kind is not set
   }
