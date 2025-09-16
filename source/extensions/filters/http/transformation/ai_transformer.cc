@@ -111,10 +111,12 @@ const Regex::CompiledGoogleReMatcher &openAiPlatformApiRegex() {
   // body.
   // Technically, the "realtime" API is not part of the Platform API but we are adding it
   // here for convenience as the behavior is the same
+  // "responses" and "conversations" API are not part of the Platform API neither but
+  // we will support that in passthrough mode as well.
   CONSTRUCT_ON_FIRST_USE(Regex::CompiledGoogleReMatcherNoSafetyChecks,
                          ".*(/v[0-9]+[a-z]*)(/"
                          "(audio|embeddings|fine_tuning|batches|files|uploads|"
-                         "images|models|moderations|realtime).*)");
+                         "images|models|moderations|realtime|responses|conversations).*)");
 }
 
 /**
