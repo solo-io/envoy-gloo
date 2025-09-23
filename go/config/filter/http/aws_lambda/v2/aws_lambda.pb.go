@@ -7,14 +7,15 @@
 package v2
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -346,7 +347,7 @@ type AWSLambdaConfig_UseDefaultCredentials struct {
 }
 
 type AWSLambdaConfig_ServiceAccountCredentials_ struct {
-	// Use projected service account token, and role arn to create reate temporary
+	// Use projected service account token, and role arn to create temporary
 	// credentials with which to authenticate lambda requests.
 	// This functionality is meant to work alongside EKS service account to IAM
 	// binding functionality as described in the [AWS docs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html).
