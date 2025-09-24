@@ -305,12 +305,20 @@ void AWSLambdaFilter::onSuccess(
 
   if (stopped_) {
     if (end_stream_) {
-      // edge case where header only request was stopped, but now needs to be
-      // lambdafied.
+      // edge cases that we need to finalize the request and continue the filter iteration here:
+      // 1. header only request because decodeHeaders() has been called with end_stream=true already and
+      // no decodeData() will be called
+      // 2. by the time we got the credential refreshed, the last decodeData() has been called with end_stream=true
+      // already. The last decodeData() saw that state_==Calling, it stopped iteration and buffered and no
+      // further decodeData() will be called
       finalizeRequest();
+      decoder_callbacks_->continueDecoding();
     }
+
     stopped_ = false;
-    decoder_callbacks_->continueDecoding();
+    // we cannot always call continueDecoding() in here because if there is a request body and it has not been completely
+    // received yet (meaning end_stream was false in the previous decodeData() call), calling continueDecoding here would
+    // resume the iteration in the filter chain without calling finalizeRequest() first.
   }
 }
 
@@ -349,6 +357,11 @@ Http::FilterDataStatus AWSLambdaFilter::decodeData(Buffer::Instance &data,
 
   if (end_stream) {
     if (has_body_ && isRequestTransformationNeeded()) {
+      // Looks like if data is already from bufferedData, this is no-op?
+      // reference: https://github.com/envoyproxy/envoy/blob/97aa669f7593d73abd3b4d6b92e91362cf745a5c/source/common/http/filter_manager.cc#L199
+      // if not, it will move data to bufferedData and requestTransformation will modify bufferedData
+      // In the case where state_ == Calling and we return StopIterationAndBuffer early above, and when we finally get the credential refreshed
+      // the bufferedData would contains the full data already, so it's ok to call finalizeRequest() there in onSuccess() without calling this.
       decoder_callbacks_->addDecodedData(data, false);
     }
     finalizeRequest();
