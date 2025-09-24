@@ -346,7 +346,7 @@ type AWSLambdaConfig_UseDefaultCredentials struct {
 }
 
 type AWSLambdaConfig_ServiceAccountCredentials_ struct {
-	// Use projected service account token, and role arn to create reate temporary
+	// Use projected service account token, and role arn to create temporary
 	// credentials with which to authenticate lambda requests.
 	// This functionality is meant to work alongside EKS service account to IAM
 	// binding functionality as described in the [AWS docs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html).
