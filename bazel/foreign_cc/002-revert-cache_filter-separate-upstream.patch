@@ -1,17 +1,449 @@
-commit 2d4e45742ec22b322e5c7c55cd50830932e3be04
-Author: Ashish Banerjee <ashish.banerjee@solo.io>
-Date:   Tue Apr 15 17:35:16 2025 +0000
+From 303c4ea5dc6bb4db7bf97ca456c698dae12163c5 Mon Sep 17 00:00:00 2001
+From: Andy Fong <andy.fong@solo.io>
+Date: Wed, 17 Sep 2025 19:08:51 -0400
+Subject: [PATCH] Revert "[cache_filter] Separate upstream from downstream
+ (#36309)"
 
-    Revert "[cache_filter] Separate upstream from downstream (#36309)"
-    
-    This reverts commit 55e23547a5bf8088a002d0a71a3fa983adf7e046.
+This reverts commit 55e23547a5bf8088a002d0a71a3fa983adf7e046.
 
-diff --git a/docs/root/_static/cache-filter-chain.svg b/docs/root/_static/cache-filter-chain.svg
+Signed-off-by: Andy Fong <andy.fong@solo.io>
+---
+ docs/root/_static/cache-filter-chain.svg      | Bin 104052 -> 0 bytes
+ .../http/http_filters/cache_filter.rst        |  14 +-
+ source/extensions/filters/http/cache/BUILD    |  11 +-
+ .../filters/http/cache/cache_filter.cc        | 323 ++++--
+ .../filters/http/cache/cache_filter.h         |  87 +-
+ .../http/cache/cache_filter_logging_info.cc   |   4 +-
+ .../http/cache/cache_filter_logging_info.h    |   8 +-
+ .../filters/http/cache/cache_insert_queue.cc  |  61 +-
+ .../filters/http/cache/cache_insert_queue.h   |  15 +-
+ .../filters/http/cache/filter_state.h         |  36 -
+ .../filters/http/cache/http_cache.h           |   4 +-
+ .../filters/http/cache/upstream_request.cc    | 272 -----
+ .../filters/http/cache/upstream_request.h     |  84 --
+ .../file_system_http_cache.cc                 |  11 +-
+ .../file_system_http_cache.h                  |   4 +-
+ .../file_system_http_cache/insert_context.cc  |   5 +-
+ .../file_system_http_cache/insert_context.h   |  10 +-
+ .../simple_http_cache/simple_http_cache.cc    |  10 +-
+ .../simple_http_cache/simple_http_cache.h     |   4 +-
+ .../cache/cache_filter_logging_info_test.cc   |   4 +-
+ .../filters/http/cache/cache_filter_test.cc   | 957 ++++++++++--------
+ test/extensions/filters/http/cache/mocks.h    |  53 +-
+ .../file_system_http_cache_test.cc            |   1 +
+ 23 files changed, 904 insertions(+), 1074 deletions(-)
+ delete mode 100644 docs/root/_static/cache-filter-chain.svg
+ delete mode 100644 source/extensions/filters/http/cache/filter_state.h
+ delete mode 100644 source/extensions/filters/http/cache/upstream_request.cc
+ delete mode 100644 source/extensions/filters/http/cache/upstream_request.h
+
+diff --git docs/root/_static/cache-filter-chain.svg docs/root/_static/cache-filter-chain.svg
 deleted file mode 100644
-index fe54227819..0000000000
-Binary files a/docs/root/_static/cache-filter-chain.svg and /dev/null differ
-diff --git a/docs/root/configuration/http/http_filters/cache_filter.rst b/docs/root/configuration/http/http_filters/cache_filter.rst
-index 68deed12bb..32aa6b24d1 100644
+index fe54227819ffd55362143a3b63479ed2c6f21cc2..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 104052
+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%0Dm$PLVYb$s
+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
+
+diff --git docs/root/configuration/http/http_filters/cache_filter.rst docs/root/configuration/http/http_filters/cache_filter.rst
+index 1527e0e169..02acbc13e0 100644
 --- docs/root/configuration/http/http_filters/cache_filter.rst
 +++ docs/root/configuration/http/http_filters/cache_filter.rst
 @@ -7,24 +7,12 @@ Cache filter
@@ -40,7 +472,7 @@ index 68deed12bb..32aa6b24d1 100644
  * HTTP Cache wont store HTTP HEAD Requests.
  
  For HTTP Responses:
-diff --git a/source/extensions/filters/http/cache/BUILD b/source/extensions/filters/http/cache/BUILD
+diff --git source/extensions/filters/http/cache/BUILD source/extensions/filters/http/cache/BUILD
 index c8bb391d51..9107e06fc5 100644
 --- source/extensions/filters/http/cache/BUILD
 +++ source/extensions/filters/http/cache/BUILD
@@ -62,7 +494,7 @@ index c8bb391d51..9107e06fc5 100644
      deps = [
          ":cache_custom_headers",
          ":cache_entry_utils_lib",
-diff --git a/source/extensions/filters/http/cache/cache_filter.cc b/source/extensions/filters/http/cache/cache_filter.cc
+diff --git source/extensions/filters/http/cache/cache_filter.cc source/extensions/filters/http/cache/cache_filter.cc
 index 0ca04ed213..88aed69f9f 100644
 --- source/extensions/filters/http/cache/cache_filter.cc
 +++ source/extensions/filters/http/cache/cache_filter.cc
@@ -569,7 +1001,7 @@ index 0ca04ed213..88aed69f9f 100644
  }
  
  } // namespace Cache
-diff --git a/source/extensions/filters/http/cache/cache_filter.h b/source/extensions/filters/http/cache/cache_filter.h
+diff --git source/extensions/filters/http/cache/cache_filter.h source/extensions/filters/http/cache/cache_filter.h
 index 3669bbf824..923a1cf197 100644
 --- source/extensions/filters/http/cache/cache_filter.h
 +++ source/extensions/filters/http/cache/cache_filter.h
@@ -744,7 +1176,7 @@ index 3669bbf824..923a1cf197 100644
  };
  
  using CacheFilterSharedPtr = std::shared_ptr<CacheFilter>;
-diff --git a/source/extensions/filters/http/cache/cache_filter_logging_info.cc b/source/extensions/filters/http/cache/cache_filter_logging_info.cc
+diff --git source/extensions/filters/http/cache/cache_filter_logging_info.cc source/extensions/filters/http/cache/cache_filter_logging_info.cc
 index 94a5b94eb2..58f27ff907 100644
 --- source/extensions/filters/http/cache/cache_filter_logging_info.cc
 +++ source/extensions/filters/http/cache/cache_filter_logging_info.cc
@@ -759,7 +1191,7 @@ index 94a5b94eb2..58f27ff907 100644
    case InsertStatus::HeaderUpdate:
      return "HeaderUpdate";
    case InsertStatus::NoInsertCacheHit:
-diff --git a/source/extensions/filters/http/cache/cache_filter_logging_info.h b/source/extensions/filters/http/cache/cache_filter_logging_info.h
+diff --git source/extensions/filters/http/cache/cache_filter_logging_info.h source/extensions/filters/http/cache/cache_filter_logging_info.h
 index 296fcf5d45..187843b2c8 100644
 --- source/extensions/filters/http/cache/cache_filter_logging_info.h
 +++ source/extensions/filters/http/cache/cache_filter_logging_info.h
@@ -778,7 +1210,7 @@ index 296fcf5d45..187843b2c8 100644
    // The CacheFilter attempted to update the headers of an existing cache entry.
    // This doesn't indicate  whether or not the update succeeded.
    HeaderUpdate,
-diff --git a/source/extensions/filters/http/cache/cache_insert_queue.cc b/source/extensions/filters/http/cache/cache_insert_queue.cc
+diff --git source/extensions/filters/http/cache/cache_insert_queue.cc source/extensions/filters/http/cache/cache_insert_queue.cc
 index 47ed1b1ab9..80de4b6128 100644
 --- source/extensions/filters/http/cache/cache_insert_queue.cc
 +++ source/extensions/filters/http/cache/cache_insert_queue.cc
@@ -919,7 +1351,7 @@ index 47ed1b1ab9..80de4b6128 100644
    if (fragments_.empty() && !fragment_in_flight_) {
      // If the queue is already empty we can just let it be destroyed immediately.
      return;
-diff --git a/source/extensions/filters/http/cache/cache_insert_queue.h b/source/extensions/filters/http/cache/cache_insert_queue.h
+diff --git source/extensions/filters/http/cache/cache_insert_queue.h source/extensions/filters/http/cache/cache_insert_queue.h
 index 52537ef82f..22297a70a5 100644
 --- source/extensions/filters/http/cache/cache_insert_queue.h
 +++ source/extensions/filters/http/cache/cache_insert_queue.h
@@ -959,7 +1391,7 @@ index 52537ef82f..22297a70a5 100644
    std::deque<std::unique_ptr<CacheInsertFragment>> fragments_;
    // Size of the data currently in the queue (including any fragment in flight).
    size_t queue_size_bytes_ = 0;
-diff --git a/source/extensions/filters/http/cache/filter_state.h b/source/extensions/filters/http/cache/filter_state.h
+diff --git source/extensions/filters/http/cache/filter_state.h source/extensions/filters/http/cache/filter_state.h
 deleted file mode 100644
 index a161aecde5..0000000000
 --- source/extensions/filters/http/cache/filter_state.h
@@ -1001,7 +1433,7 @@ index a161aecde5..0000000000
 -} // namespace HttpFilters
 -} // namespace Extensions
 -} // namespace Envoy
-diff --git a/source/extensions/filters/http/cache/http_cache.h b/source/extensions/filters/http/cache/http_cache.h
+diff --git source/extensions/filters/http/cache/http_cache.h source/extensions/filters/http/cache/http_cache.h
 index 8ae1d5d869..02cc9c80b6 100644
 --- source/extensions/filters/http/cache/http_cache.h
 +++ source/extensions/filters/http/cache/http_cache.h
@@ -1021,7 +1453,7 @@ index 8ae1d5d869..02cc9c80b6 100644
  
    // Precondition: lookup_context represents a prior cache lookup that required
    // validation.
-diff --git a/source/extensions/filters/http/cache/upstream_request.cc b/source/extensions/filters/http/cache/upstream_request.cc
+diff --git source/extensions/filters/http/cache/upstream_request.cc source/extensions/filters/http/cache/upstream_request.cc
 deleted file mode 100644
 index 550b81c59a..0000000000
 --- source/extensions/filters/http/cache/upstream_request.cc
@@ -1299,7 +1731,7 @@ index 550b81c59a..0000000000
 -} // namespace HttpFilters
 -} // namespace Extensions
 -} // namespace Envoy
-diff --git a/source/extensions/filters/http/cache/upstream_request.h b/source/extensions/filters/http/cache/upstream_request.h
+diff --git source/extensions/filters/http/cache/upstream_request.h source/extensions/filters/http/cache/upstream_request.h
 deleted file mode 100644
 index 6aa6259ca2..0000000000
 --- source/extensions/filters/http/cache/upstream_request.h
@@ -1389,7 +1821,7 @@ index 6aa6259ca2..0000000000
 -} // namespace HttpFilters
 -} // namespace Extensions
 -} // namespace Envoy
-diff --git a/source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc b/source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc
+diff --git source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc
 index 6497a941f8..5e220e2b45 100644
 --- source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc
 +++ source/extensions/http/cache/file_system_http_cache/file_system_http_cache.cc
@@ -1422,7 +1854,7 @@ index 6497a941f8..5e220e2b45 100644
    }
    return std::make_unique<FileInsertContext>(shared_from_this(), std::move(file_lookup_context));
  }
-diff --git a/source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h b/source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h
+diff --git source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h
 index 97cd77a40e..be4c594024 100644
 --- source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h
 +++ source/extensions/http/cache/file_system_http_cache/file_system_http_cache.h
@@ -1438,7 +1870,7 @@ index 97cd77a40e..be4c594024 100644
    CacheInfo cacheInfo() const override;
    const CacheStats& stats() const;
  
-diff --git a/source/extensions/http/cache/file_system_http_cache/insert_context.cc b/source/extensions/http/cache/file_system_http_cache/insert_context.cc
+diff --git source/extensions/http/cache/file_system_http_cache/insert_context.cc source/extensions/http/cache/file_system_http_cache/insert_context.cc
 index a2fc30b2f6..55503ef6dd 100644
 --- source/extensions/http/cache/file_system_http_cache/insert_context.cc
 +++ source/extensions/http/cache/file_system_http_cache/insert_context.cc
@@ -1454,8 +1886,8 @@ index a2fc30b2f6..55503ef6dd 100644
  
  void FileInsertContext::commit() {
    ASSERT(dispatcher()->isThreadSafe());
-diff --git a/source/extensions/http/cache/file_system_http_cache/insert_context.h b/source/extensions/http/cache/file_system_http_cache/insert_context.h
-index d154e862e7..a70fbbae1d 100644
+diff --git source/extensions/http/cache/file_system_http_cache/insert_context.h source/extensions/http/cache/file_system_http_cache/insert_context.h
+index 73433f43d4..45efd79ba7 100644
 --- source/extensions/http/cache/file_system_http_cache/insert_context.h
 +++ source/extensions/http/cache/file_system_http_cache/insert_context.h
 @@ -21,21 +21,17 @@ class FileSystemHttpCache;
@@ -1483,7 +1915,7 @@ index d154e862e7..a70fbbae1d 100644
  };
  
  class FileInsertContext : public InsertContext, public Logger::Loggable<Logger::Id::cache_filter> {
-diff --git a/source/extensions/http/cache/simple_http_cache/simple_http_cache.cc b/source/extensions/http/cache/simple_http_cache/simple_http_cache.cc
+diff --git source/extensions/http/cache/simple_http_cache/simple_http_cache.cc source/extensions/http/cache/simple_http_cache/simple_http_cache.cc
 index 15070529c6..04c70bba9d 100644
 --- source/extensions/http/cache/simple_http_cache/simple_http_cache.cc
 +++ source/extensions/http/cache/simple_http_cache/simple_http_cache.cc
@@ -1512,7 +1944,7 @@ index 15070529c6..04c70bba9d 100644
  }
  
  constexpr absl::string_view Name = "envoy.extensions.http.cache.simple";
-diff --git a/source/extensions/http/cache/simple_http_cache/simple_http_cache.h b/source/extensions/http/cache/simple_http_cache/simple_http_cache.h
+diff --git source/extensions/http/cache/simple_http_cache/simple_http_cache.h source/extensions/http/cache/simple_http_cache/simple_http_cache.h
 index 3acb936ac6..515ccc5f01 100644
 --- source/extensions/http/cache/simple_http_cache/simple_http_cache.h
 +++ source/extensions/http/cache/simple_http_cache/simple_http_cache.h
@@ -1528,7 +1960,7 @@ index 3acb936ac6..515ccc5f01 100644
    void updateHeaders(const LookupContext& lookup_context,
                       const Http::ResponseHeaderMap& response_headers,
                       const ResponseMetadata& metadata, UpdateHeadersCallback on_complete) override;
-diff --git a/test/extensions/filters/http/cache/cache_filter_logging_info_test.cc b/test/extensions/filters/http/cache/cache_filter_logging_info_test.cc
+diff --git test/extensions/filters/http/cache/cache_filter_logging_info_test.cc test/extensions/filters/http/cache/cache_filter_logging_info_test.cc
 index 6aa76376fe..79ba6e4210 100644
 --- test/extensions/filters/http/cache/cache_filter_logging_info_test.cc
 +++ test/extensions/filters/http/cache/cache_filter_logging_info_test.cc
@@ -1543,8 +1975,8 @@ index 6aa76376fe..79ba6e4210 100644
    EXPECT_EQ(insertStatusToString(InsertStatus::HeaderUpdate), "HeaderUpdate");
    EXPECT_EQ(insertStatusToString(InsertStatus::NoInsertCacheHit), "NoInsertCacheHit");
    EXPECT_EQ(insertStatusToString(InsertStatus::NoInsertRequestNotCacheable),
-diff --git a/test/extensions/filters/http/cache/cache_filter_test.cc b/test/extensions/filters/http/cache/cache_filter_test.cc
-index fad814b0f5..14edc705c3 100644
+diff --git test/extensions/filters/http/cache/cache_filter_test.cc test/extensions/filters/http/cache/cache_filter_test.cc
+index 9b76553dc6..6f72f58610 100644
 --- test/extensions/filters/http/cache/cache_filter_test.cc
 +++ test/extensions/filters/http/cache/cache_filter_test.cc
 @@ -1,5 +1,3 @@
@@ -1719,7 +2151,7 @@ index fad814b0f5..14edc705c3 100644
    }
  
    void testDecodeRequestHitNoBody(CacheFilterSharedPtr filter) {
-@@ -243,7 +123,7 @@ protected:
+@@ -242,7 +122,7 @@ protected:
  
      // The cache lookup callback should be posted to the dispatcher.
      // Run events on the dispatcher so that the callback is invoked.
@@ -1728,7 +2160,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&decoder_callbacks_);
    }
-@@ -274,7 +154,7 @@ protected:
+@@ -272,7 +152,7 @@ protected:
      // Run events on the dispatcher so that the callback is invoked.
      // The posted lookup callback will cause another callback to be posted (when getBody() is
      // called) which should also be invoked.
@@ -1737,7 +2169,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&decoder_callbacks_);
    }
-@@ -294,9 +174,6 @@ protected:
+@@ -292,9 +172,6 @@ protected:
                                                      {"cache-control", "public,max-age=3600"}};
    NiceMock<Http::MockStreamDecoderFilterCallbacks> decoder_callbacks_;
    NiceMock<Http::MockStreamEncoderFilterCallbacks> encoder_callbacks_;
@@ -1747,7 +2179,7 @@ index fad814b0f5..14edc705c3 100644
    Api::ApiPtr api_ = Api::createApiForTest();
    Event::DispatcherPtr dispatcher_ = api_->allocateDispatcher("test_thread");
    const Seconds delay_ = Seconds(10);
-@@ -316,8 +193,7 @@ TEST_F(CacheFilterTest, UncacheableRequest) {
+@@ -314,8 +191,7 @@ TEST_F(CacheFilterTest, UncacheableRequest) {
    // POST requests are uncacheable
    request_headers_.setMethod(Http::Headers::get().MethodValues.Post);
  
@@ -1757,7 +2189,7 @@ index fad814b0f5..14edc705c3 100644
      // Create filter for the request
      CacheFilterSharedPtr filter = makeFilter(simple_cache_);
  
-@@ -345,16 +221,15 @@ TEST_F(CacheFilterTest, UncacheableResponse) {
+@@ -343,16 +219,15 @@ TEST_F(CacheFilterTest, UncacheableResponse) {
    // Responses with "Cache-Control: no-store" are uncacheable
    response_headers_.setReferenceKey(Http::CustomHeaders::get().CacheControl, "no-store");
  
@@ -1778,7 +2210,7 @@ index fad814b0f5..14edc705c3 100644
      filter->onStreamComplete();
      EXPECT_THAT(lookupStatus(), IsOkAndHolds(LookupStatus::CacheMiss));
      EXPECT_THAT(insertStatus(), IsOkAndHolds(InsertStatus::NoInsertResponseNotCacheable));
-@@ -362,23 +237,24 @@ TEST_F(CacheFilterTest, UncacheableResponse) {
+@@ -360,23 +235,24 @@ TEST_F(CacheFilterTest, UncacheableResponse) {
  }
  
  TEST_F(CacheFilterTest, CacheMiss) {
@@ -1809,7 +2241,7 @@ index fad814b0f5..14edc705c3 100644
  }
  
  TEST_F(CacheFilterTest, Disabled) {
-@@ -391,26 +267,28 @@ TEST_F(CacheFilterTest, CacheMissWithTrailers) {
+@@ -389,26 +265,28 @@ TEST_F(CacheFilterTest, CacheMissWithTrailers) {
    request_headers_.setHost("CacheMissWithTrailers");
    const std::string body = "abc";
    Buffer::OwnedImpl body_buffer(body);
@@ -1847,7 +2279,7 @@ index fad814b0f5..14edc705c3 100644
  }
  
  TEST_F(CacheFilterTest, CacheMissWithTrailersWhenCacheRespondsQuickerThanUpstream) {
-@@ -419,34 +297,46 @@ TEST_F(CacheFilterTest, CacheMissWithTrailersWhenCacheRespondsQuickerThanUpstrea
+@@ -417,34 +295,46 @@ TEST_F(CacheFilterTest, CacheMissWithTrailersWhenCacheRespondsQuickerThanUpstrea
    Buffer::OwnedImpl body_buffer(body);
    Http::TestResponseTrailerMapImpl trailers;
  
@@ -1905,7 +2337,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Create filter for request 2.
-@@ -464,7 +354,25 @@ TEST_F(CacheFilterTest, CacheHitWithBody) {
+@@ -462,7 +352,25 @@ TEST_F(CacheFilterTest, CacheHitWithBody) {
    request_headers_.setHost("CacheHitWithBody");
    const std::string body = "abc";
  
@@ -1932,7 +2364,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Create filter for request 2
-@@ -485,8 +393,18 @@ TEST_F(CacheFilterTest, WatermarkEventsAreSentIfCacheBlocksStreamAndLimitExceede
+@@ -483,8 +391,18 @@ TEST_F(CacheFilterTest, WatermarkEventsAreSentIfCacheBlocksStreamAndLimitExceede
    // Set the buffer limit to 2 bytes to ensure we send watermark events.
    EXPECT_CALL(encoder_callbacks_, encoderBufferLimit()).WillRepeatedly(::testing::Return(2));
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -1953,7 +2385,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb)]() mutable { std::move(cb)(LookupResult{}, false); });
    });
-@@ -508,36 +426,35 @@ TEST_F(CacheFilterTest, WatermarkEventsAreSentIfCacheBlocksStreamAndLimitExceede
+@@ -506,36 +424,35 @@ TEST_F(CacheFilterTest, WatermarkEventsAreSentIfCacheBlocksStreamAndLimitExceede
          dispatcher_->post(
              [cb = std::move(ready_for_next_chunk)]() mutable { std::move(cb)(true); });
        });
@@ -2004,7 +2436,7 @@ index fad814b0f5..14edc705c3 100644
      filter->onStreamComplete();
      EXPECT_THAT(lookupStatus(), IsOkAndHolds(LookupStatus::CacheMiss));
      EXPECT_THAT(insertStatus(), IsOkAndHolds(InsertStatus::InsertSucceeded));
-@@ -551,8 +468,18 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileWatermarkedSendsLowWatermarkEvent) {
+@@ -549,8 +466,18 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileWatermarkedSendsLowWatermarkEvent) {
    // Set the buffer limit to 2 bytes to ensure we send watermark events.
    EXPECT_CALL(encoder_callbacks_, encoderBufferLimit()).WillRepeatedly(::testing::Return(2));
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2025,7 +2457,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb)]() mutable { std::move(cb)(LookupResult{}, false); });
    });
-@@ -569,40 +496,36 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileWatermarkedSendsLowWatermarkEvent) {
+@@ -567,40 +494,36 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileWatermarkedSendsLowWatermarkEvent) {
          EXPECT_THAT(captured_insert_body_callback, IsNull());
          captured_insert_body_callback = std::move(ready_for_next_chunk);
        });
@@ -2081,7 +2513,7 @@ index fad814b0f5..14edc705c3 100644
    }
  }
  
-@@ -615,7 +538,12 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
+@@ -613,7 +536,12 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
    request_headers_.setHost("CacheEntryStreamedWithTrailers");
    const std::string body = "abcde";
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2095,7 +2527,7 @@ index fad814b0f5..14edc705c3 100644
    // response_headers_ intentionally has no content length, LookupResult also has no content length.
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb), this]() mutable {
-@@ -641,6 +569,7 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
+@@ -639,6 +567,7 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
        std::move(cb)(std::make_unique<Http::TestResponseTrailerMapImpl>());
      });
    });
@@ -2103,7 +2535,7 @@ index fad814b0f5..14edc705c3 100644
    {
      CacheFilterSharedPtr filter = makeFilter(mock_http_cache);
      EXPECT_CALL(decoder_callbacks_, encodeHeaders_(IsSupersetOfHeaders(response_headers_), false));
-@@ -655,7 +584,7 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
+@@ -653,7 +582,7 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
      // Run events on the dispatcher so that the callback is invoked.
      // The posted lookup callback will cause another callback to be posted (when getBody() is
      // called) which should also be invoked.
@@ -2112,7 +2544,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&decoder_callbacks_);
  
-@@ -668,7 +597,12 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
+@@ -666,7 +595,12 @@ TEST_F(CacheFilterTest, CacheEntryStreamedWithTrailersAndNoContentLengthCanDeliv
  TEST_F(CacheFilterTest, OnDestroyBeforeOnHeadersAbortsAction) {
    request_headers_.setHost("CacheHitWithBody");
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2126,7 +2558,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      std::unique_ptr<Http::ResponseHeaderMap> response_headers =
          std::make_unique<Http::TestResponseHeaderMapImpl>(response_headers_);
-@@ -684,13 +618,18 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnHeadersAbortsAction) {
+@@ -682,13 +616,18 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnHeadersAbortsAction) {
    filter->onDestroy();
    // Nothing extra should happen when the posted lookup completion resolves, because
    // the filter was destroyed.
@@ -2147,7 +2579,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      std::unique_ptr<Http::ResponseHeaderMap> response_headers =
          std::make_unique<Http::TestResponseHeaderMapImpl>(response_headers_);
-@@ -705,12 +644,13 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnBodyAbortsAction) {
+@@ -703,12 +642,13 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnBodyAbortsAction) {
        .WillOnce([&](const AdjustedByteRange&, LookupBodyCallback&& cb) {
          body_callback = std::move(cb);
        });
@@ -2162,7 +2594,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_THAT(body_callback, NotNull());
    // body_callback should not be called because LookupContext::onDestroy,
    // correctly implemented, should have aborted it.
-@@ -719,7 +659,12 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnBodyAbortsAction) {
+@@ -717,7 +657,12 @@ TEST_F(CacheFilterTest, OnDestroyBeforeOnBodyAbortsAction) {
  TEST_F(CacheFilterTest, OnDestroyBeforeOnTrailersAbortsAction) {
    request_headers_.setHost("CacheHitWithTrailers");
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2176,7 +2608,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      std::unique_ptr<Http::ResponseHeaderMap> response_headers =
          std::make_unique<Http::TestResponseHeaderMapImpl>(response_headers_);
-@@ -755,7 +700,12 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
+@@ -753,7 +698,12 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
    // 8 bytes.
    EXPECT_CALL(encoder_callbacks_, encoderBufferLimit()).WillRepeatedly(::testing::Return(5));
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2190,7 +2622,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      std::unique_ptr<Http::ResponseHeaderMap> response_headers =
          std::make_unique<Http::TestResponseHeaderMapImpl>(response_headers_);
-@@ -777,6 +727,7 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
+@@ -775,6 +725,7 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
            std::move(cb)(std::make_unique<Buffer::OwnedImpl>("fgh"), true);
          });
        });
@@ -2198,7 +2630,7 @@ index fad814b0f5..14edc705c3 100644
  
    CacheFilterSharedPtr filter = makeFilter(mock_http_cache, false);
  
-@@ -803,7 +754,7 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
+@@ -801,7 +752,7 @@ TEST_F(CacheFilterTest, BodyReadFromCacheLimitedToBufferSizeChunks) {
    // Run events on the dispatcher so that the callback is invoked.
    // The posted lookup callback will cause another callback to be posted (when getBody() is
    // called) which should also be invoked.
@@ -2207,7 +2639,7 @@ index fad814b0f5..14edc705c3 100644
  
    filter->onDestroy();
    filter.reset();
-@@ -813,8 +764,18 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
+@@ -811,8 +762,18 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
    request_headers_.setHost("CacheHitWithBody");
    const std::string body = "abc";
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2228,7 +2660,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb)]() mutable { std::move(cb)(LookupResult{}, false); });
    });
-@@ -823,23 +784,27 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
+@@ -821,23 +782,27 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
                      InsertCallback insert_complete, bool) {
          dispatcher_->post([cb = std::move(insert_complete)]() mutable { std::move(cb)(true); });
        });
@@ -2263,7 +2695,7 @@ index fad814b0f5..14edc705c3 100644
  
      filter->onStreamComplete();
      EXPECT_THAT(lookupStatus(), IsOkAndHolds(LookupStatus::CacheMiss));
-@@ -847,13 +812,23 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
+@@ -845,13 +810,23 @@ TEST_F(CacheFilterTest, CacheInsertAbortedByCache) {
    }
  }
  
@@ -2290,7 +2722,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb)]() mutable { std::move(cb)(LookupResult{}, false); });
    });
-@@ -862,47 +837,44 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileIncompleteCacheWriteInQueueShouldCom
+@@ -860,47 +835,44 @@ TEST_F(CacheFilterTest, FilterDestroyedWhileIncompleteCacheWriteInQueueShouldCom
        .WillOnce([&](const Http::ResponseHeaderMap&, const ResponseMetadata&,
                      InsertCallback insert_complete,
                      bool) { captured_insert_header_callback = std::move(insert_complete); });
@@ -2357,7 +2789,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb)]() mutable { std::move(cb)(LookupResult{}, false); });
    });
-@@ -916,7 +888,20 @@ TEST_F(CacheFilterTest, FilterDeletedWhileCompleteCacheWriteInQueueShouldContinu
+@@ -914,7 +886,20 @@ TEST_F(CacheFilterTest, FilterDeletedWhileCompleteCacheWriteInQueueShouldContinu
        .WillOnce([&](const Buffer::Instance&, InsertCallback ready_for_next_chunk, bool) {
          captured_insert_body_callback = std::move(ready_for_next_chunk);
        });
@@ -2379,7 +2811,7 @@ index fad814b0f5..14edc705c3 100644
    // Header callback should be captured, body callback should not yet since the
    // queue has not reached that chunk.
    ASSERT_THAT(captured_insert_header_callback, NotNull());
-@@ -926,14 +911,14 @@ TEST_F(CacheFilterTest, FilterDeletedWhileCompleteCacheWriteInQueueShouldContinu
+@@ -924,14 +909,14 @@ TEST_F(CacheFilterTest, FilterDeletedWhileCompleteCacheWriteInQueueShouldContinu
    // Run events on the dispatcher so that the callback is invoked,
    // where it should now proceed to write the body chunk, since the
    // write is still completable.
@@ -2396,7 +2828,7 @@ index fad814b0f5..14edc705c3 100644
  }
  
  TEST_F(CacheFilterTest, SuccessfulValidation) {
-@@ -941,13 +926,28 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
+@@ -939,13 +924,28 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
    const std::string body = "abc";
    const std::string etag = "abc123";
    const std::string last_modified_date = formatter_.now(time_source_);
@@ -2431,7 +2863,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Create filter for request 2
-@@ -959,13 +959,12 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
+@@ -957,13 +957,12 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
      // Decoding the request should find a cached response that requires validation.
      // As far as decoding the request is concerned, this is the same as a cache miss with the
      // exception of injecting validation precondition headers.
@@ -2447,7 +2879,7 @@ index fad814b0f5..14edc705c3 100644
  
      // Encode 304 response
      // Advance time to make sure the cached date is updated with the 304 date
-@@ -973,26 +972,33 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
+@@ -971,26 +970,33 @@ TEST_F(CacheFilterTest, SuccessfulValidation) {
      Http::TestResponseHeaderMapImpl not_modified_response_headers = {{":status", "304"},
                                                                       {"date", not_modified_date}};
  
@@ -2493,7 +2925,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&encoder_callbacks_);
  
-@@ -1007,16 +1013,32 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
+@@ -1005,16 +1011,32 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
    const std::string body = "abc";
    const std::string etag = "abc123";
    const std::string last_modified_date = formatter_.now(time_source_);
@@ -2533,7 +2965,7 @@ index fad814b0f5..14edc705c3 100644
  
      // Make request require validation
      request_headers_.setReferenceKey(Http::CustomHeaders::get().CacheControl, "no-cache");
-@@ -1024,13 +1046,12 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
+@@ -1022,13 +1044,12 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
      // Decoding the request should find a cached response that requires validation.
      // As far as decoding the request is concerned, this is the same as a cache miss with the
      // exception of injecting validation precondition headers.
@@ -2549,7 +2981,7 @@ index fad814b0f5..14edc705c3 100644
  
      // Encode 304 response
      // Advance time to make sure the cached date is updated with the 304 date
-@@ -1038,24 +1059,34 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
+@@ -1036,24 +1057,34 @@ TEST_F(CacheFilterTest, SuccessfulValidationWithFilterDestroyedDuringContinueEnc
      Http::TestResponseHeaderMapImpl not_modified_response_headers = {{":status", "304"},
                                                                       {"date", not_modified_date}};
  
@@ -2594,7 +3026,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&encoder_callbacks_);
    }
-@@ -1066,15 +1097,31 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
+@@ -1064,15 +1095,31 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
    const std::string body = "abc";
    const std::string etag = "abc123";
    const std::string last_modified_date = formatter_.now(time_source_);
@@ -2633,7 +3065,7 @@ index fad814b0f5..14edc705c3 100644
      CacheFilterSharedPtr filter = makeFilter(simple_cache_);
  
      // Make request require validation
-@@ -1083,22 +1130,21 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
+@@ -1081,22 +1128,21 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
      // Decoding the request should find a cached response that requires validation.
      // As far as decoding the request is concerned, this is the same as a cache miss with the
      // exception of injecting validation precondition headers.
@@ -2660,8 +3092,8 @@ index fad814b0f5..14edc705c3 100644
 +    EXPECT_EQ(filter->encodeData(new_body, true), Http::FilterDataStatus::Continue);
  
      // The response headers should have the new status.
-     EXPECT_THAT(response_headers_, HeaderHasValueRef(Http::Headers::get().Status, "204"));
-@@ -1108,7 +1154,7 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
+     EXPECT_THAT(response_headers_, ContainsHeader(Http::Headers::get().Status, "204"));
+@@ -1106,7 +1152,7 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
  
      // If a cache getBody callback is made, it should be posted to the dispatcher.
      // Run events on the dispatcher so that any available callbacks are invoked.
@@ -2670,7 +3102,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&encoder_callbacks_);
  
-@@ -1121,8 +1167,25 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
+@@ -1119,8 +1165,25 @@ TEST_F(CacheFilterTest, UnsuccessfulValidation) {
  TEST_F(CacheFilterTest, SingleSatisfiableRange) {
    request_headers_.setHost("SingleSatisfiableRange");
    const std::string body = "abc";
@@ -2698,7 +3130,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Add range info to headers.
-@@ -1152,7 +1215,7 @@ TEST_F(CacheFilterTest, SingleSatisfiableRange) {
+@@ -1149,7 +1212,7 @@ TEST_F(CacheFilterTest, SingleSatisfiableRange) {
      // Run events on the dispatcher so that the callback is invoked.
      // The posted lookup callback will cause another callback to be posted (when getBody() is
      // called) which should also be invoked.
@@ -2707,7 +3139,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&decoder_callbacks_);
  
-@@ -1165,8 +1228,25 @@ TEST_F(CacheFilterTest, SingleSatisfiableRange) {
+@@ -1162,8 +1225,25 @@ TEST_F(CacheFilterTest, SingleSatisfiableRange) {
  TEST_F(CacheFilterTest, MultipleSatisfiableRanges) {
    request_headers_.setHost("MultipleSatisfiableRanges");
    const std::string body = "abc";
@@ -2735,7 +3167,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Add range info to headers
-@@ -1193,7 +1273,7 @@ TEST_F(CacheFilterTest, MultipleSatisfiableRanges) {
+@@ -1189,7 +1269,7 @@ TEST_F(CacheFilterTest, MultipleSatisfiableRanges) {
      // Run events on the dispatcher so that the callback is invoked.
      // The posted lookup callback will cause another callback to be posted (when getBody() is
      // called) which should also be invoked.
@@ -2744,7 +3176,7 @@ index fad814b0f5..14edc705c3 100644
  
      ::testing::Mock::VerifyAndClearExpectations(&decoder_callbacks_);
  
-@@ -1205,8 +1285,25 @@ TEST_F(CacheFilterTest, MultipleSatisfiableRanges) {
+@@ -1201,8 +1281,25 @@ TEST_F(CacheFilterTest, MultipleSatisfiableRanges) {
  TEST_F(CacheFilterTest, NotSatisfiableRange) {
    request_headers_.setHost("NotSatisfiableRange");
    const std::string body = "abc";
@@ -2772,7 +3204,7 @@ index fad814b0f5..14edc705c3 100644
    waitBeforeSecondRequest();
    {
      // Add range info to headers
-@@ -1238,7 +1335,7 @@ TEST_F(CacheFilterTest, NotSatisfiableRange) {
+@@ -1233,7 +1330,7 @@ TEST_F(CacheFilterTest, NotSatisfiableRange) {
      // Run events on the dispatcher so that the callback is invoked.
      // The posted lookup callback will cause another callback to be posted (when getBody() is
      // called) which should also be invoked.
@@ -2781,7 +3213,7 @@ index fad814b0f5..14edc705c3 100644
  
      // This counts as a cache hit: we served an HTTP error, but we
      // correctly got that info from the cache instead of upstream.
-@@ -1278,11 +1375,22 @@ TEST_F(CacheFilterTest, GetRequestWithBodyAndTrailers) {
+@@ -1273,11 +1370,22 @@ TEST_F(CacheFilterTest, GetRequestWithBodyAndTrailers) {
  // reliably fail if the CacheFilter is accessed after being deleted.
  TEST_F(CacheFilterTest, FilterDeletedBeforePostedCallbackExecuted) {
    request_headers_.setHost("FilterDeletedBeforePostedCallbackExecuted");
@@ -2805,7 +3237,7 @@ index fad814b0f5..14edc705c3 100644
      // Call decode headers to start the cache lookup, which should immediately post the callback to
      // the dispatcher.
      EXPECT_EQ(filter->decodeHeaders(request_headers_, true),
-@@ -1298,18 +1406,29 @@ TEST_F(CacheFilterTest, FilterDeletedBeforePostedCallbackExecuted) {
+@@ -1293,18 +1401,29 @@ TEST_F(CacheFilterTest, FilterDeletedBeforePostedCallbackExecuted) {
    EXPECT_CALL(decoder_callbacks_, encodeHeaders_).Times(0);
  
    // Run events on the dispatcher so that the callback is invoked after the filter deletion.
@@ -2837,7 +3269,7 @@ index fad814b0f5..14edc705c3 100644
      // Call decode headers to start the cache lookup, which should immediately post the callback to
      // the dispatcher.
      EXPECT_EQ(filter->decodeHeaders(request_headers_, true),
-@@ -1326,7 +1445,7 @@ TEST_F(CacheFilterTest, LocalReplyDuringLookup) {
+@@ -1321,7 +1440,7 @@ TEST_F(CacheFilterTest, LocalReplyDuringLookup) {
      EXPECT_CALL(decoder_callbacks_, encodeHeaders_).Times(0);
  
      // Run events on the dispatcher so that the lookup callback is invoked after the local reply.
@@ -2846,7 +3278,7 @@ index fad814b0f5..14edc705c3 100644
  
      filter->onStreamComplete();
      EXPECT_THAT(lookupStatus(), IsOkAndHolds(LookupStatus::RequestIncomplete));
-@@ -1340,7 +1459,12 @@ using CacheFilterDeathTest = CacheFilterTest;
+@@ -1335,7 +1454,12 @@ using CacheFilterDeathTest = CacheFilterTest;
  TEST_F(CacheFilterDeathTest, BadRangeRequestLookup) {
    request_headers_.setHost("BadRangeRequestLookup");
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2860,7 +3292,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      dispatcher_->post([cb = std::move(cb), this]() mutable {
        // LookupResult with unknown length and an unsatisfiable RangeDetails is invalid.
-@@ -1352,6 +1476,7 @@ TEST_F(CacheFilterDeathTest, BadRangeRequestLookup) {
+@@ -1347,6 +1471,7 @@ TEST_F(CacheFilterDeathTest, BadRangeRequestLookup) {
            false);
      });
    });
@@ -2868,7 +3300,7 @@ index fad814b0f5..14edc705c3 100644
    {
      CacheFilterSharedPtr filter = makeFilter(mock_http_cache);
      // encodeHeaders can be called when ENVOY_BUG doesn't exit.
-@@ -1365,7 +1490,7 @@ TEST_F(CacheFilterDeathTest, BadRangeRequestLookup) {
+@@ -1360,7 +1485,7 @@ TEST_F(CacheFilterDeathTest, BadRangeRequestLookup) {
      // The cache lookup callback should be posted to the dispatcher.
      // Run events on the dispatcher so that the callback is invoked.
      EXPECT_ENVOY_BUG(
@@ -2877,7 +3309,7 @@ index fad814b0f5..14edc705c3 100644
          "handleCacheHitWithRangeRequest() should not be called with satisfiable_=false");
    }
  }
-@@ -1374,7 +1499,12 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
+@@ -1369,7 +1494,12 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
    request_headers_.setHost("RangeRequestSatisfiedBeforeLengthKnown");
    std::string body = "abcde";
    auto mock_http_cache = std::make_shared<MockHttpCache>();
@@ -2891,7 +3323,7 @@ index fad814b0f5..14edc705c3 100644
    EXPECT_CALL(*mock_lookup_context, getHeaders(_)).WillOnce([&](LookupHeadersCallback&& cb) {
      // LookupResult with unknown length and an unsatisfiable RangeDetails is invalid.
      dispatcher_->post([cb = std::move(cb), this]() mutable {
-@@ -1392,6 +1522,7 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
+@@ -1387,6 +1517,7 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
            cb(std::make_unique<Buffer::OwnedImpl>(body), false);
          });
        });
@@ -2899,7 +3331,7 @@ index fad814b0f5..14edc705c3 100644
    {
      CacheFilterSharedPtr filter = makeFilter(mock_http_cache);
      response_headers_ = {{":status", "206"}, {"content-range", "bytes 0-4/*"}};
-@@ -1403,13 +1534,24 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
+@@ -1398,13 +1529,24 @@ TEST_F(CacheFilterTest, RangeRequestSatisfiedBeforeLengthKnown) {
  
      // The cache lookup callback should be posted to the dispatcher.
      // Run events on the dispatcher so that the callback is invoked.
@@ -2926,7 +3358,7 @@ index fad814b0f5..14edc705c3 100644
    Envoy::Http::TestResponseHeaderMapImpl local_response_headers{{":status", "408"}};
    EXPECT_ENVOY_BUG(
        {
-@@ -1432,7 +1574,7 @@ TEST_F(CacheFilterDeathTest, StreamTimeoutDuringLookup) {
+@@ -1427,7 +1569,7 @@ TEST_F(CacheFilterDeathTest, StreamTimeoutDuringLookup) {
          // As a death test when ENVOY_BUG crashes, as in debug builds, this will exit here,
          // so we must not perform any required cleanup operations below this point in the block.
          // When ENVOY_BUG does not crash, we can still validate additional things.
@@ -2935,7 +3367,7 @@ index fad814b0f5..14edc705c3 100644
  
          filter->onStreamComplete();
          EXPECT_THAT(lookupStatus(), IsOkAndHolds(LookupStatus::RequestIncomplete));
-@@ -1440,7 +1582,7 @@ TEST_F(CacheFilterDeathTest, StreamTimeoutDuringLookup) {
+@@ -1435,7 +1577,7 @@ TEST_F(CacheFilterDeathTest, StreamTimeoutDuringLookup) {
        "Request timed out while cache lookup was outstanding.");
  
    // Clear out captured lookup lambdas from the dispatcher.
@@ -2944,7 +3376,7 @@ index fad814b0f5..14edc705c3 100644
  }
  
  TEST(LookupStatusDeathTest, ResolveLookupStatusRequireValidationAndInitialIsBug) {
-@@ -1449,6 +1591,12 @@ TEST(LookupStatusDeathTest, ResolveLookupStatusRequireValidationAndInitialIsBug)
+@@ -1444,6 +1586,12 @@ TEST(LookupStatusDeathTest, ResolveLookupStatusRequireValidationAndInitialIsBug)
        "Unexpected filter state in requestCacheStatus");
  }
  
@@ -2957,7 +3389,7 @@ index fad814b0f5..14edc705c3 100644
  TEST(LookupStatusDeathTest, ResolveLookupStatusRequireValidationAndDestroyedIsBug) {
    EXPECT_ENVOY_BUG(CacheFilter::resolveLookupStatus(CacheEntryStatus::RequiresValidation,
                                                      FilterState::Destroyed),
-@@ -1464,7 +1612,9 @@ TEST(LookupStatusTest, ResolveLookupStatusReturnsCorrectStatuses) {
+@@ -1459,7 +1607,9 @@ TEST(LookupStatusTest, ResolveLookupStatusReturnsCorrectStatuses) {
              LookupStatus::Unknown);
    EXPECT_EQ(CacheFilter::resolveLookupStatus(absl::nullopt, FilterState::ValidatingCachedResponse),
              LookupStatus::Unknown);
@@ -2968,7 +3400,7 @@ index fad814b0f5..14edc705c3 100644
              LookupStatus::Unknown);
    EXPECT_EQ(CacheFilter::resolveLookupStatus(absl::nullopt, FilterState::Destroyed),
              LookupStatus::Unknown);
-@@ -1472,7 +1622,7 @@ TEST(LookupStatusTest, ResolveLookupStatusReturnsCorrectStatuses) {
+@@ -1467,7 +1617,7 @@ TEST(LookupStatusTest, ResolveLookupStatusReturnsCorrectStatuses) {
                                               FilterState::ValidatingCachedResponse),
              LookupStatus::RequestIncomplete);
    EXPECT_EQ(CacheFilter::resolveLookupStatus(CacheEntryStatus::RequiresValidation,
@@ -2977,7 +3409,7 @@ index fad814b0f5..14edc705c3 100644
              LookupStatus::StaleHitWithSuccessfulValidation);
    EXPECT_EQ(CacheFilter::resolveLookupStatus(CacheEntryStatus::RequiresValidation,
                                               FilterState::ResponseServedFromCache),
-@@ -1493,156 +1643,143 @@ using ValidationHeadersTest = CacheFilterTest;
+@@ -1488,156 +1638,143 @@ using ValidationHeadersTest = CacheFilterTest;
  TEST_F(ValidationHeadersTest, EtagAndLastModified) {
    request_headers_.setHost("EtagAndLastModified");
    const std::string etag = "abc123";
@@ -3202,7 +3634,7 @@ index fad814b0f5..14edc705c3 100644
    }
  }
  
-diff --git a/test/extensions/filters/http/cache/mocks.h b/test/extensions/filters/http/cache/mocks.h
+diff --git test/extensions/filters/http/cache/mocks.h test/extensions/filters/http/cache/mocks.h
 index 57ee46266b..d1739f9584 100644
 --- test/extensions/filters/http/cache/mocks.h
 +++ test/extensions/filters/http/cache/mocks.h
@@ -3273,7 +3705,7 @@ index 57ee46266b..d1739f9584 100644
  } // namespace Cache
  } // namespace HttpFilters
  } // namespace Extensions
-diff --git a/test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc b/test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
+diff --git test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
 index 1907643617..29c87ea43a 100644
 --- test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
 +++ test/extensions/http/cache/file_system_http_cache/file_system_http_cache_test.cc
@@ -3285,3 +3717,6 @@ index 1907643617..29c87ea43a 100644
    HttpCacheFactory* http_cache_factory_;
  };
  
+-- 
+2.51.0
+

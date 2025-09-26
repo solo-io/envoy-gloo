@@ -286,9 +286,9 @@ private:
             for (int k = 0; k < endpoint->lb_endpoints_size(); ++k) {
               auto* lb_endpoint = endpoint->mutable_lb_endpoints(k);
               auto* metadata = lb_endpoint->mutable_metadata();
-              ProtobufWkt::Value value_obj;
+              Protobuf::Value value_obj;
               value_obj.set_string_value("bar");
-              ProtobufWkt::Struct struct_obj;
+              Protobuf::Struct struct_obj;
               (*struct_obj.mutable_fields())["foo"] = value_obj;
               (*metadata->mutable_filter_metadata())[Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation].MergeFrom(struct_obj);
             }
