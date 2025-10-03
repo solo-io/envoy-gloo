@@ -628,10 +628,8 @@ TEST_F(TransformerTest, doesNotTransformFiles) {
 
   InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
   NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
-  transformer.transform(headers, &headers, body, callbacks);
 
-  std::string res = body.toString();
-  EXPECT_EQ("", res);
+  EXPECT_THROW_WITH_REGEX(transformer.transform(headers, &headers, body, callbacks), std::exception, ".*include '/proc/self/cmdline' not found.*")
 }
 
 class InjaTransformerTest : public TransformerInstanceTest {};
