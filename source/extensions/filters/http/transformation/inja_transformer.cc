@@ -11,6 +11,7 @@
 #include "source/common/regex/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
+#include "source/common/runtime/runtime_features.h"
 #include "source/common/common/empty_string.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
