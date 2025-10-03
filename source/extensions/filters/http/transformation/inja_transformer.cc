@@ -223,6 +223,8 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks&,
 // given worker thread.
 TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::RandomGenerator &rng)
     : tls_(tls), rng_(rng) {
+  env_.set_search_included_templates_in_files(Runtime::runtimeFeatureEnabled("envoy.transformation.allow_files_in_templates"));
+
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
