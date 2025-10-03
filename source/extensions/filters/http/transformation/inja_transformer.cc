@@ -11,6 +11,7 @@
 #include "source/common/regex/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
+#include "source/common/runtime/runtime_features.h"
 #include "source/common/common/empty_string.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
@@ -217,12 +218,22 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks&,
   return std::regex_replace(input, extract_regex_, replacement_text_.value(), std::regex_constants::match_not_null);
 }
 
+bool allowFilesInTemplates() {
+  const char* feature = "envoy.reloadable_features.transformation.allow_files_in_templates";
+  if (!Runtime::isRuntimeFeature(feature)) {
+    return false;
+  }
+  return Runtime::runtimeFeatureEnabled(feature);
+}
+
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
 // on the main thread. It access thread-local storage which is populated during the
 // InjaTransformer::transform method call, which happens on the request path on any
 // given worker thread.
 TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::RandomGenerator &rng)
     : tls_(tls), rng_(rng) {
+  env_.set_search_included_templates_in_files(allowFilesInTemplates());
+
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {

@@ -616,6 +616,22 @@ TEST_F(TransformerTest, transformBodyNotSet) {
   EXPECT_EQ("456", headers.get_("x-header"));
 }
 
+TEST_F(TransformerTest, doesNotTransformFiles) {
+  Http::TestRequestHeaderMapImpl headers{{":method", "GET"},
+                                         {":authority", "www.solo.io"},
+                                         {"x-test", "789"},
+                                         {":path", "/users/123"}};
+  Buffer::OwnedImpl body("{\"a\":\"456\"}");
+
+  TransformationTemplate transformation;
+  transformation.mutable_body()->set_text("{% include \"/proc/self/cmdline\" %}");
+
+  InjaTransformer transformer(transformation, google::protobuf::BoolValue(), factory_context_.dispatcher_, factory_context_.api_, tls_);
+  NiceMock<Http::MockStreamDecoderFilterCallbacks> callbacks;
+
+  EXPECT_THROW_WITH_REGEX(transformer.transform(headers, &headers, body, callbacks), std::exception, ".*include '/proc/self/cmdline' not found.*")
+}
+
 class InjaTransformerTest : public TransformerInstanceTest {};
 
 TEST_F(InjaTransformerTest, transformWithHyphens) {
