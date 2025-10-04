@@ -1,28 +1,39 @@
-diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
-index c03b77f372..4fb67e82ee 100644
+From 97aa669f7593d73abd3b4d6b92e91362cf745a5c Mon Sep 17 00:00:00 2001
+From: Andy Fong <andy.fong@solo.io>
+Date: Thu, 18 Sep 2025 00:07:05 +0000
+Subject: [PATCH] disable oghttp2
+
+Signed-off-by: Andy Fong <andy.fong@solo.io>
+---
+ source/common/http/http2/codec_impl.cc    | 1 +
+ source/common/runtime/runtime_features.cc | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git source/common/http/http2/codec_impl.cc source/common/http/http2/codec_impl.cc
+index b3dd891733..52efbecb96 100644
 --- source/common/http/http2/codec_impl.cc
 +++ source/common/http/http2/codec_impl.cc
-@@ -2221,6 +2221,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+@@ -2231,6 +2231,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
-
+ 
    auto direct_visitor = std::make_unique<Http2Visitor>(this);
 +  ENVOY_LOG(trace, "Are we using oghttp2? {}", use_oghttp2_library_);
-
+ 
  #ifdef ENVOY_NGHTTP2
    if (use_oghttp2_library_) {
-diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
-index c1af2c754a..9273bb9e06 100644
+diff --git source/common/runtime/runtime_features.cc source/common/runtime/runtime_features.cc
+index 3da2ea7986..a9895070aa 100644
 --- source/common/runtime/runtime_features.cc
 +++ source/common/runtime/runtime_features.cc
-@@ -53,7 +53,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
+@@ -49,7 +49,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
  RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_extension);
  RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
  RUNTIME_GUARD(envoy_reloadable_features_http2_propagate_reset_events);
 -RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
- RUNTIME_GUARD(envoy_reloadable_features_http3_happy_eyeballs);
  RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_cookie);
- RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_trailers);
-@@ -125,6 +124,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
+ // Delay deprecation and decommission until UHV is enabled.
+ RUNTIME_GUARD(envoy_reloadable_features_http_reject_path_with_fragment);
+@@ -106,6 +105,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
  #else
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_always_use_v6);
  #endif
@@ -30,3 +41,6 @@ index c1af2c754a..9273bb9e06 100644
  // TODO(vikaschoudhary16) flip this to true only after all the
  // TcpProxy::Filter::HttpStreamDecoderFilterCallbacks are implemented or commented as unnecessary
  FALSE_RUNTIME_GUARD(envoy_restart_features_upstream_http_filters_with_tcp_proxy);
+-- 
+2.51.0
+
