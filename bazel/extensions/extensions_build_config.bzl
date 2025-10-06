@@ -347,8 +347,10 @@ EXTENSIONS = {
     #
     # CacheFilter plugins
     #
-    "envoy.extensions.http.cache.file_system_http_cache": "//source/extensions/http/cache/file_system_http_cache:config",
-    "envoy.extensions.http.cache.simple":               "//source/extensions/http/cache/simple_http_cache:config",
+    "envoy.extensions.http.cache.file_system_http_cache":    "//source/extensions/http/cache/file_system_http_cache:config",
+    "envoy.extensions.http.cache.simple":                    "//source/extensions/http/cache/simple_http_cache:config",
+    "envoy.extensions.http.cache_v2.file_system_http_cache": "//source/extensions/http/cache_v2/file_system_http_cache:config",
+    "envoy.extensions.http.cache_v2.simple":                 "//source/extensions/http/cache_v2/simple_http_cache:config",
 
     #
     # Internal redirect predicates
@@ -425,8 +427,13 @@ EXTENSIONS = {
     # Custom response policies
     #
 
-    # "envoy.http.custom_response.redirect_policy":             "//source/extensions/http/custom_response/redirect_policy:redirect_policy_lib",
-    # "envoy.http.custom_response.local_response_policy":       "//source/extensions/http/custom_response/local_response_policy:local_response_policy_lib",
+    "envoy.http.custom_response.redirect_policy":             "//source/extensions/http/custom_response/redirect_policy:redirect_policy_lib",
+    "envoy.http.custom_response.local_response_policy":       "//source/extensions/http/custom_response/local_response_policy:local_response_policy_lib",
+
+    #
+    # External Processing Request Modifiers
+    #
+    "envoy.http.ext_proc.processing_request_modifiers.mapped_attribute_builder":         "//source/extensions/http/ext_proc/processing_request_modifiers/mapped_attribute_builder:mapped_attribute_builder_lib",
 
     #
     # External Processing Response Processors
