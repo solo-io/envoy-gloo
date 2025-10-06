@@ -11,6 +11,7 @@
 #include "source/common/regex/regex.h"
 #include "source/common/common/utility.h"
 #include "source/common/config/metadata.h"
+#include "source/common/runtime/runtime_features.h"
 #include "source/common/common/empty_string.h"
 
 #include "source/extensions/filters/http/solo_well_known_names.h"
@@ -217,12 +218,19 @@ Extractor::replaceAllValues(Http::StreamFilterCallbacks&,
   return std::regex_replace(input, extract_regex_, replacement_text_.value(), std::regex_constants::match_not_null);
 }
 
+bool allowFilesInTemplates(Runtime::Loader& runtime) {
+  const char* feature = "envoy.transformation.allow_files_in_templates";
+  return runtime.snapshot().getBoolean(feature, false);
+}
+
 // A TransformerInstance is constructed by the InjaTransformer constructor at config time
 // on the main thread. It access thread-local storage which is populated during the
 // InjaTransformer::transform method call, which happens on the request path on any
 // given worker thread.
-TransformerInstance::TransformerInstance(ThreadLocal::Slot &tls, Envoy::Random::RandomGenerator &rng)
+TransformerInstance::TransformerInstance(Runtime::Loader& runtime, ThreadLocal::Slot &tls, Envoy::Random::RandomGenerator &rng)
     : tls_(tls), rng_(rng) {
+  env_.set_search_included_templates_in_files(allowFilesInTemplates(runtime));
+
   env_.add_callback("header", 1,
                     [this](Arguments &args) { return header_callback(args); });
   env_.add_callback("request_header", 1, [this](Arguments &args) {
@@ -715,6 +723,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
                                  google::protobuf::BoolValue log_request_response_info,
                                  Event::Dispatcher& main_thread_dispatcher,
                                  Envoy::Api::Api& api,
+                                 Runtime::Loader& runtime,
                                  ThreadLocal::SlotAllocator &tls)
     : Transformer(log_request_response_info),
       advanced_templates_(transformation.advanced_templates()),
@@ -723,7 +732,7 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
       ignore_error_on_parse_(transformation.ignore_error_on_parse()),
       escape_characters_(transformation.escape_characters()),
       tls_(tls.allocateSlot()),
-      instance_(std::make_unique<TransformerInstance>(*tls_, api.randomGenerator())) {
+      instance_(std::make_unique<TransformerInstance>(runtime, *tls_, api.randomGenerator())) {
   if (advanced_templates_) {
     instance_->set_element_notation(inja::ElementNotation::Pointer);
   }
