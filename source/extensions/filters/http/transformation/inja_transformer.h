@@ -50,7 +50,7 @@ public:
 
 class TransformerInstance {
 public:
-  TransformerInstance(ThreadLocal::Slot& tls, Envoy::Random::RandomGenerator &rng);
+  TransformerInstance(Runtime::Loader& runtime, ThreadLocal::Slot& tls, Envoy::Random::RandomGenerator &rng);
 
   inja::Template parse(std::string_view input);
   std::string render(const inja::Template &input);
@@ -129,6 +129,7 @@ public:
                   google::protobuf::BoolValue log_request_response_info,
                   Event::Dispatcher& main_thread_dispatcher,
                   Envoy::Api::Api& api,
+                  Runtime::Loader& runtime,
                   ThreadLocal::SlotAllocator &tls);
   ~InjaTransformer();
 

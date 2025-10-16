@@ -8,6 +8,7 @@
 #include "test/test_common/test_runtime.h"
 
 #include "api/envoy/config/filter/http/aws_lambda/v2/aws_lambda.pb.validate.h"
+#include <thread>
 
 namespace Envoy {
 
@@ -262,6 +263,58 @@ typed_config:
     RELEASE_ASSERT(response->waitForEndStream(timeout), "unexpected timeout");
   }
 
+  void testWithSTSSlowClient() {
+    cred_mode_ = CredMode::STS;
+    add_transform_ = false;
+    initialize();
+    Http::TestRequestHeaderMapImpl request_headers{
+        {":method", "GET"}, {":authority", "www.solo.io"}, {":path", "/"}};
+
+    auto encoder_decoder = codec_client_->startRequest(request_headers);
+
+    auto downstream_request = &encoder_decoder.first;
+    auto response = std::move(encoder_decoder.second);
+
+    // set end_stream to false to simulate slow client
+    codec_client_->sendData(*downstream_request, "Hello ", false);
+
+    auto timeout = TestUtility::DefaultTimeout;
+
+    // first request is sts request; return sts response.
+    waitForNextUpstreamRequest(0, timeout);
+    upstream_request_->encodeHeaders(default_response_headers_, false);
+    upstream_request_->encodeData(VALID_CHAINED_RESPONSE, true);
+
+    // In order to finish sending the request ONLY after the the credential is refreshed
+    // have to put some wait in here. So, the credential fetching will be done before end_stream
+    // is set (the triggering condition for this bug)
+    // I tested this locally by removing the sleep and the test will pass but won't be effective
+    // because end_stream would be set before onSuccess() is called.
+    // Is there a better way?
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(2000ms);
+    codec_client_->sendData(*downstream_request, "World!", true);
+
+    // second upstream request is the "lambda" request.
+    waitForNextUpstreamRequest(0, timeout);
+
+    // make sure we have the body
+    std::string body = upstream_request_->body().toString();
+    EXPECT_EQ(body, "Hello World!");
+
+    // make sure the request is signed with x-amz-security-token header
+    const auto security_tokens = upstream_request_->headers().get(Http::LowerCaseString("x-amz-security-token"));
+    ASSERT_TRUE(!security_tokens.empty());
+    EXPECT_NE(0, security_tokens[0]->value().size());
+
+    // wrap up the test nicely:
+    upstream_request_->encodeHeaders(default_response_headers_, false);
+    upstream_request_->encodeData(10, true);
+
+    // Wait for the response to be read by the codec client.
+    RELEASE_ASSERT(response->waitForEndStream(timeout), "unexpected timeout");
+  }
+
   void setUseHttpClient(bool use) {
     std::string useStr = use ? "true" : "false";
     scoped_runtime_.mergeValues(
@@ -308,5 +361,8 @@ TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTSHttpClient) {
   testWithSTS();
 }
 
-
+TEST_P(AWSLambdaFilterIntegrationTest, TestWithSTSHttpSlowClient) {
+  setUseHttpClient(true);
+  testWithSTSSlowClient();
+}
 } // namespace Envoy

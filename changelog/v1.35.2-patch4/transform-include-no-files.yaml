@@ -1,0 +1,4 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/envoy-gloo/issues/467
+    description: Do not include files in transformation templates.

@@ -19,7 +19,8 @@ TransformerConstSharedPtr Transformation::getTransformer(
         transformation.transformation_template(), 
         transformation.log_request_response_info(),
         context.mainThreadDispatcher(), 
-        context.api(), 
+        context.api(),
+        context.runtime(),
         context.threadLocal());
   case envoy::api::v2::filter::http::Transformation::kHeaderBodyTransform: {
     const auto& header_body_transform = transformation.header_body_transform();
