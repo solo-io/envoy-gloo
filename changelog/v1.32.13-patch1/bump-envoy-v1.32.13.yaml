@@ -8,3 +8,4 @@ changelog:
     description: >-
       Bumps Envoy to v1.32.13
       https://www.envoyproxy.io/docs/envoy/v1.32.13/version_history/v1.32/v1.32.13
+      Also added patch to backported the fix for CVE-2025-62409
