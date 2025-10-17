@@ -69,6 +69,7 @@ def envoy_gloo_dependencies():
     _repository_impl("envoy", patches=[
         "@envoy_gloo//bazel/foreign_cc:set_filter_state-enable-per-route-configuration-over.patch",
         "@envoy_gloo//bazel/foreign_cc:tlv-support.patch", #remove in  1.34
+        "@envoy_gloo//bazel/foreign_cc:CVE-2025-62409.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
