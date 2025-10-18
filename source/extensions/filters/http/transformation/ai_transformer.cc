@@ -44,37 +44,37 @@ std::string lookupEndpointMetadata(
   }
 
   std::vector<std::string> elements = absl::StrSplit(key, delimiter);
-  const ProtobufWkt::Value &value = Envoy::Config::Metadata::metadataValue(
+  const Protobuf::Value &value = Envoy::Config::Metadata::metadataValue(
       endpoint_metadata.get(),
       Extensions::HttpFilters::SoloHttpFilterNames::get().Transformation,
       elements);
 
   switch (value.kind_case()) {
-  case ProtobufWkt::Value::kStringValue: {
+  case Protobuf::Value::kStringValue: {
     return value.string_value();
   }
-  case ProtobufWkt::Value::kNumberValue: {
+  case Protobuf::Value::kNumberValue: {
     return std::to_string(value.number_value());
   }
-  case ProtobufWkt::Value::kBoolValue: {
+  case Protobuf::Value::kBoolValue: {
     const std::string &stringval =
         value.bool_value() ? trueString : falseString;
     return stringval;
   }
-  case ProtobufWkt::Value::kStructValue: {
+  case Protobuf::Value::kStructValue: {
     std::string output;
     auto status =
         ProtobufUtil::MessageToJsonString(value.struct_value(), &output);
     return output;
   }
-  case ProtobufWkt::Value::kListValue: {
+  case Protobuf::Value::kListValue: {
     std::string output;
     auto status =
         ProtobufUtil::MessageToJsonString(value.list_value(), &output);
     return output;
   }
-  case ProtobufWkt::Value::KIND_NOT_SET:
-  case ProtobufWkt::Value::kNullValue:
+  case Protobuf::Value::KIND_NOT_SET:
+  case Protobuf::Value::kNullValue:
     return "";
   }
 
@@ -256,39 +256,39 @@ void setProviderKeyHeader(Http::RequestHeaderMap *request_headers,
  * @param pb_value
  * @return json
  */
-json protobufValueToJson(const ProtobufWkt::Value &pb_value) {
+json protobufValueToJson(const Protobuf::Value &pb_value) {
   switch (pb_value.kind_case()) {
-  case ProtobufWkt::Value::kNullValue:
+  case Protobuf::Value::kNullValue:
     return json(nullptr); // JSON null
 
-  case ProtobufWkt::Value::kBoolValue:
+  case Protobuf::Value::kBoolValue:
     return json(pb_value.bool_value()); // JSON boolean
 
-  case ProtobufWkt::Value::kNumberValue:
+  case Protobuf::Value::kNumberValue:
     return json(pb_value.number_value()); // JSON number (double)
 
-  case ProtobufWkt::Value::kStringValue:
+  case Protobuf::Value::kStringValue:
     return json(pb_value.string_value()); // JSON string
 
-  case ProtobufWkt::Value::kStructValue: {
+  case Protobuf::Value::kStructValue: {
     json obj = json::object(); // JSON object
-    const ProtobufWkt::Struct &pb_struct = pb_value.struct_value();
+    const Protobuf::Struct &pb_struct = pb_value.struct_value();
     for (const auto &field : pb_struct.fields()) {
       obj[field.first] = protobufValueToJson(field.second);
     }
     return obj;
   }
 
-  case ProtobufWkt::Value::kListValue: {
+  case Protobuf::Value::kListValue: {
     json arr = json::array(); // JSON array
-    const ProtobufWkt::ListValue &pb_list = pb_value.list_value();
+    const Protobuf::ListValue &pb_list = pb_value.list_value();
     for (const auto &item : pb_list.values()) {
       arr.push_back(protobufValueToJson(item));
     }
     return arr;
   }
 
-  case ProtobufWkt::Value::KIND_NOT_SET:
+  case Protobuf::Value::KIND_NOT_SET:
   default:
     return json(nullptr); // Default to null if kind is not set
   }

@@ -255,6 +255,9 @@ class AiTransformerTest : public ::testing::Test {
     MOCK_METHOD(const Http::ConnectionPool::Instance::StreamOptions&, upstreamStreamOptions, (), (const));
     MOCK_METHOD(void, addUpstreamCallbacks, (Http::UpstreamCallbacks& callbacks));
     MOCK_METHOD(void, setUpstreamToDownstream, (Router::UpstreamToDownstream& upstream_to_downstream_interface));
+    MOCK_METHOD(void, setupRouteTimeoutForWebsocketUpgrade, ());
+    MOCK_METHOD(void, disableRouteTimeoutForWebsocketUpgrade, ());
+    MOCK_METHOD(void, disablePerTryTimeoutForWebsocketUpgrade, ());
 
   };
 

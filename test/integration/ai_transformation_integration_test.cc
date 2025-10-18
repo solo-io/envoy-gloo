@@ -261,7 +261,7 @@ public:
     ASSERT_TRUE(response->waitForEndStream());
   }
 
-  ProtobufWkt::Struct azureEndPointMetaData() {
+  Protobuf::Struct azureEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
         {"auth_token", "foobar"},
         {"json_schema", "openai"},
@@ -272,7 +272,7 @@ public:
     return MessageUtil::keyValueStruct(metadata);
   }
 
-  ProtobufWkt::Struct openAiEndPointMetaData() {
+  Protobuf::Struct openAiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
         {"auth_token", "foobar"},
         {"json_schema", "openai"},
@@ -282,7 +282,7 @@ public:
     return MessageUtil::keyValueStruct(metadata);
   }
 
-  ProtobufWkt::Struct anthropicEndPointMetaData() {
+  Protobuf::Struct anthropicEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
         {"auth_token", "foobar"},
         {"json_schema", "anthropic"},
@@ -291,7 +291,7 @@ public:
     return MessageUtil::keyValueStruct(metadata);
   }
 
-  ProtobufWkt::Struct geminiEndPointMetaData() {
+  Protobuf::Struct geminiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
         {"auth_token", "foobar"},
         {"json_schema", "gemini"},
@@ -301,7 +301,7 @@ public:
     return MessageUtil::keyValueStruct(metadata);
   }
 
-  ProtobufWkt::Struct vertexAiEndPointMetaData() {
+  Protobuf::Struct vertexAiEndPointMetaData() {
     static std::map<std::string, std::string> metadata{
         {"auth_token", "foobar"},
         {"json_schema", "gemini"},
@@ -326,7 +326,7 @@ public:
   std::string filter_transformation_string_{DEFAULT_FILTER_TRANSFORMATION};
   std::string matcher_string_{DEFAULT_MATCHER};
   bool downstream_filter_{false};
-  ProtobufWkt::Struct *endpoint_metadata_{nullptr};
+  Protobuf::Struct *endpoint_metadata_{nullptr};
 
 private:
   std::string loadListenerConfig(const std::string &transformation_config_str,
@@ -423,7 +423,7 @@ TEST_P(AiTransformationIntegrationTest, NoEndPointMetadata) {
 TEST_P(AiTransformationIntegrationTest, EmptyEndPointMetadata) {
   // There is endpoint metadata `io.solo.transformation` constains no fields
   // AI Transformer will fallback to the default which is openai
-  ProtobufWkt::Struct metadata;
+  Protobuf::Struct metadata;
   endpoint_metadata_ = &metadata;
   initialize();
   Http::TestRequestHeaderMapImpl request_headers{{":method", "POST"},
