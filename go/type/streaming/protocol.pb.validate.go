@@ -82,7 +82,7 @@ type PubMsgMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PubMsgMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -184,7 +184,7 @@ type PubAckMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PubAckMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -297,7 +297,7 @@ type MsgProtoMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m MsgProtoMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -399,7 +399,7 @@ type AckMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AckMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -503,7 +503,7 @@ type ConnectRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ConnectRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -617,7 +617,7 @@ type ConnectResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ConnectResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -737,7 +737,7 @@ type SubscriptionRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m SubscriptionRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -843,7 +843,7 @@ type SubscriptionResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m SubscriptionResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -953,7 +953,7 @@ type UnsubscribeRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m UnsubscribeRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1056,7 +1056,7 @@ type CloseRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m CloseRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1158,7 +1158,7 @@ type CloseResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m CloseResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}

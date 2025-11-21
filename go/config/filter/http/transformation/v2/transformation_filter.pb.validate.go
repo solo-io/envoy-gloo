@@ -150,7 +150,7 @@ type FilterTransformationsMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m FilterTransformationsMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -321,7 +321,7 @@ type TransformationRuleMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationRuleMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -517,7 +517,7 @@ type RouteTransformationsMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m RouteTransformationsMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -682,7 +682,7 @@ type ResponseMatcherMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ResponseMatcherMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -840,7 +840,7 @@ type ResponseTransformationRuleMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ResponseTransformationRuleMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1140,7 +1140,7 @@ type TransformationMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1332,7 +1332,7 @@ type ExtractionMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m ExtractionMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1848,7 +1848,7 @@ type TransformationTemplateMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationTemplateMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -1951,7 +1951,7 @@ type InjaTemplateMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m InjaTemplateMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2050,7 +2050,7 @@ type PassthroughMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PassthroughMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2150,7 +2150,7 @@ type MergeExtractorsToBodyMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m MergeExtractorsToBodyMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2298,7 +2298,7 @@ type MergeJsonKeysMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m MergeJsonKeysMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2400,7 +2400,7 @@ type HeaderBodyTransformMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m HeaderBodyTransformMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2534,7 +2534,7 @@ type FieldDefaultMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m FieldDefaultMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2702,7 +2702,7 @@ type PromptEnrichmentMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PromptEnrichmentMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -2867,7 +2867,7 @@ type AiTransformationMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AiTransformationMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3058,7 +3058,7 @@ type TransformationRule_TransformationsMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationRule_TransformationsMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3304,7 +3304,7 @@ type RouteTransformations_RouteTransformationMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m RouteTransformations_RouteTransformationMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3500,7 +3500,7 @@ type RouteTransformations_RouteTransformation_RequestMatchMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m RouteTransformations_RouteTransformation_RequestMatchMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3676,7 +3676,7 @@ type RouteTransformations_RouteTransformation_ResponseMatchMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m RouteTransformations_RouteTransformation_ResponseMatchMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3823,7 +3823,7 @@ type TransformationTemplate_HeaderToAppendMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationTemplate_HeaderToAppendMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -3973,7 +3973,7 @@ type TransformationTemplate_DynamicMetadataValueMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationTemplate_DynamicMetadataValueMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -4108,7 +4108,7 @@ type TransformationTemplate_SpanTransformerMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m TransformationTemplate_SpanTransformerMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -4244,7 +4244,7 @@ type MergeJsonKeys_OverridableTemplateMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m MergeJsonKeys_OverridableTemplateMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -4351,7 +4351,7 @@ type PromptEnrichment_MessageMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m PromptEnrichment_MessageMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
