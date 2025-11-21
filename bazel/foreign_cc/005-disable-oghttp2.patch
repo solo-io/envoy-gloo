@@ -1,6 +1,6 @@
-From 97aa669f7593d73abd3b4d6b92e91362cf745a5c Mon Sep 17 00:00:00 2001
+From bbfa38ad176607bf658c614e2845cbc476880732 Mon Sep 17 00:00:00 2001
 From: Andy Fong <andy.fong@solo.io>
-Date: Thu, 18 Sep 2025 00:07:05 +0000
+Date: Fri, 21 Nov 2025 13:55:23 -0500
 Subject: [PATCH] disable oghttp2
 
 Signed-off-by: Andy Fong <andy.fong@solo.io>
@@ -10,10 +10,10 @@ Signed-off-by: Andy Fong <andy.fong@solo.io>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git source/common/http/http2/codec_impl.cc source/common/http/http2/codec_impl.cc
-index b3dd891733..52efbecb96 100644
+index f13b1b0217..ebaa9c840f 100644
 --- source/common/http/http2/codec_impl.cc
 +++ source/common/http/http2/codec_impl.cc
-@@ -2231,6 +2231,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+@@ -2327,6 +2327,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
  
    auto direct_visitor = std::make_unique<Http2Visitor>(this);
@@ -22,18 +22,18 @@ index b3dd891733..52efbecb96 100644
  #ifdef ENVOY_NGHTTP2
    if (use_oghttp2_library_) {
 diff --git source/common/runtime/runtime_features.cc source/common/runtime/runtime_features.cc
-index 3da2ea7986..a9895070aa 100644
+index 3255902e0c..c2a93c6569 100644
 --- source/common/runtime/runtime_features.cc
 +++ source/common/runtime/runtime_features.cc
-@@ -49,7 +49,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
+@@ -52,7 +52,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
  RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_extension);
  RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
  RUNTIME_GUARD(envoy_reloadable_features_http2_propagate_reset_events);
 -RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
- RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_cookie);
  // Delay deprecation and decommission until UHV is enabled.
  RUNTIME_GUARD(envoy_reloadable_features_http_reject_path_with_fragment);
-@@ -106,6 +105,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
+ RUNTIME_GUARD(envoy_reloadable_features_mobile_use_network_observer_registry);
+@@ -109,6 +108,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
  #else
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_always_use_v6);
  #endif
