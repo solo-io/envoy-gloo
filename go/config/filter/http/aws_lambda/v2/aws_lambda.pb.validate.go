@@ -176,7 +176,7 @@ type AWSLambdaPerRouteMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AWSLambdaPerRouteMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -310,7 +310,7 @@ type AWSLambdaProtocolExtensionMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AWSLambdaProtocolExtensionMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -530,7 +530,7 @@ type AWSLambdaConfigMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AWSLambdaConfigMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -686,7 +686,7 @@ type AWSLambdaConfig_ServiceAccountCredentialsMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m AWSLambdaConfig_ServiceAccountCredentialsMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
