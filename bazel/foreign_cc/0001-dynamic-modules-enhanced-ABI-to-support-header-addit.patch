@@ -1,0 +1,296 @@
+From bd3e3fc6e7675074ff85c33757580f54ba5ea3d8 Mon Sep 17 00:00:00 2001
+From: Andy Fong <andy.fong@solo.io>
+Date: Tue, 25 Nov 2025 14:47:32 -0500
+Subject: [PATCH] dynamic modules: enhanced ABI to support header addition
+
+This is a partial port of a large upstream PR https://github.com/envoyproxy/envoy/pull/41908
+We needed the addHeader functionality to complete the rustformation work
+
+Signed-off-by: Andy Fong <andy.fong@solo.io>
+---
+ source/extensions/dynamic_modules/abi.h       | 34 +++++++
+ .../dynamic_modules/sdk/rust/src/lib.rs       | 46 +++++++++
+ .../filters/http/dynamic_modules/abi_impl.cc  | 31 ++++++
+ .../dynamic_modules/http/abi_impl_test.cc     | 94 +++++++++++++++++++
+ 4 files changed, 205 insertions(+)
+
+diff --git source/extensions/dynamic_modules/abi.h source/extensions/dynamic_modules/abi.h
+index 76ea041c56..93532e5325 100644
+--- source/extensions/dynamic_modules/abi.h
++++ source/extensions/dynamic_modules/abi.h
+@@ -1142,6 +1142,40 @@ size_t envoy_dynamic_module_callback_http_get_response_trailer(
+     envoy_dynamic_module_type_buffer_envoy_ptr* result_buffer_ptr, size_t* result_buffer_length_ptr,
+     size_t index);
+ 
++/**
++ * envoy_dynamic_module_callback_http_add_request_header is called by the module to add
++ * the value of the request header with the given key. If the header does not exist, it will be
++ * created. If the header already exists, all existing values will be removed and the new value will
++ * be set. When the given value is null, the header will be removed if the key exists.
++ *
++ * @param filter_envoy_ptr is the pointer to the DynamicModuleHttpFilter object of the
++ * corresponding HTTP filter.
++ * @param key is the key of the header.
++ * @param key_length is the length of the key.
++ * @param value is the pointer to the buffer of the value. It can be null to remove the header.
++ * @param value_length is the length of the value.
++ * @return true if the operation is successful, false otherwise.
++ *
++ * Note that this only adds the header to the underlying Envoy object. Whether or not the header is
++ * actually sent to the upstream depends on the phase of the execution and subsequent
++ * filters. In other words, returning true from this function does not guarantee that the header
++ * will be sent to the upstream.
++ */
++bool envoy_dynamic_module_callback_http_add_request_header(
++    envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
++    envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
++    envoy_dynamic_module_type_buffer_module_ptr value, size_t value_length);
++
++/**
++ * envoy_dynamic_module_callback_http_add_response_header is exactly the same as the
++ * envoy_dynamic_module_callback_http_add_request_header, but for the response headers.
++ * See the comments on envoy_dynamic_module_callback_http_add_request_header for more details.
++ */
++bool envoy_dynamic_module_callback_http_add_response_header(
++    envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
++    envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
++    envoy_dynamic_module_type_buffer_module_ptr value, size_t value_length);
++
+ /**
+  * envoy_dynamic_module_callback_http_get_request_headers_count is called by the module to get the
+  * number of request headers. Combined with envoy_dynamic_module_callback_http_get_request_headers,
+diff --git source/extensions/dynamic_modules/sdk/rust/src/lib.rs source/extensions/dynamic_modules/sdk/rust/src/lib.rs
+index 534ce469c6..75f6506a76 100644
+--- source/extensions/dynamic_modules/sdk/rust/src/lib.rs
++++ source/extensions/dynamic_modules/sdk/rust/src/lib.rs
+@@ -598,6 +598,13 @@ pub trait EnvoyHttpFilter {
+   /// Returns true if the header is set successfully.
+   fn set_request_header(&mut self, key: &str, value: &[u8]) -> bool;
+ 
++  /// Add a new request header with the given key and value.
++  ///
++  /// This will add a new header even if the header with the same key already exists.
++  ///
++  /// Returns true if the header is added successfully.
++  fn add_request_header(&mut self, key: &str, value: &[u8]) -> bool;
++
+   /// Remove the request header with the given key.
+   ///
+   /// Returns true if the header is removed successfully.
+@@ -693,6 +700,13 @@ pub trait EnvoyHttpFilter {
+   /// Returns true if the operation is successful.
+   fn set_response_trailer(&mut self, key: &str, value: &[u8]) -> bool;
+ 
++  /// Add a new response header with the given key and value.
++  ///
++  /// This will add a new header even if the header with the same key already exists.
++  ///
++  /// Returns true if the header is added successfully.
++  fn add_response_header(&mut self, key: &str, value: &[u8]) -> bool;
++
+   /// Remove the response trailer with the given key.
+   ///
+   /// Returns true if the trailer is removed successfully.
+@@ -1167,6 +1181,22 @@ impl EnvoyHttpFilter for EnvoyHttpFilterImpl {
+     }
+   }
+ 
++  fn add_request_header(&mut self, key: &str, value: &[u8]) -> bool {
++    let key_ptr = key.as_ptr();
++    let key_size = key.len();
++    let value_ptr = value.as_ptr();
++    let value_size = value.len();
++    unsafe {
++      abi::envoy_dynamic_module_callback_http_add_request_header(
++        self.raw_ptr,
++        key_ptr as *const _ as *mut _,
++        key_size,
++        value_ptr as *const _ as *mut _,
++        value_size,
++      )
++    }
++  }
++
+   fn get_request_trailer_value(&self, key: &str) -> Option<EnvoyBuffer> {
+     self.get_header_value_impl(
+       key,
+@@ -1241,6 +1271,22 @@ impl EnvoyHttpFilter for EnvoyHttpFilterImpl {
+     }
+   }
+ 
++  fn add_response_header(&mut self, key: &str, value: &[u8]) -> bool {
++    let key_ptr = key.as_ptr();
++    let key_size = key.len();
++    let value_ptr = value.as_ptr();
++    let value_size = value.len();
++    unsafe {
++      abi::envoy_dynamic_module_callback_http_add_response_header(
++        self.raw_ptr,
++        key_ptr as *const _ as *mut _,
++        key_size,
++        value_ptr as *const _ as *mut _,
++        value_size,
++      )
++    }
++  }
++
+   fn get_response_trailer_value(&self, key: &str) -> Option<EnvoyBuffer> {
+     self.get_header_value_impl(
+       key,
+diff --git source/extensions/filters/http/dynamic_modules/abi_impl.cc source/extensions/filters/http/dynamic_modules/abi_impl.cc
+index 2d2b166c27..ac4f6a2de0 100644
+--- source/extensions/filters/http/dynamic_modules/abi_impl.cc
++++ source/extensions/filters/http/dynamic_modules/abi_impl.cc
+@@ -411,6 +411,29 @@ size_t envoy_dynamic_module_callback_http_get_response_trailer(
+                             result_buffer_length_ptr, index);
+ }
+ 
++bool addHeaderValueImpl(HeadersMapOptRef map, envoy_dynamic_module_type_buffer_module_ptr key,
++                        size_t key_length, envoy_dynamic_module_type_buffer_module_ptr value,
++                        size_t value_length) {
++  if (!map.has_value()) {
++    return false;
++  }
++  if (value == nullptr) {
++    return false;
++  }
++  absl::string_view key_view(key, key_length);
++  absl::string_view value_view(value, value_length);
++  map->addCopy(Envoy::Http::LowerCaseString(key_view), value_view);
++  return true;
++}
++
++bool envoy_dynamic_module_callback_http_add_request_header(
++    envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
++    envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
++    envoy_dynamic_module_type_buffer_module_ptr value, size_t value_length) {
++  DynamicModuleHttpFilter* filter = static_cast<DynamicModuleHttpFilter*>(filter_envoy_ptr);
++  return addHeaderValueImpl(filter->requestHeaders(), key, key_length, value, value_length);
++}
++
+ bool setHeaderValueImpl(HeadersMapOptRef map, envoy_dynamic_module_type_buffer_module_ptr key,
+                         size_t key_length, envoy_dynamic_module_type_buffer_module_ptr value,
+                         size_t value_length) {
+@@ -444,6 +467,14 @@ bool envoy_dynamic_module_callback_http_set_request_trailer(
+   return setHeaderValueImpl(filter->requestTrailers(), key, key_length, value, value_length);
+ }
+ 
++bool envoy_dynamic_module_callback_http_add_response_header(
++    envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
++    envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
++    envoy_dynamic_module_type_buffer_module_ptr value, size_t value_length) {
++  DynamicModuleHttpFilter* filter = static_cast<DynamicModuleHttpFilter*>(filter_envoy_ptr);
++  return addHeaderValueImpl(filter->responseHeaders(), key, key_length, value, value_length);
++}
++
+ bool envoy_dynamic_module_callback_http_set_response_header(
+     envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
+     envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
+diff --git test/extensions/dynamic_modules/http/abi_impl_test.cc test/extensions/dynamic_modules/http/abi_impl_test.cc
+index 89ee935da9..17e6123a02 100644
+--- test/extensions/dynamic_modules/http/abi_impl_test.cc
++++ test/extensions/dynamic_modules/http/abi_impl_test.cc
+@@ -153,6 +153,100 @@ INSTANTIATE_TEST_SUITE_P(
+                       envoy_dynamic_module_callback_http_get_response_header,
+                       envoy_dynamic_module_callback_http_get_response_trailer));
+ 
++// Parameterized test for add_header_value
++using AddHeaderValueCallbackType = bool (*)(envoy_dynamic_module_type_http_filter_envoy_ptr,
++                                            envoy_dynamic_module_type_buffer_module_ptr, size_t,
++                                            envoy_dynamic_module_type_buffer_module_ptr, size_t);
++
++class DynamicModuleHttpFilterAddHeaderValueTest
++    : public DynamicModuleHttpFilterTest,
++      public ::testing::WithParamInterface<AddHeaderValueCallbackType> {};
++
++TEST_P(DynamicModuleHttpFilterAddHeaderValueTest, AddHeaderValue) {
++  AddHeaderValueCallbackType callback = GetParam();
++
++  // Test with nullptr accessors.
++  const std::string key = "key";
++  const std::string value = "value";
++  envoy_dynamic_module_type_buffer_envoy_ptr key_ptr = const_cast<char*>(key.data());
++  size_t key_length = key.size();
++  envoy_dynamic_module_type_buffer_envoy_ptr value_ptr = const_cast<char*>(value.data());
++  size_t value_length = value.size();
++  EXPECT_FALSE(callback(filter_.get(), key_ptr, key_length, value_ptr, value_length));
++
++  std::initializer_list<std::pair<std::string, std::string>> headers = {
++      {"single", "value"}, {"multi", "value1"}, {"multi", "value2"}};
++  Http::TestRequestHeaderMapImpl request_headers{headers};
++  Http::TestRequestTrailerMapImpl request_trailers{headers};
++  Http::TestResponseHeaderMapImpl response_headers{headers};
++  Http::TestResponseTrailerMapImpl response_trailers{headers};
++  EXPECT_CALL(decoder_callbacks_, requestHeaders())
++      .WillRepeatedly(testing::Return(makeOptRef<RequestHeaderMap>(request_headers)));
++  EXPECT_CALL(decoder_callbacks_, requestTrailers())
++      .WillRepeatedly(testing::Return(makeOptRef<RequestTrailerMap>(request_trailers)));
++  EXPECT_CALL(encoder_callbacks_, responseHeaders())
++      .WillRepeatedly(testing::Return(makeOptRef<ResponseHeaderMap>(response_headers)));
++  EXPECT_CALL(encoder_callbacks_, responseTrailers())
++      .WillRepeatedly(testing::Return(makeOptRef<ResponseTrailerMap>(response_trailers)));
++
++  Http::HeaderMap* header_map = nullptr;
++  if (callback == &envoy_dynamic_module_callback_http_add_request_header) {
++    header_map = &request_headers;
++  } else if (callback == &envoy_dynamic_module_callback_http_add_response_header) {
++    header_map = &response_headers;
++  } else {
++    FAIL();
++  }
++
++  // Non existing key.
++  const std::string new_key = "new_one";
++  const std::string new_value = "value";
++  envoy_dynamic_module_type_buffer_envoy_ptr new_key_ptr = const_cast<char*>(new_key.data());
++  size_t new_key_length = new_key.size();
++  envoy_dynamic_module_type_buffer_envoy_ptr new_value_ptr = const_cast<char*>(new_value.data());
++  size_t new_value_length = new_value.size();
++  EXPECT_TRUE(
++      callback(filter_.get(), new_key_ptr, new_key_length, new_value_ptr, new_value_length));
++
++  auto values = header_map->get(Envoy::Http::LowerCaseString(new_key));
++  EXPECT_EQ(values.size(), 1);
++  EXPECT_EQ(values[0]->value().getStringView(), new_value);
++
++  // Existing non-multi key.
++  const std::string key2 = "single";
++  const std::string value2 = "new_value";
++  envoy_dynamic_module_type_buffer_envoy_ptr key_ptr2 = const_cast<char*>(key2.data());
++  size_t key_length2 = key2.size();
++  envoy_dynamic_module_type_buffer_envoy_ptr value_ptr2 = const_cast<char*>(value2.data());
++  size_t value_length2 = value2.size();
++  EXPECT_TRUE(callback(filter_.get(), key_ptr2, key_length2, value_ptr2, value_length2));
++
++  auto values2 = header_map->get(Envoy::Http::LowerCaseString(key2));
++  EXPECT_EQ(values2.size(), 2);
++  EXPECT_EQ(values2[0]->value().getStringView(), "value");
++  EXPECT_EQ(values2[1]->value().getStringView(), value2);
++
++  // Existing multi key must be replaced by a single value.
++  const std::string key3 = "multi";
++  const std::string value3 = "new_value";
++  envoy_dynamic_module_type_buffer_envoy_ptr key_ptr3 = const_cast<char*>(key3.data());
++  size_t key_length3 = key3.size();
++  envoy_dynamic_module_type_buffer_envoy_ptr value_ptr3 = const_cast<char*>(value3.data());
++  size_t value_length3 = value3.size();
++  EXPECT_TRUE(callback(filter_.get(), key_ptr3, key_length3, value_ptr3, value_length3));
++
++  auto values3 = header_map->get(Envoy::Http::LowerCaseString(key3));
++  EXPECT_EQ(values3.size(), 3);
++  EXPECT_EQ(values3[0]->value().getStringView(), "value1");
++  EXPECT_EQ(values3[1]->value().getStringView(), "value2");
++  EXPECT_EQ(values3[2]->value().getStringView(), value3);
++}
++
++INSTANTIATE_TEST_SUITE_P(
++    AddHeadersCountTests, DynamicModuleHttpFilterAddHeaderValueTest,
++    ::testing::Values(envoy_dynamic_module_callback_http_add_request_header,
++                      envoy_dynamic_module_callback_http_add_response_header));
++
+ // Parameterized test for set_header_value
+ using SetHeaderValueCallbackType = bool (*)(envoy_dynamic_module_type_http_filter_envoy_ptr,
+                                             envoy_dynamic_module_type_buffer_module_ptr, size_t,
+-- 
+2.51.0
+

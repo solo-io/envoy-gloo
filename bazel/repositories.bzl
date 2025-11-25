@@ -73,6 +73,9 @@ def envoy_gloo_dependencies():
         # the slack context in
         # https://github.com/solo-io/envoy-gloo-ee/issues/969
         "@envoy_gloo//bazel/foreign_cc:005-disable-oghttp2.patch",
+        # backport rust dynamic module add_header functionality from upstream main. Remove this 
+        # when upgrading to envoy v1.37.0
+        "@envoy_gloo//bazel/foreign_cc:0001-dynamic-modules-enhanced-ABI-to-support-header-addit.patch",
     ])
     _repository_impl("json", build_file = "@envoy_gloo//bazel/external:json.BUILD")
     _repository_impl("inja", build_file = "@envoy_gloo//bazel/external:inja.BUILD")
