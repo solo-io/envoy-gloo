@@ -1,0 +1,6 @@
+changelog:
+  - type: FIX
+    issueLink: https://github.com/solo-io/envoy-gloo-ee/issues/948
+    resolvesIssue: false
+    description: >-
+      backport rust dynamic module add_header functionality from upstream envoy main
