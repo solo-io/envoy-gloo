@@ -23,7 +23,7 @@ fast-build-arm:
 
 .PHONY: build-arm
 build-arm:
-	./ci/run_envoy_docker.sh 'ci/do_ci.sh bazel.release //test/extensions... //test/common/... //test/integration/...'
+	./ci/run_envoy_docker.sh 'ci/do_ci.sh bazel.release //test/extensions/... //test/common/... //test/integration/...'
 
 .PHONY: docker-release-arm
 docker-release-arm:
