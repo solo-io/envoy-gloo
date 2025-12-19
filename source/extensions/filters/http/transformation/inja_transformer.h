@@ -37,7 +37,7 @@ public:
   const GetBodyFunc *body_;
   const std::unordered_map<std::string, std::string> *destructive_extractions_;
   const std::unordered_map<std::string, absl::string_view> *extractions_;
-  const std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr<nlohmann::json>>* data_sources_;
+  const std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr<std::string>>* data_sources_;
 
   const nlohmann::json *context_;
   const std::unordered_map<std::string, std::string> *environ_;
@@ -150,7 +150,7 @@ private:
   bool advanced_templates_{};
   bool passthrough_body_{};
   std::vector<std::pair<std::string, Extractor>> extractors_;
-  std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr<nlohmann::json>> data_sources_;
+  std::unordered_map<std::string, Envoy::Config::DataSource::DataSourceProviderPtr<std::string>> data_sources_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_;
   std::vector<std::pair<Http::LowerCaseString, inja::Template>> headers_to_append_;
   std::vector<Http::LowerCaseString> headers_to_remove_;
