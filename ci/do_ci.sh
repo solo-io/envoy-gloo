@@ -4,6 +4,10 @@
 
 set -e
 
+if [ -n "$COMMIT_SHA" ]; then
+  echo "$COMMIT_SHA" > SOURCE_VERSION
+fi
+
 # TODO(phlax): Clarify and/or integrate SRCDIR and ENVOY_SRCDIR
 export SRCDIR="${SRCDIR:-$PWD}"
 export ENVOY_SRCDIR="${ENVOY_SRCDIR:-$PWD}"
