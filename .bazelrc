@@ -111,6 +111,7 @@ build:macos --@toolchains_llvm//toolchain/config:libunwind=false
 common:clang-common --linkopt=-fuse-ld=lld
 common:clang-common --@toolchains_llvm//toolchain/config:compiler-rt=false
 common:clang-common --@toolchains_llvm//toolchain/config:libunwind=false
+common:clang-common --toolchain_resolution_debug=@bazel_tools//tools/cpp:toolchain_type
 
 # Clang with libc++ (default)
 common:clang --config=clang-common
