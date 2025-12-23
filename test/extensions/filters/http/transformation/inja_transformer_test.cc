@@ -1295,6 +1295,7 @@ TEST_F(InjaTransformerTest, SetSpanNameNullRouteDecorator) {
 
 TEST_F(InjaTransformerTest, SetSpanNameEmptyRouteDecorator) {
   std::string transformer_span_name = "TRANSFORMER_SPAN_NAME";
+  std::string decorator_span_name = "";
   TransformationTemplate transformation;
   transformation.mutable_span_transformer()->mutable_name()->set_text(transformer_span_name);
 
@@ -1306,7 +1307,7 @@ TEST_F(InjaTransformerTest, SetSpanNameEmptyRouteDecorator) {
   std::unique_ptr<Tracing::MockSpan> mock_span = std::make_unique<Tracing::MockSpan>();
   const std::unique_ptr<Router::MockDecorator> mock_decorator = std::make_unique<NiceMock<Router::MockDecorator>>();
   EXPECT_CALL(*callbacks.route_, decorator).WillRepeatedly(Return(mock_decorator.get()));
-  ON_CALL(*mock_decorator, getOperation()).WillByDefault(ReturnRef(""));
+  ON_CALL(*mock_decorator, getOperation()).WillByDefault(ReturnRef(decorator_span_name));
   EXPECT_CALL(callbacks, activeSpan).WillOnce(ReturnRef(*mock_span));
   EXPECT_CALL(*mock_span, setOperation(transformer_span_name)).Times(1);
 
