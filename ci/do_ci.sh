@@ -20,6 +20,7 @@ export UPSTREAM_ENVOY_SRCDIR=$(bazel info output_base)/external/envoy
 cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelrc"                    "$SOURCE_DIR/upstream.bazelrc"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/.bazelversion"               "$SOURCE_DIR/.bazelversion"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/ci/WORKSPACE.filter.example" "$SOURCE_DIR/ci/"
+cp -f "$UPSTREAM_ENVOY_SRCDIR/ci/build_setup.sh"           "$SOURCE_DIR/ci/"
 cp -f "$UPSTREAM_ENVOY_SRCDIR/VERSION.txt"                 "$SOURCE_DIR/VERSION.txt"
 
 
