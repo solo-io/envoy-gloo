@@ -10,7 +10,7 @@ jobs:
   static-analysis:
     name: static-analysis
     runs-on: ubuntu-24.04-8core-amd64
-    container: envoyproxy/envoy-build-ubuntu:cb86d91cf406995012e330ab58830e6ee10240cb
+    container: envoyproxy/envoy-build-ubuntu:e0b4993c78551c1638ac00cf21d36313fe35d81d
     steps:
     - uses: actions/checkout@v3
     - name: Add safe directory
