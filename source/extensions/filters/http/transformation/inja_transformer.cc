@@ -414,7 +414,10 @@ json TransformerInstance::data_source_callback(const inja::Arguments &args) cons
   const std::string &name = args.at(0)->get_ref<const std::string &>();
   const auto value_it = ctx.data_sources_->find(name);
   if (value_it != ctx.data_sources_->end()) {
-    return value_it->second->data();
+    auto data_ptr = value_it->second->data();
+    if (data_ptr) {
+      return *data_ptr;
+    }
   }
   return "";
 }
@@ -754,8 +757,10 @@ InjaTransformer::InjaTransformer(const TransformationTemplate &transformation,
 
   const auto &data_sources = transformation.data_sources();
   for (auto it = data_sources.begin(); it != data_sources.end(); it++) {
-        auto provider_or_error = Envoy::Config::DataSource::DataSourceProvider::create(
-        it->second, main_thread_dispatcher, tls, api, true, max_size);
+        auto provider_or_error = Envoy::Config::DataSource::DataSourceProvider<std::string>::create(
+        it->second, main_thread_dispatcher, tls, api, true,
+        [](absl::string_view data) { return std::make_shared<std::string>(data); },
+        max_size);
         if (provider_or_error.ok()) {
           data_sources_.emplace(std::make_pair(it->first, std::move(provider_or_error.value())));
         } else {

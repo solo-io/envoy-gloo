@@ -1,5 +1,5 @@
 steps:
-- name: 'envoyproxy/envoy-build-ubuntu:cb86d91cf406995012e330ab58830e6ee10240cb'
+- name: 'envoyproxy/envoy-build-ubuntu:e0b4993c78551c1638ac00cf21d36313fe35d81d'
   id: 'gengo'
   args: ['make', 'check-gencode']
   volumes:
@@ -12,7 +12,7 @@ steps:
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
-- name: 'envoyproxy/envoy-build-ubuntu:cb86d91cf406995012e330ab58830e6ee10240cb'
+- name: 'envoyproxy/envoy-build-ubuntu:e0b4993c78551c1638ac00cf21d36313fe35d81d'
   id: 'do_ci'
   args:
   - 'ci/do_ci.sh'
@@ -33,7 +33,7 @@ steps:
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
-- name: 'envoyproxy/envoy-build-ubuntu:41c5a05d708972d703661b702a63ef5060125c33'
+- name: 'envoyproxy/envoy-build-ubuntu:e0b4993c78551c1638ac00cf21d36313fe35d81d'
   id: 'static_analysis'
   allowFailure: true
   args: ['ci/static_analysis.sh']

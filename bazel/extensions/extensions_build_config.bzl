@@ -189,6 +189,7 @@ EXTENSIONS = {
     "envoy.filters.http.json_to_metadata":              "//source/extensions/filters/http/json_to_metadata:config",
     "envoy.filters.http.jwt_authn":                     "//source/extensions/filters/http/jwt_authn:config",
     "envoy.filters.http.mcp":                           "//source/extensions/filters/http/mcp:config",
+    "envoy.filters.http.mcp_router":                    "//source/extensions/filters/http/mcp_router:config",
     "envoy.filters.http.rate_limit_quota":              "//source/extensions/filters/http/rate_limit_quota:config",
     # Disabled by default. kill_request is not built into most prebuilt images.
     # For instructions for building with disabled-by-default filters enabled, see
@@ -234,6 +235,7 @@ EXTENSIONS = {
     "envoy.filters.network.connection_limit":                     "//source/extensions/filters/network/connection_limit:config",
     "envoy.filters.network.direct_response":                      "//source/extensions/filters/network/direct_response:config",
     "envoy.filters.network.dubbo_proxy":                          "//source/extensions/filters/network/dubbo_proxy:config",
+    "envoy.filters.network.dynamic_modules":                      "//source/extensions/filters/network/dynamic_modules:config",
     "envoy.filters.network.echo":                                 "//source/extensions/filters/network/echo:config",
     "envoy.filters.network.ext_authz":                            "//source/extensions/filters/network/ext_authz:config",
     "envoy.filters.network.ext_proc":                             "//source/extensions/filters/network/ext_proc:config",
@@ -247,6 +249,7 @@ EXTENSIONS = {
     "envoy.filters.network.tcp_proxy":                            "//source/extensions/filters/network/tcp_proxy:config",
     "envoy.filters.network.thrift_proxy":                         "//source/extensions/filters/network/thrift_proxy:config",
     "envoy.filters.network.set_filter_state":                     "//source/extensions/filters/network/set_filter_state:config",
+    "envoy.filters.network.geoip":                                "//source/extensions/filters/network/geoip:config",
     "envoy.filters.network.sni_cluster":                          "//source/extensions/filters/network/sni_cluster:config",
     "envoy.filters.network.sni_dynamic_forward_proxy":            "//source/extensions/filters/network/sni_dynamic_forward_proxy:config",
     "envoy.filters.network.wasm":                                 "//source/extensions/filters/network/wasm:config",
@@ -599,6 +602,16 @@ EXTENSIONS = {
 
     # Dynamic modules
     "envoy.filters.http.dynamic_modules":                      "//source/extensions/filters/http/dynamic_modules:factory_registration",
+
+    # Certificate selectors
+    "envoy.tls.certificate_selectors.on_demand_secret":                  "//source/extensions/transport_sockets/tls/cert_selectors/on_demand:config",
+
+    # Certificate mappers
+    "envoy.tls.certificate_mappers.static_name":                  "//source/extensions/transport_sockets/tls/cert_mappers/static_name:config",
+    "envoy.tls.certificate_mappers.sni":                  "//source/extensions/transport_sockets/tls/cert_mappers/sni:config",
+
+    # Local address selectors
+    "envoy.upstream.local_address_selector.filter_state_override": "//source/extensions/local_address_selectors/filter_state_override:config",
 }
 
 # These can be changed to ["//visibility:public"], for  downstream builds which
@@ -608,4 +621,6 @@ EXTENSION_PACKAGE_VISIBILITY = ["//visibility:public"]
 CONTRIB_EXTENSION_PACKAGE_VISIBILITY = ["//visibility:public"]
 MOBILE_PACKAGE_VISIBILITY = ["//:mobile_library"]
 
+# Set this variable to true to disable alwayslink for envoy_cc_library.
+# TODO(alyssawilk) audit uses of this in source/ and migrate all libraries to extensions.
 LEGACY_ALWAYSLINK = 1
