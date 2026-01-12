@@ -2,8 +2,8 @@ REPOSITORY_LOCATIONS = dict(
     # can't have more than one comment between envoy line and commit line in
     # order to accommodate `check_extensions_build_config.sh`
     envoy = dict(
-        # envoy main_20260109
-        commit = "986f6ae05c161d299ccc839a37878512896575d8",
+        # envoy main_20260112
+        commit = "24da610495b7e5652798cd3c224d814dd514c1d5",
         remote = "https://github.com/envoyproxy/envoy",
     ),
     inja = dict(
