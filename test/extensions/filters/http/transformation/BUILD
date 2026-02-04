@@ -2,6 +2,8 @@ licenses(["notice"])  # Apache 2
 
 load(
     "@envoy//bazel:envoy_build_system.bzl",
+    "envoy_cc_benchmark_binary",
+    "envoy_benchmark_test",
     "envoy_cc_test_binary",
     "envoy_package",
 )
@@ -44,7 +46,7 @@ envoy_gloo_cc_test(
     ],
 )
 
-envoy_cc_test_binary(
+envoy_cc_benchmark_binary(
     name = "inja_transformer_speed_test",
     srcs = ["inja_transformer_speed_test.cc"],
     repository = "@envoy",
@@ -55,6 +57,11 @@ envoy_cc_test_binary(
         "@envoy//test/mocks/upstream:upstream_mocks",
         "@com_github_google_benchmark//:benchmark",
     ],
+)
+
+envoy_benchmark_test(
+    name = "inja_transformer_speed_test_benchmark_test",
+    benchmark_binary = "inja_transformer_speed_test",
 )
 
 envoy_gloo_cc_test(
