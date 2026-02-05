@@ -1,18 +1,21 @@
-# This file was inspired by envoy Dockerfile:
-# https://github.com/envoyproxy/envoy/blob/445a67344ffda0c8828c8e438e463fcaa7878434/ci/Dockerfile-envoy-alpine
-
-# From Source: https://github.com/CelsoSantos/alpine-glibc
-FROM celsosantos/alpine-glibc:arm64
+# ON_MINOR_UPDATE: Pull from https://github.com/envoyproxy/envoy/blob/4d46da0bba54dfb849d8bf68b600e53d87310a1a/ci/Dockerfile-envoy#L1-L2
+FROM ubuntu:focal
 
 ENV loglevel=info
 
-RUN apk upgrade --update-cache \
-  && apk add dumb-init \
-  && rm -rf /var/cache/apk/*
+ENV DEBIAN_FRONTEND=noninteractive
+
+# hadolint ignore=DL3005,DL3008
+RUN apt-get update && \
+  apt-get install --no-install-recommends -y \
+  ca-certificates \
+  && apt-get upgrade -y \
+  && apt-get clean \
+  && rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
 
 RUN mkdir -p /etc/envoy
 
 ADD envoy.stripped /usr/local/bin/envoy
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/envoy"]
-CMD ["--v2-config-only", "-c", "/etc/envoy/envoy.yaml"]
+ENTRYPOINT ["/usr/local/bin/envoy"]
+CMD ["-c", "/etc/envoy/envoy.yaml"]
