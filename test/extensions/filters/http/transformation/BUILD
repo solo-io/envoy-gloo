@@ -53,7 +53,7 @@ envoy_cc_test_binary(
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
-        "@com_github_google_benchmark//:benchmark",
+        "@benchmark",
     ],
 )
 
