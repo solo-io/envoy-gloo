@@ -50,7 +50,6 @@ envoy_cc_test_binary(
     repository = "@envoy",
     deps = [
         "//source/extensions/filters/http/transformation:inja_transformer_lib",
-        "@envoy//test/benchmark:main",
         "@envoy//test/mocks/http:http_mocks",
         "@envoy//test/mocks/server:server_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
