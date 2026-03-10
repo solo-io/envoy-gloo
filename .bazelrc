@@ -1,9 +1,5 @@
 # Envoy specific Bazel build/test options.
 
-# Use upstream's .bazelrc as a baseline, then override here where needed.
-# This file is copied from upstream in ci/do_ci.sh
-try-import %workspace%/upstream.bazelrc
-
 # Bazel doesn't need more than 200MB of memory for local build based on memory profiling:
 # https://docs.bazel.build/versions/master/skylark/performance.html#memory-profiling
 # The default JVM max heapsize is 1/4 of physical memory up to 32GB which could be large
@@ -12,6 +8,7 @@ try-import %workspace%/upstream.bazelrc
 # leave room for compiler/linker.
 # The number 3G is chosen heuristically to both support large VM and small VM with RBE.
 # Startup options cannot be selected via config.
+# TODO: Adding just to test android
 startup --host_jvm_args=-Xmx3g
 
 common --noenable_bzlmod
@@ -32,6 +29,8 @@ build --define envoy_mobile_listener=enabled
 build --experimental_repository_downloader_retries=2
 build --enable_platform_specific_config
 build --incompatible_merge_fixed_and_default_shell_env
+# A workaround for slow ICU download.
+build --http_timeout_scaling=6.0
 
 # Pass CC, CXX and LLVM_CONFIG variables from the environment.
 # We assume they have stable values, so this won't cause action cache misses.
@@ -111,6 +110,7 @@ build:gcc --copt=-fno-debug-types-section
 # And in all cases the reports appear to be clear false positives.
 build:gcc --copt=-Wno-error=restrict
 build:gcc --copt=-Wno-error=uninitialized
+build:gcc --copt=-Wno-error=attributes
 build:gcc --cxxopt=-Wno-missing-requires
 # We need this because -Wno-missing-requires options is rather new
 # in GCC, so flags -Wno-missing-requires exists in GCC 12, but does
@@ -225,6 +225,7 @@ build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread
 build:libc++ --define force_libcpp=enabled
 build:clang-libc++ --config=libc++
 build:clang-libc++ --action_env=ARFLAGS=r
+build:arm64-clang-libc++ --config=clang-libc++
 
 build:libc++20 --config=libc++
 # gRPC has a lot of deprecated-enum-enum-conversion warning. Remove once it is addressed
@@ -245,7 +246,6 @@ build:coverage --action_env=GCOV=llvm-profdata
 build:coverage --copt=-DNDEBUG
 # 1.5x original timeout + 300s for trace merger in all categories
 build:coverage --test_timeout=390,750,1500,5700
-build:coverage --define=dynamic_link_tests=true
 build:coverage --define=ENVOY_CONFIG_COVERAGE=1
 build:coverage --cxxopt="-DENVOY_CONFIG_COVERAGE=1"
 build:coverage --test_env=HEAPCHECK=
@@ -264,6 +264,7 @@ build:coverage --define=no_debug_info=1
 # `--no-relax` is required for coverage to not err with `relocation R_X86_64_REX_GOTPCRELX`
 build:coverage --linkopt=-Wl,-s,--no-relax
 build:coverage --test_env=ENVOY_IP_TEST_VERSIONS=v4only
+build:coverage --define=dynamic_link_tests=false
 
 build:test-coverage --test_arg="-l trace"
 build:test-coverage --test_arg="--log-path /dev/null"
@@ -271,6 +272,10 @@ build:test-coverage --test_tag_filters=-nocoverage,-fuzz_target
 build:fuzz-coverage --config=plain-fuzzer
 build:fuzz-coverage --run_under=@envoy//bazel/coverage:fuzz_coverage_wrapper.sh
 build:fuzz-coverage --test_tag_filters=-nocoverage
+# Existing fuzz tests don't need a full WASM runtime and in generally we don't really want to
+# fuzz dependencies anyways. On the other hand, disabling WASM reduces the build time and
+# resources required to build and run the tests.
+build:fuzz-coverage --define=wasm=disabled
 
 build:cache-local --remote_cache=grpc://localhost:9092
 
@@ -294,6 +299,16 @@ build:rbe-toolchain-clang-libc++ --action_env=CC=clang --action_env=CXX=clang++
 build:rbe-toolchain-clang-libc++ --action_env=CXXFLAGS=-stdlib=libc++
 build:rbe-toolchain-clang-libc++ --action_env=LDFLAGS=-stdlib=libc++
 build:rbe-toolchain-clang-libc++ --define force_libcpp=enabled
+
+build:rbe-toolchain-arm64-clang-libc++ --config=rbe-toolchain
+build:rbe-toolchain-arm64-clang-libc++ --platforms=@envoy//bazel/rbe/toolchains:rbe_linux_arm64_clang_libcxx_platform
+build:rbe-toolchain-arm64-clang-libc++ --host_platform=@envoy//bazel/rbe/toolchains:rbe_linux_arm64_clang_libcxx_platform
+build:rbe-toolchain-arm64-clang-libc++ --crosstool_top=@envoy//bazel/rbe/toolchains/configs/linux/clang_libcxx/cc:toolchain
+build:rbe-toolchain-arm64-clang-libc++ --extra_toolchains=@envoy//bazel/rbe/toolchains/configs/linux/clang_libcxx/config:cc-toolchain-arm64
+build:rbe-toolchain-arm64-clang-libc++ --action_env=CC=clang --action_env=CXX=clang++
+build:rbe-toolchain-arm64-clang-libc++ --action_env=CXXFLAGS=-stdlib=libc++
+build:rbe-toolchain-arm64-clang-libc++ --action_env=LDFLAGS=-stdlib=libc++
+build:rbe-toolchain-arm64-clang-libc++ --define force_libcpp=enabled
 
 build:rbe-toolchain-asan --config=clang-asan
 build:rbe-toolchain-asan --linkopt -fuse-ld=lld
@@ -338,6 +353,9 @@ build:remote-clang --config=rbe-toolchain-clang
 
 build:remote-clang-libc++ --config=remote
 build:remote-clang-libc++ --config=rbe-toolchain-clang-libc++
+
+build:remote-arm64-clang-libc++ --config=remote
+build:remote-arm64-clang-libc++ --config=rbe-toolchain-arm64-clang-libc++
 
 build:remote-gcc --config=remote
 build:remote-gcc --config=gcc
@@ -547,6 +565,7 @@ common:common-envoy-engflow --grpc_keepalive_timeout=30s
 
 common:cache-envoy-engflow --remote_cache=grpcs://mordenite.cluster.engflow.com
 common:cache-envoy-engflow --remote_timeout=3600s
+# common:cache-envoy-engflow --remote_instance_name=llvm-18
 common:bes-envoy-engflow --bes_backend=grpcs://mordenite.cluster.engflow.com/
 common:bes-envoy-engflow --bes_results_url=https://mordenite.cluster.engflow.com/invocation/
 common:bes-envoy-engflow --bes_timeout=3600s
@@ -563,6 +582,8 @@ common:remote-envoy-engflow --config=rbe-envoy-engflow
 
 common:remote-cache-envoy-engflow --config=common-envoy-engflow
 common:remote-cache-envoy-engflow --config=cache-envoy-engflow
+
+common:cves --//tools/dependency:cve-data=//tools/dependency:cve-data-dir
 
 # Specifies the rustfmt.toml for all rustfmt_test targets.
 build --@rules_rust//rust/settings:rustfmt.toml=//:rustfmt.toml
@@ -588,6 +609,21 @@ common:debug --config=debug-bazel
 common:debug --config=debug-sandbox
 common:debug --config=debug-coverage
 common:debug --config=debug-tests
+
+#############################################################################
+# compat: Compatibility with main branch repo settings
+#############################################################################
+common:bes --config=bes-envoy-engflow
+common:rbe --config=remote-envoy-engflow
+
+common:engflow-common --google_default_credentials=false
+common:engflow-common --grpc_keepalive_time=60s
+common:engflow-common --grpc_keepalive_timeout=30s
+common:engflow-common --remote_cache_compression
+
+common:remote-cache --config=engflow-common
+common:remote-cache --remote_cache=grpcs://mordenite.cluster.engflow.com
+common:remote-cache --remote_timeout=3600s
 
 try-import %workspace%/repo.bazelrc
 try-import %workspace%/clang.bazelrc
