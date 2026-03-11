@@ -1,0 +1,9 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: envoyproxy
+    dependencyRepo: envoy
+    dependencyTag: v1.35.9
+    resolvesIssue: false
+    description: >-
+      Bumps Envoy to v1.35.9
+      https://www.envoyproxy.io/docs/envoy/v1.35.9/version_history/v1.35/v1.35.9
