@@ -1,3 +1,15 @@
+# Envoy Gloo — End of Life
+
+Envoy Gloo is now end of life and will no longer receive releases, bug fixes, or security patches.
+
+Envoy Gloo originally existed as the downstream Envoy distribution for [Gloo OSS](https://github.com/solo-io/gloo). As the project evolved into [kgateway](https://kgateway.dev), we moved closer to upstream open source standards. This included adopting the Kubernetes Gateway API and, starting in kgateway 2.3.0, transitioning to vanilla upstream Envoy images. kgateway 2.2.x was the final release line to use Envoy Gloo.
+
+This shift removes the need for a custom downstream Envoy build and aligns kgateway more closely with the broader open source ecosystem. Because of this, Envoy Gloo will no longer be maintained.
+
+If you're still running Gloo OSS, or otherwise depending on Envoy Gloo, we encourage you to migrate to [kgateway 2.3](https://github.com/kgateway-dev/kgateway/releases/tag/v2.3.0) or later: https://kgateway.dev
+
+Thanks to everyone who contributed to Envoy Gloo over the years.
+
 # Build
 
 ## Laptop
