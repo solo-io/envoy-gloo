@@ -1,7 +1,7 @@
-From 97aa669f7593d73abd3b4d6b92e91362cf745a5c Mon Sep 17 00:00:00 2001
+From 79873ea54c14e6d096b02bc61faebfb18ad913ad Mon Sep 17 00:00:00 2001
 From: Andy Fong <andy.fong@solo.io>
-Date: Thu, 18 Sep 2025 00:07:05 +0000
-Subject: [PATCH] disable oghttp2
+Date: Thu, 5 Mar 2026 19:41:06 -0500
+Subject: [PATCH 2/4] disable-oghttp2
 
 Signed-off-by: Andy Fong <andy.fong@solo.io>
 ---
@@ -9,11 +9,11 @@ Signed-off-by: Andy Fong <andy.fong@solo.io>
  source/common/runtime/runtime_features.cc | 2 +-
  2 files changed, 2 insertions(+), 1 deletion(-)
 
-diff --git source/common/http/http2/codec_impl.cc source/common/http/http2/codec_impl.cc
-index b3dd891733..52efbecb96 100644
---- source/common/http/http2/codec_impl.cc
-+++ source/common/http/http2/codec_impl.cc
-@@ -2231,6 +2231,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
+index b4c01238de..223e18831a 100644
+--- a/source/common/http/http2/codec_impl.cc
++++ b/source/common/http/http2/codec_impl.cc
+@@ -2246,6 +2246,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
  
    auto direct_visitor = std::make_unique<Http2Visitor>(this);
@@ -21,19 +21,19 @@ index b3dd891733..52efbecb96 100644
  
  #ifdef ENVOY_NGHTTP2
    if (use_oghttp2_library_) {
-diff --git source/common/runtime/runtime_features.cc source/common/runtime/runtime_features.cc
-index 3da2ea7986..a9895070aa 100644
---- source/common/runtime/runtime_features.cc
-+++ source/common/runtime/runtime_features.cc
-@@ -49,7 +49,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_delay_reset);
- RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_extension);
+diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
+index a3987910a0..5c41273779 100644
+--- a/source/common/runtime/runtime_features.cc
++++ b/source/common/runtime/runtime_features.cc
+@@ -50,7 +50,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_ex
  RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
+ RUNTIME_GUARD(envoy_reloadable_features_http2_include_cookies_in_limits);
  RUNTIME_GUARD(envoy_reloadable_features_http2_propagate_reset_events);
 -RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
  RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_cookie);
  // Delay deprecation and decommission until UHV is enabled.
  RUNTIME_GUARD(envoy_reloadable_features_http_reject_path_with_fragment);
-@@ -106,6 +105,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
+@@ -111,6 +110,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
  #else
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_always_use_v6);
  #endif
@@ -42,5 +42,5 @@ index 3da2ea7986..a9895070aa 100644
  // TcpProxy::Filter::HttpStreamDecoderFilterCallbacks are implemented or commented as unnecessary
  FALSE_RUNTIME_GUARD(envoy_restart_features_upstream_http_filters_with_tcp_proxy);
 -- 
-2.51.0
+2.54.0
 

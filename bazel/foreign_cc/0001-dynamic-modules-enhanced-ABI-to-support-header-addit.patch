@@ -1,7 +1,7 @@
-From bd3e3fc6e7675074ff85c33757580f54ba5ea3d8 Mon Sep 17 00:00:00 2001
+From 91246b74aa20343618ebfccecb3c00379465b5b3 Mon Sep 17 00:00:00 2001
 From: Andy Fong <andy.fong@solo.io>
 Date: Tue, 25 Nov 2025 14:47:32 -0500
-Subject: [PATCH] dynamic modules: enhanced ABI to support header addition
+Subject: [PATCH 3/4] dynamic modules: enhanced ABI to support header addition
 
 This is a partial port of a large upstream PR https://github.com/envoyproxy/envoy/pull/41908
 We needed the addHeader functionality to complete the rustformation work
@@ -14,10 +14,10 @@ Signed-off-by: Andy Fong <andy.fong@solo.io>
  .../dynamic_modules/http/abi_impl_test.cc     | 94 +++++++++++++++++++
  4 files changed, 205 insertions(+)
 
-diff --git source/extensions/dynamic_modules/abi.h source/extensions/dynamic_modules/abi.h
+diff --git a/source/extensions/dynamic_modules/abi.h b/source/extensions/dynamic_modules/abi.h
 index 76ea041c56..93532e5325 100644
---- source/extensions/dynamic_modules/abi.h
-+++ source/extensions/dynamic_modules/abi.h
+--- a/source/extensions/dynamic_modules/abi.h
++++ b/source/extensions/dynamic_modules/abi.h
 @@ -1142,6 +1142,40 @@ size_t envoy_dynamic_module_callback_http_get_response_trailer(
      envoy_dynamic_module_type_buffer_envoy_ptr* result_buffer_ptr, size_t* result_buffer_length_ptr,
      size_t index);
@@ -59,10 +59,10 @@ index 76ea041c56..93532e5325 100644
  /**
   * envoy_dynamic_module_callback_http_get_request_headers_count is called by the module to get the
   * number of request headers. Combined with envoy_dynamic_module_callback_http_get_request_headers,
-diff --git source/extensions/dynamic_modules/sdk/rust/src/lib.rs source/extensions/dynamic_modules/sdk/rust/src/lib.rs
+diff --git a/source/extensions/dynamic_modules/sdk/rust/src/lib.rs b/source/extensions/dynamic_modules/sdk/rust/src/lib.rs
 index 534ce469c6..75f6506a76 100644
---- source/extensions/dynamic_modules/sdk/rust/src/lib.rs
-+++ source/extensions/dynamic_modules/sdk/rust/src/lib.rs
+--- a/source/extensions/dynamic_modules/sdk/rust/src/lib.rs
++++ b/source/extensions/dynamic_modules/sdk/rust/src/lib.rs
 @@ -598,6 +598,13 @@ pub trait EnvoyHttpFilter {
    /// Returns true if the header is set successfully.
    fn set_request_header(&mut self, key: &str, value: &[u8]) -> bool;
@@ -137,10 +137,10 @@ index 534ce469c6..75f6506a76 100644
    fn get_response_trailer_value(&self, key: &str) -> Option<EnvoyBuffer> {
      self.get_header_value_impl(
        key,
-diff --git source/extensions/filters/http/dynamic_modules/abi_impl.cc source/extensions/filters/http/dynamic_modules/abi_impl.cc
+diff --git a/source/extensions/filters/http/dynamic_modules/abi_impl.cc b/source/extensions/filters/http/dynamic_modules/abi_impl.cc
 index 2d2b166c27..ac4f6a2de0 100644
---- source/extensions/filters/http/dynamic_modules/abi_impl.cc
-+++ source/extensions/filters/http/dynamic_modules/abi_impl.cc
+--- a/source/extensions/filters/http/dynamic_modules/abi_impl.cc
++++ b/source/extensions/filters/http/dynamic_modules/abi_impl.cc
 @@ -411,6 +411,29 @@ size_t envoy_dynamic_module_callback_http_get_response_trailer(
                              result_buffer_length_ptr, index);
  }
@@ -186,10 +186,10 @@ index 2d2b166c27..ac4f6a2de0 100644
  bool envoy_dynamic_module_callback_http_set_response_header(
      envoy_dynamic_module_type_http_filter_envoy_ptr filter_envoy_ptr,
      envoy_dynamic_module_type_buffer_module_ptr key, size_t key_length,
-diff --git test/extensions/dynamic_modules/http/abi_impl_test.cc test/extensions/dynamic_modules/http/abi_impl_test.cc
+diff --git a/test/extensions/dynamic_modules/http/abi_impl_test.cc b/test/extensions/dynamic_modules/http/abi_impl_test.cc
 index 89ee935da9..17e6123a02 100644
---- test/extensions/dynamic_modules/http/abi_impl_test.cc
-+++ test/extensions/dynamic_modules/http/abi_impl_test.cc
+--- a/test/extensions/dynamic_modules/http/abi_impl_test.cc
++++ b/test/extensions/dynamic_modules/http/abi_impl_test.cc
 @@ -153,6 +153,100 @@ INSTANTIATE_TEST_SUITE_P(
                        envoy_dynamic_module_callback_http_get_response_header,
                        envoy_dynamic_module_callback_http_get_response_trailer));
@@ -292,5 +292,5 @@ index 89ee935da9..17e6123a02 100644
  using SetHeaderValueCallbackType = bool (*)(envoy_dynamic_module_type_http_filter_envoy_ptr,
                                              envoy_dynamic_module_type_buffer_module_ptr, size_t,
 -- 
-2.51.0
+2.54.0
 
