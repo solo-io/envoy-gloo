@@ -66,7 +66,9 @@ def _repository_impl(name, **kwargs):
             )
 
 def envoy_gloo_dependencies():
-    _repository_impl("envoy", patches=[
+    _repository_impl("envoy", 
+        patch_args = ["-p1"],
+        patches=[
         # revert upstream's cache filter from using a separate HttpAsyncClient
         "@envoy_gloo//bazel/foreign_cc:002-revert-cache_filter-separate-upstream.patch",
         # use nghttp2 as the default http/2 implementation over oghttp2. see
