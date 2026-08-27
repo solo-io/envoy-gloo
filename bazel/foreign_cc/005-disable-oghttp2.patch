@@ -1,4 +1,4 @@
-From 79873ea54c14e6d096b02bc61faebfb18ad913ad Mon Sep 17 00:00:00 2001
+From 9dcb6bdb0f1e0e59b53e9a8ba267687da541bfac Mon Sep 17 00:00:00 2001
 From: Andy Fong <andy.fong@solo.io>
 Date: Thu, 5 Mar 2026 19:41:06 -0500
 Subject: [PATCH 2/4] disable-oghttp2
@@ -10,10 +10,10 @@ Signed-off-by: Andy Fong <andy.fong@solo.io>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/source/common/http/http2/codec_impl.cc b/source/common/http/http2/codec_impl.cc
-index b4c01238de..223e18831a 100644
+index 3052fea8fd..664b9bf969 100644
 --- a/source/common/http/http2/codec_impl.cc
 +++ b/source/common/http/http2/codec_impl.cc
-@@ -2246,6 +2246,7 @@ ServerConnectionImpl::ServerConnectionImpl(
+@@ -2289,6 +2289,7 @@ ServerConnectionImpl::ServerConnectionImpl(
    Http2Options h2_options(http2_options, max_request_headers_kb);
  
    auto direct_visitor = std::make_unique<Http2Visitor>(this);
@@ -22,18 +22,18 @@ index b4c01238de..223e18831a 100644
  #ifdef ENVOY_NGHTTP2
    if (use_oghttp2_library_) {
 diff --git a/source/common/runtime/runtime_features.cc b/source/common/runtime/runtime_features.cc
-index a3987910a0..5c41273779 100644
+index 48adc99e57..773fbde0b4 100644
 --- a/source/common/runtime/runtime_features.cc
 +++ b/source/common/runtime/runtime_features.cc
-@@ -50,7 +50,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http1_balsa_disallow_lone_cr_in_chunk_ex
- RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
+@@ -57,7 +57,6 @@ RUNTIME_GUARD(envoy_reloadable_features_http2_discard_host_header);
  RUNTIME_GUARD(envoy_reloadable_features_http2_include_cookies_in_limits);
  RUNTIME_GUARD(envoy_reloadable_features_http2_propagate_reset_events);
+ RUNTIME_GUARD(envoy_reloadable_features_http2_track_size_of_dropped_host_header);
 -RUNTIME_GUARD(envoy_reloadable_features_http2_use_oghttp2);
  RUNTIME_GUARD(envoy_reloadable_features_http3_remove_empty_cookie);
+ RUNTIME_GUARD(envoy_reloadable_features_http_pause_generic_upgrade_request_body);
  // Delay deprecation and decommission until UHV is enabled.
- RUNTIME_GUARD(envoy_reloadable_features_http_reject_path_with_fragment);
-@@ -111,6 +110,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
+@@ -143,6 +142,7 @@ ABSL_FLAG(bool, envoy_reloadable_features_always_use_v6, true, "");
  #else
  FALSE_RUNTIME_GUARD(envoy_reloadable_features_always_use_v6);
  #endif
