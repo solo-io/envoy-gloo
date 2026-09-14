@@ -54,10 +54,8 @@ steps:
   env:
   - 'TAGGED_VERSION=$TAG_NAME'
   - 'COMMIT_SHA=$COMMIT_SHA'
-  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
   secretEnv:
     - 'QUAY_IO_PASSWORD'
-    - 'GCP_SERVICE_ACCOUNT_KEY'
   volumes:
   - name: 'vol-build'
     path: '/build'
@@ -95,7 +93,7 @@ availableSecrets:
   inline:
    - kmsKeyName: projects/solo-public/locations/global/keyRings/build/cryptoKeys/build-key
      envMap:
-       QUAY_IO_PASSWORD: 'CiQABlzmSRx5TcOqbldXa/d/+bkmAfpNAWa3PTS06WvuloZL+vASaQCCPGSGCogonVZVEUNx4G3YJtWi18gSuNx4PvLe08q8xAflTMFkjsyQirAOK3Y2oCvgYwiw/ITcuydjkpMjxDygFyENXS9FKFJoAXHlPQE5qidKr8xxmxF5ezhmjGB0gjyjXIIkbSEnBg=='
+       QUAY_IO_PASSWORD: 'CiQABlzmSau3e7z9Z4dNs3V+r2egPVThSwbL6Crfq52GdO9dGvYSaQCCPGSG43zUs4WN1jbG6YM/2YTQhbm3Z6Mk0kK3shQzk+aGJSKyfwxM3SJ74XN8MKCU89y/7dAi/AJQaluJSQt3sr0pts5jfpD2/QQMeu3snIAeG+oDRh3AXOCuokP0bCk7rWkqRM4otg=='
   secretManager:
     - versionName: projects/gloo-ee/secrets/envoy-build-cache-sa/versions/2
       env: 'GCP_SERVICE_ACCOUNT_KEY'
