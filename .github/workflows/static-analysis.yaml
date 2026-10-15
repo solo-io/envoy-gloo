@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-24.04-8core-amd64
     container: envoyproxy/envoy-build-ubuntu:e0b4993c78551c1638ac00cf21d36313fe35d81d
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
     - name: Add safe directory
       run: git config --global --add safe.directory /__w/envoy-gloo/envoy-gloo
     - name: Run static analysis
       run: ci/static_analysis.sh
     - name: Archive static analysis results
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: static-analysis-report-attempt-${{ github.run_attempt }}
         path: linux/amd64/analysis/scan-build-*/
