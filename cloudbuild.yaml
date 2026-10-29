@@ -2,7 +2,7 @@ steps:
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: "standard"
-  args: ['builds','submit','--region=us-central1','--config=ci/cloudbuild.yaml','--substitutions','TAG_NAME=$TAG_NAME,COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=']
+  args: ['builds','submit','--region=us-central1','--config=ci/cloudbuild.yaml','--substitutions','COMMIT_SHA=$COMMIT_SHA,_BUILD_TYPE=']
 
 - name: 'gcr.io/cloud-builders/gcloud'
   id: "asan"
