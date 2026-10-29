@@ -1,0 +1,198 @@
+# Submits ci/cloudbuild-release.yaml for an existing tag to Cloud Build as the
+# release service account, then waits for the build. Needs repository
+# variables ENVOY_GLOO_RELEASE_SA and ENVOY_GLOO_RELEASE_WIF_PROVIDER. The
+# `release` environment holds the required-reviewer approval. The register job
+# publishes artifacts.yaml to solo-ci with the GLOO_VULN_REPORTER org secret.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish, e.g. v1.36.14-patch1
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-envoy-gloo
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+      version: ${{ steps.verify.outputs.version }}
+      build_type: ${{ steps.verify.outputs.build_type }}
+    steps:
+      - name: Require release branch
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/release-v1.36" ]; then
+            echo "run this workflow on release-v1.36, got $REF" >&2
+            exit 1
+          fi
+      - name: Validate tag format
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "invalid tag: $TAG" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Verify tag is on this branch
+        id: verify
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          sha=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
+          git merge-base --is-ancestor "$sha" "$GITHUB_SHA"
+          version="${TAG#v}"
+          suffix=""
+          if [[ "$version" == *-* ]]; then
+            suffix="${version#*-}"
+          fi
+          if [[ "$suffix" =~ (^|[-.])(alpha|beta|rc|pre|dev|nightly)([^A-Za-z]|$) ]]; then
+            build_type=pre-release
+          else
+            build_type=release
+          fi
+          {
+            echo "sha=$sha"
+            echo "version=$version"
+            echo "build_type=$build_type"
+          } >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: check
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 350
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Require release variables
+        env:
+          SA: ${{ vars.ENVOY_GLOO_RELEASE_SA }}
+          WIF_PROVIDER: ${{ vars.ENVOY_GLOO_RELEASE_WIF_PROVIDER }}
+        run: |
+          if [ -z "$SA" ] || [ -z "$WIF_PROVIDER" ]; then
+            echo "set repository variables ENVOY_GLOO_RELEASE_SA and ENVOY_GLOO_RELEASE_WIF_PROVIDER" >&2
+            exit 1
+          fi
+      # Source goes to src/: auth writes its credential file to the workspace
+      # root, and only src/ is uploaded to Cloud Build.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: src
+          persist-credentials: false
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.ENVOY_GLOO_RELEASE_WIF_PROVIDER }}
+          service_account: ${{ vars.ENVOY_GLOO_RELEASE_SA }}
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+      - name: Submit and wait for Cloud Build
+        env:
+          ENVOY_GLOO_RELEASE_SA: ${{ vars.ENVOY_GLOO_RELEASE_SA }}
+          SHA: ${{ needs.check.outputs.sha }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # A re-run attaches to the tag's existing release build rather than
+          # building twice.
+          describe() {
+            local i out
+            for i in 1 2 3 4 5; do
+              if out="$(gcloud builds describe "$1" --project solo-public --region us-central1 --format="${2:-value(status)}")"; then
+                printf '%s\n' "${out}"
+                return 0
+              fi
+              echo "gcloud builds describe failed (attempt ${i}/5)" >&2
+              if [[ "${i}" -lt 5 ]]; then sleep 10; fi
+            done
+            return 1
+          }
+          # Newest first. createTime is filtered server-side; the rest client-side.
+          existing="$(gcloud builds list \
+            --project solo-public \
+            --region us-central1 \
+            --filter="substitutions._TAGGED_VERSION~\"^${TAG//./\\.}\$\" AND substitutions.COMMIT_SHA=\"${SHA}\" AND serviceAccount=\"projects/solo-public/serviceAccounts/${ENVOY_GLOO_RELEASE_SA}\" AND createTime>-P30D" \
+            --limit=1 \
+            --format='value(id,status)')"
+          build_id=""
+          if [[ -n "${existing}" ]]; then
+            read -r existing_id existing_status <<< "${existing}"
+            case "${existing_status}" in
+              QUEUED|PENDING|WORKING)
+                echo "Attaching to existing release build ${existing_id} (${existing_status})"
+                build_id="${existing_id}"
+                ;;
+              SUCCESS)
+                echo "Tag ${TAG} already released by Cloud Build ${existing_id}"
+                exit 0
+                ;;
+            esac
+          fi
+          if [[ -z "${build_id}" ]]; then
+            build_id="$(gcloud builds submit \
+              --project solo-public \
+              --region us-central1 \
+              --config src/ci/cloudbuild-release.yaml \
+              --service-account "projects/solo-public/serviceAccounts/${ENVOY_GLOO_RELEASE_SA}" \
+              --substitutions "COMMIT_SHA=${SHA},_TAGGED_VERSION=${TAG},_BUILD_TYPE=" \
+              --async \
+              --format='value(id)' src)"
+          fi
+          echo "Cloud Build ${build_id}"
+          {
+            echo "Cloud Build \`${build_id}\`"
+            echo "Cancelling this GitHub run does not stop the build. To stop it:"
+            echo '```'
+            echo "gcloud builds cancel ${build_id} --project solo-public --region us-central1"
+            echo '```'
+          } | tee -a "${GITHUB_STEP_SUMMARY}"
+          while true; do
+            status="$(describe "${build_id}")"
+            echo "status: ${status}"
+            case "${status}" in
+              SUCCESS|FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED) break ;;
+            esac
+            sleep 30
+          done
+          echo "Logs: $(describe "${build_id}" 'value(logUrl)')"
+          if [[ "${status}" != "SUCCESS" ]]; then
+            echo "::error::Cloud Build ${build_id} ended ${status}"
+            exit 1
+          fi
+
+  register:
+    name: Register release in solo-ci
+    needs: [check, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD_TYPE: ${{ needs.check.outputs.build_type }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: solo-io/solo-tools/.github/actions/setup-security-scan-artifacts@3be607a7f56b236a3668afccd0a9e25102ec0dea # main
+        with:
+          gcp_creds: ${{ secrets.GLOO_VULN_REPORTER }}
+
+      - name: Generate and publish artifacts.yaml
+        run: |
+          set -euo pipefail
+          ci artifacts generate images -p envoy-gloo -v "${TAG}" --category core --ref "quay.io/solo-io/envoy-gloo:${VERSION}"
+          ci artifacts publish -p envoy-gloo -v "${TAG}" --build-type "${BUILD_TYPE}"
