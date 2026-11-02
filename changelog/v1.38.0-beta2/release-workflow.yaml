@@ -1,0 +1,6 @@
+changelog:
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Add the Release workflow to the default branch so release branches can
+      dispatch it. Nothing changes on main builds.
