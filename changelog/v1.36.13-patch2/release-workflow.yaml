@@ -2,7 +2,7 @@ changelog:
   - type: NON_USER_FACING
     resolvesIssue: false
     description: >-
-      Once build-bot stops building tags, releases build and publish only from
-      the Release workflow, after a second person approves. CI builds on this
-      branch no longer hold the quay.io password, push images or upload tagged
-      release binaries.
+      New commits on this branch release only through the Release
+      workflow, after a second person approves. CI and tag builds on
+      this branch no longer hold the quay.io password, push images or
+      upload tagged release binaries.
