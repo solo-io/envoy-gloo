@@ -64,7 +64,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   id: 'docker-release'
   entrypoint: 'bash'
-  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
+  args: ['-c', 'printf %s "$$QUAY_IO_PASSWORD" | docker login quay.io --username "solo-io+solobot" --password-stdin && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
   env:
   - 'TAGGED_VERSION=$_TAGGED_VERSION'
   - 'COMMIT_SHA=$COMMIT_SHA'
@@ -109,7 +109,6 @@ tags:
 
 availableSecrets:
   secretManager:
-    # Placeholder name pending the platform Terraform.
     - versionName: projects/solo-public/secrets/envoy-gloo-quay-io-password/versions/latest
       env: 'QUAY_IO_PASSWORD'
     - versionName: projects/gloo-ee/secrets/envoy-build-cache-sa/versions/2

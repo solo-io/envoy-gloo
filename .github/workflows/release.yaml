@@ -41,7 +41,8 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
         run: |
-          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+          re='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          if ! [[ "$TAG" =~ $re ]]; then
             echo "invalid tag: $TAG" >&2
             exit 1
           fi
