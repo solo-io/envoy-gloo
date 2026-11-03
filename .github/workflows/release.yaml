@@ -60,10 +60,11 @@ jobs:
           if [[ "$version" == *-* ]]; then
             suffix="${version#*-}"
           fi
-          if [[ "$suffix" =~ (^|[-.])(alpha|beta|rc|pre|dev|nightly)([^A-Za-z]|$) ]]; then
-            build_type=pre-release
-          else
+          # Only -patchN / -patch.N is a regular release; any other suffix is a pre-release.
+          if [[ -z "$suffix" || "$suffix" =~ ^patch\.?[0-9]+$ ]]; then
             build_type=release
+          else
+            build_type=pre-release
           fi
           {
             echo "sha=$sha"
