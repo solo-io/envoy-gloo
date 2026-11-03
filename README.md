@@ -87,8 +87,8 @@ make docker-release-arm
 ```
 
 # Releasing
-Create the tag and GitHub release as before. Tick **Set as a pre-release** unless the version has no suffix or ends in `-patchN` or `-patch.N`, and untick **Set as the latest release**: releases from release branches are never Latest. Then run the Release workflow on `release-v1.36` with the tag as input; a release owner approves the `release` environment, and the workflow submits the release build to Cloud Build.
+Create the tag and GitHub release as before. Tick **Set as a pre-release** unless the version has no suffix or its suffix is exactly `patchN` or `patch.N`, and untick **Set as the latest release**: releases from release branches are never Latest. Then run the Release workflow on `release-v1.36` with the tag as input; a release owner other than the person who started the run approves the `release` environment, and the workflow submits the release build to Cloud Build.
 
-Cancelling the GitHub run does not stop the Cloud Build. To stop a mistaken release, run the `gcloud builds cancel` command printed in the run summary. A tag must point at a commit that contains `ci/cloudbuild-release.yaml`, so use tags created after this change merges. If the run times out while the build is still running (a long queue on the worker pool), re-run the failed jobs: the run attaches to that build, or finishes at once if it already succeeded.
+Cancelling the GitHub run does not stop the Cloud Build. To stop a mistaken release, run the `gcloud builds cancel` command printed in the run summary. Tag a commit that contains `ci/cloudbuild-release.yaml`; the release build fails on an older commit. If the run times out while the build is still running (a long queue on the worker pool), re-run the failed jobs: the run attaches to that build, or finishes at once if it already succeeded.
 
 `release-v1.36` is the only registered release line. To release another line, a release owner creates the branch under its exact registered name; the workflow's branch check, the `release` environment's deployment branches and IT's identity binding then each list that name. Branch patterns come later.
