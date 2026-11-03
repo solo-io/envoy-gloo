@@ -55,7 +55,7 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           sha=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
-          git merge-base --is-ancestor "$sha" "$GITHUB_SHA"
+          git merge-base --is-ancestor "$sha" "$GITHUB_SHA" || { echo "tag $TAG is not on this branch" >&2; exit 1; }
           version="${TAG#v}"
           suffix=""
           if [[ "$version" == *-* ]]; then
