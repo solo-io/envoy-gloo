@@ -47,21 +47,6 @@ steps:
   secretEnv:
   - 'GCP_SERVICE_ACCOUNT_KEY'
 
-- name: 'gcr.io/cloud-builders/docker'
-  id: 'docker-release'
-  entrypoint: 'bash'
-  args: ['-c', 'docker login quay.io --username "solo-io+solobot" --password $$QUAY_IO_PASSWORD && cp linux/amd64/build_envoy_release_stripped/envoy ci/envoy.stripped && make docker-release']
-  env:
-  - 'TAGGED_VERSION=$TAG_NAME'
-  - 'COMMIT_SHA=$COMMIT_SHA'
-  - 'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/envoy-build-cache-solo-io'
-  secretEnv:
-    - 'QUAY_IO_PASSWORD'
-    - 'GCP_SERVICE_ACCOUNT_KEY'
-  volumes:
-  - name: 'vol-build'
-    path: '/build'
-
 - name: gcr.io/cloud-builders/gsutil
   entrypoint: 'bash'
   args:
@@ -92,10 +77,6 @@ tags:
   - "sub-job"
 
 availableSecrets:
-  inline:
-   - kmsKeyName: projects/solo-public/locations/global/keyRings/build/cryptoKeys/build-key
-     envMap:
-       QUAY_IO_PASSWORD: 'CiQABlzmSRx5TcOqbldXa/d/+bkmAfpNAWa3PTS06WvuloZL+vASaQCCPGSGCogonVZVEUNx4G3YJtWi18gSuNx4PvLe08q8xAflTMFkjsyQirAOK3Y2oCvgYwiw/ITcuydjkpMjxDygFyENXS9FKFJoAXHlPQE5qidKr8xxmxF5ezhmjGB0gjyjXIIkbSEnBg=='
   secretManager:
     - versionName: projects/gloo-ee/secrets/envoy-build-cache-sa/versions/2
       env: 'GCP_SERVICE_ACCOUNT_KEY'

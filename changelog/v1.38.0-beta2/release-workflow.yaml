@@ -3,4 +3,5 @@ changelog:
     resolvesIssue: false
     description: >-
       Add the Release workflow to the default branch so release branches can
-      dispatch it. Nothing changes on main builds.
+      dispatch it. main builds no longer log in to quay.io or push
+      quay.io/solo-io/envoy-gloo:<commit sha> images.
