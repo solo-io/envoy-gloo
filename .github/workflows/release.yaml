@@ -189,7 +189,7 @@ jobs:
       BUILD_TYPE: ${{ needs.check.outputs.build_type }}
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: solo-io/solo-tools/.github/actions/setup-security-scan-artifacts@3be607a7f56b236a3668afccd0a9e25102ec0dea # main
+      - uses: solo-io/solo-tools/.github/actions/setup-security-scan-artifacts@bb2f009552c04e7c3f8cdcdc49e46409ba80bea8 # release-v0.2.0
         with:
           gcp_creds: ${{ secrets.GLOO_VULN_REPORTER }}
 
