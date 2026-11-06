@@ -4,6 +4,7 @@
 # `release` environment holds the required-reviewer approval. The register job
 # publishes artifacts.yaml to solo-ci with the GLOO_VULN_REPORTER org secret.
 name: Release
+run-name: "Release ${{ inputs.tag }}"
 
 on:
   workflow_dispatch:
