@@ -5,3 +5,8 @@ changelog:
       Add the Release workflow to the default branch so release branches can
       dispatch it. main builds no longer log in to quay.io or push
       quay.io/solo-io/envoy-gloo:<commit sha> images.
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Track envoy main_20260311, which declares the Go dependencies that
+      main's gencode and static-analysis builds were missing.
