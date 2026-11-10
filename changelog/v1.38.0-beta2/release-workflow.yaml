@@ -9,4 +9,6 @@ changelog:
     resolvesIssue: false
     description: >-
       Track envoy main_20260311, which declares the Go dependencies that
-      main's gencode and static-analysis builds were missing.
+      main's gencode and static-analysis builds were missing. The extensions
+      that envoy main added since are listed commented out, so nothing new
+      is compiled in.
