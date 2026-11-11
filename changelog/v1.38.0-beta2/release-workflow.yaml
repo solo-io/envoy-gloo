@@ -11,4 +11,6 @@ changelog:
       Track envoy main_20260311, which declares the Go dependencies that
       main's gencode and static-analysis builds were missing. The extensions
       that envoy main added since are listed commented out, so nothing new
-      is compiled in.
+      is compiled in. Envoy's gazelle fix for protoc-gen-star v2's
+      afero and golang.org/x/tools imports (#43910, #43926) is backported
+      as a patch.

@@ -1,0 +1,17 @@
+Backport envoy acf9032e79 and be5f52a703 ("bazel: Fix more gazelle deps",
+#43910, #43926): resolve protoc-gen-star v2's afero and x/tools imports.
+
+diff --git bazel/dependency_imports.bzl bazel/dependency_imports.bzl
+--- bazel/dependency_imports.bzl
++++ bazel/dependency_imports.bzl
+@@ -189,6 +189,10 @@
+         sum = "h1:sIXJOMrYnQZJu7OB7ANSF4MYri2fTEGIsRLz6LwI4xE=",
+         version = "v2.0.4-0.20230330145011-496ad1ac90a4",
+         build_external = "external",
++        build_directives = [
++            "gazelle:resolve go github.com/spf13/afero @com_github_spf13_afero//:afero",
++            "gazelle:resolve go golang.org/x/tools/imports @org_golang_x_tools//imports",
++        ],
+     )
+     go_repository(
+         name = "com_github_iancoleman_strcase",
