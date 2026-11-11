@@ -21,7 +21,7 @@ private:
 };
 
 TransformerPairConstSharedPtr matchTransform(Http::Matching::HttpMatchingDataImpl&& data, const Envoy::Matcher::MatchTreeSharedPtr<Http::HttpMatchingData>& matcher) {
-    const Matcher::MatchResult match_result = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
+    const Matcher::ActionMatchResult match_result = Matcher::evaluateMatch<Http::HttpMatchingData>(*matcher, data);
     if (match_result.isMatch()) {
       const auto action = match_result.action();
 
