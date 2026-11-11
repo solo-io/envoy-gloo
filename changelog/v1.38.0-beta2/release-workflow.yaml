@@ -1,0 +1,16 @@
+changelog:
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Add the Release workflow to the default branch so release branches can
+      dispatch it. main builds no longer log in to quay.io or push
+      quay.io/solo-io/envoy-gloo:<commit sha> images.
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Track envoy main_20260311, which declares the Go dependencies that
+      main's gencode and static-analysis builds were missing. The extensions
+      that envoy main added since are listed commented out, so nothing new
+      is compiled in. Envoy's gazelle fix for protoc-gen-star v2's
+      afero and golang.org/x/tools imports (#43910, #43926) is backported
+      as a patch.

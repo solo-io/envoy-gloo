@@ -32,6 +32,7 @@ EXTENSIONS = {
     "envoy.clusters.original_dst":                      "//source/extensions/clusters/original_dst:original_dst_cluster_lib",
     "envoy.clusters.logical_dns":                       "//source/extensions/clusters/logical_dns:logical_dns_cluster_lib",
     "envoy.clusters.reverse_connection":                "//source/extensions/clusters/reverse_connection:reverse_connection_lib",
+    # "envoy.clusters.dynamic_modules":                  "//source/extensions/clusters/dynamic_modules:cluster",
 
     #
     # Compression
@@ -95,6 +96,7 @@ EXTENSIONS = {
     "envoy.matching.matchers.runtime_fraction":         "//source/extensions/matching/input_matchers/runtime_fraction:config",
     "envoy.matching.matchers.cel_matcher":              "//source/extensions/matching/input_matchers/cel_matcher:config",
     "envoy.matching.matchers.metadata_matcher":         "//source/extensions/matching/input_matchers/metadata:config",
+    # "envoy.matching.matchers.dynamic_modules":         "//source/extensions/matching/input_matchers/dynamic_modules:config",
 
     #
     # Network Matchers
@@ -135,12 +137,14 @@ EXTENSIONS = {
     "envoy.matching.inputs.endpoint_metadata":     "//source/extensions/matching/common_inputs/transport_socket:config",
     "envoy.matching.inputs.locality_metadata":     "//source/extensions/matching/common_inputs/transport_socket:config",
     "envoy.matching.inputs.transport_socket_filter_state": "//source/extensions/matching/common_inputs/transport_socket:config",
+    # "envoy.matching.inputs.dynamic_module_data_input": "//source/extensions/matching/http/dynamic_modules:data_input_lib",
 
     #
     # Matching actions
     #
 
     "envoy.matching.actions.format_string":             "//source/extensions/matching/actions/format_string:config",
+    # "envoy.matching.actions.transform_stat":           "//source/extensions/matching/actions/transform_stat:config",
     "envoy.matching.action.transport_socket.name":      "//source/extensions/matching/common_inputs/transport_socket:config",
 
     #
@@ -193,6 +197,10 @@ EXTENSIONS = {
     "envoy.filters.http.jwt_authn":                     "//source/extensions/filters/http/jwt_authn:config",
     "envoy.filters.http.mcp":                           "//source/extensions/filters/http/mcp:config",
     "envoy.filters.http.mcp_router":                    "//source/extensions/filters/http/mcp_router:config",
+    # "envoy.filters.http.a2a":                          "//source/extensions/filters/http/a2a:config",
+    # "envoy.filters.http.file_server":                  "//source/extensions/filters/http/file_server:config",
+    # "envoy.filters.http.mcp_json_rest_bridge":         "//source/extensions/filters/http/mcp_json_rest_bridge:config",
+    # "envoy.filters.http.sse_to_metadata":              "//source/extensions/filters/http/sse_to_metadata:config",
     "envoy.filters.http.rate_limit_quota":              "//source/extensions/filters/http/rate_limit_quota:config",
     # Disabled by default. kill_request is not built into most prebuilt images.
     # For instructions for building with disabled-by-default filters enabled, see
@@ -232,6 +240,7 @@ EXTENSIONS = {
     "envoy.filters.listener.proxy_protocol":            "//source/extensions/filters/listener/proxy_protocol:config",
     "envoy.filters.listener.tls_inspector":             "//source/extensions/filters/listener/tls_inspector:config",
     "envoy.filters.listener.dynamic_modules":           "//source/extensions/filters/listener/dynamic_modules:config",
+    # "envoy.filters.listener.set_filter_state":         "//source/extensions/filters/listener/set_filter_state:config",
     "envoy.filters.udp_listener.dynamic_modules":       "//source/extensions/filters/udp/dynamic_modules:config",
 
     #
@@ -421,6 +430,7 @@ EXTENSIONS = {
     #
 
     "envoy.tls.cert_validator.spiffe":                  "//source/extensions/transport_sockets/tls/cert_validator/spiffe:config",
+    # "envoy.tls.cert_validator.dynamic_modules":        "//source/extensions/transport_sockets/tls/cert_validator/dynamic_modules:config",
 
     #
     # HTTP header formatters
@@ -568,6 +578,7 @@ EXTENSIONS = {
     "envoy.load_balancing_policies.client_side_weighted_round_robin": "//source/extensions/load_balancing_policies/client_side_weighted_round_robin:config",
     "envoy.load_balancing_policies.override_host":     "//source/extensions/load_balancing_policies/override_host:config",
     "envoy.load_balancing_policies.wrr_locality":      "//source/extensions/load_balancing_policies/wrr_locality:config",
+    # "envoy.load_balancing_policies.dynamic_modules":   "//source/extensions/load_balancing_policies/dynamic_modules:config",
 
     #
     # HTTP Early Header Mutation
@@ -588,6 +599,11 @@ EXTENSIONS = {
     "envoy.config_subscription.ads_collection": "//source/extensions/config_subscription/grpc:grpc_collection_subscription_lib",
     "envoy.config_mux.delta_grpc_mux_factory": "//source/extensions/config_subscription/grpc/xds_mux:grpc_mux_lib",
     "envoy.config_mux.sotw_grpc_mux_factory": "//source/extensions/config_subscription/grpc/xds_mux:grpc_mux_lib",
+
+    #
+    # Content Parsers
+    #
+    # "envoy.content_parsers.json":                          "//source/extensions/content_parsers/json:config",
 
     #
     # Geolocation Provider
