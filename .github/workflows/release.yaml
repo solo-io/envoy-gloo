@@ -190,7 +190,28 @@ jobs:
       BUILD_TYPE: ${{ needs.check.outputs.build_type }}
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: solo-io/solo-tools/.github/actions/setup-security-scan-artifacts@bb2f009552c04e7c3f8cdcdc49e46409ba80bea8 # release-v0.2.0
+      # envoy-gloo is public and solo-tools internal, so GitHub won't load solo-tools actions remotely:
+      # check solo-tools out with a read-only App token and run the action from the checkout.
+      - name: Create solo-tools read token
+        id: solo-tools-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PRIVATE_MODULES_CLIENT_ID }}
+          private-key: ${{ secrets.PRIVATE_MODULES_APP_PRIVATE_KEY }}
+          owner: solo-io
+          repositories: solo-tools
+          permission-contents: read
+
+      - name: Check out solo-tools
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: solo-io/solo-tools
+          ref: bb2f009552c04e7c3f8cdcdc49e46409ba80bea8 # release-v0.2.0
+          token: ${{ steps.solo-tools-token.outputs.token }}
+          path: solo-tools
+          persist-credentials: false
+
+      - uses: ./solo-tools/.github/actions/setup-security-scan-artifacts
         with:
           gcp_creds: ${{ secrets.GLOO_VULN_REPORTER }}
 

@@ -1,0 +1,6 @@
+changelog:
+  - type: NON_USER_FACING
+    resolvesIssue: false
+    description: >-
+      Loads the solo-tools release action from a checkout made with a read-only
+      GitHub App token, so the Release workflow can register CVEs again.
