@@ -16,9 +16,12 @@ on:
 
 permissions: {}
 
+# One run at a time per release line (the branch it runs from). Runs on other lines don't wait
+# behind it. queue: max keeps a run waiting behind one held for approval instead of replacing it.
 concurrency:
-  group: release-envoy-gloo
+  group: release-envoy-gloo-${{ github.ref_name }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   check:
